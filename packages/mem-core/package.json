@@ -1,0 +1,58 @@
+{
+  "name": "@pencil-agent/mem-core",
+  "version": "1.0.2",
+  "description": "Persistent memory engine for AI coding agents with consolidation, scoring, and insights",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./extension": {
+      "import": "./dist/extension.js",
+      "types": "./dist/extension.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "CLAUDE.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "nanomem",
+    "memory",
+    "ai",
+    "llm",
+    "persistent-memory",
+    "consolidation",
+    "spaced-repetition",
+    "a-mem",
+    "mem0"
+  ],
+  "author": "NanoPencil Team",
+  "license": "GPL-3.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@pencil-agent/nano-pencil": "^1.10.1",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/O-Pencil/nanoPencil.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

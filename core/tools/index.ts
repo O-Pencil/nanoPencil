@@ -1,0 +1,178 @@
+export {
+	type BashOperations,
+	type BashSpawnContext,
+	type BashSpawnHook,
+	type BashToolDetails,
+	type BashToolInput,
+	type BashToolOptions,
+	bashTool,
+	createBashTool,
+} from "./bash.js";
+export {
+	createEditTool,
+	type EditOperations,
+	type EditToolDetails,
+	type EditToolInput,
+	type EditToolOptions,
+	editTool,
+} from "./edit.js";
+export {
+	createFindTool,
+	type FindOperations,
+	type FindToolDetails,
+	type FindToolInput,
+	type FindToolOptions,
+	findTool,
+} from "./find.js";
+export {
+	createGrepTool,
+	type GrepOperations,
+	type GrepToolDetails,
+	type GrepToolInput,
+	type GrepToolOptions,
+	grepTool,
+} from "./grep.js";
+export {
+	createLsTool,
+	type LsOperations,
+	type LsToolDetails,
+	type LsToolInput,
+	type LsToolOptions,
+	lsTool,
+} from "./ls.js";
+export {
+	createReadTool,
+	type ReadOperations,
+	type ReadToolDetails,
+	type ReadToolInput,
+	type ReadToolOptions,
+	readTool,
+} from "./read.js";
+export {
+	DEFAULT_MAX_BYTES,
+	DEFAULT_MAX_LINES,
+	formatSize,
+	type TruncationOptions,
+	type TruncationResult,
+	truncateHead,
+	truncateLine,
+	truncateTail,
+} from "./truncate.js";
+export {
+	createWriteTool,
+	type WriteOperations,
+	type WriteToolInput,
+	type WriteToolOptions,
+	writeTool,
+} from "./write.js";
+
+import type { AgentTool } from "@pencil-agent/agent-core";
+import { type BashToolOptions, bashTool, createBashTool } from "./bash.js";
+import { createEditTool, editTool } from "./edit.js";
+import { createFindTool, findTool } from "./find.js";
+import { createGrepTool, grepTool } from "./grep.js";
+import { createLsTool, lsTool } from "./ls.js";
+import { createReadTool, type ReadToolOptions, readTool } from "./read.js";
+import { createWriteTool, writeTool } from "./write.js";
+
+/** Tool type (AgentTool from pi-ai) */
+export type Tool = AgentTool<any>;
+
+// Default tools for full access mode (using process.cwd())
+export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool];
+
+// Read-only tools for exploration without modification (using process.cwd())
+export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool];
+
+// All available tools (using process.cwd())
+export const allTools = {
+	read: readTool,
+	bash: bashTool,
+	edit: editTool,
+	write: writeTool,
+	grep: grepTool,
+	find: findTool,
+	ls: lsTool,
+};
+
+export type ToolName = keyof typeof allTools;
+
+export interface ToolsOptions {
+	/** Options for the read tool */
+	read?: ReadToolOptions;
+	/** Options for the bash tool */
+	bash?: BashToolOptions;
+}
+
+/**
+ * Create coding tools configured for a specific working directory.
+ */
+export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
+	return [
+		createReadTool(cwd, options?.read),
+		createBashTool(cwd, options?.bash),
+		createEditTool(cwd),
+		createWriteTool(cwd),
+	];
+}
+
+/**
+ * Create read-only tools configured for a specific working directory.
+ */
+export function createReadOnlyTools(cwd: string, options?: ToolsOptions): Tool[] {
+	return [createReadTool(cwd, options?.read), createGrepTool(cwd), createFindTool(cwd), createLsTool(cwd)];
+}
+
+/**
+ * Create all tools configured for a specific working directory.
+ */
+export function createAllTools(cwd: string, options?: ToolsOptions): Record<ToolName, Tool> {
+	return {
+		read: createReadTool(cwd, options?.read),
+		bash: createBashTool(cwd, options?.bash),
+		edit: createEditTool(cwd),
+		write: createWriteTool(cwd),
+		grep: createGrepTool(cwd),
+		find: createFindTool(cwd),
+		ls: createLsTool(cwd),
+	};
+}
+
+// ============================================================================
+// Tool Guidance (for system prompt)
+// ============================================================================
+
+/**
+ * Tool guidance for system prompt.
+ * These are usage guidelines shown to the AI to help it use tools correctly.
+ */
+export const toolGuidance: Record<string, string> = {
+	read: "读取文件内容。优先使用此工具查看文件，不要用 cat 或其他命令。",
+	bash: "执行 bash 命令（ls、grep、find 等）进行文件操作和系统交互。",
+	edit: "对文件进行精确编辑。使用查找替换方式，旧文本必须完全匹配。编辑前先用 read 查看文件。",
+	write: "创建或覆盖文件。仅在创建新文件或完整重写时使用。",
+	grep: "在文件内容中搜索模式（遵守 .gitignore）。适合查找代码中的特定字符串。",
+	find: "按 glob 模式查找文件（遵守 .gitignore）。适合查找特定名称的文件。",
+	ls: "列出目录内容。",
+};
+
+/**
+ * Get guidance for a specific tool
+ */
+export function getToolGuidance(toolName: string): string | undefined {
+	return toolGuidance[toolName];
+}
+
+/**
+ * Get guidance for multiple tools
+ */
+export function getToolsGuidance(toolNames: string[]): Record<string, string> {
+	const result: Record<string, string> = {};
+	for (const name of toolNames) {
+		const guidance = toolGuidance[name];
+		if (guidance) {
+			result[name] = guidance;
+		}
+	}
+	return result;
+}

@@ -1,0 +1,18 @@
+# Code Owners for NanoPencil
+
+# Default owner for all files (maintainers)
+* @O-Pencil/nanopencil
+
+# Core packages
+/packages/agent-core/ @O-Pencil/nanopencil
+/packages/ai/ @O-Pencil/nanopencil
+/packages/tui/ @O-Pencil/nanopencil
+/packages/mem-core/ @O-Pencil/nanopencil
+/packages/soul-core/ @O-Pencil/nanopencil
+
+# Documentation
+/docs/ @O-Pencil/nanopencil
+*.md @O-Pencil/nanopencil
+
+# GitHub configs
+/.github/ @O-Pencil/nanopencil

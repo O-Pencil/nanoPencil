@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "paths": {
+      "nanosoul": ["./packages/nanosoul/src"],
+      "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
+    },
+  },
+  "include": [
+    "*.ts",
+    "cli/**/*.ts",
+    "core/**/*.ts",
+    "modes/**/*.ts",
+    "utils/**/*.ts",
+    "extensions/**/*.ts",
+  ],
+  "exclude": ["node_modules", "dist"],
+}

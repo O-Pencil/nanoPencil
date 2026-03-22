@@ -1,0 +1,58 @@
+# Source files (TypeScript)
+*.ts
+!*.d.ts
+tsconfig.json
+
+# Build and development
+node_modules/
+dist/
+.git/
+.gitignore
+
+# Tests and coverage
+test/
+tests/
+*.test.ts
+*.spec.ts
+coverage/
+
+# Documentation source files (keep built docs)
+*.md
+!README.md
+!docs/*.md
+CLAUDE.md
+AGENTS.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Package manager locks (optional - remove if you want them)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Misc
+*.zip
+*.tar.gz

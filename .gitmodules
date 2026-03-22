@@ -1,0 +1,2 @@
+# 已移除 submodule 配置
+# 原有 nanoMem submodule 已迁移到 packages/mem-core

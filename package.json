@@ -1,0 +1,101 @@
+{
+  "name": "@pencil-agent/nano-pencil",
+  "version": "1.11.2",
+  "description": "CLI writing agent with read, bash, edit, write tools and session management. Based on pi; supports DashScope Coding Plan. Soul enabled by default for AI personality evolution.",
+  "type": "module",
+  "bin": {
+    "nanopencil": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.json",
+    "docs",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "tsx cli.ts",
+    "build": "npm run build:deps && tsc && npm run copy:theme:json && npm run copy:extensions && npm run bundle:packages",
+    "build:deps": "npm run build --prefix packages/agent-core && npm run build --prefix packages/ai && npm run build --prefix packages/tui",
+    "copy:theme:json": "node -e \"const fs=require('fs');const p=require('path');const d='dist/modes/interactive/theme';if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});fs.readdirSync('modes/interactive/theme').forEach(f=>{if(f.endsWith('.json'))fs.copyFileSync(p.join('modes/interactive/theme',f),p.join(d,f))})\"",
+    "copy:extensions": "node -e \"\nconst fs=require('fs');\nconst p=require('path');\nfunction c(s,d){\n  if(fs.existsSync(d))fs.rmSync(d,{recursive:true,force:true});\n  if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});\n  fs.readdirSync(s).forEach(f=>{\n    const sp=p.join(s,f),dp=p.join(d,f);\n    fs.statSync(sp).isDirectory()?c(sp,dp):fs.copyFileSync(sp,dp)\n  })\n}\n// Copy defaults extensions\n\nc('extensions/defaults/security-audit','dist/extensions/defaults/security-audit');\nc('extensions/defaults/soul','dist/extensions/defaults/soul');\nc('extensions/defaults/interview','dist/extensions/defaults/interview');\nc('extensions/defaults/loop','dist/extensions/defaults/loop');\nc('extensions/defaults/mcp','dist/extensions/defaults/mcp');\n// Copy optional extensions\nc('extensions/optional/simplify','dist/extensions/optional/simplify');\nc('extensions/optional/export-html','dist/extensions/optional/export-html');\nconsole.log('Extensions copied to dist/');\n\"",
+    "bundle:packages": "node scripts/bundle-deps.js",
+    "watch": "tsc --watch",
+    "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
+    "prepublishOnly": "npm run build",
+    "changelog": "node scripts/generate-changelog.js",
+    "release": "npm run changelog && npm version patch && npm publish"
+  },
+  "keywords": [
+    "nanopencil",
+    "writing-agent",
+    "coding-agent",
+    "ai",
+    "llm",
+    "cli",
+    "tui",
+    "agent",
+    "apikey",
+    "dashscope"
+  ],
+  "license": "GPL-3.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@mariozechner/jiti": "^2.6.2",
+    "@pencil-agent/agent-core": "0.0.1",
+    "@pencil-agent/ai": "0.0.1",
+    "@pencil-agent/tui": "0.0.1",
+    "@silvia-odwyer/photon-node": "^0.3.4",
+    "chalk": "^5.5.0",
+    "cli-highlight": "^2.1.11",
+    "diff": "^8.0.2",
+    "extract-zip": "^2.0.1",
+    "file-type": "^21.1.1",
+    "glob": "^13.0.1",
+    "hosted-git-info": "^9.0.2",
+    "ignore": "^7.0.5",
+    "marked": "^15.0.12",
+    "minimatch": "^10.1.1",
+    "proper-lockfile": "^4.1.2",
+    "yaml": "^2.8.2"
+  },
+  "bundledDependencies": [
+    "@pencil-agent/agent-core",
+    "@pencil-agent/ai",
+    "@pencil-agent/tui"
+  ],
+  "devDependencies": {
+    "@types/hosted-git-info": "^3.0.5",
+    "@types/node": "^22.15.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "cross-env": "^10.1.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "@types/node": "^22.15.0"
+  },
+  "piConfig": {
+    "name": "nanopencil",
+    "configDir": ".nanopencil"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:O-Pencil/nanoPencil.git"
+  },
+  "homepage": "https://github.com/O-Pencil/nanoPencil",
+  "bundleDependencies": [
+    "@pencil-agent/agent-core",
+    "@pencil-agent/ai",
+    "@pencil-agent/tui"
+  ]
+}

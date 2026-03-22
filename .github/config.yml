@@ -1,0 +1,17 @@
+# GitHub Actions Configuration
+
+# Enable issues
+issues:
+  enabled: true
+
+# Enable projects (if using GitHub Projects)
+# projects:
+#   enabled: true
+
+# Comment templates for PR reviews
+# rufo:
+#   requiredOrPrChecks: true
+#   exceptionLabels: []
+#   commentTemplate: |
+#     ## PR Review Checklist
+#     <!-- Add your custom PR review template here -->

@@ -1,0 +1,49 @@
+{
+  "name": "@pencil-agent/soul-core",
+  "version": "0.1.0",
+  "description": "AI personality evolution engine - persistent memory and adaptive behavior for AI coding agents",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "soul",
+    "personality",
+    "ai",
+    "evolution",
+    "memory",
+    "adaptive",
+    "agent",
+    "nanopencil"
+  ],
+  "license": "GPL-3.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/O-Pencil/nanoPencil.git"
+  }
+}

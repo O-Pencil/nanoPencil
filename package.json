@@ -50,6 +50,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@agentclientprotocol/sdk": "^0.16.1",
     "@mariozechner/jiti": "^2.6.2",
     "@pencil-agent/agent-core": "0.0.1",
     "@pencil-agent/ai": "0.0.1",

@@ -100,6 +100,8 @@ import {
   readClipboardImage,
 } from "../utils/clipboard-image.js";
 import { ensureTool } from "../../core/utils/tools-manager.js";
+import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
+import { formatDimensionNote, resizeImage } from "../utils/image-resize.js";
 import { ArminComponent } from "./components/armin.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { promptForApiKey } from "./components/apikey-input.js";
@@ -2153,6 +2155,65 @@ export class InteractiveMode {
     }
   }
 
+  /**
+   * Extract image file paths from text, read them as base64 ImageContent,
+   * and return the cleaned text with image references plus the image array.
+   */
+  private async extractImagesFromText(
+    text: string,
+  ): Promise<{ text: string; images: ImageContent[] }> {
+    const images: ImageContent[] = [];
+    const tmpDir = os.tmpdir();
+
+    // Match clipboard-pasted image paths (pi-clipboard-UUID.ext)
+    const clipboardImagePattern = new RegExp(
+      `${tmpDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[/\\\\]pi-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)`,
+      "gi",
+    );
+
+    const matches = text.match(clipboardImagePattern);
+    if (!matches) {
+      return { text, images };
+    }
+
+    let cleanedText = text;
+    for (const filePath of matches) {
+      try {
+        if (!fs.existsSync(filePath)) continue;
+
+        const mimeType =
+          await detectSupportedImageMimeTypeFromFile(filePath);
+        if (!mimeType) continue;
+
+        const content = fs.readFileSync(filePath);
+        const base64Content = content.toString("base64");
+
+        const resized = await resizeImage({
+          type: "image",
+          data: base64Content,
+          mimeType,
+        });
+        const dimensionNote = formatDimensionNote(resized);
+
+        images.push({
+          type: "image",
+          mimeType: resized.mimeType,
+          data: resized.data,
+        });
+
+        // Replace file path in text with a reference
+        const ref = dimensionNote
+          ? `[image: ${path.basename(filePath)}] ${dimensionNote}`
+          : `[image: ${path.basename(filePath)}]`;
+        cleanedText = cleanedText.replace(filePath, ref);
+      } catch {
+        // Skip files that can't be read
+      }
+    }
+
+    return { text: cleanedText, images };
+  }
+
   private setupEditorSubmitHandler(): void {
     this.defaultEditor.onSubmit = async (text: string) => {
       text = text.trim();
@@ -2368,7 +2429,14 @@ export class InteractiveMode {
       if (this.session.isStreaming) {
         this.editor.addToHistory?.(text);
         this.editor.setText("");
-        await this.session.prompt(text, { streamingBehavior: "steer" });
+        const steerResult = await this.extractImagesFromText(text);
+        await this.session.prompt(steerResult.text, {
+          streamingBehavior: "steer",
+          images:
+            steerResult.images.length > 0
+              ? steerResult.images
+              : undefined,
+        });
         this.updatePendingMessagesDisplay();
         this.ui.requestRender();
         return;
@@ -2386,11 +2454,22 @@ export class InteractiveMode {
 
       this.editor.addToHistory?.(text);
       this.editor.setText("");
-      if (!text.startsWith("/")) {
+
+      // Extract images from clipboard-pasted file paths in the text
+      const { text: processedText, images } =
+        await this.extractImagesFromText(text);
+
+      if (!processedText.startsWith("/")) {
+        const displayContent: (TextContent | ImageContent)[] = [
+          { type: "text", text: processedText },
+        ];
+        if (images.length > 0) {
+          displayContent.push(...images);
+        }
         this.optimisticUserMessages.push(text);
         this.addMessageToChat({
           role: "user",
-          content: [{ type: "text", text }],
+          content: displayContent,
           timestamp: Date.now(),
         } as AgentMessage);
         this.ui.requestRender();
@@ -2398,7 +2477,9 @@ export class InteractiveMode {
       try {
         // Clear persona switch flag - interview should now run normally for subsequent messages
         delete process.env.PI_JUST_SWITCHED_PERSONA;
-        await this.session.prompt(text);
+        await this.session.prompt(processedText, {
+          images: images.length > 0 ? images : undefined,
+        });
       } catch (error: unknown) {
         if (
           !text.startsWith("/") &&

@@ -217,48 +217,51 @@ Sessions are stored as JSONL (newline-delimited JSON) with entry types:
 - Context files loaded from `.pencil-context.md`, `.PENCIL.md`, `CLAUDE.md`, `AGENTS.md`
 - Skills loaded as `<skill name="..." location="...">` blocks in user messages
 
-### Chinese Localization
-The codebase includes Chinese comments and strings (nanoPencil targets Chinese users with DashScope integration).
+### Code Comments and User-Facing Strings
+
+- **English only**: All comments and all string literals meant for humans (errors, logs, TUI/CLI labels, prompts embedded in code, etc.) must be written in **English**. Do not add or keep Chinese or other non-English text inside source files.
+- **Docs outside code**: End-user documentation may stay bilingual (e.g. `README_CN.md`); this rule applies to **repository source** (TypeScript/JavaScript, config that ships as part of the product, etc.).
+- **Commit messages** must be written in **English** as specified below.
 
 ## Commit Message Convention
 
-使用中文撰写 commit message，格式如下：
+Write commit messages in **English**, using this shape:
 
 ```
-<类型>(<可选范围>): <简短描述>
+<type>(<optional scope>): <short summary>
 
-<可选正文>
+<optional body with more detail>
 ```
 
-### 类型 (type)
+### Types
 
-- `feat`: 新功能
-- `fix`: Bug 修复
-- `docs`: 文档更新
-- `refactor`: 代码重构
-- `perf`: 性能优化
-- `chore`: 构建/工具/依赖等
-- `style`: 代码格式（不影响功能）
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `refactor`: Code change that neither fixes a bug nor adds a feature
+- `perf`: Performance improvement
+- `chore`: Build, tooling, dependencies, etc.
+- `style`: Formatting only (no behavior change)
 
-### 示例
+### Examples
 
 ```
-feat(interview): 降低 Interview 触发频率
+feat(interview): reduce interview trigger frequency
 
-- 添加 shouldRunInterview 智能检测逻辑
-- 只在模糊需求或短文本时触发
-- 添加 persona 切换后跳过 interview
-- 添加 Interview 过程可视化
+- Add shouldRunInterview heuristics
+- Trigger only on vague or very short prompts
+- Skip interview after persona switch
+- Improve interview progress visibility
 
-fix: 修复版本比较逻辑导致误报更新提示
+fix: correct version comparison false-positive update prompt
 
-不能包含任何Co-Authored-By: Claude Opus 4.6 noreply@anthropic.com
+Do not include any Co-Authored-By: lines.
 ```
 
-### 注意事项
+### Rules
 
-- **禁止包含 Co-Authored-By**: 不要在 commit message 中添加任何 `Co-Authored-By:` 信息
-- 使用中文描述，简洁明了
+- **No `Co-Authored-By:`**: Do not add any `Co-Authored-By:` trailer to commit messages.
+- Keep the subject line concise; use the body for bullets or context when needed.
 
 ---
 

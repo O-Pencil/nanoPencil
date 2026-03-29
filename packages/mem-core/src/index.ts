@@ -11,7 +11,7 @@ export type { PromptSet } from "./i18n.js";
 export { PROMPTS } from "./i18n.js";
 export { renderInsightsHtml } from "./insights-html.js";
 export { renderFullInsightsHtml } from "./full-insights-html.js";
-export { getRelatedSummaries, linkNewEntry } from "./linking.js";
+export { getGraphNeighborhoodBySeeds, getRelatedSummaries, linkNewEntry, reinforceRelations } from "./linking.js";
 export { evictExpiredEntries, evictExpiredWork, filterByScope, filterPII, matchesScope } from "./privacy.js";
 export type { ScoreWeights } from "./scoring.js";
 export {
@@ -27,6 +27,7 @@ export {
 	tierEntries,
 } from "./scoring.js";
 export type {
+	AlignmentSnapshot,
 	Episode,
 	ExtractedItem,
 	ExtractedWork,

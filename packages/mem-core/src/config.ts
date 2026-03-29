@@ -26,9 +26,9 @@ export interface ProgressiveRecallConfig {
 export interface NanomemConfig {
 	memoryDir: string;
 	tokenBudget: number;
-	budget: { lessons: number; knowledge: number; episodes: number; preferences: number; work: number; facets: number };
+	budget: { lessons: number; knowledge: number; events: number; episodes: number; preferences: number; work: number; facets: number };
 	halfLife: Record<string, number>;
-	maxEntries: { knowledge: number; lessons: number; preferences: number; work: number; facets: number };
+	maxEntries: { knowledge: number; lessons: number; events: number; preferences: number; work: number; facets: number };
 	consolidationThreshold: number;
 	/** Stanford-style retrieval scoring weights */
 	scoreWeights: { recency: number; importance: number; relevance: number };
@@ -42,11 +42,14 @@ export interface NanomemConfig {
 	strengthGrowthFactor: number;
 	/** Progressive recall injection configuration */
 	progressiveRecall: ProgressiveRecallConfig;
+	/** Default forgetting windows for less important memories */
+	forgetting: { ambientTtlDays: number; workTtlDays: number };
 }
 
 const DEFAULT_BUDGET = {
-	lessons: 0.2,
-	knowledge: 0.2,
+	lessons: 0.18,
+	knowledge: 0.17,
+	events: 0.15,
 	episodes: 0.18,
 	preferences: 0.1,
 	work: 0.2,
@@ -60,12 +63,13 @@ const DEFAULT_HALF_LIFE: Record<string, number> = {
 	preference: 120,
 	decision: 45,
 	entity: 30,
+	event: 180,
 	work: 45,
 	pattern: 180,
 	struggle: 120,
 };
 
-const DEFAULT_MAX_ENTRIES = { knowledge: 1000, lessons: 500, preferences: 200, work: 400, facets: 400 };
+const DEFAULT_MAX_ENTRIES = { knowledge: 1000, lessons: 500, events: 300, preferences: 200, work: 400, facets: 400 };
 const DEFAULT_SCORE_WEIGHTS = { recency: 1, importance: 1, relevance: 1 };
 const DEFAULT_EVICTION_WEIGHTS = { accessFrequency: 0.4, baseImpact: 0.6 };
 const DEFAULT_PROGRESSIVE_RECALL: ProgressiveRecallConfig = {
@@ -76,6 +80,10 @@ const DEFAULT_PROGRESSIVE_RECALL: ProgressiveRecallConfig = {
 	forceRecentHours: 24,
 	forceImportanceMin: 9,
 };
+const DEFAULT_FORGETTING = {
+	ambientTtlDays: 45,
+	workTtlDays: 21,
+} as const;
 
 export function getConfig(overrides?: Partial<NanomemConfig>): NanomemConfig {
 	const tokenBudget = Number(process.env.NANOMEM_TOKEN_BUDGET) || 6000;
@@ -94,5 +102,6 @@ export function getConfig(overrides?: Partial<NanomemConfig>): NanomemConfig {
 		locale,
 		strengthGrowthFactor: overrides?.strengthGrowthFactor ?? 1.5,
 		progressiveRecall: overrides?.progressiveRecall ?? { ...DEFAULT_PROGRESSIVE_RECALL },
+		forgetting: overrides?.forgetting ?? { ...DEFAULT_FORGETTING },
 	};
 }

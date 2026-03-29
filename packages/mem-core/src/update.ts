@@ -13,7 +13,7 @@ import { linkNewEntry } from "./linking.js";
 import { filterPII } from "./privacy.js";
 import { extractTags, tagOverlap } from "./scoring.js";
 import { deriveNameFromContent, deriveSummaryFromContent } from "./store.js";
-import type { ExtractedItem, MemoryEntry, WorkEntry } from "./types.js";
+import type { ExtractedItem, MemoryEntry, MemoryRetention, MemoryStability, WorkEntry } from "./types.js";
 
 const UPDATE_OVERLAP_THRESHOLD = 0.7;
 const NOOP_SIMILARITY_THRESHOLD = 0.8;
@@ -57,6 +57,64 @@ function findUpdateCandidate(entries: MemoryEntry[], type: string, tags: string[
 	return entries.findIndex((e) => e.type === type && tagOverlap(e.tags, tags) >= UPDATE_OVERLAP_THRESHOLD);
 }
 
+function inferRetention(item: ExtractedItem): MemoryRetention {
+	if (item.retention) return item.retention;
+	if (item.stability === "situational" || item.stateData) return "ambient";
+	switch (item.type) {
+		case "preference":
+		case "pattern":
+			return "core";
+		case "lesson":
+		case "struggle":
+		case "decision":
+		case "event":
+			return "key-event";
+		default:
+			return "ambient";
+	}
+}
+
+function inferStability(item: ExtractedItem): MemoryStability {
+	if (item.stability) return item.stability;
+	if (item.stateData) return "situational";
+	switch (item.type) {
+		case "preference":
+		case "pattern":
+			return "stable";
+		case "event":
+			return item.eventData?.kind === "milestone" ? "stable" : "situational";
+		default:
+			return "stable";
+	}
+}
+
+function inferSalience(item: ExtractedItem): number {
+	if (typeof item.salience === "number") {
+		return Math.max(1, Math.min(10, item.salience));
+	}
+	switch (item.type) {
+		case "event":
+		case "struggle":
+			return 9;
+		case "lesson":
+		case "decision":
+			return 8;
+		case "pattern":
+			return 7;
+		case "preference":
+			return 6;
+		default:
+			return 4;
+	}
+}
+
+function inferTtl(item: ExtractedItem, cfg: NanomemConfig, retention: MemoryRetention, salience: number): number | undefined {
+	if (item.stability === "situational" || item.stateData) return Math.min(14, cfg.forgetting.ambientTtlDays);
+	if (retention !== "ambient") return undefined;
+	if (item.type === "fact" && salience <= 5) return cfg.forgetting.ambientTtlDays;
+	return undefined;
+}
+
 /** Process a single extracted item through the Mem0 pipeline */
 export function applyExtraction(
 	entries: MemoryEntry[],
@@ -76,6 +134,9 @@ export function applyExtraction(
 	const summary = item.summary || deriveSummaryFromContent(detail);
 	const tags = extractTags(`${name} ${summary} ${detail}`);
 	const nameSummary = `${name} ${summary}`;
+	const retention = inferRetention(item);
+	const salience = inferSalience(item);
+	const stability = inferStability(item);
 
 	if (isDuplicate(entries, memType, tags, nameSummary)) return;
 
@@ -90,6 +151,17 @@ export function applyExtraction(
 			content: detail,
 			tags,
 			lastAccessed: new Date().toISOString(),
+			retention:
+				existing.retention === "core" || retention === "core"
+					? "core"
+					: existing.retention === "key-event" || retention === "key-event"
+						? "key-event"
+						: "ambient",
+			salience: Math.max(existing.salience ?? existing.importance, salience),
+			eventData: item.eventData ?? existing.eventData,
+			stateData: item.stateData ?? existing.stateData,
+			stability: existing.stability === "stable" || stability === "stable" ? "stable" : "situational",
+			ttl: inferTtl(item, cfg, retention, salience) ?? existing.ttl,
 		};
 		return;
 	}
@@ -121,6 +193,12 @@ export function applyExtraction(
 		relatedIds: [],
 		scope: cfg.defaultScope,
 		facetData: item.facetData,
+		eventData: item.eventData,
+		retention,
+		salience,
+		stability,
+		stateData: item.stateData,
+		ttl: inferTtl(item, cfg, retention, salience),
 	};
 
 	linkNewEntry(newEntry, entries);
@@ -147,6 +225,8 @@ function mapType(t: ExtractedItem["type"]): MemoryEntry["type"] {
 			return "pattern";
 		case "struggle":
 			return "struggle";
+		case "event":
+			return "event";
 		default:
 			return "fact";
 	}

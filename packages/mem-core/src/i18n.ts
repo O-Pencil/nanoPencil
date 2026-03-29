@@ -11,6 +11,9 @@ export interface PromptSet {
 	reconsolidationSystem: string;
 	sectionLessons: string;
 	sectionKnowledge: string;
+	sectionKeyEvents?: string;
+	sectionRelatedContext?: string;
+	sectionCurrentState?: string;
 	sectionEpisodes: string;
 	sectionPreferences: string;
 	sectionWork: string;
@@ -77,12 +80,14 @@ Do NOT extract:
 - Verbose logs — capture gist and why it matters
 
 Return a JSON array. Each item: "type", "name", "summary", "detail", optionally "facetData".
-Types: preference | fact | lesson | decision | retract | pattern | struggle
+Types: preference | fact | lesson | decision | event | retract | pattern | struggle
 
 Field rules:
 - name: max 30 chars — what you'd call it when recalling
 - summary: one-liner max 150 chars — the cue that triggers the memory
 - detail: full context but concise — why it matters, not verbatim transcript
+- event: use this when something meaningfully changed the relationship, the workflow, or future decisions
+- mark short-lived moods, stress, burnout, urgency, or temporary constraints as situational instead of stable
 - facetData (pattern): {"kind": "pattern", "trigger": "when/condition", "behavior": "what they do"}
 - facetData (struggle): {"kind": "struggle", "problem": "what failed", "attempts": ["tried X", "tried Y"], "solution": "what finally worked"}
 
@@ -115,6 +120,9 @@ Return ONLY the updated text, no JSON wrapping.`,
 
 	sectionLessons: "Lessons Learned",
 	sectionKnowledge: "Knowledge Base",
+	sectionKeyEvents: "Key Events",
+	sectionRelatedContext: "Related Context",
+	sectionCurrentState: "Current State Signals",
 	sectionEpisodes: "Recent Sessions",
 	sectionPreferences: "User Preferences",
 	sectionWork: "Work History",

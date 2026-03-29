@@ -14,9 +14,15 @@ import { utilityEntry, utilityWork } from "./eviction.js";
 import { extractMemories, extractWork } from "./extraction.js";
 import type { PromptSet } from "./i18n.js";
 import { PROMPTS } from "./i18n.js";
-import { getRelatedSummaries, linkNewEntry } from "./linking.js";
+import {
+	getGraphContextSummaries,
+	getGraphNeighborhoodBySeeds,
+	linkNewEntry,
+	reinforceRelations,
+	type GraphNeighbor,
+} from "./linking.js";
 import { evictExpiredEntries, evictExpiredWork, filterByScope, filterPII } from "./privacy.js";
-import { extractTags, pickTop, scoreEntry, scoreEpisode, scoreWorkEntry, tagOverlap, tierEntries } from "./scoring.js";
+import { daysSince, extractTags, pickTop, scoreEntry, scoreEpisode, scoreWorkEntry, tagOverlap, tierEntries } from "./scoring.js";
 import {
 	loadEntries,
 	loadEpisodes,
@@ -37,6 +43,7 @@ import type {
 	FullInsightsReport,
 	HumanInsight,
 	InsightsReport,
+	AlignmentSnapshot,
 	LlmFn,
 	MemoryEntry,
 	MemoryScope,
@@ -54,6 +61,7 @@ export class NanoMemEngine {
 
 	private knowledgePath: string;
 	private lessonsPath: string;
+	private eventsPath: string;
 	private preferencesPath: string;
 	private facetsPath: string;
 	private workPath: string;
@@ -65,6 +73,7 @@ export class NanoMemEngine {
 		this.llmFn = llmFn;
 		this.knowledgePath = join(this.cfg.memoryDir, "knowledge.json");
 		this.lessonsPath = join(this.cfg.memoryDir, "lessons.json");
+		this.eventsPath = join(this.cfg.memoryDir, "events.json");
 		this.preferencesPath = join(this.cfg.memoryDir, "preferences.json");
 		this.facetsPath = join(this.cfg.memoryDir, "facets.json");
 		this.workPath = join(this.cfg.memoryDir, "work.json");
@@ -84,6 +93,7 @@ export class NanoMemEngine {
 
 		const knowledge = await loadEntries(this.knowledgePath);
 		const lessons = await loadEntries(this.lessonsPath);
+		const events = await loadEntries(this.eventsPath);
 		const prefs = await loadEntries(this.preferencesPath);
 		const facets = await loadEntries(this.facetsPath);
 
@@ -91,6 +101,8 @@ export class NanoMemEngine {
 			const target =
 				item.type === "lesson"
 					? lessons
+					: item.type === "event"
+						? events
 					: item.type === "preference"
 						? prefs
 						: item.type === "pattern" || item.type === "struggle"
@@ -104,6 +116,7 @@ export class NanoMemEngine {
 		await Promise.all([
 			saveEntries(this.knowledgePath, knowledge, this.cfg.maxEntries.knowledge, (e) => utilityEntry(e, hl, ew)),
 			saveEntries(this.lessonsPath, lessons, this.cfg.maxEntries.lessons, (e) => utilityEntry(e, hl, ew)),
+			saveEntries(this.eventsPath, events, this.cfg.maxEntries.events, (e) => utilityEntry(e, hl, ew)),
 			saveEntries(this.preferencesPath, prefs, this.cfg.maxEntries.preferences, (e) => utilityEntry(e, hl, ew)),
 			saveEntries(this.facetsPath, facets, this.cfg.maxEntries.facets, (e) => utilityEntry(e, hl, ew)),
 		]);
@@ -130,6 +143,7 @@ export class NanoMemEngine {
 			eventTime: now,
 			accessCount: 0,
 			relatedIds: [],
+			ttl: this.cfg.forgetting.workTtlDays,
 			scope: this.cfg.defaultScope,
 		};
 
@@ -169,10 +183,11 @@ export class NanoMemEngine {
 
 		const knowledge = await loadEntries(this.knowledgePath);
 		const lessons = await loadEntries(this.lessonsPath);
-		const allExisting = [...knowledge, ...lessons];
+		const events = await loadEntries(this.eventsPath);
+		const allExisting = [...knowledge, ...lessons, ...events];
 
 		for (const entry of newEntries) {
-			const target = entry.type === "lesson" ? lessons : knowledge;
+			const target = entry.type === "lesson" ? lessons : entry.type === "event" ? events : knowledge;
 			const result = checkConsolidationEntry(target, entry, allExisting);
 			if (result.action === "skip") continue;
 			if (result.action === "update" && result.index !== undefined) {
@@ -198,6 +213,7 @@ export class NanoMemEngine {
 		await Promise.all([
 			saveEntries(this.knowledgePath, knowledge, this.cfg.maxEntries.knowledge, (e) => utilityEntry(e, hl, ew)),
 			saveEntries(this.lessonsPath, lessons, this.cfg.maxEntries.lessons, (e) => utilityEntry(e, hl, ew)),
+			saveEntries(this.eventsPath, events, this.cfg.maxEntries.events, (e) => utilityEntry(e, hl, ew)),
 		]);
 
 		for (const ep of episodes) {
@@ -214,9 +230,10 @@ export class NanoMemEngine {
 	// ─── Retrieval & Injection (Progressive Recall) ────────────
 
 	async getMemoryInjection(project: string, contextTags: string[], scope?: MemoryScope): Promise<string> {
-		const [allKnowledge, allLessons, allPrefs, allFacets, allEpisodes, allWork] = await Promise.all([
+		const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
+			loadEntries(this.eventsPath),
 			loadEntries(this.preferencesPath),
 			loadEntries(this.facetsPath),
 			loadEpisodes(this.episodesDir),
@@ -225,6 +242,7 @@ export class NanoMemEngine {
 
 		const knowledge = this.filterAndCleanEntries(allKnowledge, scope);
 		const lessons = this.filterAndCleanEntries(allLessons, scope);
+		const events = this.filterAndCleanEntries(allEvents, scope);
 		const prefs = this.filterAndCleanEntries(allPrefs, scope);
 		const facets = this.filterAndCleanEntries(allFacets, scope);
 		const work = this.filterAndCleanWork(allWork, scope);
@@ -238,6 +256,7 @@ export class NanoMemEngine {
 		// Tier all MemoryEntry categories
 		const tieredKnowledge = tierEntries(knowledge, project, contextTags, hl, sw, pr);
 		const tieredLessons = tierEntries(lessons, project, contextTags, hl, sw, pr);
+		const tieredEvents = tierEntries(events, project, contextTags, hl, sw, pr);
 		const tieredPrefs = tierEntries(prefs, project, contextTags, hl, sw, pr);
 		const tieredFacets = tierEntries(facets, project, contextTags, hl, sw, pr);
 
@@ -253,18 +272,34 @@ export class NanoMemEngine {
 		const scoreFn = (e: MemoryEntry) => scoreEntry(e, project, contextTags, hl, sw);
 
 		// Active tier: pick top entries with full detail, split budget across categories
-		const activeBudgetPer = Math.floor(activeChars / 4);
+		const activeBudgetPer = Math.floor(activeChars / 5);
 		const activeKnowledge = pickTop(tieredKnowledge.active, scoreFn, activeLen, activeBudgetPer);
 		const activeLessons = pickTop(tieredLessons.active, scoreFn, activeLen, activeBudgetPer);
+		const activeEvents = pickTop(tieredEvents.active, scoreFn, activeLen, activeBudgetPer);
 		const activePrefs = pickTop(tieredPrefs.active, scoreFn, activeLen, activeBudgetPer);
 		const activeFacets = pickTop(tieredFacets.active, scoreFn, activeLen, activeBudgetPer);
 
+		const activeSeeds = [...activeKnowledge, ...activeLessons, ...activeEvents, ...activePrefs, ...activeFacets];
+		const allEntries = [...allKnowledge, ...allLessons, ...allEvents, ...allPrefs, ...allFacets];
+		const activeIds = new Set(activeSeeds.map((entry) => entry.id));
+		const graphContext = getGraphNeighborhoodBySeeds(activeSeeds, allEntries, 8).filter(
+			(neighbor) => !activeIds.has(neighbor.entry.id),
+		);
+
 		// Cue tier: pick top entries with name + summary + id, split budget across categories
-		const cueBudgetPer = Math.floor(cueChars / 6); // 6 = knowledge + lessons + prefs + facets + episodes + work
+		const cueBudgetPer = Math.floor(cueChars / 7); // 7 = knowledge + lessons + events + prefs + facets + episodes + work
 		const cueKnowledge = pickTop(tieredKnowledge.cue, scoreFn, cueLen, cueBudgetPer);
 		const cueLessons = pickTop(tieredLessons.cue, scoreFn, cueLen, cueBudgetPer);
+		const cueEvents = pickTop(tieredEvents.cue, scoreFn, cueLen, cueBudgetPer);
 		const cuePrefs = pickTop(tieredPrefs.cue, scoreFn, cueLen, cueBudgetPer);
 		const cueFacets = pickTop(tieredFacets.cue, scoreFn, cueLen, cueBudgetPer);
+		const graphContextIds = new Set(graphContext.map((neighbor) => neighbor.entry.id));
+		const dedupeCue = (entries: MemoryEntry[]) => entries.filter((entry) => !graphContextIds.has(entry.id));
+		const dedupedCueKnowledge = dedupeCue(cueKnowledge);
+		const dedupedCueLessons = dedupeCue(cueLessons);
+		const dedupedCueEvents = dedupeCue(cueEvents);
+		const dedupedCuePrefs = dedupeCue(cuePrefs);
+		const dedupedCueFacets = dedupeCue(cueFacets);
 
 		// Episodes and Work use their existing scoring for cue layer
 		const topEpisodes = pickTop(
@@ -281,13 +316,15 @@ export class NanoMemEngine {
 		);
 
 		// Reinforce all recalled entries (Active + Cue) via spaced repetition
-		const allRecalledKnowledge = [...activeKnowledge, ...cueKnowledge];
-		const allRecalledLessons = [...activeLessons, ...cueLessons];
-		const allRecalledPrefs = [...activePrefs, ...cuePrefs];
-		const allRecalledFacets = [...activeFacets, ...cueFacets];
+		const allRecalledKnowledge = [...activeKnowledge, ...dedupedCueKnowledge];
+		const allRecalledLessons = [...activeLessons, ...dedupedCueLessons];
+		const allRecalledEvents = [...activeEvents, ...dedupedCueEvents];
+		const allRecalledPrefs = [...activePrefs, ...dedupedCuePrefs];
+		const allRecalledFacets = [...activeFacets, ...dedupedCueFacets];
 
 		await this.reinforceEntries(allRecalledKnowledge, allKnowledge, this.knowledgePath);
 		await this.reinforceEntries(allRecalledLessons, allLessons, this.lessonsPath);
+		await this.reinforceEntries(allRecalledEvents, allEvents, this.eventsPath);
 		await this.reinforceEntries(allRecalledPrefs, allPrefs, this.preferencesPath);
 		await this.reinforceEntries(allRecalledFacets, allFacets, this.facetsPath);
 		await this.reinforceWork(topWork, allWork);
@@ -302,18 +339,21 @@ export class NanoMemEngine {
 			{
 				knowledge: activeKnowledge,
 				lessons: activeLessons,
+				events: activeEvents,
 				preferences: activePrefs,
 				facets: activeFacets,
 			},
 			{
-				knowledge: cueKnowledge,
-				lessons: cueLessons,
-				preferences: cuePrefs,
-				facets: cueFacets,
+				knowledge: dedupedCueKnowledge,
+				lessons: dedupedCueLessons,
+				events: dedupedCueEvents,
+				preferences: dedupedCuePrefs,
+				facets: dedupedCueFacets,
 				episodes: topEpisodes,
 				work: topWork,
 			},
-			allKnowledge,
+			allEntries,
+			graphContext,
 			p,
 		);
 	}
@@ -322,8 +362,7 @@ export class NanoMemEngine {
 
 	/** Retrieve a single entry by ID (for recall_memory tool) */
 	async getEntryById(id: string): Promise<MemoryEntry | null> {
-		const paths = [this.knowledgePath, this.lessonsPath, this.preferencesPath, this.facetsPath];
-		for (const path of paths) {
+		for (const { path } of this.getMemoryPathConfigs()) {
 			const entries = await loadEntries(path);
 			const entry = entries.find((e) => e.id === id);
 			if (entry) return entry;
@@ -333,12 +372,7 @@ export class NanoMemEngine {
 
 	/** Reinforce a single entry by ID (bump accessCount, lastAccessed, strength) */
 	async reinforceEntryById(id: string): Promise<boolean> {
-		const pathConfigs = [
-			{ path: this.knowledgePath, max: this.cfg.maxEntries.knowledge },
-			{ path: this.lessonsPath, max: this.cfg.maxEntries.lessons },
-			{ path: this.preferencesPath, max: this.cfg.maxEntries.preferences },
-			{ path: this.facetsPath, max: this.cfg.maxEntries.facets },
-		];
+		const pathConfigs = this.getMemoryPathConfigs();
 		const hl = this.cfg.halfLife;
 		const ew = this.cfg.evictionWeights;
 
@@ -356,26 +390,125 @@ export class NanoMemEngine {
 		return false;
 	}
 
+	async editEntryById(
+		id: string,
+		patch: Partial<
+			Pick<MemoryEntry, "name" | "summary" | "detail" | "retention" | "salience" | "stability" | "ttl">
+		> & { tags?: string[] },
+	): Promise<MemoryEntry | null> {
+		const located = await this.findEntryLocation(id);
+		if (!located) return null;
+		const { entry, entries, path, max } = located;
+		const detail = patch.detail ?? entry.detail ?? entry.content ?? "";
+		entry.name = patch.name ?? entry.name;
+		entry.summary = patch.summary ?? entry.summary;
+		entry.detail = detail;
+		entry.content = detail;
+		entry.retention = patch.retention ?? entry.retention;
+		entry.salience = patch.salience ?? entry.salience;
+		entry.stability = patch.stability ?? entry.stability;
+		entry.ttl = patch.ttl ?? entry.ttl;
+		entry.tags = patch.tags?.length ? patch.tags : extractTags(`${entry.name || ""} ${entry.summary || ""} ${detail}`);
+		entry.lastAccessed = new Date().toISOString();
+		await this.persistEntries(path, entries, max);
+		return entry;
+	}
+
+	async resolveConflictByIds(
+		aId: string,
+		bId: string,
+		action: "merge" | "demote" | "forget" | "mark-situational",
+	): Promise<{ action: string; updatedIds: string[] } | null> {
+		const aLocated = await this.findEntryLocation(aId);
+		const bLocated = await this.findEntryLocation(bId);
+		if (!aLocated || !bLocated) return null;
+
+		const pickPrimary = () => {
+			const score = (entry: MemoryEntry) =>
+				(entry.salience ?? entry.importance) * 2 +
+				(entry.accessCount ?? 0) +
+				(entry.retention === "core" ? 4 : entry.retention === "key-event" ? 2 : 0);
+			return score(aLocated.entry) >= score(bLocated.entry)
+				? { primary: aLocated, secondary: bLocated }
+				: { primary: bLocated, secondary: aLocated };
+		};
+
+		const { primary, secondary } = pickPrimary();
+
+		if (action === "forget") {
+			secondary.entries.splice(secondary.entries.findIndex((entry) => entry.id === secondary.entry.id), 1);
+			await this.persistEntries(secondary.path, secondary.entries, secondary.max);
+			return { action, updatedIds: [primary.entry.id] };
+		}
+
+		if (action === "demote") {
+			secondary.entry.retention = "ambient";
+			secondary.entry.salience = Math.max(1, Math.min(secondary.entry.salience ?? secondary.entry.importance, 4));
+			secondary.entry.ttl = secondary.entry.ttl ?? this.cfg.forgetting.ambientTtlDays;
+			secondary.entry.lastAccessed = new Date().toISOString();
+			await this.persistEntries(secondary.path, secondary.entries, secondary.max);
+			return { action, updatedIds: [secondary.entry.id] };
+		}
+
+		if (action === "mark-situational") {
+			secondary.entry.stability = "situational";
+			secondary.entry.retention = "ambient";
+			secondary.entry.ttl = Math.min(14, this.cfg.forgetting.ambientTtlDays);
+			secondary.entry.lastAccessed = new Date().toISOString();
+			await this.persistEntries(secondary.path, secondary.entries, secondary.max);
+			return { action, updatedIds: [secondary.entry.id] };
+		}
+
+		primary.entry.summary = [primary.entry.summary, secondary.entry.summary].filter(Boolean).join(" | ").slice(0, 300);
+		primary.entry.detail = [primary.entry.detail || primary.entry.content, secondary.entry.detail || secondary.entry.content]
+			.filter(Boolean)
+			.join("\n\n")
+			.slice(0, 4000);
+		primary.entry.content = primary.entry.detail;
+		primary.entry.tags = [...new Set([...(primary.entry.tags ?? []), ...(secondary.entry.tags ?? [])])].slice(0, 30);
+		primary.entry.relatedIds = [...new Set([...(primary.entry.relatedIds ?? []), ...(secondary.entry.relatedIds ?? []), secondary.entry.id])].slice(0, 20);
+		primary.entry.relations = [
+			...new Map(
+				[...(primary.entry.relations ?? []), ...(secondary.entry.relations ?? [])].map((relation) => [
+					`${relation.id}:${relation.kind}`,
+					relation,
+				]),
+			).values(),
+		].slice(0, 30);
+		primary.entry.salience = Math.max(primary.entry.salience ?? primary.entry.importance, secondary.entry.salience ?? secondary.entry.importance);
+		primary.entry.lastAccessed = new Date().toISOString();
+		secondary.entries.splice(secondary.entries.findIndex((entry) => entry.id === secondary.entry.id), 1);
+		await Promise.all([
+			this.persistEntries(primary.path, primary.entries, primary.max),
+			this.persistEntries(secondary.path, secondary.entries, secondary.max),
+		]);
+		return { action, updatedIds: [primary.entry.id] };
+	}
+
 	/** Full-text search across ALL entries including dormant (for search_all_memories tool) */
 	async searchAllEntries(query: string, limit = 10): Promise<MemoryEntry[]> {
 		const tags = extractTags(query);
 		const queryLower = query.toLowerCase();
 
-		const [knowledge, lessons, prefs, facets] = await Promise.all([
+		const [knowledge, lessons, events, prefs, facets] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
+			loadEntries(this.eventsPath),
 			loadEntries(this.preferencesPath),
 			loadEntries(this.facetsPath),
 		]);
 
-		const all = [...knowledge, ...lessons, ...prefs, ...facets];
+		const all = [...knowledge, ...lessons, ...events, ...prefs, ...facets];
 
 		return all
 			.map((e) => {
 				const nameMatch = (e.name || "").toLowerCase().includes(queryLower) ? 2 : 0;
 				const summaryMatch = (e.summary || "").toLowerCase().includes(queryLower) ? 1 : 0;
 				const tagMatch = tagOverlap(e.tags, tags);
-				return { entry: e, score: nameMatch + summaryMatch + tagMatch };
+				const relationBoost = (e.relations ?? [])
+					.filter((relation) => tags.some((tag) => relation.kind.includes(tag) || relation.id.includes(tag)))
+					.reduce((sum, relation) => sum + relation.weight * 0.15, 0);
+				return { entry: e, score: nameMatch + summaryMatch + tagMatch + relationBoost };
 			})
 			.filter((x) => x.score > 0)
 			.sort((a, b) => b.score - a.score)
@@ -388,15 +521,17 @@ export class NanoMemEngine {
 	async getStats(): Promise<{
 		knowledge: number;
 		lessons: number;
+		events: number;
 		preferences: number;
 		facets: number;
 		episodes: number;
 		work: number;
 		totalSessions: number;
 	}> {
-		const [knowledge, lessons, prefs, facets, episodes, work, meta] = await Promise.all([
+		const [knowledge, lessons, events, prefs, facets, episodes, work, meta] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
+			loadEntries(this.eventsPath),
 			loadEntries(this.preferencesPath),
 			loadEntries(this.facetsPath),
 			loadEpisodes(this.episodesDir),
@@ -406,6 +541,7 @@ export class NanoMemEngine {
 		return {
 			knowledge: knowledge.length,
 			lessons: lessons.length,
+			events: events.length,
 			preferences: prefs.length,
 			facets: facets.length,
 			episodes: episodes.length,
@@ -419,12 +555,14 @@ export class NanoMemEngine {
 	async getAllEntries(): Promise<{
 		knowledge: MemoryEntry[];
 		lessons: MemoryEntry[];
+		events: MemoryEntry[];
 		preferences: MemoryEntry[];
 		facets: MemoryEntry[];
 	}> {
 		return {
 			knowledge: await loadEntries(this.knowledgePath),
 			lessons: await loadEntries(this.lessonsPath),
+			events: await loadEntries(this.eventsPath),
 			preferences: await loadEntries(this.preferencesPath),
 			facets: await loadEntries(this.facetsPath),
 		};
@@ -442,14 +580,16 @@ export class NanoMemEngine {
 	async deduplicateAll(): Promise<{
 		knowledge: number;
 		lessons: number;
+		events: number;
 		preferences: number;
 		facets: number;
 		work: number;
 		total: number;
 	}> {
-		const [knowledge, lessons, prefs, facets, work] = await Promise.all([
+		const [knowledge, lessons, events, prefs, facets, work] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
+			loadEntries(this.eventsPath),
 			loadEntries(this.preferencesPath),
 			loadEntries(this.facetsPath),
 			loadWork(this.workPath),
@@ -457,6 +597,7 @@ export class NanoMemEngine {
 
 		const k = deduplicateMemoryEntries(knowledge);
 		const l = deduplicateMemoryEntries(lessons);
+		const ev = deduplicateMemoryEntries(events);
 		const p = deduplicateMemoryEntries(prefs);
 		const f = deduplicateMemoryEntries(facets);
 		const w = deduplicateWorkEntries(work);
@@ -468,6 +609,9 @@ export class NanoMemEngine {
 				utilityEntry(e, hl, ew),
 			),
 			saveEntries(this.lessonsPath, l.deduped, this.cfg.maxEntries.lessons, (e) =>
+				utilityEntry(e, hl, ew),
+			),
+			saveEntries(this.eventsPath, ev.deduped, this.cfg.maxEntries.events, (e) =>
 				utilityEntry(e, hl, ew),
 			),
 			saveEntries(this.preferencesPath, p.deduped, this.cfg.maxEntries.preferences, (e) =>
@@ -482,10 +626,11 @@ export class NanoMemEngine {
 		]);
 
 		const total =
-			k.removedCount + l.removedCount + p.removedCount + f.removedCount + w.removedCount;
+			k.removedCount + l.removedCount + ev.removedCount + p.removedCount + f.removedCount + w.removedCount;
 		return {
 			knowledge: k.removedCount,
 			lessons: l.removedCount,
+			events: ev.removedCount,
 			preferences: p.removedCount,
 			facets: f.removedCount,
 			work: w.removedCount,
@@ -495,17 +640,71 @@ export class NanoMemEngine {
 
 	async searchEntries(query: string, scope?: MemoryScope): Promise<MemoryEntry[]> {
 		const tags = extractTags(query);
-		const { knowledge, lessons, preferences, facets } = await this.getAllEntries();
-		const all = [...knowledge, ...lessons, ...preferences, ...facets];
+		const { knowledge, lessons, events, preferences, facets } = await this.getAllEntries();
+		const all = [...knowledge, ...lessons, ...events, ...preferences, ...facets];
 		return filterByScope(all, scope)
-			.map((e) => ({ entry: e, score: tagOverlap(e.tags, tags) }))
+			.map((e) => ({
+				entry: e,
+				score:
+					tagOverlap(e.tags, tags) +
+					(e.relations ?? [])
+						.filter((relation) => tags.some((tag) => relation.kind.includes(tag) || relation.id.includes(tag)))
+						.reduce((sum, relation) => sum + relation.weight * 0.12, 0),
+			}))
 			.filter((x) => x.score > 0)
 			.sort((a, b) => b.score - a.score)
 			.map((x) => x.entry);
 	}
 
+	async getAlignmentSnapshot(): Promise<AlignmentSnapshot> {
+		const all = await this.exportAll();
+		const memoryEntries = [...all.knowledge, ...all.lessons, ...all.events, ...all.preferences, ...all.facets];
+		const sortByInfluence = (entries: MemoryEntry[]) =>
+			[...entries].sort((a, b) => {
+				const aScore =
+					(a.salience ?? a.importance) * ((a.accessCount ?? 0) + 1) + (a.retention === "core" ? 2 : 0);
+				const bScore =
+					(b.salience ?? b.importance) * ((b.accessCount ?? 0) + 1) + (b.retention === "core" ? 2 : 0);
+				return bScore - aScore;
+			});
+		const identityCore = sortByInfluence(
+			memoryEntries.filter((entry) => entry.stability !== "situational" && entry.retention === "core"),
+		).slice(0, 8);
+		const keyEvents = sortByInfluence(
+			memoryEntries.filter((entry) => entry.type === "event" || entry.retention === "key-event"),
+		).slice(0, 8);
+		const behaviorDrivers = sortByInfluence(
+			memoryEntries.filter((entry) => entry.type === "pattern" || entry.type === "preference" || entry.type === "lesson"),
+		).slice(0, 8);
+		const currentState = sortByInfluence(
+			memoryEntries.filter((entry) => entry.stability === "situational" || entry.stateData),
+		).slice(0, 6);
+		const relationshipEdges = sortByInfluence(memoryEntries)
+			.flatMap((entry) =>
+				(entry.relations ?? []).map((relation) => ({
+					fromId: entry.id,
+					toId: relation.id,
+					kind: relation.kind,
+					weight: relation.weight,
+				})),
+			)
+			.sort((a, b) => b.weight - a.weight)
+			.slice(0, 12);
+		const conflicts = this.detectAlignmentConflicts(memoryEntries).slice(0, 8);
+
+		return {
+			identityCore,
+			keyEvents,
+			behaviorDrivers,
+			currentState,
+			relationshipEdges,
+			conflicts,
+			generatedAt: new Date().toISOString(),
+		};
+	}
+
 	async forgetEntry(id: string): Promise<boolean> {
-		const paths = [this.knowledgePath, this.lessonsPath, this.preferencesPath, this.facetsPath];
+		const paths = [this.knowledgePath, this.lessonsPath, this.eventsPath, this.preferencesPath, this.facetsPath];
 		for (const path of paths) {
 			const entries = await loadEntries(path);
 			const idx = entries.findIndex((e) => e.id === id);
@@ -523,22 +722,24 @@ export class NanoMemEngine {
 	async exportAll(): Promise<{
 		knowledge: MemoryEntry[];
 		lessons: MemoryEntry[];
+		events: MemoryEntry[];
 		preferences: MemoryEntry[];
 		facets: MemoryEntry[];
 		work: WorkEntry[];
 		episodes: Episode[];
 		meta: Meta;
 	}> {
-		const [knowledge, lessons, preferences, facets, work, episodes, meta] = await Promise.all([
+		const [knowledge, lessons, events, preferences, facets, work, episodes, meta] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
+			loadEntries(this.eventsPath),
 			loadEntries(this.preferencesPath),
 			loadEntries(this.facetsPath),
 			loadWork(this.workPath),
 			loadEpisodes(this.episodesDir),
 			loadMeta(this.metaPath),
 		]);
-		return { knowledge, lessons, preferences, facets, work, episodes, meta };
+		return { knowledge, lessons, events, preferences, facets, work, episodes, meta };
 	}
 
 	// ─── Full Insights Report ────────────────────────────────────────
@@ -747,6 +948,33 @@ export class NanoMemEngine {
 
 	// ─── Private Helpers ─────────────────────────────────────────
 
+	private getMemoryPathConfigs(): Array<{ path: string; max: number }> {
+		return [
+			{ path: this.knowledgePath, max: this.cfg.maxEntries.knowledge },
+			{ path: this.lessonsPath, max: this.cfg.maxEntries.lessons },
+			{ path: this.eventsPath, max: this.cfg.maxEntries.events },
+			{ path: this.preferencesPath, max: this.cfg.maxEntries.preferences },
+			{ path: this.facetsPath, max: this.cfg.maxEntries.facets },
+		];
+	}
+
+	private async findEntryLocation(
+		id: string,
+	): Promise<{ entry: MemoryEntry; entries: MemoryEntry[]; path: string; max: number } | null> {
+		for (const { path, max } of this.getMemoryPathConfigs()) {
+			const entries = await loadEntries(path);
+			const entry = entries.find((candidate) => candidate.id === id);
+			if (entry) return { entry, entries, path, max };
+		}
+		return null;
+	}
+
+	private async persistEntries(path: string, entries: MemoryEntry[], max: number): Promise<void> {
+		const hl = this.cfg.halfLife;
+		const ew = this.cfg.evictionWeights;
+		await saveEntries(path, entries, max, (entry) => utilityEntry(entry, hl, ew));
+	}
+
 	private filterAndCleanEntries(entries: MemoryEntry[], scope?: MemoryScope): MemoryEntry[] {
 		return filterByScope(evictExpiredEntries(entries), scope);
 	}
@@ -765,20 +993,108 @@ export class NanoMemEngine {
 				entry.strength = (entry.strength || 30) * this.cfg.strengthGrowthFactor;
 			}
 		}
-		const hl = this.cfg.halfLife;
-		const ew = this.cfg.evictionWeights;
-		await saveEntries(
-			savePath,
-			all,
-			savePath === this.lessonsPath
-				? this.cfg.maxEntries.lessons
-				: savePath === this.preferencesPath
-					? this.cfg.maxEntries.preferences
-					: savePath === this.facetsPath
-						? this.cfg.maxEntries.facets
-						: this.cfg.maxEntries.knowledge,
-			(e) => utilityEntry(e, hl, ew),
+		reinforceRelations(recalled, all);
+		const pathConfig = this.getMemoryPathConfigs().find((config) => config.path === savePath);
+		await this.persistEntries(savePath, all, pathConfig?.max ?? this.cfg.maxEntries.knowledge);
+	}
+
+	private detectAlignmentConflicts(
+		entries: MemoryEntry[],
+	): Array<{
+		aId: string;
+		bId: string;
+		reason: string;
+		severity: number;
+		recommendation: "merge" | "demote" | "forget" | "mark-situational";
+		rationale: string;
+	}> {
+		const candidates = entries.filter(
+			(entry) =>
+				entry.stability !== "situational" &&
+				(entry.retention === "core" || entry.retention === "key-event") &&
+				!!(entry.summary || entry.detail || entry.name),
 		);
+		const conflicts: Array<{
+			aId: string;
+			bId: string;
+			reason: string;
+			severity: number;
+			recommendation: "merge" | "demote" | "forget" | "mark-situational";
+			rationale: string;
+		}> = [];
+		const seen = new Set<string>();
+		const positiveMarkers = ["prefer", "always", "use", "enable", "include", "like", "keep", "should"];
+		const negativeMarkers = ["avoid", "never", "disable", "remove", "dislike", "hate", "stop", "do not", "don't"];
+		const getText = (entry: MemoryEntry) =>
+			`${entry.name || ""} ${entry.summary || ""} ${entry.detail || ""}`.toLowerCase();
+		const polarity = (text: string): "positive" | "negative" | "neutral" => {
+			const hasPositive = positiveMarkers.some((marker) => text.includes(marker));
+			const hasNegative = negativeMarkers.some((marker) => text.includes(marker));
+			if (hasPositive && !hasNegative) return "positive";
+			if (hasNegative && !hasPositive) return "negative";
+			return "neutral";
+		};
+
+		for (let i = 0; i < candidates.length; i++) {
+			for (let j = i + 1; j < candidates.length; j++) {
+				const a = candidates[i]!;
+				const b = candidates[j]!;
+				if (a.id === b.id) continue;
+				const overlap = tagOverlap(a.tags, b.tags);
+				if (overlap < 0.45) continue;
+				const aPolarity = polarity(getText(a));
+				const bPolarity = polarity(getText(b));
+				if (aPolarity === "neutral" || bPolarity === "neutral" || aPolarity === bPolarity) continue;
+				const pairKey = [a.id, b.id].sort().join(":");
+				if (seen.has(pairKey)) continue;
+				seen.add(pairKey);
+				const severity = Math.min(
+					1,
+					overlap * 0.6 + ((a.salience ?? a.importance) + (b.salience ?? b.importance)) / 20 * 0.4,
+				);
+				const reason = `Potential conflict on shared context: ${aPolarity} vs ${bPolarity}`;
+				const recommendation = this.suggestConflictAction(a, b, severity);
+				const rationale = this.explainConflictAction(a, b, recommendation);
+				conflicts.push({ aId: a.id, bId: b.id, reason, severity, recommendation, rationale });
+			}
+		}
+
+		return conflicts.sort((a, b) => b.severity - a.severity);
+	}
+
+	private suggestConflictAction(
+		a: MemoryEntry,
+		b: MemoryEntry,
+		severity: number,
+	): "merge" | "demote" | "forget" | "mark-situational" {
+		const aStable = a.stability !== "situational";
+		const bStable = b.stability !== "situational";
+		const aRecent = daysSince(a.created) <= 14;
+		const bRecent = daysSince(b.created) <= 14;
+		const aLowSignal = (a.salience ?? a.importance) <= 4;
+		const bLowSignal = (b.salience ?? b.importance) <= 4;
+
+		if (aStable !== bStable) return "mark-situational";
+		if (severity >= 0.8 && (aLowSignal || bLowSignal)) return "forget";
+		if (severity >= 0.65 && (aRecent || bRecent)) return "demote";
+		return "merge";
+	}
+
+	private explainConflictAction(
+		a: MemoryEntry,
+		b: MemoryEntry,
+		action: "merge" | "demote" | "forget" | "mark-situational",
+	): string {
+		switch (action) {
+			case "mark-situational":
+				return "One side looks more temporary than the other, so this conflict likely comes from short-term context rather than true identity drift.";
+			case "forget":
+				return "One side has weak signal compared with the conflict risk, so forgetting the weaker memory is safer than keeping both.";
+			case "demote":
+				return "At least one side is recent enough that it may be an overfit; demoting it reduces the chance of personality drift.";
+			default:
+				return "Both memories may describe the same preference from different angles, so a merged memory is likely safer than keeping them separate.";
+		}
 	}
 
 	private async reinforceWork(recalled: WorkEntry[], all: WorkEntry[]): Promise<void> {
@@ -829,29 +1145,41 @@ export class NanoMemEngine {
 		active: {
 			knowledge: MemoryEntry[];
 			lessons: MemoryEntry[];
+			events: MemoryEntry[];
 			preferences: MemoryEntry[];
 			facets: MemoryEntry[];
 		},
 		cue: {
 			knowledge: MemoryEntry[];
 			lessons: MemoryEntry[];
+			events: MemoryEntry[];
 			preferences: MemoryEntry[];
 			facets: MemoryEntry[];
 			episodes: Episode[];
 			work: WorkEntry[];
 		},
-		allKnowledge: MemoryEntry[],
+		allEntries: MemoryEntry[],
+		graphContext: GraphNeighbor[],
 		p: PromptSet,
 	): string {
 		const sections: string[] = [];
 
 		// ── Active tier: full detail ──
 		const activeLines: string[] = [];
+		const keyEventLines: string[] = [];
+		const stateLines: string[] = [];
 
 		const formatActiveEntry = (e: MemoryEntry): string => {
-			const related = getRelatedSummaries(e, allKnowledge, 2);
+			const related = getGraphContextSummaries(e, allEntries, 3);
 			const suffix = related.length ? ` [→ ${related.join("; ")}]` : "";
 			return `- [ID: ${e.id}] **${e.name || "—"}**: ${e.summary || ""}\n  ${e.detail || ""}${suffix}`;
+		};
+
+		const formatActiveEvent = (e: MemoryEntry): string => {
+			const related = getGraphContextSummaries(e, allEntries, 4);
+			const outcome = e.eventData?.outcome ? `\n  Outcome: ${e.eventData.outcome}` : "";
+			const suffix = related.length ? ` [→ ${related.join("; ")}]` : "";
+			return `- [ID: ${e.id}] **${e.name || "—"}**: ${e.summary || ""}\n  ${e.detail || ""}${outcome}${suffix}`;
 		};
 
 		const formatActiveFacet = (e: MemoryEntry): string => {
@@ -864,13 +1192,39 @@ export class NanoMemEngine {
 			return formatActiveEntry(e);
 		};
 
-		for (const e of active.lessons) activeLines.push(formatActiveEntry(e));
-		for (const e of active.knowledge) activeLines.push(formatActiveEntry(e));
-		for (const e of active.preferences) activeLines.push(formatActiveEntry(e));
+		const pushActiveEntry = (entry: MemoryEntry) => {
+			if (entry.stability === "situational" || entry.stateData) {
+				const mood = entry.stateData?.mood ? ` (${entry.stateData.mood})` : "";
+				stateLines.push(`- [ID: ${entry.id}] **${entry.name || "Unknown"}**${mood}: ${entry.summary || ""}`);
+				return;
+			}
+			activeLines.push(formatActiveEntry(entry));
+		};
+
+		for (const e of active.lessons) pushActiveEntry(e);
+		for (const e of active.knowledge) pushActiveEntry(e);
+		for (const e of active.preferences) pushActiveEntry(e);
 		for (const e of active.facets) activeLines.push(formatActiveFacet(e));
+		for (const e of active.events) keyEventLines.push(formatActiveEvent(e));
 
 		if (activeLines.length) {
 			sections.push(`### ${p.sectionActiveMemories}\n${activeLines.join("\n")}`);
+		}
+		if (keyEventLines.length) {
+			sections.push(`### ${p.sectionKeyEvents ?? "Key Events"}\n${keyEventLines.join("\n")}`);
+		}
+		if (stateLines.length) {
+			sections.push(`### ${p.sectionCurrentState ?? "Current State Signals"}\n${stateLines.join("\n")}`);
+		}
+
+		const relatedLines = graphContext.map(
+			(neighbor) =>
+				`- [${neighbor.relation}] [ID: ${neighbor.entry.id}] [${neighbor.entry.type}] **${
+					neighbor.entry.name || "Unknown"
+				}**: ${neighbor.entry.summary || ""}`,
+		);
+		if (relatedLines.length) {
+			sections.push(`### ${p.sectionRelatedContext ?? "Related Context"}\n${relatedLines.join("\n")}`);
 		}
 
 		// ── Cue tier: name + summary + id ──
@@ -889,8 +1243,12 @@ export class NanoMemEngine {
 			return formatCueEntry(e);
 		};
 
+		const formatCueEvent = (e: MemoryEntry): string =>
+			`- [ID: ${e.id}] [event] **${e.name || "—"}**: ${e.summary || ""}`;
+
 		for (const e of cue.lessons) cueLines.push(formatCueEntry(e));
 		for (const e of cue.knowledge) cueLines.push(formatCueEntry(e));
+		for (const e of cue.events) cueLines.push(formatCueEvent(e));
 		for (const e of cue.preferences) cueLines.push(formatCueEntry(e));
 		for (const e of cue.facets) cueLines.push(formatCueFacet(e));
 

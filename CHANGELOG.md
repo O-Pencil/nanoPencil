@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.10] - 2026-03-29
+
+### Added
+- **NanoMem memory governance**
+  - Added key event memory, progressive graph context, and relation-aware recall
+  - Added current state signals to separate short-term state from stable identity
+  - Added alignment snapshot, conflict detection, and review tooling
+  - Added memory editing and conflict resolution commands/tools
+
+### Changed
+- **NanoMem retrieval and forgetting**
+  - Prioritize core memory and key events in progressive disclosure
+  - Strengthen graph edges on successful recall and decay weak links over time
+  - Let low-signal ambient and situational memory fade faster
+
+### Fixed
+- Reduced memory drift caused by temporary mood or short-lived context
+- Reduced duplicate cue/context injection by de-duplicating graph neighbors and cue memories
+
+---
+
 ## [1.11.2] - 2026-03-19
 
 ### Added

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.13] - 2026-03-30
+
+### Added
+- feat(figma): add standalone Figma MCP OAuth groundwork and built-in Figma setup guidance
+
+### Fixed
+- fix(mcp): support streamable HTTP event-stream responses for remote MCP servers
+- fix(mcp): allow HTTP MCP tools to execute through the NanoPencil MCP client
+- fix(figma): make remote Figma MCP usable through built-in presets and authenticated tool discovery
+
 ## [1.11.12] - 2026-03-29
 
 ### Fixed

@@ -58,13 +58,8 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 
 	// 注册 resources_discover 事件：当 agent-reach 已安装时，提供 internet-search skill
 	pi.on("resources_discover", async (_event: ResourcesDiscoverEvent): Promise<ResourcesDiscoverResult> => {
-		// 检查 agent-reach 是否已安装
-		if (!isAgentReachInstalled()) {
-			// 未安装，不提供 skill
-			return {};
-		}
-
-		// 检查 skill 文件是否存在
+		// Always expose the skill so the model knows how to install or use link-world.
+		// The skill itself checks whether agent-reach is already available.
 		if (!existsSync(SKILL_PATH)) {
 			return {};
 		}
@@ -78,6 +73,19 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 	pi.registerCommand("link-world", {
 		description: "安装 link-world，为 AI 提供互联网访问（Twitter、YouTube、Bilibili、小红书、抖音等）",
 		handler: async (_args: string, _ctx: ExtensionCommandContext) => {
+			if (isAgentReachInstalled()) {
+				pi.sendMessage(
+					{
+						customType: LINK_WORLD_CUSTOM_TYPE,
+						content:
+							"link-world is already installed on this machine. Do not reinstall it. Run `agent-reach doctor` to verify the current setup, repair any missing channels, and continue configuring the internet tools the user needs. The installation is persistent across sessions because link-world stores its data outside the workspace.",
+						display: true,
+					},
+					{ triggerTurn: true },
+				);
+				return;
+			}
+
 			const doc = getInstallDoc();
 			const content = doc
 				? `请严格按照以下安装指南操作，帮我安装 link-world。不要修改工作区内的文件，所有安装按文档中的目录规则进行。\n\n---\n\n${doc}`

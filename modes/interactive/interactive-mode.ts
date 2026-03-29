@@ -3994,21 +3994,25 @@ export class InteractiveMode {
     }
 
     this.session.modelRegistry.refresh();
-    await this.refreshCurrentModelForProvider(provider);
+    await this.refreshCurrentModelForProvider(provider, trimmedModelName);
     this.showStatus(`Saved ${definition.label} configuration`);
     return true;
   }
 
-  private async refreshCurrentModelForProvider(provider: string): Promise<void> {
+  private async refreshCurrentModelForProvider(
+    provider: string,
+    preferredModelId?: string,
+  ): Promise<void> {
     const currentModel = this.session.model;
     if (!currentModel || currentModel.provider !== provider) {
       return;
     }
 
-    const updatedModel = this.session.modelRegistry.find(
-      currentModel.provider,
-      currentModel.id,
-    );
+    const updatedModel =
+      (preferredModelId
+        ? this.session.modelRegistry.find(currentModel.provider, preferredModelId)
+        : undefined) ??
+      this.session.modelRegistry.find(currentModel.provider, currentModel.id);
     if (!updatedModel) {
       return;
     }
@@ -4054,7 +4058,9 @@ export class InteractiveMode {
     }
 
     try {
-      const configured = await this.configureCustomProtocolProvider(provider);
+      const configured = await this.configureCustomProtocolProvider(provider, {
+        force: true,
+      });
       if (!configured) {
         this.showStatus("Configuration cancelled");
         return;

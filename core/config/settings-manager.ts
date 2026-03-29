@@ -25,6 +25,8 @@ export interface TerminalSettings {
 	showImages?: boolean; // default: true (only relevant if terminal supports images)
 	clearOnShrink?: boolean; // default: false (clear empty rows when content shrinks)
 	showTokenStats?: boolean; // default: true (show token usage in footer)
+	showWorkingTrace?: boolean; // default: false (show tool and coding execution steps in chat)
+	showMemoryTrace?: boolean; // default: false (show NanoMem search/recall/alignment traces in chat)
 }
 
 export interface ImageSettings {
@@ -827,6 +829,32 @@ export class SettingsManager {
 		}
 		this.globalSettings.terminal.showTokenStats = enabled;
 		this.markModified("terminal", "showTokenStats");
+		this.save();
+	}
+
+	getShowWorkingTrace(): boolean {
+		return this.settings.terminal?.showWorkingTrace ?? false;
+	}
+
+	setShowWorkingTrace(enabled: boolean): void {
+		if (!this.globalSettings.terminal) {
+			this.globalSettings.terminal = {};
+		}
+		this.globalSettings.terminal.showWorkingTrace = enabled;
+		this.markModified("terminal", "showWorkingTrace");
+		this.save();
+	}
+
+	getShowMemoryTrace(): boolean {
+		return this.settings.terminal?.showMemoryTrace ?? false;
+	}
+
+	setShowMemoryTrace(enabled: boolean): void {
+		if (!this.globalSettings.terminal) {
+			this.globalSettings.terminal = {};
+		}
+		this.globalSettings.terminal.showMemoryTrace = enabled;
+		this.markModified("terminal", "showMemoryTrace");
 		this.save();
 	}
 

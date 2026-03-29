@@ -79,6 +79,9 @@ export interface Episode {
 	sessionId: string;
 	project: string;
 	date: string;
+	startedAt?: string;
+	endedAt?: string;
+	timeZone?: string;
 	summary: string;
 	userGoal?: string;
 	filesModified: string[];

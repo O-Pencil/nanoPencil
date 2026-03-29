@@ -1945,6 +1945,14 @@ export class InteractiveMode {
     message: string,
     type?: "info" | "warning" | "error",
   ): void {
+    if (
+      type !== "error" &&
+      this.isMemoryTraceMessage(message) &&
+      !this.settingsManager.getShowMemoryTrace()
+    ) {
+      return;
+    }
+
     if (type === "error") {
       this.showError(message);
     } else if (type === "warning") {
@@ -1952,6 +1960,17 @@ export class InteractiveMode {
     } else {
       this.showStatus(message);
     }
+  }
+
+  private isMemoryTraceMessage(message: string): boolean {
+    return message.startsWith("NanoMem");
+  }
+
+  private shouldRenderToolTrace(toolName: string): boolean {
+    if (toolName.startsWith("nanomem_")) {
+      return this.settingsManager.getShowMemoryTrace();
+    }
+    return this.settingsManager.getShowWorkingTrace();
   }
 
   /** Show a custom component with keyboard focus. Overlay mode renders on top of existing content. */
@@ -2595,6 +2614,9 @@ export class InteractiveMode {
 
           for (const content of this.streamingMessage.content) {
             if (content.type === "toolCall") {
+              if (!this.shouldRenderToolTrace(content.name)) {
+                continue;
+              }
               if (!this.pendingTools.has(content.id)) {
                 this.chatContainer.addChild(new Text("", 0, 0));
                 const component = new ToolExecutionComponent(
@@ -2664,6 +2686,9 @@ export class InteractiveMode {
         break;
 
       case "tool_execution_start": {
+        if (!this.shouldRenderToolTrace(event.toolName)) {
+          break;
+        }
         if (!this.pendingTools.has(event.toolCallId)) {
           const component = new ToolExecutionComponent(
             event.toolName,
@@ -3708,6 +3733,8 @@ export class InteractiveMode {
           quietStartup: this.settingsManager.getQuietStartup(),
           clearOnShrink: this.settingsManager.getClearOnShrink(),
           showTokenStats: this.settingsManager.getShowTokenStats(),
+          showWorkingTrace: this.settingsManager.getShowWorkingTrace(),
+          showMemoryTrace: this.settingsManager.getShowMemoryTrace(),
         },
         {
           onAutoCompactChange: (enabled) => {
@@ -3780,6 +3807,12 @@ export class InteractiveMode {
           },
           onQuietStartupChange: (enabled) => {
             this.settingsManager.setQuietStartup(enabled);
+          },
+          onShowWorkingTraceChange: (enabled) => {
+            this.settingsManager.setShowWorkingTrace(enabled);
+          },
+          onShowMemoryTraceChange: (enabled) => {
+            this.settingsManager.setShowMemoryTrace(enabled);
           },
           onDoubleEscapeActionChange: (action) => {
             this.settingsManager.setDoubleEscapeAction(action);

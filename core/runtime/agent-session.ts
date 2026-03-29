@@ -1040,6 +1040,11 @@ export class AgentSession {
     }
     this._pendingNextTurnMessages = [];
 
+    const activeBaseToolNames = this.getActiveToolNames().filter((name) =>
+      this._baseToolRegistry.has(name),
+    );
+    this._baseSystemPrompt = this._rebuildSystemPrompt(activeBaseToolNames);
+
     // Emit before_agent_start extension event
     if (this._extensionRunner) {
       const result = await this._extensionRunner.emitBeforeAgentStart(
@@ -1067,6 +1072,8 @@ export class AgentSession {
         // Ensure we're using the base prompt (in case previous turn had modifications)
         this.agent.setSystemPrompt(this._baseSystemPrompt);
       }
+    } else {
+      this.agent.setSystemPrompt(this._baseSystemPrompt);
     }
 
     await this.agent.prompt(messages);
@@ -2431,7 +2438,7 @@ export class AgentSession {
 
     const defaultActiveToolNames = this._baseToolsOverride
       ? Object.keys(this._baseToolsOverride)
-      : ["read", "bash", "edit", "write"];
+      : ["read", "bash", "edit", "write", "time"];
     const baseActiveToolNames =
       options.activeToolNames ?? defaultActiveToolNames;
     const activeToolNameSet = new Set<string>(baseActiveToolNames);

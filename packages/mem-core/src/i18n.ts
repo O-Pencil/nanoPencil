@@ -79,6 +79,8 @@ Do NOT extract:
 - Things the user will obviously forget
 - Verbose logs — capture gist and why it matters
 
+The conversation may include a system-time header. Use it to resolve relative references like "today", "yesterday", and "currently".
+
 Return a JSON array. Each item: "type", "name", "summary", "detail", optionally "facetData".
 Types: preference | fact | lesson | decision | event | retract | pattern | struggle
 
@@ -97,6 +99,8 @@ Example:
 Return [] if nothing worth remembering. Output ONLY valid JSON.`,
 
 	workExtractionSystem: `You extract what was accomplished in this conversation. Think: "What did the user set out to do, and what did they actually achieve?"
+
+The conversation may include a system-time header. Use it to resolve relative references like "today", "yesterday", and "currently".
 
 Return a JSON object: {"goal": "what the user wanted to achieve", "summary": "brief one-liner of what was done", "detail": "full description including obstacles overcome and any 'aha' moments"}.
 - Include obstacles overcome and breakthroughs — these matter for future recall

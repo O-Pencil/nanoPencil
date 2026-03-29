@@ -49,11 +49,21 @@ import {
   APP_NAME,
   getAuthPath,
   getDebugLogPath,
+  getModelsPath,
   getShareViewerUrl,
   getUpdateInstruction,
   PACKAGE_NAME,
   VERSION,
 } from "../../config.js";
+import {
+  type CustomProtocolProviderId,
+  getCustomProtocolProviderBaseUrl,
+  getCustomProtocolProviderDefinition,
+  getCustomProtocolProviderModelName,
+  isCustomProtocolProvider,
+  saveCustomProtocolProviderApiKey,
+  saveCustomProtocolProviderConfig,
+} from "../../core/custom-providers.js";
 import {
   type AgentSession,
   type AgentSessionEvent,
@@ -1712,7 +1722,10 @@ export class InteractiveMode {
           this.hideExtensionSelector();
           resolve(undefined);
         },
-        { tui: this.ui, timeout: opts?.timeout },
+        {
+          tui: this.ui,
+          timeout: opts?.timeout,
+        },
       );
 
       this.editorContainer.clear();
@@ -1783,7 +1796,11 @@ export class InteractiveMode {
           this.hideExtensionInput();
           resolve(undefined);
         },
-        { tui: this.ui, timeout: opts?.timeout },
+        {
+          tui: this.ui,
+          timeout: opts?.timeout,
+          initialValue: opts?.initialValue,
+        },
       );
 
       this.editorContainer.clear();
@@ -3837,6 +3854,10 @@ export class InteractiveMode {
    * Handle /apikey command - allow user to update API key for current provider
    */
   private async handleApiKeyCommand(): Promise<void> {
+    await this.handleProviderCredentialsCommand();
+  }
+
+  private async handleProviderCredentialsCommand(): Promise<void> {
     const currentModel = this.session.model;
     if (!currentModel) {
       this.showError(
@@ -3846,38 +3867,157 @@ export class InteractiveMode {
     }
 
     const provider = currentModel.provider;
-    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-
-    // Stop TUI temporarily
-    this.ui.stop();
 
     try {
-      const apiKey = await promptForApiKey({
-        prompt: `请输入 ${providerName} API Key (留空取消)`,
-      });
-
-      if (apiKey) {
-        // Store the new API key
-        this.session.modelRegistry.authStorage.set(provider, {
-          type: "api_key",
-          key: apiKey,
+      if (isCustomProtocolProvider(provider)) {
+        const updated = await this.configureCustomProtocolProvider(provider, {
+          force: true,
         });
-
-        // Refresh model registry to pick up new key
-        this.session.modelRegistry.refresh();
-
-        this.showStatus(`${providerName} API Key 已更新`);
-      } else {
-        this.showStatus("操作已取消");
+        if (!updated) {
+          this.showStatus("Configuration cancelled");
+        }
+        return;
       }
+
+      const apiKey = await this.showExtensionInput(
+        `Update API key for ${provider}`,
+        "API key",
+      );
+      if (apiKey === undefined) {
+        this.showStatus("Configuration cancelled");
+        return;
+      }
+
+      const trimmedApiKey = apiKey.trim();
+      if (!trimmedApiKey) {
+        this.showStatus("Configuration cancelled");
+        return;
+      }
+
+      this.session.modelRegistry.authStorage.set(provider, {
+        type: "api_key",
+        key: trimmedApiKey,
+      });
+      this.session.modelRegistry.refresh();
+      this.showStatus(`Updated API key for ${provider}`);
     } catch (error) {
       this.showError(error instanceof Error ? error.message : String(error));
-    } finally {
-      // Restart TUI
-      this.ui.start();
-      this.ui.requestRender(true);
     }
   }
+
+  private async ensureProviderConfiguredForSelection(
+    model: Model<any>,
+  ): Promise<boolean> {
+    if (!isCustomProtocolProvider(model.provider)) {
+      return true;
+    }
+
+    return this.configureCustomProtocolProvider(model.provider);
+  }
+
+  private async configureCustomProtocolProvider(
+    provider: CustomProtocolProviderId,
+    options: { force?: boolean } = {},
+  ): Promise<boolean> {
+    const definition = getCustomProtocolProviderDefinition(provider);
+    const modelsPath = getModelsPath();
+    const authStorage = this.session.modelRegistry.authStorage;
+    const currentBaseUrl =
+      getCustomProtocolProviderBaseUrl(modelsPath, provider) ??
+      definition.defaultBaseUrl;
+    const currentModelName =
+      getCustomProtocolProviderModelName(modelsPath, provider) ??
+      "custom-model";
+    const hasExistingApiKey = authStorage.has(provider);
+
+    if (
+      !options.force &&
+      hasExistingApiKey &&
+      currentBaseUrl.trim() &&
+      currentModelName.trim()
+    ) {
+      return true;
+    }
+
+    const baseUrl = await this.showExtensionInput(
+      `${definition.label} base URL`,
+      definition.defaultBaseUrl,
+      { initialValue: currentBaseUrl },
+    );
+    if (baseUrl === undefined) {
+      return false;
+    }
+
+    const trimmedBaseUrl = baseUrl.trim();
+    if (!trimmedBaseUrl) {
+      this.showError("Base URL cannot be empty.");
+      return false;
+    }
+
+    const modelNameInput = await this.showExtensionInput(
+      `${definition.label} model name`,
+      "Model name",
+      { initialValue: currentModelName },
+    );
+    if (modelNameInput === undefined) {
+      return false;
+    }
+
+    const trimmedModelName = modelNameInput.trim();
+    if (!trimmedModelName) {
+      this.showError("Model name cannot be empty.");
+      return false;
+    }
+
+    const apiKeyInput = await this.showExtensionInput(
+      `${definition.label} API key`,
+      hasExistingApiKey && options.force
+        ? "Leave empty to keep the current API key"
+        : "API key",
+    );
+    if (apiKeyInput === undefined) {
+      return false;
+    }
+
+    const trimmedApiKey = apiKeyInput.trim();
+    if (!trimmedApiKey && !hasExistingApiKey) {
+      this.showError("API key cannot be empty.");
+      return false;
+    }
+
+    saveCustomProtocolProviderConfig(modelsPath, provider, {
+      baseUrl: trimmedBaseUrl,
+      modelName: trimmedModelName,
+    });
+    if (trimmedApiKey) {
+      saveCustomProtocolProviderApiKey(authStorage, provider, trimmedApiKey);
+    }
+
+    this.session.modelRegistry.refresh();
+    await this.refreshCurrentModelForProvider(provider);
+    this.showStatus(`Saved ${definition.label} configuration`);
+    return true;
+  }
+
+  private async refreshCurrentModelForProvider(provider: string): Promise<void> {
+    const currentModel = this.session.model;
+    if (!currentModel || currentModel.provider !== provider) {
+      return;
+    }
+
+    const updatedModel = this.session.modelRegistry.find(
+      currentModel.provider,
+      currentModel.id,
+    );
+    if (!updatedModel) {
+      return;
+    }
+
+    await this.session.setModel(updatedModel);
+    this.footer.invalidate();
+    this.updateEditorBorderColor();
+  }
+
 
   private async findExactModelMatch(
     searchTerm: string,
@@ -3942,6 +4082,7 @@ export class InteractiveMode {
         this.settingsManager,
         this.session.modelRegistry,
         this.session.scopedModels,
+        (model) => this.ensureProviderConfiguredForSelection(model),
         async (model) => {
           try {
             await this.session.setModel(model);

@@ -6,12 +6,15 @@
 
 import { PROMPTS } from "./i18n.js";
 import type {
+	DeveloperPersona,
 	FullInsightsChart,
 	FullInsightsFriction,
 	FullInsightsReport,
 	FullInsightsFeatureToTry,
 	FullInsightsUsagePattern,
+	HumanInsight,
 	PatternInsight,
+	RootCauseInsight,
 } from "./types.js";
 
 function escapeHtml(str: string): string {
@@ -54,6 +57,11 @@ function renderBarRows(chart: FullInsightsChart): string {
 export function renderFullInsightsHtml(report: FullInsightsReport, locale: string): string {
 	const p = PROMPTS[locale] ?? PROMPTS.en;
 	const lang = locale === "zh" ? "zh-CN" : "en";
+	const enhancedReport = report as FullInsightsReport & {
+		persona?: DeveloperPersona;
+		humanInsights?: HumanInsight[];
+		rootCauses?: RootCauseInsight[];
+	};
 
 	const sections: string[] = [];
 
@@ -62,6 +70,27 @@ export function renderFullInsightsHtml(report: FullInsightsReport, locale: strin
 		'<a href="#section-glance"><i class="ri-dashboard-line"></i> ' + escapeHtml(p.fullInsightsAtAGlance) + "</a>",
 		'<a href="#section-work"><i class="ri-briefcase-4-line"></i> ' + escapeHtml(p.fullInsightsWorkOn) + "</a>",
 	];
+	if (enhancedReport.persona) {
+		tocLinks.push(
+			'<a href="#section-persona"><i class="ri-user-star-line"></i> ' +
+				escapeHtml(p.humanInsightsSectionPersona) +
+				"</a>",
+		);
+	}
+	if (enhancedReport.humanInsights?.length) {
+		tocLinks.push(
+			'<a href="#section-human-insights"><i class="ri-robot-2-line"></i> ' +
+				escapeHtml(p.humanInsightsSectionInsights) +
+				"</a>",
+		);
+	}
+	if (enhancedReport.rootCauses?.length) {
+		tocLinks.push(
+			'<a href="#section-root-causes"><i class="ri-stethoscope-line"></i> ' +
+				escapeHtml(p.humanInsightsSectionRootCauses) +
+				"</a>",
+		);
+	}
 	if (report.charts.length) tocLinks.push('<a href="#section-charts"><i class="ri-bar-chart-box-line"></i> Charts</a>');
 	if (report.wins.length) tocLinks.push('<a href="#section-wins"><i class="ri-trophy-line"></i> ' + escapeHtml(p.fullInsightsWins) + "</a>");
 	if (report.frictions.length) tocLinks.push('<a href="#section-frictions"><i class="ri-error-warning-line"></i> ' + escapeHtml(p.fullInsightsFrictions) + "</a>");
@@ -92,6 +121,76 @@ ${statItems.map((s) => `<div class="stat"><i class="${s.icon} stat-icon"></i><di
     <article class="glance-card"><h3><i class="ri-rocket-line"></i> Ambitious</h3><p>${escapeHtml(report.atAGlance.ambitious)}</p></article>
   </div>
 </section>`;
+
+	let personaHtml = "";
+	if (enhancedReport.persona) {
+		const persona = enhancedReport.persona;
+		personaHtml = `<section id="section-persona" class="section">
+  <h2><i class="ri-user-star-line"></i> ${escapeHtml(p.humanInsightsSectionPersona)}</h2>
+  <div class="persona-grid">
+    <article class="persona-card persona-lead">
+      <div class="persona-kicker">${escapeHtml(persona.summary)}</div>
+      <div class="persona-text">${escapeHtml(persona.whatTheyDo)}</div>
+      <div class="persona-text">${escapeHtml(persona.workStyle)}</div>
+      <div class="persona-meta">${escapeHtml(persona.experienceLevel)}</div>
+    </article>
+    <article class="persona-card">
+      <div class="persona-card-title">Strengths</div>
+      <ul class="persona-list">${persona.superpowers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </article>
+    <article class="persona-card">
+      <div class="persona-card-title">Watchouts</div>
+      <ul class="persona-list">${persona.painPoints.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </article>
+  </div>
+</section>`;
+	}
+
+	let humanInsightsHtml = "";
+	if (enhancedReport.humanInsights?.length) {
+		humanInsightsHtml = `<section id="section-human-insights" class="section">
+  <h2><i class="ri-robot-2-line"></i> ${escapeHtml(p.humanInsightsSectionInsights)}</h2>
+  <div class="insight-review-list">
+${enhancedReport.humanInsights
+	.map(
+		(insight) => `    <article class="insight-review-card priority-${escapeHtml(insight.utility)}">
+  <div class="insight-review-header">
+    <div class="insight-review-icon">${escapeHtml(insight.icon)}</div>
+    <div>
+      <div class="insight-review-title">${escapeHtml(insight.title)}</div>
+      <div class="insight-review-priority">${escapeHtml(insight.utility.toUpperCase())}</div>
+    </div>
+  </div>
+  <div class="insight-review-content">${escapeHtml(insight.content)}</div>
+  ${insight.tags.length ? `<div class="insight-tags">${insight.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+</article>`,
+	)
+	.join("\n")}
+  </div>
+</section>`;
+	}
+
+	let rootCausesHtml = "";
+	if (enhancedReport.rootCauses?.length) {
+		rootCausesHtml = `<section id="section-root-causes" class="section">
+  <h2><i class="ri-stethoscope-line"></i> ${escapeHtml(p.humanInsightsSectionRootCauses)}</h2>
+  <div class="root-cause-list">
+${enhancedReport.rootCauses
+	.map(
+		(item) => `    <article class="root-cause-card">
+  <div class="root-cause-label">Recurring symptom</div>
+  <div class="root-cause-title">${escapeHtml(item.symptom)}</div>
+  <div class="root-cause-label">Likely cause</div>
+  <div class="root-cause-body">${escapeHtml(item.rootCause)}</div>
+  ${item.evidence.length ? `<div class="root-cause-label">Evidence</div><ul class="root-cause-evidence">${item.evidence.map((fact) => `<li>${escapeHtml(fact)}</li>`).join("")}</ul>` : ""}
+  <div class="root-cause-label">Recommended fix</div>
+  <div class="root-cause-body">${escapeHtml(item.suggestion)}</div>
+</article>`,
+	)
+	.join("\n")}
+  </div>
+</section>`;
+	}
 
 	// What You Work On
 	let workHtml = "";
@@ -234,6 +333,33 @@ h2 .ri{vertical-align:middle;margin-right:6px}
 .nav-toc a:hover{background:#e2e8f0;color:#334155}
 .nav-toc .ri{margin-right:4px;vertical-align:middle}
 .stats-row{display:flex;gap:24px;margin-bottom:32px;padding:20px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+.persona-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px}
+.persona-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px}
+.persona-lead{background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);border-color:#fdba74}
+.persona-kicker{font-size:18px;font-weight:700;color:#9a3412;margin-bottom:10px}
+.persona-text{font-size:14px;color:#334155;line-height:1.6;margin-bottom:8px}
+.persona-meta{font-size:12px;color:#7c2d12;text-transform:uppercase;letter-spacing:.04em}
+.persona-card-title{font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:10px}
+.persona-list{margin:0;padding-left:18px}
+.persona-list li{margin-bottom:8px;font-size:14px;color:#334155}
+.insight-review-list,.root-cause-list{display:flex;flex-direction:column;gap:16px}
+.insight-review-card{border-radius:10px;padding:18px;border:1px solid #dbeafe;background:#f8fbff}
+.insight-review-card.priority-high{border-color:#93c5fd;background:#eff6ff}
+.insight-review-card.priority-medium{border-color:#cbd5e1;background:#f8fafc}
+.insight-review-card.priority-low{border-color:#d1fae5;background:#f0fdf4}
+.insight-review-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.insight-review-icon{font-size:24px;line-height:1}
+.insight-review-title{font-size:16px;font-weight:700;color:#0f172a}
+.insight-review-priority{font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.08em}
+.insight-review-content{font-size:14px;color:#334155;line-height:1.7}
+.insight-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.insight-tags span{font-size:11px;color:#475569;background:#e2e8f0;border-radius:999px;padding:4px 8px}
+.root-cause-card{border-radius:10px;padding:18px;border:1px solid #fecaca;background:#fff7f7}
+.root-cause-label{font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.root-cause-title{font-size:16px;font-weight:700;color:#7f1d1d;margin-bottom:10px}
+.root-cause-body{font-size:14px;color:#334155;line-height:1.7;margin-bottom:12px}
+.root-cause-evidence{margin:0 0 12px 18px}
+.root-cause-evidence li{margin-bottom:6px;font-size:13px;color:#475569}
 .stat{text-align:center}
 .stat-icon{font-size:20px;color:#64748b;display:block;margin-bottom:4px}
 .stat-value{font-size:24px;font-weight:700;color:#0f172a}
@@ -286,6 +412,7 @@ h2 .ri{vertical-align:middle;margin-right:6px}
 .pattern-list li{margin-bottom:6px;font-size:14px;color:#334155}
 footer{margin-top:32px;text-align:center;font-size:12px;color:#94a3b8}
 @media (max-width:640px){.charts-row{grid-template-columns:1fr}.stats-row{justify-content:center}}
+@media (max-width:900px){.persona-grid{grid-template-columns:1fr}}
 `;
 
 	const copyScript = `
@@ -326,6 +453,9 @@ ${tocLinks.map((link) => "      " + link).join("\n")}
 ${statsHtml}
 ${glanceHtml}
 ${workHtml}
+${personaHtml}
+${humanInsightsHtml}
+${rootCausesHtml}
 ${chartsHtml}
 ${winsHtml}
 ${frictionsHtml}

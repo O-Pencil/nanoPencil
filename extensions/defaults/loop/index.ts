@@ -213,7 +213,58 @@ function extractLoopDecision(text: string): LoopDecision | undefined {
 			nextStep,
 		};
 	} catch {
-		return undefined;
+		const lines = payload
+			.split(/\r?\n/)
+			.map((line) => line.trim())
+			.filter(Boolean);
+		if (lines.length === 0) {
+			return undefined;
+		}
+
+		const getValue = (...prefixes: string[]): string | undefined => {
+			const line = lines.find((entry) =>
+				prefixes.some((prefix) => entry.toLowerCase().startsWith(prefix.toLowerCase())),
+			);
+			if (!line) {
+				return undefined;
+			}
+			const separatorIndex = line.indexOf(":");
+			if (separatorIndex === -1) {
+				return undefined;
+			}
+			return line.slice(separatorIndex + 1).trim();
+		};
+
+		const rawStatus = getValue("status:", "状态:");
+		const normalizedStatus =
+			rawStatus === "complete" || rawStatus === "完成"
+				? "complete"
+				: rawStatus === "continue" || rawStatus === "继续" || rawStatus === "in_progress"
+					? "continue"
+					: rawStatus === "blocked" || rawStatus === "阻塞"
+						? "blocked"
+						: undefined;
+		if (!normalizedStatus) {
+			return undefined;
+		}
+
+		const summary =
+			getValue("summary:", "摘要:", "已完成工作:", "completed work:") ??
+			lines.filter((line) => !line.startsWith("-")).slice(1).join(" ").trim();
+		if (!summary) {
+			return undefined;
+		}
+
+		const nextStep = getValue("next step:", "下一步:");
+		if (normalizedStatus === "continue" && !nextStep) {
+			return undefined;
+		}
+
+		return {
+			status: normalizedStatus,
+			summary,
+			nextStep,
+		};
 	}
 }
 

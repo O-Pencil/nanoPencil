@@ -131,6 +131,12 @@ export class FooterDataProvider {
 					for (const cb of this.branchChangeCallbacks) cb();
 				}
 			});
+			this.gitWatcher.on("error", () => {
+				if (this.gitWatcher) {
+					this.gitWatcher.close();
+					this.gitWatcher = null;
+				}
+			});
 		} catch {
 			// Silently fail if we can't watch
 		}

@@ -97,8 +97,20 @@ Usage:
 			const html = renderInsightsHtml(report, engine.cfg.locale);
 			writeFileSync(outputPath, html, "utf-8");
 		} else {
-			const report = await engine.generateFullInsights();
-			const html = renderFullInsightsHtml(report, engine.cfg.locale);
+			const enhanced = await engine.generateEnhancedInsights();
+			const html = renderFullInsightsHtml(
+				({
+					...enhanced.report,
+					persona: enhanced.persona,
+					humanInsights: enhanced.humanInsights,
+					rootCauses: enhanced.rootCauses,
+				} as typeof enhanced.report & {
+					persona?: typeof enhanced.persona;
+					humanInsights: typeof enhanced.humanInsights;
+					rootCauses: typeof enhanced.rootCauses;
+				}),
+				engine.cfg.locale,
+			);
 			writeFileSync(outputPath, html, "utf-8");
 		}
 		console.log(`Insights report written to: ${outputPath}`);

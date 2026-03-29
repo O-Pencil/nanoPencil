@@ -10,6 +10,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { getAgentDir } from "../../config.js";
 import { AuthStorage } from "../config/auth-storage.js";
+import { getMCPConfigPath } from "./mcp-config.js";
 
 // Log level control: DEBUG shows all MCP messages, RELEASE only shows summary
 // Check if running from installed location (production) vs development
@@ -149,8 +150,7 @@ export class MCPClient {
    * Load MCP server configurations from config file
    */
   private loadServersFromConfig(): void {
-    const configDir = getAgentDir();
-    const configPath = join(configDir, "mcp.json");
+    const configPath = getMCPConfigPath();
 
     if (!existsSync(configPath)) {
       return;

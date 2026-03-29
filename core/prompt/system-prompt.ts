@@ -56,7 +56,7 @@ export function buildSystemPrompt(
     timeZoneName: "short",
   });
   const timeReasoningInstruction =
-    "\nFor exact current time or date-sensitive reasoning, use the `time` tool instead of relying only on this prompt timestamp.";
+    "\nFor exact current time or any date-sensitive reasoning, you must use the `time` tool before answering. This includes questions about the current time, current date, today, tomorrow, yesterday, this week, deadlines, elapsed time, or anything that depends on the real system clock. Do not rely only on this prompt timestamp for those answers.";
 
   const appendSection = appendSystemPrompt ? `\n\n${appendSystemPrompt}` : "";
 

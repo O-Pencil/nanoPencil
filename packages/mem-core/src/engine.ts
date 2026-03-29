@@ -31,6 +31,7 @@ import { deduplicateMemoryEntries, deduplicateWorkEntries } from "./dedup.js";
 import { buildFullInsightsReport } from "./full-insights.js";
 import { generateHumanInsights } from "./human-insights.js";
 import type {
+	DeveloperPersona,
 	Episode,
 	ExtractedItem,
 	FullInsightsReport,
@@ -552,6 +553,7 @@ export class NanoMemEngine {
 	 */
 	async generateEnhancedInsights(): Promise<{
 		report: FullInsightsReport;
+		persona?: DeveloperPersona;
 		humanInsights: HumanInsight[];
 		rootCauses: RootCauseInsight[];
 	}> {
@@ -565,6 +567,7 @@ export class NanoMemEngine {
 
 		return {
 			report: baseReport,
+			persona: humanData.persona,
 			humanInsights: humanData.humanInsights,
 			rootCauses: humanData.rootCauses,
 		};

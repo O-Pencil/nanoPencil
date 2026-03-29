@@ -240,12 +240,12 @@ export class ExtensionRunner {
 	}
 
 	private async withTimeout<T>(
-		promise: Promise<T>,
+		valueOrPromise: T | PromiseLike<T>,
 		timeoutMs: number,
 	): Promise<T | typeof this.beforeAgentStartTimeoutSentinel> {
 		return new Promise((resolve) => {
 			const timer = setTimeout(() => resolve(this.beforeAgentStartTimeoutSentinel), timeoutMs);
-			promise
+			Promise.resolve(valueOrPromise)
 				.then((value) => {
 					clearTimeout(timer);
 					resolve(value);
@@ -766,10 +766,7 @@ export class ExtensionRunner {
 						images,
 						systemPrompt: currentSystemPrompt,
 					};
-					const handlerResult = await this.withTimeout(
-						handler(event, ctx) as Promise<unknown>,
-						this.beforeAgentStartTimeoutMs,
-					);
+					const handlerResult = await this.withTimeout(handler(event, ctx), this.beforeAgentStartTimeoutMs);
 					if (handlerResult === this.beforeAgentStartTimeoutSentinel) {
 						this.reportBeforeAgentStartTimeout(ext.path);
 						continue;

@@ -1,27 +1,47 @@
-export interface LoopTask {
-	id: string;
-	prompt: string;
-	intervalMs: number;
-	createdAt: number;
-	expiresAt: number;
-	lastExecutedAt: number | null;
-	executionCount: number;
-	jitterMs: number;
-	timerId: ReturnType<typeof setTimeout> | null;
+export type LoopStatus = "running" | "complete" | "blocked" | "stopped" | "failed";
+
+export type LoopDecisionStatus = "continue" | "complete" | "blocked";
+
+export interface LoopDecision {
+	status: LoopDecisionStatus;
+	summary: string;
+	nextStep?: string;
 }
 
-export interface LoopSchedulerConfig {
-	maxTasks: number;
-	maxLifetimeMs: number;
-	defaultIntervalMs: number;
-	minIntervalMs: number;
-	maxJitterRatio: number;
-	maxJitterMs: number;
+export interface LoopTaskState {
+	id: string;
+	goal: string;
+	status: LoopStatus;
+	startedAt: number;
+	updatedAt: number;
+	currentIteration: number;
+	awaitingTurn: boolean;
+	consecutiveFailures: number;
+	maxIterations: number;
+	maxConsecutiveFailures: number;
+	lastDecision?: LoopDecision;
+	lastError?: string;
+}
+
+export interface LoopTaskSnapshot {
+	id: string;
+	goal: string;
+	status: LoopStatus;
+	startedAt: number;
+	updatedAt: number;
+	completedIterations: number;
+	consecutiveFailures: number;
+	lastDecision?: LoopDecision;
+	lastError?: string;
+}
+
+export interface LoopControllerState {
+	active?: LoopTaskState;
+	lastTerminal?: LoopTaskSnapshot;
 }
 
 export type ParsedLoopCommand =
-	| { type: "list" }
-	| { type: "clear" }
-	| { type: "delete"; taskId: string }
-	| { type: "create"; prompt: string; intervalMs: number }
+	| { type: "start"; goal: string }
+	| { type: "status" }
+	| { type: "stop" }
 	| { type: "help"; reason?: string };

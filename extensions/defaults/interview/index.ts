@@ -74,6 +74,19 @@ function truncateForPrompt(str: string, maxChars: number): string {
 	return str.slice(0, maxChars);
 }
 
+const LOOP_PROMPT_PREFIX = "[LOOP:";
+
+function isLoopManagedPrompt(prompt: string): boolean {
+	const trimmed = prompt.trim();
+	if (!trimmed) return false;
+
+	return (
+		trimmed.startsWith(LOOP_PROMPT_PREFIX) ||
+		trimmed.includes("Autonomous loop goal:") ||
+		trimmed.includes("You are inside a managed loop.")
+	);
+}
+
 /**
  * Check if interview should be triggered based on prompt content and context.
  * Only triggers for:
@@ -140,6 +153,11 @@ function isNonTaskPrompt(prompt: string): boolean {
 function shouldRunInterview(prompt: string): boolean {
 	// Check if we just switched persona - skip interview on first message after switch
 	if (process.env.PI_JUST_SWITCHED_PERSONA === "true") {
+		return false;
+	}
+
+	// Loop-generated follow-up turns should stay autonomous and never re-open interview.
+	if (isLoopManagedPrompt(prompt)) {
 		return false;
 	}
 
@@ -425,6 +443,19 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 			// Start from provided answers (if any) then allow extra clarifications.
 			const referenceSystemPrompt = ctx.getSystemPrompt();
 			let answers = { ...answersFromModel };
+
+			if (isLoopManagedPrompt(query)) {
+				return {
+					content: [{ type: "text", text: query }],
+					details: {
+						original_intent: query,
+						refined_intent: query,
+						completion_score: 1,
+						answers,
+						missing_slots: [],
+					},
+				};
+			}
 
 			// UI mode guard: prevent the model from triggering interactive interview for non-task prompts.
 			if (ctx.hasUI && !isTaskLikePrompt(query)) {

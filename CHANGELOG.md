@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.11] - 2026-03-29
+
+### Added
+- Added separate switches to hide working traces and NanoMem traces by default, making chat responses feel more natural.
+- Added a built-in `time` tool so the agent can confirm the real current system time for time-sensitive questions.
+
+### Changed
+- Refresh the system prompt timestamp on every turn instead of relying on the session startup time.
+- Include real system time context in NanoMem transcript extraction and store episode start/end time metadata for longer-term temporal recall.
+
+
 ## [1.11.10] - 2026-03-29
 
 ### Added

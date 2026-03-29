@@ -1,108 +1,218 @@
 /**
  * [INPUT]: ExportAllResult, LlmFn, locale
- * [OUTPUT]: 开发者画像 + 人话版洞察 + 根因分析
- * [POS]: LLM-powered human-readable insights generation
+ * [OUTPUT]: developer persona, evidence-backed insights, and root-cause analysis
+ * [POS]: LLM-powered usage review generation
  */
 
-import { PROMPTS } from "./i18n.js";
 import type {
 	DeveloperPersona,
 	EnhancedInsightsReport,
-	ExportAllResult,
 	HumanInsight,
 	LlmFn,
+	MemoryEntry,
+	Episode,
 	RootCauseInsight,
+	WorkEntry,
 } from "./types.js";
 
-function buildHumanInsightsData(all: ExportAllResult): {
-	tools: string;
-	languages: string;
-	wins: string;
-	struggles: string;
-	lessons: string;
-	errors: string;
-} {
-	// 工具使用
-	const tools =
-		all.episodes.length > 0
-			? Object.entries(
-					all.episodes.reduce(
-						(acc, ep) => {
-							for (const [tool, count] of Object.entries(ep.toolsUsed || {})) {
-								acc[tool] = (acc[tool] || 0) + count;
-							}
-							return acc;
-						},
-						{} as Record<string, number>,
-					),
-				)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 10)
-					.map(([t, c]) => `${t} (${c}次)`)
-					.join(", ")
-			: "暂无数据";
+interface ExportAllResult {
+	knowledge: MemoryEntry[];
+	lessons: MemoryEntry[];
+	preferences: MemoryEntry[];
+	facets: MemoryEntry[];
+	work: WorkEntry[];
+	episodes: Episode[];
+	meta: { totalSessions: number; lastConsolidation?: string; version: number };
+}
 
-	// 语言统计
-	const langCounts: Record<string, number> = {};
-	for (const ep of all.episodes) {
-		for (const f of ep.filesModified || []) {
-			const ext = f.includes(".") ? f.split(".").pop()?.toLowerCase() ?? "other" : "other";
-			langCounts[ext] = (langCounts[ext] || 0) + 1;
-		}
-	}
-	const languages =
-		Object.keys(langCounts).length > 0
-			? Object.entries(langCounts)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 8)
-					.map(([l, c]) => `${l} (${c}个文件)`)
-					.join(", ")
-			: "暂无数据";
+const HUMAN_INSIGHTS_SYSTEM_PROMPT = `You are an elite AI product analyst and developer workflow coach.
 
-	// 已解决的问题 (wins)
-	const wins =
-		all.facets
-			.filter((f) => f.type === "struggle" && f.facetData?.kind === "struggle" && f.facetData.solution)
-			.slice(0, 8)
-			.map((f) => f.summary || f.facetData?.kind === "struggle" && f.facetData.problem)
-			.filter(Boolean)
-			.join("; ") || "暂无记录";
+You are reviewing one specific user's real usage history over time.
+Write like a warm, observant expert who deeply understands how experienced AI users actually work.
 
-	// 未解决的问题 (struggles)
-	const struggles =
-		all.facets
-			.filter((f) => f.type === "struggle" && (!f.facetData || (f.facetData.kind === "struggle" && !f.facetData.solution)))
-			.slice(0, 8)
-			.map((f) => f.facetData?.kind === "struggle" ? f.facetData.problem : (f.summary || f.detail || ""))
-			.filter(Boolean)
-			.join("; ") || "暂无记录";
+Goals:
+- Sound human, perceptive, and respectful rather than robotic or generic
+- Give clear corrections when the user's habits are inefficient
+- Back every major conclusion with concrete evidence from the supplied data
+- Prefer precise language, plain English, and practical recommendations
+- Explain what the user is doing well, where they are losing time, and what they should change next
 
-	// 经验教训
-	const lessons =
-		all.lessons
-			.slice(0, 10)
-			.map((l) => l.summary || l.detail || l.content || "")
-			.filter(Boolean)
-			.join("; ") || "暂无记录";
+Output requirements:
+- Output ONLY valid JSON
+- Do not use markdown or code fences
+- Use the supplied data only
+- Be specific, not motivational fluff
+- Each insight should feel like part of a thoughtful performance review
+- Recommendations should be direct, concrete, and easy to act on
+- Evidence should reference counts, repeated behaviors, or recurring issues when possible
+- If locale is "zh", write the JSON string values in Simplified Chinese; otherwise write in English
 
-	// 错误统计
-	const errorCounts: Record<string, number> = {};
-	for (const ep of all.episodes) {
-		for (const err of ep.errors || []) {
-			const key = err.slice(0, 50).trim();
-			errorCounts[key] = (errorCounts[key] || 0) + 1;
-		}
-	}
-	const errors =
-		Object.keys(errorCounts).length > 0
-			? Object.entries(errorCounts)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 10)
-					.map(([e, c]) => `${e} (${c}次)`)
-					.join("; ")
-			: "暂无错误记录";
+Return JSON matching this schema:
+{
+  "persona": {
+    "whatTheyDo": "1-2 sentences",
+    "experienceLevel": "1 sentence",
+    "superpowers": ["...", "..."],
+    "painPoints": ["...", "..."],
+    "workStyle": "1-2 sentences",
+    "summary": "1 sentence"
+  },
+  "insights": [
+    {
+      "title": "short title",
+      "content": "3-5 sentences combining observation, evidence, correction, and advice",
+      "icon": "emoji",
+      "utility": "high|medium|low",
+      "tags": ["tag1", "tag2"]
+    }
+  ],
+  "rootCauses": [
+    {
+      "symptom": "what keeps happening",
+      "rootCause": "why it likely happens",
+      "evidence": ["fact 1", "fact 2"],
+      "suggestion": "what to change next"
+    }
+  ]
+}`.trim();
 
-	return { tools, languages, wins, struggles, lessons, errors };
+function summarizeCounts(rows: Array<[string, number]>, formatter: (label: string, value: number) => string): string[] {
+	return rows.map(([label, value]) => formatter(label, value));
+}
+
+function buildHumanInsightsData(all: ExportAllResult) {
+	const totalToolUses = all.episodes.reduce(
+		(total, episode) =>
+			total +
+			Object.values(episode.toolsUsed ?? {}).reduce<number>((sum, count) => sum + count, 0),
+		0,
+	);
+
+	const toolCounts = all.episodes.reduce(
+		(acc, episode) => {
+			for (const [tool, count] of Object.entries(episode.toolsUsed ?? {})) {
+				acc[tool] = (acc[tool] ?? 0) + count;
+			}
+			return acc;
+		},
+		{} as Record<string, number>,
+	);
+
+	const languageCounts = all.episodes.reduce(
+		(acc, episode) => {
+			for (const file of episode.filesModified ?? []) {
+				const ext = file.includes(".") ? file.split(".").pop()?.toLowerCase() ?? "other" : "other";
+				acc[ext] = (acc[ext] ?? 0) + 1;
+			}
+			return acc;
+		},
+		{} as Record<string, number>,
+	);
+
+	const errorCounts = all.episodes.reduce(
+		(acc, episode) => {
+			for (const error of episode.errors ?? []) {
+				const key = error.replace(/\s+/g, " ").trim().slice(0, 120);
+				if (!key) continue;
+				acc[key] = (acc[key] ?? 0) + 1;
+			}
+			return acc;
+		},
+		{} as Record<string, number>,
+	);
+
+	const resolvedStruggles = all.facets.filter(
+		(entry) => entry.type === "struggle" && entry.facetData?.kind === "struggle" && !!entry.facetData.solution,
+	);
+	const unresolvedStruggles = all.facets.filter(
+		(entry) => entry.type === "struggle" && entry.facetData?.kind === "struggle" && !entry.facetData.solution,
+	);
+	const patternEntries = all.facets.filter(
+		(entry) => entry.type === "pattern" && entry.facetData?.kind === "pattern",
+	);
+
+	const topTools = Object.entries(toolCounts)
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, 8);
+	const topLanguages = Object.entries(languageCounts)
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, 8);
+	const topErrors = Object.entries(errorCounts)
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, 8);
+	const topPatterns = patternEntries
+		.slice()
+		.sort((a, b) => (b.accessCount + 1) * b.importance - (a.accessCount + 1) * a.importance)
+		.slice(0, 6)
+		.map((entry) => ({
+			trigger: entry.facetData?.kind === "pattern" ? entry.facetData.trigger : "",
+			behavior: entry.facetData?.kind === "pattern" ? entry.facetData.behavior : "",
+			importance: entry.importance,
+			accessCount: entry.accessCount,
+		}));
+
+	const notableWins = resolvedStruggles.slice(0, 6).map((entry) => ({
+		problem: entry.facetData?.kind === "struggle" ? entry.facetData.problem : entry.summary || "",
+		solution: entry.facetData?.kind === "struggle" ? entry.facetData.solution : "",
+		importance: entry.importance,
+	}));
+
+	const notableFrictions = unresolvedStruggles.slice(0, 6).map((entry) => ({
+		problem: entry.facetData?.kind === "struggle" ? entry.facetData.problem : entry.summary || "",
+		attempts: entry.facetData?.kind === "struggle" ? entry.facetData.attempts : [],
+		importance: entry.importance,
+	}));
+
+	const topLessons = all.lessons
+		.slice()
+		.sort((a, b) => (b.accessCount + 1) * b.importance - (a.accessCount + 1) * a.importance)
+		.slice(0, 8)
+		.map((entry) => entry.summary || entry.detail || entry.content || "")
+		.filter(Boolean);
+
+	const projectCounts = all.episodes.reduce(
+		(acc, episode) => {
+			const key = episode.project || "default";
+			acc[key] = (acc[key] ?? 0) + 1;
+			return acc;
+		},
+		{} as Record<string, number>,
+	);
+
+	return {
+		overview: {
+			totalSessions: all.meta.totalSessions,
+			episodes: all.episodes.length,
+			workEntries: all.work.length,
+			knowledgeEntries: all.knowledge.length,
+			lessonEntries: all.lessons.length,
+			preferenceEntries: all.preferences.length,
+			facetEntries: all.facets.length,
+			totalToolUses,
+			resolvedStruggleCount: resolvedStruggles.length,
+			unresolvedStruggleCount: unresolvedStruggles.length,
+		},
+		topTools: topTools.map(([tool, count]) => ({
+			tool,
+			count,
+			share: totalToolUses > 0 ? Number(((count / totalToolUses) * 100).toFixed(1)) : 0,
+		})),
+		topLanguages: topLanguages.map(([language, fileCount]) => ({ language, fileCount })),
+		topErrors: topErrors.map(([error, count]) => ({ error, count })),
+		topPatterns,
+		notableWins,
+		notableFrictions,
+		topLessons,
+		projectDistribution: Object.entries(projectCounts)
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 6)
+			.map(([project, sessions]) => ({ project, sessions })),
+		evidenceDigest: {
+			tools: summarizeCounts(topTools, (tool, count) => `${tool}: ${count} uses`),
+			languages: summarizeCounts(topLanguages, (language, count) => `${language}: ${count} files`),
+			errors: summarizeCounts(topErrors, (error, count) => `${error}: ${count} times`),
+		},
+	};
 }
 
 function parseHumanInsightsResponse(raw: string): {
@@ -112,49 +222,50 @@ function parseHumanInsightsResponse(raw: string): {
 } | null {
 	try {
 		const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-		const parsed = JSON.parse(cleaned);
+		const parsed = JSON.parse(cleaned) as {
+			persona?: Record<string, unknown>;
+			insights?: Array<Record<string, unknown>>;
+			rootCauses?: Array<Record<string, unknown>>;
+		};
 
-		// Validate structure
-		if (typeof parsed !== "object" || parsed === null) return null;
+		if (typeof parsed !== "object" || parsed === null) {
+			return null;
+		}
 
 		const persona = parsed.persona
 			? {
 					whatTheyDo: String(parsed.persona.whatTheyDo || ""),
 					experienceLevel: String(parsed.persona.experienceLevel || ""),
-					superpowers: Array.isArray(parsed.persona.superpowers)
-						? parsed.persona.superpowers.map(String)
-						: [],
-					painPoints: Array.isArray(parsed.persona.painPoints)
-						? parsed.persona.painPoints.map(String)
-						: [],
+					superpowers: Array.isArray(parsed.persona.superpowers) ? parsed.persona.superpowers.map(String) : [],
+					painPoints: Array.isArray(parsed.persona.painPoints) ? parsed.persona.painPoints.map(String) : [],
 					workStyle: String(parsed.persona.workStyle || ""),
 					summary: String(parsed.persona.summary || ""),
 				}
 			: undefined;
 
 		const insights: HumanInsight[] = Array.isArray(parsed.insights)
-			? parsed.insights.map((i: unknown) => ({
-					title: String((i as Record<string, unknown>).title || ""),
-					content: String((i as Record<string, unknown>).content || ""),
-					icon: String((i as Record<string, unknown>).icon || "💡"),
-					utility: ["high", "medium", "low"].includes(String((i as Record<string, unknown>).utility))
-						? (String((i as Record<string, unknown>).utility) as "high" | "medium" | "low")
-						: "medium",
-					tags: Array.isArray((i as Record<string, unknown>).tags)
-						? (i as Record<string, unknown>).tags.map(String)
-						: [],
-				}))
+			? parsed.insights
+					.map((item) => ({
+						title: String(item.title || "").trim(),
+						content: String(item.content || "").trim(),
+						icon: String(item.icon || "Insight").trim(),
+						utility: ["high", "medium", "low"].includes(String(item.utility))
+							? (String(item.utility) as "high" | "medium" | "low")
+							: "medium",
+						tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+					}))
+					.filter((item) => item.title && item.content)
 			: [];
 
 		const rootCauses: RootCauseInsight[] = Array.isArray(parsed.rootCauses)
-			? parsed.rootCauses.map((r: unknown) => ({
-					symptom: String((r as Record<string, unknown>).symptom || ""),
-					rootCause: String((r as Record<string, unknown>).rootCause || ""),
-					evidence: Array.isArray((r as Record<string, unknown>).evidence)
-						? (r as Record<string, unknown>).evidence.map(String)
-						: [],
-					suggestion: String((r as Record<string, unknown>).suggestion || ""),
-				}))
+			? parsed.rootCauses
+					.map((item) => ({
+						symptom: String(item.symptom || "").trim(),
+						rootCause: String(item.rootCause || "").trim(),
+						evidence: Array.isArray(item.evidence) ? item.evidence.map(String) : [],
+						suggestion: String(item.suggestion || "").trim(),
+					}))
+					.filter((item) => item.symptom && item.rootCause)
 			: [];
 
 		return { persona, insights, rootCauses };
@@ -163,9 +274,6 @@ function parseHumanInsightsResponse(raw: string): {
 	}
 }
 
-/**
- * 生成大白话版洞察报告
- */
 export async function generateHumanInsights(
 	all: ExportAllResult,
 	llmFn: LlmFn | undefined,
@@ -175,27 +283,16 @@ export async function generateHumanInsights(
 	humanInsights: HumanInsight[];
 	rootCauses: RootCauseInsight[];
 }> {
-	// 如果没有 LLM，返回空结果
 	if (!llmFn) {
 		return { humanInsights: [], rootCauses: [] };
 	}
 
-	const p = PROMPTS[locale] || PROMPTS.en;
 	const data = buildHumanInsightsData(all);
-
-	// 构建用户 prompt，替换模板变量
-	let userPrompt = p.humanInsightsUserTemplate;
-	userPrompt = userPrompt.replace("{{tools}}", data.tools);
-	userPrompt = userPrompt.replace("{{languages}}", data.languages);
-	userPrompt = userPrompt.replace("{{wins}}", data.wins);
-	userPrompt = userPrompt.replace("{{struggles}}", data.struggles);
-	userPrompt = userPrompt.replace("{{lessons}}", data.lessons);
-	userPrompt = userPrompt.replace("{{errors}}", data.errors);
+	const userPrompt = JSON.stringify({ locale, reviewData: data });
 
 	try {
-		const raw = await llmFn(p.humanInsightsSystemPrompt, userPrompt);
+		const raw = await llmFn(HUMAN_INSIGHTS_SYSTEM_PROMPT, userPrompt);
 		const parsed = parseHumanInsightsResponse(raw);
-
 		if (parsed) {
 			return {
 				persona: parsed.persona,
@@ -204,25 +301,19 @@ export async function generateHumanInsights(
 			};
 		}
 	} catch {
-		// Fallback to empty
+		// Fall back to empty enhanced insights when the LLM path is unavailable.
 	}
 
 	return { humanInsights: [], rootCauses: [] };
 }
 
-/**
- * 将人类可读洞察合并到 FullInsightsReport 生成流程中
- */
 export async function buildEnhancedInsightsReport(
 	all: ExportAllResult,
 	llmFn: LlmFn | undefined,
 	locale: string,
 ): Promise<EnhancedInsightsReport> {
-	// 这个函数会在 engine.ts 中被调用来生成完整报告
-	// 目前 placeholder - 实际逻辑在对应的调用处
 	const humanData = await generateHumanInsights(all, llmFn, locale);
 
-	// 返回一个基础结构，实际的完整报告会在调用处构建
 	return {
 		stats: {
 			knowledge: all.knowledge.length,

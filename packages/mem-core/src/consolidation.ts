@@ -59,7 +59,8 @@ async function llmConsolidation(episodes: Episode[], cfg: NanomemConfig, llmFn: 
 		}>;
 		const now = new Date().toISOString();
 		return items.map((item) => {
-			const type: MemoryEntry["type"] = item.type === "lesson" ? "lesson" : "fact";
+			const type: MemoryEntry["type"] =
+				item.type === "lesson" ? "lesson" : item.type === "event" ? "event" : "fact";
 			const detail = item.detail || item.content || "";
 			const name = item.name || deriveNameFromContent(detail);
 			const summary = item.summary || deriveSummaryFromContent(detail);
@@ -78,6 +79,9 @@ async function llmConsolidation(episodes: Episode[], cfg: NanomemConfig, llmFn: 
 				eventTime: now,
 				accessCount: 0,
 				relatedIds: [],
+				retention: type === "event" ? "key-event" : type === "lesson" ? "key-event" : "ambient",
+				salience: type === "event" ? Math.max(8, item.importance ?? 8) : item.importance ?? 6,
+				stability: type === "event" ? "stable" : type === "lesson" ? "stable" : "situational",
 				scope: cfg.defaultScope,
 			};
 		});
@@ -118,6 +122,7 @@ function heuristicConsolidation(episodes: Episode[], cfg: NanomemConfig): Memory
 			eventTime: now,
 			accessCount: 0,
 			relatedIds: [],
+			stability: "situational",
 			scope: cfg.defaultScope,
 		});
 	}
@@ -143,6 +148,51 @@ function heuristicConsolidation(episodes: Episode[], cfg: NanomemConfig): Memory
 			eventTime: now,
 			accessCount: 0,
 			relatedIds: [],
+			retention: "key-event",
+			salience: 8,
+			stability: "stable",
+			scope: cfg.defaultScope,
+		});
+	}
+
+	const significantEpisodes = [...episodes]
+		.filter((ep) => ep.importance >= 8 || ep.errors.length >= 2)
+		.sort((a, b) => b.importance - a.importance)
+		.slice(0, 3);
+
+	for (const ep of significantEpisodes) {
+		const detailParts = [
+			ep.summary,
+			ep.userGoal ? `Goal: ${ep.userGoal}` : "",
+			ep.errors.length ? `Errors: ${ep.errors.join("; ")}` : "",
+			ep.keyObservations.length ? `Observations: ${ep.keyObservations.slice(0, 4).join("; ")}` : "",
+		].filter(Boolean);
+		const detail = detailParts.join("\n");
+		const name = ep.userGoal ? deriveNameFromContent(ep.userGoal) : deriveNameFromContent(ep.summary);
+		const summary = deriveSummaryFromContent(ep.summary || ep.userGoal || detail);
+		result.push({
+			id: makeId(),
+			type: "event",
+			name,
+			summary,
+			detail,
+			content: detail,
+			tags: extractTags(`${ep.project} ${ep.summary} ${ep.userGoal || ""} ${ep.errors.join(" ")}`),
+			project: ep.project || "unknown",
+			importance: Math.min(10, Math.max(8, ep.importance)),
+			strength: cfg.halfLife.event ?? 180,
+			created: now,
+			eventTime: ep.date ? new Date(ep.date).toISOString() : now,
+			accessCount: 0,
+			relatedIds: [],
+			retention: "key-event",
+			salience: Math.min(10, Math.max(8, ep.importance + ep.errors.length)),
+			stability: ep.errors.length ? "situational" : "stable",
+			eventData: {
+				kind: ep.errors.length ? "incident" : "milestone",
+				outcome: ep.errors.length ? "Captured from a high-friction session" : "Captured from a high-importance session",
+				emotionalWeight: Math.min(10, ep.importance),
+			},
 			scope: cfg.defaultScope,
 		});
 	}

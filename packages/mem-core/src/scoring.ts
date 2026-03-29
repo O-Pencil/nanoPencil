@@ -45,9 +45,23 @@ export function scoreEntry(
 	const strength = e.strength || defaultHalfLife[e.type] || 30;
 	const recency = decay(daysSince(e.created), strength);
 	const importanceNorm = Math.min(1, e.importance / 10);
+	const salienceNorm = Math.min(1, (e.salience ?? e.importance) / 10);
 	const projectMatch = e.project === project ? 1 : 0.5;
 	const relevance = projectMatch * (0.3 + 0.7 * tagOverlap(e.tags, ctx));
-	return weights.recency * recency + weights.importance * importanceNorm + weights.relevance * relevance;
+	const retentionBoost =
+		e.retention === "core" ? 0.2 : e.retention === "key-event" ? 0.25 : 0;
+	const stabilityBoost = e.stability === "stable" ? 0.08 : -0.12;
+	const situationalPenalty =
+		e.stability === "situational" && daysSince(e.created) > 10 ? 0.18 : 0;
+	return (
+		weights.recency * recency +
+		weights.importance * importanceNorm +
+		weights.relevance * relevance +
+		salienceNorm * 0.25 +
+		retentionBoost +
+		stabilityBoost -
+		situationalPenalty
+	);
 }
 
 export function scoreEpisode(
@@ -107,6 +121,8 @@ export function getInjectionLevel(
 	// Force Active for very recent or critical entries
 	if (hoursSinceCreation <= cfg.forceRecentHours) return "active";
 	if (entry.importance >= cfg.forceImportanceMin) return "active";
+	if (entry.retention === "key-event" && (entry.salience ?? entry.importance) >= 7) return "active";
+	if (entry.retention === "core" && score >= cfg.thresholdCue) return "active";
 	if (score >= cfg.thresholdActive) return "active";
 	if (score >= cfg.thresholdCue) return "cue";
 	return "dormant";

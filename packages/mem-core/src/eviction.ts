@@ -19,7 +19,16 @@ export function utilityEntry(e: MemoryEntry, defaultHalfLife: Record<string, num
 	const strength = e.strength || defaultHalfLife[e.type] || 30;
 	const accessNorm = Math.min(1, (e.accessCount ?? 0) / 10);
 	const impactNorm = Math.min(1, e.importance / 10);
-	return (w.accessFrequency * accessNorm + w.baseImpact * impactNorm) * decay(daysSince(e.created), strength);
+	const salienceNorm = Math.min(1, (e.salience ?? e.importance) / 10);
+	const retentionMultiplier =
+		e.retention === "core" ? 1.25 : e.retention === "key-event" ? 1.35 : 0.9;
+	const stabilityMultiplier = e.stability === "stable" ? 1.08 : 0.78;
+	return (
+		(w.accessFrequency * accessNorm + w.baseImpact * impactNorm + salienceNorm * 0.2) *
+		retentionMultiplier *
+		stabilityMultiplier *
+		decay(daysSince(e.created), strength)
+	);
 }
 
 export function utilityWork(w: WorkEntry, defaultHalfLife: Record<string, number>, ew: EvictionWeights): number {

@@ -2545,6 +2545,14 @@ export class AgentSession {
     if (isContextOverflow(message, contextWindow)) return false;
 
     const err = message.errorMessage;
+    // Do not retry errors that require user intervention.
+    if (
+      /insufficient.?balance|insufficient.?quota|quota.?exceeded|credit.?balance|billing|payment required|invalid api key|incorrect api key|unauthorized|unauthenticated|authentication|forbidden|permission denied|access denied|model_not_found|model not found/i.test(
+        err,
+      )
+    ) {
+      return false;
+    }
     // Match: overloaded_error, rate limit, 429, 500, 502, 503, 504, service unavailable, connection errors, fetch failed, terminated, retry delay exceeded
     return /overloaded|rate.?limit|too many requests|429|500|502|503|504|service.?unavailable|server error|internal error|connection.?error|connection.?refused|other side closed|fetch failed|upstream.?connect|reset before headers|terminated|retry delay/i.test(
       err,

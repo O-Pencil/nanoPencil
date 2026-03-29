@@ -28,7 +28,9 @@ export class ProviderSelectorComponent extends Container {
 				label: customProvider?.label ?? provider,
 				description:
 					provider === currentProvider
-						? "(current)"
+						? customProvider
+							? "(current, press Enter to edit)"
+							: "(current)"
 						: customProvider?.description,
 			};
 		});

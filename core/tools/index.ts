@@ -162,7 +162,7 @@ export const toolGuidance: Record<string, string> = {
 };
 
 toolGuidance.time =
-	"Get the real current system time. Use this for time-sensitive confirmations like current date/time, today/tomorrow, deadlines, and temporal reasoning.";
+	"Get the real current system time. You must use this for current time/date questions, today/tomorrow/yesterday, deadlines, schedules, or any temporal reasoning that depends on the live system clock.";
 
 /**
  * Get guidance for a specific tool

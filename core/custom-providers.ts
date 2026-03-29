@@ -30,7 +30,7 @@ const CUSTOM_PROVIDER_DEFINITIONS: Record<
 	[CUSTOM_ANTHROPIC_PROVIDER]: {
 		id: CUSTOM_ANTHROPIC_PROVIDER,
 		label: "Anthropic-compatible",
-		description: "Custom endpoint using the Anthropic Messages protocol.",
+		description: "Configure or edit an endpoint that speaks the Anthropic Messages API.",
 		defaultBaseUrl: "https://api.anthropic.com/v1",
 		api: "anthropic-messages",
 		defaultInput: ["text", "image"],
@@ -38,7 +38,7 @@ const CUSTOM_PROVIDER_DEFINITIONS: Record<
 	[CUSTOM_OPENAI_PROVIDER]: {
 		id: CUSTOM_OPENAI_PROVIDER,
 		label: "OpenAI-compatible",
-		description: "Custom endpoint using OpenAI-compatible APIs.",
+		description: "Configure or edit an endpoint that speaks an OpenAI-compatible API.",
 		defaultBaseUrl: "https://api.openai.com/v1",
 		api: "openai-completions",
 		defaultInput: ["text", "image"],

@@ -9,6 +9,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { getAgentDir } from "../../config.js";
+import { AuthStorage } from "../config/auth-storage.js";
 
 // Log level control: DEBUG shows all MCP messages, RELEASE only shows summary
 // Check if running from installed location (production) vs development
@@ -38,13 +39,23 @@ export interface MCPServerConfig {
   /** Display name */
   name: string;
   /** Command to start the server (e.g., "npx", "uvx") */
-  command: string;
+  command?: string;
   /** Arguments to pass to the command */
-  args: string[];
+  args?: string[];
+  /** Streamable HTTP endpoint for remote/local HTTP MCP servers */
+  url?: string;
+  /** Additional headers for HTTP MCP servers */
+  headers?: Record<string, string>;
+  /** Credential provider id stored in auth.json for HTTP MCP servers */
+  authProvider?: string;
+  /** Header name to use when authProvider resolves a token */
+  authHeaderName?: string;
+  /** Header auth scheme. "bearer" prefixes the token, "raw" passes it as-is */
+  authScheme?: "bearer" | "raw";
   /** Environment variables to pass */
   env?: Record<string, string>;
-  /** Transport type: "stdio" or "sse" */
-  transport?: "stdio" | "sse";
+  /** Transport type: "stdio", "sse", or "http" */
+  transport?: "stdio" | "sse" | "http";
   /** Whether this server is enabled */
   enabled?: boolean;
   /** Tool call timeout in milliseconds (default: 20000) */
@@ -108,6 +119,16 @@ interface SpawnSpec {
   args: string[];
 }
 
+interface HTTPSession {
+  sessionId?: string;
+  initialized: boolean;
+}
+
+interface ServerSentEventPayload {
+  event?: string;
+  data?: string;
+}
+
 /**
  * MCP Client class
  * Manages connections to MCP servers and tool calls
@@ -116,8 +137,11 @@ export class MCPClient {
   private servers = new Map<string, MCPServerConfig>();
   private serverRuntimes = new Map<string, ServerRuntime>();
   private serverTools = new Map<string, MCPTool[]>();
+  private httpSessions = new Map<string, HTTPSession>();
+  private authStorage: AuthStorage;
 
   constructor() {
+    this.authStorage = AuthStorage.create(join(getAgentDir(), "auth.json"));
     this.loadServersFromConfig();
   }
 
@@ -194,24 +218,26 @@ export class MCPClient {
   }
 
   private getSpawnAttempts(server: MCPServerConfig): SpawnSpec[] {
+    if (!server.command) return [];
     const attempts: SpawnSpec[] = [];
     const cmd = server.command.trim();
     const lower = cmd.toLowerCase();
+    const commandArgs = server.args ?? [];
 
     if (process.platform === "win32" && lower === "npx") {
-      attempts.push({ command: "npx.cmd", args: server.args });
-      const npmExecArgs = this.convertNpxArgsToNpmExecArgs(server.args);
+      attempts.push({ command: "npx.cmd", args: commandArgs });
+      const npmExecArgs = this.convertNpxArgsToNpmExecArgs(commandArgs);
       if (npmExecArgs) {
         attempts.push({ command: "npm.cmd", args: npmExecArgs });
       }
-      attempts.push({ command: "npx", args: server.args });
+      attempts.push({ command: "npx", args: commandArgs });
       return attempts;
     }
 
-    attempts.push({ command: cmd, args: server.args });
+    attempts.push({ command: cmd, args: commandArgs });
 
     if (lower === "npx") {
-      const npmExecArgs = this.convertNpxArgsToNpmExecArgs(server.args);
+      const npmExecArgs = this.convertNpxArgsToNpmExecArgs(commandArgs);
       if (npmExecArgs) {
         attempts.push({
           command: process.platform === "win32" ? "npm.cmd" : "npm",
@@ -361,6 +387,12 @@ export class MCPClient {
     method: string,
     params?: Record<string, unknown>,
   ): void {
+    const server = this.servers.get(serverId);
+    if (server?.transport === "http") {
+      void this.sendHttpRequest(server, method, params, 20_000, true);
+      return;
+    }
+
     const runtime = this.getRuntime(serverId);
     if (!runtime) return;
     this.writeFramedMessage(runtime, {
@@ -376,6 +408,20 @@ export class MCPClient {
     params?: Record<string, unknown>,
     timeoutMs = 20_000,
   ): Promise<T> {
+    const server = this.servers.get(serverId);
+    if (!server) {
+      throw new Error(`Server ${serverId} not found`);
+    }
+
+    if (server.transport === "http") {
+      return (await this.sendHttpRequest(
+        server,
+        method,
+        params,
+        timeoutMs,
+      )) as T;
+    }
+
     const runtime = this.getRuntime(serverId);
     if (!runtime) {
       throw new Error(`Server ${serverId} is not running`);
@@ -408,9 +454,192 @@ export class MCPClient {
     });
   }
 
+  private getHttpSession(serverId: string): HTTPSession {
+    const existing = this.httpSessions.get(serverId);
+    if (existing) return existing;
+    const created: HTTPSession = { initialized: false };
+    this.httpSessions.set(serverId, created);
+    return created;
+  }
+
+  private async buildHttpHeaders(
+    server: MCPServerConfig,
+    sessionId?: string,
+  ): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-03-26",
+      ...(server.headers ?? {}),
+    };
+
+    if (sessionId) {
+      headers["Mcp-Session-Id"] = sessionId;
+    }
+
+    if (server.authProvider) {
+      const token = await this.authStorage.getApiKey(server.authProvider);
+      if (token) {
+        const headerName = server.authHeaderName?.trim() || "Authorization";
+        const scheme = server.authScheme ?? "bearer";
+        headers[headerName] = scheme === "raw" ? token : `Bearer ${token}`;
+      }
+    }
+
+    return headers;
+  }
+
+  private async ensureHttpInitialized(server: MCPServerConfig): Promise<void> {
+    const session = this.getHttpSession(server.id);
+    if (session.initialized) {
+      return;
+    }
+
+    const initPayload = {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+      clientInfo: { name: "nano-pencil", version: "1.11.12" },
+    };
+    await this.sendHttpRequest(server, "initialize", initPayload, server.initTimeout ?? 20_000);
+    session.initialized = true;
+    await this.sendHttpRequest(server, "notifications/initialized", {}, server.initTimeout ?? 20_000, true);
+  }
+
+  private async sendHttpRequest(
+    server: MCPServerConfig,
+    method: string,
+    params: Record<string, unknown> | undefined,
+    timeoutMs: number,
+    isNotification = false,
+    allowRetry = true,
+  ): Promise<unknown> {
+    if (!server.url) {
+      throw new Error(`HTTP MCP server ${server.id} is missing a url`);
+    }
+
+    const session = this.getHttpSession(server.id);
+    if (method !== "initialize" && !session.initialized) {
+      await this.ensureHttpInitialized(server);
+    }
+
+    const requestId = isNotification ? undefined : Date.now() + Math.floor(Math.random() * 1000);
+    const body = isNotification
+      ? {
+          jsonrpc: "2.0",
+          method,
+          params: params ?? {},
+        }
+      : {
+          jsonrpc: "2.0",
+          id: requestId,
+          method,
+          params: params ?? {},
+        };
+
+    const response = await fetch(server.url, {
+      method: "POST",
+      headers: await this.buildHttpHeaders(
+        server,
+        method === "initialize" ? undefined : session.sessionId,
+      ),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (response.status === 404 && session.sessionId && allowRetry && method !== "initialize") {
+      this.httpSessions.set(server.id, { initialized: false });
+      return this.sendHttpRequest(server, method, params, timeoutMs, isNotification, false);
+    }
+
+    if (!response.ok) {
+      if (response.status === 401 && server.authProvider) {
+        throw new Error(
+          `HTTP MCP request failed (401 Unauthorized). The ${server.id} server requires valid credentials for "${server.authProvider}". Re-authenticate and try again.`,
+        );
+      }
+      const errorText = await response.text().catch(() => "");
+      throw new Error(
+        `HTTP MCP request failed (${response.status} ${response.statusText})${errorText ? `: ${errorText}` : ""}`,
+      );
+    }
+
+    const nextSessionId = response.headers.get("Mcp-Session-Id");
+    if (nextSessionId) {
+      session.sessionId = nextSessionId;
+    }
+
+    if (isNotification) {
+      return undefined;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    const raw = await response.text();
+    if (!raw.trim()) {
+      return undefined;
+    }
+
+    let message: JsonRpcMessage;
+    if (contentType.includes("text/event-stream")) {
+      message = this.parseEventStreamResponse(raw);
+    } else {
+      if (!contentType.includes("application/json") && !raw.trim().startsWith("{")) {
+        throw new Error(`Unsupported HTTP MCP response content type: ${contentType || "unknown"}`);
+      }
+      message = JSON.parse(raw) as JsonRpcMessage;
+    }
+
+    if (message.error) {
+      throw new Error(message.error.message || `JSON-RPC error ${message.error.code ?? "unknown"}`);
+    }
+    return message.result;
+  }
+
+  private parseEventStreamResponse(raw: string): JsonRpcMessage {
+    const events: ServerSentEventPayload[] = [];
+    let current: ServerSentEventPayload = {};
+
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line.trim()) {
+        if (current.data !== undefined || current.event !== undefined) {
+          events.push(current);
+          current = {};
+        }
+        continue;
+      }
+
+      if (line.startsWith(":")) {
+        continue;
+      }
+
+      const separatorIndex = line.indexOf(":");
+      const field = separatorIndex === -1 ? line : line.slice(0, separatorIndex);
+      const value = separatorIndex === -1 ? "" : line.slice(separatorIndex + 1).trimStart();
+
+      if (field === "event") {
+        current.event = value;
+      } else if (field === "data") {
+        current.data = current.data ? `${current.data}\n${value}` : value;
+      }
+    }
+
+    if (current.data !== undefined || current.event !== undefined) {
+      events.push(current);
+    }
+
+    const payload = [...events]
+      .reverse()
+      .find((event) => typeof event.data === "string" && event.data.trim().length > 0)?.data;
+
+    if (!payload) {
+      throw new Error("HTTP MCP event-stream response did not include a JSON payload");
+    }
+
+    return JSON.parse(payload) as JsonRpcMessage;
+  }
+
   private async initializeServer(serverId: string): Promise<void> {
     const server = this.servers.get(serverId);
-    const isNpx = server?.command.toLowerCase().includes("npx");
+    const isNpx = server?.command?.toLowerCase().includes("npx") ?? false;
     const isWindows = process.platform === "win32";
 
     // Give server a moment to initialize
@@ -509,8 +738,22 @@ export class MCPClient {
       throw new Error(`Server ${serverId} not found`);
     }
 
+    if (server.transport === "http") {
+      try {
+        await this.ensureHttpInitialized(server);
+        await this.loadToolsForServer(serverId);
+        return true;
+      } catch (error) {
+        console.error(
+          `Failed to initialize HTTP MCP server ${serverId}:`,
+          error instanceof Error ? error.message : error,
+        );
+        return false;
+      }
+    }
+
     if (server.transport === "sse") {
-      // SSE servers don't need to be started as separate processes
+      // Legacy SSE-only remote servers are not fully supported yet.
       return true;
     }
 
@@ -560,6 +803,22 @@ export class MCPClient {
    * Stop an MCP server
    */
   stopServer(serverId: string): void {
+    const server = this.servers.get(serverId);
+    const httpSession = this.httpSessions.get(serverId);
+    if (server?.transport === "http" && httpSession?.sessionId && server.url) {
+      void this.buildHttpHeaders(server, httpSession.sessionId)
+        .then((headers) =>
+          fetch(server.url!, {
+            method: "DELETE",
+            headers,
+          }),
+        )
+        .catch(() => {
+        // Ignore termination failures from HTTP MCP servers.
+        });
+    }
+
+    this.httpSessions.delete(serverId);
     const runtime = this.serverRuntimes.get(serverId);
     if (runtime) {
       for (const pending of runtime.pendingRequests.values()) {
@@ -576,7 +835,11 @@ export class MCPClient {
    * Stop all running servers
    */
   stopAllServers(): void {
-    for (const serverId of this.serverRuntimes.keys()) {
+    const serverIds = new Set<string>([
+      ...this.serverRuntimes.keys(),
+      ...this.httpSessions.keys(),
+    ]);
+    for (const serverId of serverIds) {
       this.stopServer(serverId);
     }
   }
@@ -641,8 +904,64 @@ export class MCPClient {
       return this.callSSETool(server, toolNameOnly, args);
     }
 
+    if (server.transport === "http") {
+      return this.callHttpTool(server, toolNameOnly, args, effectiveTimeout);
+    }
+
     // For stdio transport, send JSON-RPC message
     return this.callStdioTool(server, toolNameOnly, args, effectiveTimeout);
+  }
+
+  private async callHttpTool(
+    server: MCPServerConfig,
+    toolName: string,
+    args: Record<string, unknown>,
+    timeoutMs: number = 20_000,
+  ): Promise<MCPToolResult> {
+    try {
+      const result = (await this.sendRequest<Record<string, unknown>>(
+        server.id,
+        "tools/call",
+        { name: toolName, arguments: args },
+        timeoutMs,
+      )) as Record<string, unknown>;
+
+      const isError = result.isError === true;
+      const content = Array.isArray(result.content)
+        ? (result.content as Array<Record<string, unknown>>).map((item) => {
+            const type =
+              item.type === "image" || item.type === "resource"
+                ? item.type
+                : "text";
+            return {
+              type: type as "text" | "image" | "resource",
+              text:
+                typeof item.text === "string"
+                  ? item.text
+                  : typeof item.message === "string"
+                    ? item.message
+                    : undefined,
+              data: item,
+            };
+          })
+        : [{ type: "text" as const, text: JSON.stringify(result) }];
+
+      return {
+        content,
+        error:
+          isError
+            ? content
+                .map((c) => c.text)
+                .filter((t): t is string => !!t)
+                .join("\n") || `MCP tool ${toolName} failed`
+            : undefined,
+      };
+    } catch (error) {
+      return {
+        content: [{ type: "text", text: `Failed to call tool: ${error}` }],
+        error: String(error),
+      };
+    }
   }
 
   /**

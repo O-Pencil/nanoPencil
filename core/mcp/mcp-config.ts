@@ -64,6 +64,27 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
       transport: "stdio",
       toolTimeout: 30000,
     },
+    {
+      id: "figma-desktop",
+      name: "Figma Desktop MCP",
+      url: "http://127.0.0.1:3845/mcp",
+      enabled: false,
+      transport: "http",
+      toolTimeout: 60000,
+      initTimeout: 20000,
+    },
+    {
+      id: "figma-remote",
+      name: "Figma Remote MCP",
+      url: "https://mcp.figma.com/mcp",
+      authProvider: "figma",
+      authHeaderName: "Authorization",
+      authScheme: "bearer",
+      enabled: false,
+      transport: "http",
+      toolTimeout: 60000,
+      initTimeout: 20000,
+    },
     // ===== 数据库工具 =====
     {
       id: "sqlite",
@@ -161,7 +182,22 @@ export function loadMCPConfig(): MCPConfig {
 
   try {
     const content = readFileSync(configPath, "utf-8");
-    return JSON.parse(content) as MCPConfig;
+    const parsed = JSON.parse(content) as MCPConfig;
+    const existingServers = parsed.mcpServers ?? [];
+    const existingIds = new Set(existingServers.map((server) => server.id));
+    const missingDefaults = DEFAULT_MCP_CONFIG.mcpServers.filter(
+      (server) => !existingIds.has(server.id),
+    );
+
+    if (missingDefaults.length === 0) {
+      return parsed;
+    }
+
+    const mergedConfig: MCPConfig = {
+      mcpServers: [...existingServers, ...missingDefaults],
+    };
+    saveMCPConfig(mergedConfig);
+    return mergedConfig;
   } catch (error) {
     console.error(`Failed to load MCP config: ${error}`);
     return DEFAULT_MCP_CONFIG;

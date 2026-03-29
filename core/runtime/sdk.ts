@@ -16,6 +16,7 @@ import type {
 } from "../extensions/index.js";
 import { convertToLlm } from "../messages.js";
 import { MCPManager } from "../mcp-manager.js";
+import { registerFigmaMcpOAuthProvider } from "../mcp/figma-auth.js";
 import { ModelRegistry } from "../model-registry.js";
 import { findInitialModel } from "../model-resolver.js";
 import type { ResourceLoader } from "../config/resource-loader.js";
@@ -187,6 +188,8 @@ function getDefaultAgentDir(): string {
 export async function createAgentSession(
   options: CreateAgentSessionOptions = {},
 ): Promise<CreateAgentSessionResult> {
+  registerFigmaMcpOAuthProvider();
+
   const cwd = options.cwd ?? process.cwd();
   const agentDir = options.agentDir ?? getDefaultAgentDir();
   let resourceLoader = options.resourceLoader;

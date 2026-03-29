@@ -33,6 +33,10 @@ import { runMigrations, showDeprecationWarnings } from "./migrations.js";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
 import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
 import {
+	CUSTOM_ANTHROPIC_PROVIDER,
+	CUSTOM_OPENAI_PROVIDER,
+} from "./core/custom-providers.js";
+import {
 	ensureNanopencilCodingPlanAuth,
 	ensureNanopencilDefaultConfig,
 	NANOPENCIL_ARK_CODING_PROVIDER,
@@ -617,6 +621,8 @@ export async function main(args: string[]) {
 						NANOPENCIL_ARK_CODING_PROVIDER,
 						NANOPENCIL_MINIMAX_CODING_PROVIDER,
 						NANOPENCIL_ZHIPU_CODING_PROVIDER,
+						CUSTOM_ANTHROPIC_PROVIDER,
+						CUSTOM_OPENAI_PROVIDER,
 					],
 				}
 			: {},

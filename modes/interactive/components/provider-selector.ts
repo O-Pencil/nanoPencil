@@ -1,8 +1,8 @@
-/**
- * Provider 选择器：列出可用 provider，选择后回调。用于「先选 provider 再选 model」流程。
- */
-
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
+import {
+	getCustomProtocolProviderDefinition,
+	isCustomProtocolProvider,
+} from "../../../core/custom-providers.js";
 import { getSelectListTheme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 
@@ -18,13 +18,26 @@ export class ProviderSelectorComponent extends Container {
 		super();
 		this.addChild(new DynamicBorder());
 
-		const items: SelectItem[] = providers.map((p) => ({
-			value: p,
-			label: p,
-			description: p === currentProvider ? "(当前)" : undefined,
-		}));
+		const items: SelectItem[] = providers.map((provider) => {
+			const customProvider = isCustomProtocolProvider(provider)
+				? getCustomProtocolProviderDefinition(provider)
+				: undefined;
 
-		this.selectList = new SelectList(items, Math.min(Math.max(items.length, 4), 12), getSelectListTheme());
+			return {
+				value: provider,
+				label: customProvider?.label ?? provider,
+				description:
+					provider === currentProvider
+						? "(current)"
+						: customProvider?.description,
+			};
+		});
+
+		this.selectList = new SelectList(
+			items,
+			Math.min(Math.max(items.length, 4), 12),
+			getSelectListTheme(),
+		);
 		this.selectList.onSelect = (item) => onSelect(item.value);
 		this.selectList.onCancel = onCancel;
 

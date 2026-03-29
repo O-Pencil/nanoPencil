@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.12] - 2026-03-29
+
+### Fixed
+- Hardened interactive extension prompt focus handling so interview selectors, extension inputs, and multiline editors recover focus more reliably.
+- Prevented stale prompt abort/cancel callbacks from dismissing a newer prompt, reducing the risk of blocked input during long-running or multi-step interactions.
+- Restored editor focus more consistently around agent start/end transitions so users can keep typing while execution continues.
+
+
 ## [1.11.11] - 2026-03-29
 
 ### Added

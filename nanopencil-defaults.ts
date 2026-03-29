@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { createInterface } from "readline";
 import { getAgentDir, getModelsPath } from "./config.js";
+import { ensureCustomProtocolProvidersInModels } from "./core/custom-providers.js";
 import type { AuthStorage } from "./core/config/auth-storage.js";
 import type { ModelRegistry } from "./core/model-registry.js";
 
@@ -589,9 +590,11 @@ export function ensureNanopencilDefaultConfig(): void {
 	const modelsPath = getModelsPath();
 	if (!existsSync(modelsPath)) {
 		writeFileSync(modelsPath, JSON.stringify(NANOPENCIL_DEFAULT_MODELS_JSON, null, 2), "utf-8");
+		ensureCustomProtocolProvidersInModels(modelsPath);
 		return;
 	}
 	mergeNanopencilModelsIfNeeded(modelsPath);
+	ensureCustomProtocolProvidersInModels(modelsPath);
 }
 
 /**

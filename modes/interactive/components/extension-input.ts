@@ -11,6 +11,7 @@ import { keyHint } from "./keybinding-hints.js";
 export interface ExtensionInputOptions {
 	tui?: TUI;
 	timeout?: number;
+	initialValue?: string;
 }
 
 export class ExtensionInputComponent extends Container implements Focusable {
@@ -61,6 +62,9 @@ export class ExtensionInputComponent extends Container implements Focusable {
 		}
 
 		this.input = new Input();
+		if (opts?.initialValue) {
+			this.input.setValue(opts.initialValue);
+		}
 		this.addChild(this.input);
 		this.addChild(new Spacer(1));
 		this.addChild(new Text(`${keyHint("selectConfirm", "submit")}  ${keyHint("selectCancel", "cancel")}`, 1, 0));

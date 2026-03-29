@@ -10,6 +10,7 @@ import { allTools, type ToolName } from "../core/tools/index.js";
 export type Mode = "text" | "json" | "rpc";
 
 export interface Args {
+	cwd?: string;
 	provider?: string;
 	model?: string;
 	apiKey?: string;
@@ -83,6 +84,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.resume = true;
 		} else if (arg === "--provider" && i + 1 < args.length) {
 			result.provider = args[++i];
+		} else if (arg === "--cwd" && i + 1 < args.length) {
+			result.cwd = args[++i];
 		} else if (arg === "--model" && i + 1 < args.length) {
 			result.model = args[++i];
 		} else if (arg === "--api-key" && i + 1 < args.length) {
@@ -204,6 +207,7 @@ ${chalk.bold("Commands:")}
 
 ${chalk.bold("Options:")}
   --provider <name>              Provider name (default: google)
+  --cwd <dir>                    Working directory to use for project-local discovery
   --model <pattern>              Model pattern or ID (supports "provider/id" and optional ":<thinking>")
   --api-key <key>                API key (defaults to env vars)
   --system-prompt <text>         System prompt (default: coding assistant prompt)
@@ -312,6 +316,7 @@ ${chalk.bold("Environment Variables:")}
   AWS_SECRET_ACCESS_KEY            - AWS secret key for Amazon Bedrock
   AWS_BEARER_TOKEN_BEDROCK         - Bedrock API key (bearer token)
   AWS_REGION                       - AWS region for Amazon Bedrock (e.g., us-east-1)
+  ${`${APP_NAME.toUpperCase()}_CWD`.padEnd(32)} - Working directory override for project-local discovery
   ${ENV_AGENT_DIR.padEnd(32)} - Session storage directory (default: ~/${CONFIG_DIR_NAME}/agent)
   PI_PACKAGE_DIR                   - Override package directory (for Nix/Guix store paths)
   PI_OFFLINE                       - Disable startup network operations when set to 1/true/yes

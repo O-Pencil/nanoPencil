@@ -350,7 +350,7 @@ export class InteractiveMode {
     this.editor = this.defaultEditor;
     this.editorContainer = new Container();
     this.editorContainer.addChild(this.editor as Component);
-    this.footerDataProvider = new FooterDataProvider();
+    this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
     this.footer.setAutoCompactEnabled(session.autoCompactionEnabled);
 
@@ -452,7 +452,7 @@ export class InteractiveMode {
         ...extensionCommands,
         ...skillCommandList,
       ],
-      process.cwd(),
+      this.session.cwd,
       fdPath,
     );
     this.defaultEditor.setAutocompleteProvider(this.autocompleteProvider);
@@ -582,7 +582,7 @@ export class InteractiveMode {
    * Update terminal title with session name and cwd.
    */
   private updateTerminalTitle(): void {
-    const cwdBasename = path.basename(process.cwd());
+    const cwdBasename = path.basename(this.session.cwd);
     const sessionName = this.sessionManager.getSessionName();
     if (sessionName) {
       this.ui.terminal.setTitle(`✎ - ${sessionName} - ${cwdBasename}`);
@@ -1303,7 +1303,7 @@ export class InteractiveMode {
     const createContext = (): ExtensionContext => ({
       ui: this.createExtensionUIContext(),
       hasUI: true,
-      cwd: process.cwd(),
+      cwd: this.session.cwd,
       sessionManager: this.sessionManager,
       modelRegistry: this.session.modelRegistry,
       model: this.session.model,
@@ -3067,7 +3067,7 @@ export class InteractiveMode {
     if (context.messages.length === 0) {
       this.chatContainer.addChild(new Spacer(1));
       if (APP_NAME === "nanopencil") {
-        const cwd = process.cwd();
+        const cwd = this.session.cwd;
         const model = this.session.model;
         const modelLine =
           model?.name ??
@@ -5400,7 +5400,7 @@ export class InteractiveMode {
           type: "user_bash",
           command,
           excludeFromContext,
-          cwd: process.cwd(),
+          cwd: this.session.cwd,
         })
       : undefined;
 

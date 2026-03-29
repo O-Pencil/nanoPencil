@@ -25,6 +25,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 
 	try {
 		mcpManager = new MCPManager();
+		mcpManager.setWorkingDir(pi.cwd);
 		await mcpManager.initialize();
 
 		const mcpTools = mcpManager.getTools();

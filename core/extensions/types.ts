@@ -921,6 +921,9 @@ export type ExtensionHandler<E, R = undefined> = (event: E, ctx: ExtensionContex
  * ExtensionAPI passed to extension factory functions.
  */
 export interface ExtensionAPI {
+	/** Working directory resolved for this extension load */
+	cwd: string;
+
 	// =========================================================================
 	// Event Subscription
 	// =========================================================================

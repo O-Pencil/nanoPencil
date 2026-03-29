@@ -3954,21 +3954,6 @@ export class InteractiveMode {
       return false;
     }
 
-    const modelNameInput = await this.showExtensionInput(
-      `${definition.label} model name`,
-      "Model name",
-      { initialValue: currentModelName },
-    );
-    if (modelNameInput === undefined) {
-      return false;
-    }
-
-    const trimmedModelName = modelNameInput.trim();
-    if (!trimmedModelName) {
-      this.showError("Model name cannot be empty.");
-      return false;
-    }
-
     const apiKeyInput = await this.showExtensionInput(
       `${definition.label} API key`,
       hasExistingApiKey && options.force
@@ -3982,6 +3967,21 @@ export class InteractiveMode {
     const trimmedApiKey = apiKeyInput.trim();
     if (!trimmedApiKey && !hasExistingApiKey) {
       this.showError("API key cannot be empty.");
+      return false;
+    }
+
+    const modelNameInput = await this.showExtensionInput(
+      `${definition.label} model name`,
+      "Model name",
+      { initialValue: currentModelName },
+    );
+    if (modelNameInput === undefined) {
+      return false;
+    }
+
+    const trimmedModelName = modelNameInput.trim();
+    if (!trimmedModelName) {
+      this.showError("Model name cannot be empty.");
       return false;
     }
 
@@ -4016,6 +4016,54 @@ export class InteractiveMode {
     await this.session.setModel(updatedModel);
     this.footer.invalidate();
     this.updateEditorBorderColor();
+  }
+
+  private async selectConfiguredCustomProvider(
+    provider: CustomProtocolProviderId,
+  ): Promise<void> {
+    this.session.modelRegistry.refresh();
+    const modelName = getCustomProtocolProviderModelName(getModelsPath(), provider);
+    if (!modelName) {
+      this.showError(`No model configured for ${provider}`);
+      return;
+    }
+
+    const model = this.session.modelRegistry.find(provider, modelName);
+    if (!model) {
+      this.showError(`Configured model not found for ${provider}`);
+      return;
+    }
+
+    await this.session.setModel(model);
+    this.footer.invalidate();
+    this.updateEditorBorderColor();
+    this.showStatus(`Model: ${model.id}`);
+    this.checkDaxnutsEasterEgg(model);
+  }
+
+  private async handleProviderSelectionFromSelector(
+    provider: string,
+    done: () => void,
+  ): Promise<void> {
+    done();
+    this.ui.requestRender();
+
+    if (!isCustomProtocolProvider(provider)) {
+      this.showModelSelector(undefined, provider);
+      return;
+    }
+
+    try {
+      const configured = await this.configureCustomProtocolProvider(provider);
+      if (!configured) {
+        this.showStatus("Configuration cancelled");
+        return;
+      }
+
+      await this.selectConfiguredCustomProvider(provider);
+    } catch (error) {
+      this.showError(error instanceof Error ? error.message : String(error));
+    }
   }
 
 
@@ -4127,9 +4175,7 @@ export class InteractiveMode {
         providers,
         this.session.model?.provider,
         (provider) => {
-          done();
-          this.ui.requestRender();
-          this.showModelSelector(undefined, provider);
+          void this.handleProviderSelectionFromSelector(provider, done);
         },
         () => {
           done();

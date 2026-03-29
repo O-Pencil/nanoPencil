@@ -1,149 +1,413 @@
 /**
- * Loop extension: /loop 定时任务（会话级，关闭/重载扩展时销毁）。
- * 规格见 docs/循环命令计划.md
+ * Loop extension: autonomous goal execution until the task is complete.
  */
 
+import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions/types.js";
 import type { EventBus } from "../../../core/runtime/event-bus.js";
-import { formatInterval, parseLoopCommand } from "./loop-parser.js";
-import { LoopScheduler } from "./loop-scheduler.js";
-import type { LoopTask } from "./loop-types.js";
+import { buildHelp, parseLoopCommand } from "./loop-parser.js";
+import { LoopController } from "./loop-controller.js";
+import type { LoopDecision, LoopTaskSnapshot, LoopTaskState } from "./loop-types.js";
 
-/** 按会话 EventBus 隔离：同一进程多 AgentSession / 多次 loadExtensions 时避免共用模块级单例 */
-const schedulersByBus = new WeakMap<EventBus, LoopScheduler>();
+const LOOP_CUSTOM_TYPE = "loop";
+const LOOP_STATE_START = "<loop-state>";
+const LOOP_STATE_END = "</loop-state>";
+
+const LOOP_SYSTEM_PROMPT = `
+You are executing inside NanoPencil autonomous loop mode.
+
+Your job is to keep pushing the same goal forward until it is actually complete.
+Do not stop just because one reply finished. If more work can be done autonomously, keep the task in progress.
+
+At the end of your final assistant message for this run, append exactly one XML block with a single JSON object:
+<loop-state>{"status":"continue|complete|blocked","summary":"short summary","nextStep":"next concrete step when status is continue"}</loop-state>
+
+Rules:
+- Use "continue" when the goal still needs more autonomous work.
+- Use "complete" only when the requested goal is fully done as far as you can verify.
+- Use "blocked" only when you cannot continue without external input, permissions, missing resources, or repeated hard failure.
+- Keep "summary" concise and factual.
+- Include "nextStep" whenever status is "continue".
+- Do not wrap the JSON in markdown fences.
+`.trim();
+
+const controllersByBus = new WeakMap<EventBus, LoopController>();
 const notifyByBus = new WeakMap<EventBus, (msg: string, type?: "info" | "warning" | "error") => void>();
 
-function summarizePrompt(p: string, max = 56): string {
-	const t = p.trim();
-	if (t.length <= max) return t;
-	return `${t.slice(0, max - 3)}...`;
-}
-
-function formatExpiresAt(ts: number): string {
-	try {
-		return new Date(ts).toLocaleString();
-	} catch {
-		return String(ts);
+function getController(bus: EventBus): LoopController {
+	let controller = controllersByBus.get(bus);
+	if (!controller) {
+		controller = new LoopController();
+		controllersByBus.set(bus, controller);
 	}
+	return controller;
 }
 
-function buildHelp(reason?: string): string {
-	const lines: string[] = [];
-	if (reason) lines.push(`[Loop] ${reason}`);
-	lines.push(
-		"[Loop] 用法:",
-		"  /loop <提示词>                     默认每 10 分钟",
-		"  /loop 30m <提示词>               每 30 分钟",
-		"  /loop <提示词> every 2h          每 2 小时",
-		"  /loop list                       列出任务",
-		"  /loop delete <taskId>            删除任务",
-		"  /loop clear                      清除全部",
-		"",
-		"间隔单位: s / m / h / d，最小 1 分钟（秒会向上取整到整分）。",
-	);
+function recordLoopEvent(pi: ExtensionAPI, message: string): void {
+	pi.appendEntry(LOOP_CUSTOM_TYPE, {
+		message,
+		timestamp: Date.now(),
+	});
+}
+
+function notify(bus: EventBus, message: string, type: "info" | "warning" | "error" = "info"): void {
+	notifyByBus.get(bus)?.(message, type);
+}
+
+function formatDate(timestamp: number): string {
+	return new Date(timestamp).toLocaleString();
+}
+
+function summarizeGoal(goal: string, maxLength = 80): string {
+	const trimmed = goal.trim();
+	if (trimmed.length <= maxLength) {
+		return trimmed;
+	}
+	return `${trimmed.slice(0, maxLength - 3)}...`;
+}
+
+function formatTaskState(task: LoopTaskState): string {
+	const lines = [
+		`[Loop] Active loop ${task.id}`,
+		`Status: ${task.status}`,
+		`Goal: ${task.goal}`,
+		`Started: ${formatDate(task.startedAt)}`,
+		`Current iteration: ${task.currentIteration}`,
+		`Awaiting result: ${task.awaitingTurn ? "yes" : "no"}`,
+		`Consecutive failures: ${task.consecutiveFailures}/${task.maxConsecutiveFailures}`,
+		`Max iterations: ${task.maxIterations}`,
+	];
+
+	if (task.lastDecision?.summary) {
+		lines.push(`Last summary: ${task.lastDecision.summary}`);
+	}
+	if (task.lastDecision?.nextStep) {
+		lines.push(`Last next step: ${task.lastDecision.nextStep}`);
+	}
+	if (task.lastError) {
+		lines.push(`Last error: ${task.lastError}`);
+	}
+
 	return lines.join("\n");
 }
 
-function describeTask(t: LoopTask): string {
-	const iv = formatInterval(t.intervalMs);
-	const last = t.lastExecutedAt ? new Date(t.lastExecutedAt).toLocaleString() : "从未";
-	return `  ${t.id}  每${iv}  已执行${t.executionCount}次  上次:${last}  到期:${formatExpiresAt(t.expiresAt)}\n    ${summarizePrompt(t.prompt, 72)}`;
+function formatSnapshot(snapshot: LoopTaskSnapshot): string {
+	const lines = [
+		`[Loop] Last loop ${snapshot.id}`,
+		`Status: ${snapshot.status}`,
+		`Goal: ${snapshot.goal}`,
+		`Started: ${formatDate(snapshot.startedAt)}`,
+		`Updated: ${formatDate(snapshot.updatedAt)}`,
+		`Completed iterations: ${snapshot.completedIterations}`,
+		`Consecutive failures: ${snapshot.consecutiveFailures}`,
+	];
+
+	if (snapshot.lastDecision?.summary) {
+		lines.push(`Last summary: ${snapshot.lastDecision.summary}`);
+	}
+	if (snapshot.lastDecision?.nextStep) {
+		lines.push(`Last next step: ${snapshot.lastDecision.nextStep}`);
+	}
+	if (snapshot.lastError) {
+		lines.push(`Last error: ${snapshot.lastError}`);
+	}
+
+	return lines.join("\n");
+}
+
+function appendSystemPrompt(systemPrompt: string): string {
+	return `${systemPrompt}\n\n${LOOP_SYSTEM_PROMPT}`;
+}
+
+function extractText(message: AgentMessage | undefined): string {
+	if (!message || (message as { role?: string }).role !== "assistant") {
+		return "";
+	}
+
+	const content = (message as { content?: unknown }).content;
+	if (typeof content === "string") {
+		return content;
+	}
+	if (!Array.isArray(content)) {
+		return "";
+	}
+
+	return content
+		.filter(
+			(part): part is { type: "text"; text: string } =>
+				typeof part === "object" &&
+				part !== null &&
+				"type" in part &&
+				(part as { type?: unknown }).type === "text" &&
+				typeof (part as { text?: unknown }).text === "string",
+		)
+		.map((part) => part.text)
+		.join("\n");
+}
+
+function extractUserText(message: AgentMessage | undefined): string {
+	if (!message || (message as { role?: string }).role !== "user") {
+		return "";
+	}
+
+	const content = (message as { content?: unknown }).content;
+	if (typeof content === "string") {
+		return content;
+	}
+	if (!Array.isArray(content)) {
+		return "";
+	}
+
+	return content
+		.filter(
+			(part): part is { type: "text"; text: string } =>
+				typeof part === "object" &&
+				part !== null &&
+				"type" in part &&
+				(part as { type?: unknown }).type === "text" &&
+				typeof (part as { text?: unknown }).text === "string",
+		)
+		.map((part) => part.text)
+		.join("\n");
+}
+
+function getLastAssistantMessage(messages: AgentMessage[]): AgentMessage | undefined {
+	for (let i = messages.length - 1; i >= 0; i -= 1) {
+		if ((messages[i] as { role?: string }).role === "assistant") {
+			return messages[i];
+		}
+	}
+	return undefined;
+}
+
+function extractLoopDecision(text: string): LoopDecision | undefined {
+	const startIndex = text.lastIndexOf(LOOP_STATE_START);
+	const endIndex = text.lastIndexOf(LOOP_STATE_END);
+	if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+		return undefined;
+	}
+
+	const payload = text.slice(startIndex + LOOP_STATE_START.length, endIndex).trim();
+	try {
+		const parsed = JSON.parse(payload) as Partial<LoopDecision>;
+		if (
+			parsed.status !== "continue" &&
+			parsed.status !== "complete" &&
+			parsed.status !== "blocked"
+		) {
+			return undefined;
+		}
+
+		const summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
+		const nextStep = typeof parsed.nextStep === "string" ? parsed.nextStep.trim() : undefined;
+		if (!summary) {
+			return undefined;
+		}
+		if (parsed.status === "continue" && !nextStep) {
+			return undefined;
+		}
+
+		return {
+			status: parsed.status,
+			summary,
+			nextStep,
+		};
+	} catch {
+		return undefined;
+	}
+}
+
+function describeDecision(decision: LoopDecision): string {
+	const lines = [
+		`[Loop] Decision: ${decision.status}`,
+		`Summary: ${decision.summary}`,
+	];
+	if (decision.nextStep) {
+		lines.push(`Next step: ${decision.nextStep}`);
+	}
+	return lines.join("\n");
+}
+
+function describeTerminalSnapshot(snapshot: LoopTaskSnapshot | undefined): string {
+	if (!snapshot) {
+		return "[Loop] No loop task is active.";
+	}
+	return formatSnapshot(snapshot);
+}
+
+function dispatchNextIteration(pi: ExtensionAPI, bus: EventBus, controller: LoopController): void {
+	const task = controller.getActiveTask();
+	if (!task) {
+		return;
+	}
+
+	const prompt = controller.buildPrompt();
+	controller.markDispatched();
+	notify(bus, `[Loop] Starting iteration ${task.currentIteration} for ${task.id}`, "info");
+	pi.sendUserMessage(prompt, { deliverAs: "followUp" });
 }
 
 export default async function loopExtension(pi: ExtensionAPI) {
 	const bus = pi.events;
-
-	function getScheduler(): LoopScheduler {
-		let scheduler = schedulersByBus.get(bus);
-		if (!scheduler) {
-			scheduler = new LoopScheduler(
-				{},
-				async (task) => {
-					const text = `[Loop Task ${task.id}] ${task.prompt}`;
-					notifyByBus.get(bus)?.(`[Loop] 正在执行任务 ${task.id}：${summarizePrompt(task.prompt)}`, "info");
-					// 始终传 followUp：Agent 忙碌时入队；空闲时 prompt 非流式分支仍会正常开 turn，且避免 isIdle 检测与发送之间的竞态
-					pi.sendUserMessage(text, { deliverAs: "followUp" });
-				},
-				{
-					onExpired: (task) => {
-						notifyByBus.get(bus)?.(`[Loop] 任务 ${task.id} 已到期并自动删除`, "info");
-					},
-				},
-			);
-			schedulersByBus.set(bus, scheduler);
-		}
-		return scheduler;
-	}
+	const controller = getController(bus);
 
 	pi.on("session_shutdown", () => {
-		schedulersByBus.get(bus)?.dispose();
-		schedulersByBus.delete(bus);
+		controller.stop("Session shutdown stopped the loop.", "stopped");
+		controllersByBus.delete(bus);
 		notifyByBus.delete(bus);
 	});
 
+	pi.on("before_agent_start", (event) => {
+		if (!controller.isLoopPrompt(event.prompt)) {
+			return;
+		}
+
+		return {
+			systemPrompt: appendSystemPrompt(event.systemPrompt),
+		};
+	});
+
+	pi.on("input", (event) => {
+		if (event.source !== "extension" || !event.text.startsWith("[LOOP:")) {
+			return;
+		}
+
+		if (!controller.isLoopPrompt(event.text)) {
+			return { action: "handled" };
+		}
+
+		return { action: "continue" };
+	});
+
+	pi.on("context", (event) => {
+		const lastMessage = event.messages[event.messages.length - 1];
+		const lastUserText = extractUserText(lastMessage);
+		if (!lastUserText.startsWith("[LOOP:")) {
+			return;
+		}
+
+		if (controller.isLoopPrompt(lastUserText)) {
+			return;
+		}
+
+		return {
+			messages: event.messages.slice(0, -1),
+		};
+	});
+
+	pi.on("agent_end", (event) => {
+		const activeTask = controller.getActiveTask();
+		if (!activeTask?.awaitingTurn) {
+			return;
+		}
+
+		const assistantText = extractText(getLastAssistantMessage(event.messages));
+		if (!assistantText) {
+			const failure = controller.recordFailure("Loop run ended without an assistant message.");
+			if (failure.action === "stop") {
+				const message = describeTerminalSnapshot(failure.snapshot);
+				recordLoopEvent(pi, message);
+				notify(bus, message, "warning");
+				return;
+			}
+			recordLoopEvent(pi, `[Loop] Iteration failed. Retrying iteration ${failure.task?.currentIteration}.`);
+			dispatchNextIteration(pi, bus, controller);
+			return;
+		}
+
+		const decision = extractLoopDecision(assistantText);
+		if (!decision) {
+			const failure = controller.recordFailure(
+				"Assistant response did not include a valid <loop-state> block.",
+			);
+			if (failure.action === "stop") {
+				const message = describeTerminalSnapshot(failure.snapshot);
+				recordLoopEvent(pi, message);
+				notify(bus, message, "warning");
+				return;
+			}
+			recordLoopEvent(
+				pi,
+				`[Loop] Missing or invalid loop-state block. Retrying iteration ${failure.task?.currentIteration}.`,
+			);
+			dispatchNextIteration(pi, bus, controller);
+			return;
+		}
+
+		recordLoopEvent(pi, describeDecision(decision));
+		const next = controller.finishTurn(decision);
+		if (next.action === "stop") {
+			const message = describeTerminalSnapshot(next.snapshot);
+			recordLoopEvent(pi, message);
+			notify(bus, message, decision.status === "complete" ? "info" : "warning");
+			return;
+		}
+
+		dispatchNextIteration(pi, bus, controller);
+	});
+
 	pi.registerCommand("loop", {
-		description: "定时循环执行提示词（会话级；list / delete / clear）",
+		description: "Run one autonomous task until it is complete, blocked, stopped, or fails.",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			if (ctx.ui.notify) {
 				notifyByBus.set(bus, ctx.ui.notify.bind(ctx.ui));
 			}
 
-			const parsed = parseLoopCommand(args.trim());
+			const parsed = parseLoopCommand(args);
 			if (parsed.type === "help") {
-				const reason =
-					parsed.reason === "empty"
-						? "缺少参数。"
-						: parsed.reason === "bad_interval"
-							? "无效的时间间隔。"
-							: parsed.reason === "empty_prompt"
-								? "提示词为空。"
-								: parsed.reason === "interval_only"
-									? "仅有间隔，缺少提示词。"
-									: "";
-				ctx.ui.notify?.(buildHelp(reason || undefined), "warning");
+				const reason = parsed.reason === "empty" ? "Missing loop goal." : undefined;
+				const help = buildHelp(reason);
+				recordLoopEvent(pi, help);
+				notify(bus, help, "warning");
 				return;
 			}
 
-			const sched = getScheduler();
+			if (parsed.type === "status") {
+				const state = controller.getState();
+				const message = state.active
+					? formatTaskState(state.active)
+					: state.lastTerminal
+						? formatSnapshot(state.lastTerminal)
+						: "[Loop] No loop task has been started in this session.";
+				recordLoopEvent(pi, message);
+				notify(bus, message, "info");
+				return;
+			}
+
+			if (parsed.type === "stop") {
+				const activeTask = controller.getActiveTask();
+				if (!activeTask) {
+					const message = "[Loop] No active loop is running.";
+					recordLoopEvent(pi, message);
+					notify(bus, message, "warning");
+					return;
+				}
+
+				controller.stop("Stopped by user request.", "stopped");
+				if (!ctx.isIdle()) {
+					ctx.abort();
+				}
+				const message = `[Loop] Stopped loop ${activeTask.id}.`;
+				recordLoopEvent(pi, message);
+				notify(bus, message, "info");
+				return;
+			}
 
 			try {
-				switch (parsed.type) {
-					case "list": {
-						const tasks = sched.list();
-						if (tasks.length === 0) {
-							ctx.ui.notify?.("[Loop] 当前没有调度任务", "info");
-							return;
-						}
-						const body = tasks.map(describeTask).join("\n");
-						ctx.ui.notify?.(`[Loop] 共 ${tasks.length} 个任务:\n${body}`, "info");
-						break;
-					}
-					case "delete": {
-						const ok = sched.delete(parsed.taskId);
-						ctx.ui.notify?.(
-							ok ? `[Loop] 已删除任务 ${parsed.taskId}` : `[Loop] 未找到任务 ${parsed.taskId}`,
-							ok ? "info" : "warning",
-						);
-						break;
-					}
-					case "clear": {
-						sched.clear();
-						ctx.ui.notify?.("[Loop] 已清除所有任务", "info");
-						break;
-					}
-					case "create": {
-						const task = sched.create(parsed.prompt, parsed.intervalMs);
-						const iv = formatInterval(task.intervalMs);
-						ctx.ui.notify?.(
-							`[Loop] 已创建任务 ${task.id}：每 ${iv} 执行一次 "${summarizePrompt(task.prompt)}"，到期 ${formatExpiresAt(task.expiresAt)}`,
-							"info",
-						);
-						break;
-					}
-				}
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
-				ctx.ui.notify?.(`[Loop] ${msg}`, "error");
+				const task = controller.start(parsed.goal);
+				const message = [
+					`[Loop] Started autonomous loop ${task.id}.`,
+					`Goal: ${task.goal}`,
+					`Safety limits: ${task.maxIterations} iterations, ${task.maxConsecutiveFailures} consecutive failures.`,
+				].join("\n");
+				recordLoopEvent(pi, message);
+				notify(bus, `[Loop] Started ${task.id}: ${summarizeGoal(task.goal)}`, "info");
+				dispatchNextIteration(pi, bus, controller);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				const output = `[Loop] ${message}`;
+				recordLoopEvent(pi, output);
+				notify(bus, output, "error");
 			}
 		},
 	});

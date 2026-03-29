@@ -1,9 +1,16 @@
-# Loop 扩展（`/loop`）
+# Loop Extension
 
-会话级定时任务：按间隔向当前 Agent 发送用户消息（前缀 `[Loop Task <id>]`），空闲直接触发 turn，忙碌时走 `followUp` 队列。
+`/loop` runs one autonomous task until the agent reports it as complete, reports it is blocked, the user stops it, or a safety limit is reached.
 
-- 规格与语法：`docs/循环命令计划.md`
-- 实现：`loop-parser.ts`、`loop-scheduler.ts`、`index.ts`
-- 会话结束或 `/reload` 触发 `session_shutdown` 时会 `dispose` 调度器并清除定时器
-- 调度器按 `pi.events`（EventBus）隔离，避免同一 Node 进程内多会话共用模块状态
-- 定时触发统一使用 `sendUserMessage(..., { deliverAs: "followUp" })`：忙碌时入队，空闲时仍会走正常 `prompt` 开 turn，并避免与 `isIdle` 检测的竞态
+Commands:
+
+- `/loop <goal>` starts an autonomous loop for one goal
+- `/loop status` shows the active loop or the last finished loop
+- `/loop stop` stops the active loop
+
+Implementation notes:
+
+- Loop turns are tagged with a loop prompt prefix so the extension can inject loop-specific system instructions.
+- At the end of each loop run, the assistant must emit a `<loop-state>{...}</loop-state>` JSON block.
+- The extension parses that block and either starts the next autonomous iteration or stops with a terminal status.
+- Loop state is session-scoped and is cleared on shutdown or reload.

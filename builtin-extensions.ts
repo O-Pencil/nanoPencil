@@ -31,6 +31,7 @@ const BUNDLED_SECURITY_AUDIT_EXTENSION = join(__dirname, "extensions", "defaults
 const BUNDLED_SOUL_EXTENSION = join(__dirname, "extensions", "defaults", "soul", "index.js");
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
+const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
 const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "defaults", "mcp", "index.js");
 const BUNDLED_EXPORT_HTML_EXTENSION = join(__dirname, "extensions", "optional", "export-html", "index.js");
 
@@ -142,6 +143,15 @@ export function getBuiltinExtensionPaths(): string[] {
 	}
 
 	// === MCP 扩展（MCP 工具协议适配） ===
+	// Built-in team extension
+	if (existsSync(BUNDLED_TEAM_EXTENSION)) {
+		paths.push(BUNDLED_TEAM_EXTENSION);
+	} else {
+		const teamTs = join(__dirname, "extensions", "defaults", "team", "index.ts");
+		if (existsSync(teamTs)) paths.push(teamTs);
+	}
+
+	// Built-in MCP extension
 	if (existsSync(BUNDLED_MCP_EXTENSION)) {
 		paths.push(BUNDLED_MCP_EXTENSION);
 	} else {

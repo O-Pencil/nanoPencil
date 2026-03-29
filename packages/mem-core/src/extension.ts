@@ -67,12 +67,41 @@ function getAssistantMessageText(msg: { role: string; content?: unknown }): stri
 		.join("\n");
 }
 
+function getSystemTimeSnapshot(now = new Date()): {
+	iso: string;
+	local: string;
+	timeZone: string;
+	epochMs: number;
+	date: string;
+} {
+	const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+	return {
+		iso: now.toISOString(),
+		local: now.toLocaleString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+			timeZoneName: "short",
+		}),
+		timeZone,
+		epochMs: now.getTime(),
+		date: now.toISOString().slice(0, 10),
+	};
+}
+
 function buildTranscript(
 	messages: Array<{ role: string; content?: unknown }>,
+	timeSnapshot = getSystemTimeSnapshot(),
 	maxMessages = 24,
 	maxChars = 12000,
 ): string {
-	const lines: string[] = [];
+	const lines: string[] = [
+		`System time: ${timeSnapshot.iso} | Local: ${timeSnapshot.local} | Time zone: ${timeSnapshot.timeZone} | Epoch ms: ${timeSnapshot.epochMs}`,
+	];
 	let total = 0;
 	const slice = messages.slice(-maxMessages);
 	for (const msg of slice) {
@@ -131,6 +160,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 	const errors: string[] = [];
 	let sessionId = `nm-${Date.now()}`;
 	let sessionGoal: string | undefined;
+	let sessionStartedAt = getSystemTimeSnapshot();
 	let cachedInjection: string | undefined;
 	let lastInjectionAt = 0;
 	let injectionRefreshInFlight: Promise<void> | undefined;
@@ -152,6 +182,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 	};
 
 	pi.on("session_start", async (_event, ctx) => {
+		sessionStartedAt = getSystemTimeSnapshot();
 		const file = ctx.sessionManager.getSessionFile();
 		if (file) sessionId = basename(file, ".jsonl");
 		try {
@@ -204,7 +235,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			});
 		}
 
-		const transcript = buildTranscript(event.messages);
+		const transcript = buildTranscript(event.messages, getSystemTimeSnapshot());
 		if (!transcript.trim()) return;
 
 		// Avoid blocking the main turn lifecycle (which delays next user message rendering).
@@ -228,10 +259,15 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		const hasGoal = sessionGoal && sessionGoal.length > 10;
 		if (!hasActivity && !hasGoal) return;
 
+		const sessionEndedAt = getSystemTimeSnapshot();
+
 		await engine.saveEpisode({
 			sessionId,
 			project,
-			date: new Date().toISOString().slice(0, 10),
+			date: sessionEndedAt.date,
+			startedAt: sessionStartedAt.iso,
+			endedAt: sessionEndedAt.iso,
+			timeZone: sessionEndedAt.timeZone,
 			summary: observations.slice(0, 10).join("; ") || sessionGoal?.slice(0, 100) || "Conversation session",
 			userGoal: sessionGoal,
 			filesModified: [...filesModified],

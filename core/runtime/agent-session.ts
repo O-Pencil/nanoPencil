@@ -567,6 +567,17 @@ export class AgentSession {
           .catch(() => {});
       }
     }
+
+    if (event.type === "agent_end" && this._extensionRunner) {
+      // Emit agent_end only after retry and compaction settle.
+      // This lets post-run extensions react to a stable end state.
+      void this._extensionRunner
+        .emit({
+          type: "agent_end",
+          messages: event.messages,
+        })
+        .catch(() => {});
+    }
   };
 
   /** Resolve the pending retry promise */
@@ -606,15 +617,6 @@ export class AgentSession {
     if (event.type === "agent_start") {
       this._turnIndex = 0;
       await this._extensionRunner.emit({ type: "agent_start" });
-    } else if (event.type === "agent_end") {
-      // Do not block the main turn lifecycle on extension post-processing.
-      // Slow hooks (e.g. memory extraction) should not delay the next prompt.
-      void this._extensionRunner
-        .emit({
-          type: "agent_end",
-          messages: event.messages,
-        })
-        .catch(() => {});
     } else if (event.type === "turn_start") {
       const extensionEvent: TurnStartEvent = {
         type: "turn_start",

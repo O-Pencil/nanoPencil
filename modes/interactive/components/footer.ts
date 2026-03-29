@@ -94,7 +94,7 @@ export class FooterComponent implements Component {
 		const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
 
 		// Replace home directory with ~
-		let pwd = process.cwd();
+		let pwd = this.session.cwd;
 		const home = process.env.HOME || process.env.USERPROFILE;
 		if (home && pwd.startsWith(home)) {
 			pwd = `~${pwd.slice(home.length)}`;

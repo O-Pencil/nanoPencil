@@ -141,6 +141,8 @@ function createExtensionAPI(
 	eventBus: EventBus,
 ): ExtensionAPI {
 	const api = {
+		cwd,
+
 		// Registration methods - write to extension
 		on(event: string, handler: HandlerFn): void {
 			const list = extension.handlers.get(event) ?? [];

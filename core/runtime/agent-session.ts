@@ -456,6 +456,10 @@ export class AgentSession {
     return this._modelRegistry;
   }
 
+  get cwd(): string {
+    return this._cwd;
+  }
+
   // =========================================================================
   // Event Subscription
   // =========================================================================
@@ -2703,7 +2707,7 @@ export class AgentSession {
       const result = options?.operations
         ? await executeBashWithOperations(
             resolvedCommand,
-            process.cwd(),
+            this._cwd,
             options.operations,
             {
               onChunk,

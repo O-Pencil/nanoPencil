@@ -7,7 +7,7 @@
 
 import { type ImageContent, modelsAreEqual, supportsXhigh } from "@pencil-agent/ai";
 import chalk from "chalk";
-import { join } from "path";
+import { join, resolve } from "path";
 import { createInterface } from "readline";
 import { type Args, parseArgs, printHelp } from "./cli/args.js";
 import { selectConfig } from "./cli/config-selector.js";
@@ -104,6 +104,12 @@ function reportSettingsErrors(settingsManager: SettingsManager, context: string)
 function isTruthyEnvFlag(value: string | undefined): boolean {
 	if (!value) return false;
 	return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
+}
+
+function resolveWorkingDirectory(parsedCwd?: string): string {
+	const envCwd = process.env[`${APP_NAME.toUpperCase()}_CWD`];
+	const requestedCwd = parsedCwd || envCwd;
+	return requestedCwd ? resolve(requestedCwd) : process.cwd();
 }
 
 type PackageCommand = "install" | "remove" | "update" | "list";
@@ -591,13 +597,11 @@ export async function main(args: string[]) {
 	}
 
 	// Run migrations (pass cwd for project-local migrations)
-	const { migratedAuthProviders: migratedProviders, deprecationWarnings } = runMigrations(process.cwd());
-
-	// First pass: parse args to get --extension paths
 	const firstPass = parseArgs(args);
+	const cwd = resolveWorkingDirectory(firstPass.cwd);
+	const { migratedAuthProviders: migratedProviders, deprecationWarnings } = runMigrations(cwd);
 
 	// Early load extensions to discover their CLI flags
-	const cwd = process.cwd();
 	const agentDir = getAgentDir();
 	const settingsManager = SettingsManager.create(cwd, agentDir);
 	reportSettingsErrors(settingsManager, "startup");
@@ -687,6 +691,7 @@ export async function main(args: string[]) {
 
 	// Second pass: parse args with extension flags
 	const parsed = parseArgs(args, extensionFlags);
+	const parsedCwd = resolveWorkingDirectory(parsed.cwd);
 
 	// Pass flag values to extensions via runtime
 	for (const [name, value] of parsed.unknownFlags) {
@@ -760,7 +765,7 @@ export async function main(args: string[]) {
 	}
 
 	// Create session manager based on CLI flags
-	let sessionManager = await createSessionManager(parsed, cwd);
+	let sessionManager = await createSessionManager(parsed, parsedCwd);
 
 	// Handle --resume: show session picker
 	if (parsed.resume) {
@@ -768,7 +773,7 @@ export async function main(args: string[]) {
 		KeybindingsManager.create();
 
 		const selectedPath = await selectSession(
-			(onProgress) => SessionManager.list(cwd, parsed.sessionDir, onProgress),
+			(onProgress) => SessionManager.list(parsedCwd, parsed.sessionDir, onProgress),
 			SessionManager.listAll,
 		);
 		if (!selectedPath) {
@@ -788,6 +793,7 @@ export async function main(args: string[]) {
 	);
 	// NanoPencil 默认启用 MCP；离线模式或 --no-mcp 参数下关闭
 	sessionOptions.enableMCP = APP_NAME === "nanopencil" && !offlineMode && !parsed.noMcp;
+	sessionOptions.cwd = parsedCwd;
 	sessionOptions.authStorage = authStorage;
 	sessionOptions.modelRegistry = modelRegistry;
 	sessionOptions.resourceLoader = resourceLoader;

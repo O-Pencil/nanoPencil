@@ -398,6 +398,7 @@ export async function createAgentSession(
   if (options.enableMCP) {
     try {
       currentMcpManager = new MCPManager();
+      currentMcpManager.setWorkingDir(cwd);
       await currentMcpManager.initialize();
       initialMcpTools = [...currentMcpManager.getTools()];
       time("mcp.initialize");
@@ -440,6 +441,7 @@ export async function createAgentSession(
         // ignore
       }
       currentMcpManager = new MCPManager();
+      currentMcpManager.setWorkingDir(cwd);
       await currentMcpManager.initialize();
       time("mcp.initialize");
       return currentMcpManager.getTools();

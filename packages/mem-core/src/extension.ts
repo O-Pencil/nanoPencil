@@ -261,7 +261,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		handler: async (_args, ctx) => {
 			const s = await engine.getStats();
 			ctx.ui.notify(
-				`NanoMem: ${s.totalSessions} sessions | ${s.knowledge} knowledge | ${s.lessons} lessons | ${s.preferences} prefs | ${s.work} work | ${s.episodes} episodes`,
+				`NanoMem: ${s.totalSessions} sessions | ${s.knowledge} knowledge | ${s.lessons} lessons | ${s.events} events | ${s.preferences} prefs | ${s.work} work | ${s.episodes} episodes`,
 				"info",
 			);
 		},
@@ -298,6 +298,88 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 
 			writeFileSync(outputPath, html, "utf-8");
 			ctx.ui.notify(`NanoMem: Insights report written to ${outputPath}`, "info");
+		},
+	});
+
+	pi.registerCommand("mem-align", {
+		description: "Show which stable memories and current states are shaping the agent",
+		handler: async (_args, ctx) => {
+			const snapshot = await engine.getAlignmentSnapshot();
+			const topIdentity = snapshot.identityCore
+				.slice(0, 3)
+				.map((entry) => entry.name || entry.summary || entry.id)
+				.join(" | ");
+			const topDrivers = snapshot.behaviorDrivers
+				.slice(0, 3)
+				.map((entry) => entry.name || entry.summary || entry.id)
+				.join(" | ");
+			const topStates = snapshot.currentState
+				.slice(0, 2)
+				.map((entry) => entry.stateData?.mood || entry.summary || entry.id)
+				.join(" | ");
+			const conflictCount = snapshot.conflicts.length;
+			ctx.ui.notify(
+				`NanoMem alignment | core: ${topIdentity || "none"} | drivers: ${topDrivers || "none"} | current state: ${topStates || "none"} | conflicts: ${conflictCount}`,
+				"info",
+			);
+		},
+	});
+
+	pi.registerCommand("mem-review", {
+		description: "Review the highest-risk memory conflicts and suggested actions",
+		handler: async (_args, ctx) => {
+			const snapshot = await engine.getAlignmentSnapshot();
+			const topConflicts = snapshot.conflicts.slice(0, 3);
+			if (!topConflicts.length) {
+				ctx.ui.notify("NanoMem review | no high-risk conflicts detected", "info");
+				return;
+			}
+			const summary = topConflicts
+				.map((conflict) => `${conflict.aId} vs ${conflict.bId} -> ${conflict.recommendation}`)
+				.join(" | ");
+			ctx.ui.notify(`NanoMem review | ${summary}`, "info");
+		},
+	});
+
+	pi.registerCommand("mem-edit", {
+		description: "Edit a memory entry by ID. Usage: /mem-edit <id> <field> <value>",
+		handler: async (args, ctx) => {
+			const parts = (args || "").trim().split(/\s+/);
+			const [id, field, ...rest] = parts;
+			if (!id || !field || rest.length === 0) {
+				ctx.ui.notify("NanoMem edit | usage: /mem-edit <id> <field> <value>", "info");
+				return;
+			}
+			const value = rest.join(" ");
+			const patch =
+				field === "salience" || field === "ttl"
+					? ({ [field]: Number(value) } as Record<string, unknown>)
+					: ({ [field]: value } as Record<string, unknown>);
+			const updated = await engine.editEntryById(id, patch as never);
+			ctx.ui.notify(updated ? `NanoMem edit | updated ${id}` : `NanoMem edit | no memory found for ${id}`, "info");
+		},
+	});
+
+	pi.registerCommand("mem-resolve", {
+		description: "Resolve a memory conflict. Usage: /mem-resolve <aId> <bId> [merge|demote|forget|mark-situational]",
+		handler: async (args, ctx) => {
+			const [aId, bId, action] = (args || "").trim().split(/\s+/);
+			if (!aId || !bId) {
+				ctx.ui.notify("NanoMem resolve | usage: /mem-resolve <aId> <bId> [action]", "info");
+				return;
+			}
+			const snapshot = await engine.getAlignmentSnapshot();
+			const suggested =
+				snapshot.conflicts.find(
+					(conflict) =>
+						(conflict.aId === aId && conflict.bId === bId) || (conflict.aId === bId && conflict.bId === aId),
+				)?.recommendation ?? "merge";
+			const result = await engine.resolveConflictByIds(
+				aId,
+				bId,
+				(action as "merge" | "demote" | "forget" | "mark-situational") || suggested,
+			);
+			ctx.ui.notify(result ? `NanoMem resolve | ${result.action} -> ${result.updatedIds.join(", ")}` : "NanoMem resolve | failed", "info");
 		},
 	});
 
@@ -371,6 +453,149 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 
 			return {
 				content: [{ type: "text" as const, text: lines.join("\n") }],
+				details: undefined,
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "nanomem_alignment",
+		label: "Inspect Memory Alignment",
+		description:
+			"Inspect which stable memories, key events, behavior drivers, and short-term state signals are currently shaping the agent. " +
+			"Use this when you need to sanity-check whether the memory system is aligned with the user.",
+		parameters: Type.Object({}),
+		async execute() {
+			const snapshot = await engine.getAlignmentSnapshot();
+			const formatEntry = (entry: { id: string; type: string; name?: string; summary?: string }) =>
+				`- [ID: ${entry.id}] [${entry.type}] ${entry.name || entry.summary || "Untitled"}${entry.summary && entry.name ? `: ${entry.summary}` : ""}`;
+			const lines = [
+				"Identity Core:",
+				...snapshot.identityCore.map(formatEntry),
+				"",
+				"Key Events:",
+				...snapshot.keyEvents.map(formatEntry),
+				"",
+				"Behavior Drivers:",
+				...snapshot.behaviorDrivers.map(formatEntry),
+				"",
+				"Current State Signals:",
+				...snapshot.currentState.map((entry) => formatEntry(entry)),
+				"",
+				"Strongest Memory Edges:",
+				...snapshot.relationshipEdges.map(
+					(edge) => `- [${edge.kind}] ${edge.fromId} -> ${edge.toId} (weight ${edge.weight.toFixed(2)})`,
+				),
+				"",
+				"Potential Conflicts:",
+				...(snapshot.conflicts.length
+					? snapshot.conflicts.map(
+							(conflict) =>
+								`- ${conflict.aId} vs ${conflict.bId} | severity ${conflict.severity.toFixed(2)} | ${conflict.reason} | action ${conflict.recommendation} | ${conflict.rationale}`,
+						)
+					: ["- none"]),
+			];
+
+			return {
+				content: [{ type: "text" as const, text: lines.join("\n") }],
+				details: undefined,
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "nanomem_review",
+		label: "Review Memory Conflicts",
+		description:
+			"Review high-risk memory conflicts and suggested actions such as merge, demote, forget, or mark-situational. " +
+			"Use this when you want to inspect the riskiest alignment problems before acting on memory edits.",
+		parameters: Type.Object({
+			limit: Type.Optional(Type.Number({ description: "Max conflicts to show (default 5)", default: 5 })),
+		}),
+		async execute(_toolCallId, params) {
+			const snapshot = await engine.getAlignmentSnapshot();
+			const limit = params.limit ?? 5;
+			const conflicts = snapshot.conflicts.slice(0, limit);
+			const lines = [
+				"Memory Conflict Review:",
+				...(conflicts.length
+					? conflicts.map(
+							(conflict) =>
+								`- ${conflict.aId} vs ${conflict.bId} | severity ${conflict.severity.toFixed(2)} | ${conflict.recommendation} | ${conflict.rationale}`,
+						)
+					: ["- none"]),
+			];
+			return {
+				content: [{ type: "text" as const, text: lines.join("\n") }],
+				details: undefined,
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "nanomem_edit",
+		label: "Edit Memory Entry",
+		description:
+			"Edit a memory entry by ID. Use this to correct names, summaries, detail, salience, ttl, retention, or stability when reviewing memory quality.",
+		parameters: Type.Object({
+			id: Type.String({ description: "Memory entry ID" }),
+			field: Type.Union([
+				Type.Literal("name"),
+				Type.Literal("summary"),
+				Type.Literal("detail"),
+				Type.Literal("retention"),
+				Type.Literal("salience"),
+				Type.Literal("stability"),
+				Type.Literal("ttl"),
+			]),
+			value: Type.String({ description: "New field value" }),
+		}),
+		async execute(_toolCallId, params) {
+			const patch =
+				params.field === "salience" || params.field === "ttl"
+					? ({ [params.field]: Number(params.value) } as Record<string, unknown>)
+					: ({ [params.field]: params.value } as Record<string, unknown>);
+			const updated = await engine.editEntryById(params.id, patch as never);
+			return {
+				content: [
+					{
+						type: "text" as const,
+						text: updated
+							? `Updated ${params.id}: ${params.field} -> ${params.value}`
+							: `No memory found with ID: ${params.id}`,
+					},
+				],
+				details: undefined,
+			};
+		},
+	});
+
+	pi.registerTool({
+		name: "nanomem_resolve_conflict",
+		label: "Resolve Memory Conflict",
+		description:
+			"Resolve a memory conflict by applying merge, demote, forget, or mark-situational to a pair of memory IDs.",
+		parameters: Type.Object({
+			aId: Type.String({ description: "First conflicting memory ID" }),
+			bId: Type.String({ description: "Second conflicting memory ID" }),
+			action: Type.Union([
+				Type.Literal("merge"),
+				Type.Literal("demote"),
+				Type.Literal("forget"),
+				Type.Literal("mark-situational"),
+			]),
+		}),
+		async execute(_toolCallId, params) {
+			const result = await engine.resolveConflictByIds(params.aId, params.bId, params.action);
+			return {
+				content: [
+					{
+						type: "text" as const,
+						text: result
+							? `Resolved conflict: ${params.action} -> ${result.updatedIds.join(", ")}`
+							: `Failed to resolve conflict for ${params.aId} and ${params.bId}`,
+					},
+				],
 				details: undefined,
 			};
 		},

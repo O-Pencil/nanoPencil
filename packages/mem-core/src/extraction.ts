@@ -9,6 +9,12 @@ import { PROMPTS } from "./i18n.js";
 import { deriveNameFromContent, deriveSummaryFromContent } from "./store.js";
 import type { ExtractedItem, ExtractedWork, LlmFn } from "./types.js";
 
+const STATE_PATTERNS = [
+	/\b(?:i am|i'm|feeling|felt)\s+(stressed|overwhelmed|anxious|burned out|tired|exhausted|excited|optimistic|frustrated|upset|sad|happy|energized)\b/gi,
+	/\b(?:under a lot of|dealing with|in)\s+(stress|pressure|burnout|urgency|fatigue|panic)\b/gi,
+	/\b(?:this week|today|right now|lately|currently)\b.{0,40}\b(stressed|busy|overwhelmed|blocked|energized|excited)\b/gi,
+];
+
 export async function extractMemories(
 	conversation: string,
 	cfg: NanomemConfig,
@@ -46,7 +52,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	const items: ExtractedItem[] = [];
 	const seen = new Set<string>();
 
-	const addItem = (type: ExtractedItem["type"], content: string) => {
+	const addItem = (type: ExtractedItem["type"], content: string, overrides: Partial<ExtractedItem> = {}) => {
 		const trimmed = content.trim();
 		// Skip very short or already seen content
 		if (trimmed.length < 8 || seen.has(trimmed.toLowerCase())) return;
@@ -56,6 +62,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 			name: deriveNameFromContent(trimmed),
 			summary: deriveSummaryFromContent(trimmed),
 			detail: trimmed,
+			...overrides,
 		});
 	};
 
@@ -107,6 +114,36 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	for (const pat of decisionPatterns) {
 		for (const match of text.matchAll(pat)) {
 			addItem("decision", match[1]!);
+		}
+	}
+
+	// Key event patterns: launches, incidents, milestones, major interpersonal moments
+	const eventPatterns = [
+		/(?:launched|shipped|released|rolled out)\s+(.{8,100})/gi,
+		/(?:major|big|critical)\s+(?:incident|outage|failure|breakthrough)[:\s]+(.{8,100})/gi,
+		/(?:finally managed to|turned out that|breakthrough)[:\s]+(.{8,100})/gi,
+		/(?:first time|important moment|key event)[:\s]+(.{8,100})/gi,
+	];
+	for (const pat of eventPatterns) {
+		for (const match of text.matchAll(pat)) {
+			addItem("event", match[1]!);
+		}
+	}
+
+	for (const pat of STATE_PATTERNS) {
+		for (const match of text.matchAll(pat)) {
+			const mood = match[1]!;
+			addItem("fact", `Current state: ${mood}`, {
+				summary: `Temporary state: ${mood}`,
+				stability: "situational",
+				retention: "ambient",
+				salience: ["burned out", "panic", "overwhelmed", "stressed"].includes(mood.toLowerCase()) ? 7 : 5,
+				stateData: {
+					mood: mood.toLowerCase(),
+					intensity: ["burned out", "panic", "overwhelmed", "stressed"].includes(mood.toLowerCase()) ? 8 : 5,
+					horizon: "short-term",
+				},
+			});
 		}
 	}
 

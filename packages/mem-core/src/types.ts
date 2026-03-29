@@ -12,14 +12,35 @@ export interface MemoryScope {
 	agentId?: string;
 }
 
+export type MemoryRetention = "core" | "key-event" | "ambient";
+export type MemoryStability = "stable" | "situational";
+
 /** Structured data for Facets (Pattern/Struggle) memory types */
 export type FacetData =
 	| { kind: "pattern"; trigger: string; behavior: string }
 	| { kind: "struggle"; problem: string; attempts: string[]; solution: string };
 
+export interface EventData {
+	kind: string;
+	outcome?: string;
+	emotionalWeight?: number;
+}
+
+export interface StateData {
+	mood: string;
+	intensity?: number;
+	horizon?: "momentary" | "short-term";
+}
+
+export interface MemoryRelation {
+	id: string;
+	kind: "same-project" | "tag-overlap" | "cause-of" | "caused-by" | "preference-shapes" | "repeated-pattern";
+	weight: number;
+}
+
 export interface MemoryEntry {
 	id: string;
-	type: "fact" | "lesson" | "preference" | "decision" | "entity" | "pattern" | "struggle";
+	type: "fact" | "lesson" | "preference" | "decision" | "entity" | "pattern" | "struggle" | "event";
 	/** @deprecated Use name/summary/detail instead. Kept for backward compatibility reads. */
 	content?: string;
 	/** Short title (≤30 chars) for quick identification */
@@ -44,8 +65,14 @@ export interface MemoryEntry {
 	/** TTL in days — auto-evicted after expiry. undefined = permanent */
 	ttl?: number;
 	scope?: MemoryScope;
+	retention?: MemoryRetention;
+	salience?: number;
+	stability?: MemoryStability;
+	stateData?: StateData;
+	relations?: MemoryRelation[];
 	/** Structured data for pattern/struggle types (Facets) */
 	facetData?: FacetData;
+	eventData?: EventData;
 }
 
 export interface Episode {
@@ -93,7 +120,7 @@ export interface Meta {
 export type UpdateAction = "add" | "update" | "delete" | "noop";
 
 export interface ExtractedItem {
-	type: "preference" | "fact" | "lesson" | "decision" | "retract" | "pattern" | "struggle";
+	type: "preference" | "fact" | "lesson" | "decision" | "retract" | "pattern" | "struggle" | "event";
 	/** @deprecated Use name/summary/detail instead. */
 	content?: string;
 	/** Short title (≤30 chars) */
@@ -104,6 +131,11 @@ export interface ExtractedItem {
 	detail?: string;
 	/** Structured data for pattern/struggle types (populated by LLM extraction) */
 	facetData?: FacetData;
+	eventData?: EventData;
+	retention?: MemoryRetention;
+	salience?: number;
+	stability?: MemoryStability;
+	stateData?: StateData;
 }
 
 export interface ExtractedWork {
@@ -147,6 +179,28 @@ export interface InsightsReport {
 		totalSessions: number;
 	};
 	recommendations: string[];
+	generatedAt: string;
+}
+
+export interface AlignmentSnapshot {
+	identityCore: MemoryEntry[];
+	keyEvents: MemoryEntry[];
+	behaviorDrivers: MemoryEntry[];
+	currentState: MemoryEntry[];
+	relationshipEdges: Array<{
+		fromId: string;
+		toId: string;
+		kind: MemoryRelation["kind"];
+		weight: number;
+	}>;
+	conflicts: Array<{
+		aId: string;
+		bId: string;
+		reason: string;
+		severity: number;
+		recommendation: "merge" | "demote" | "forget" | "mark-situational";
+		rationale: string;
+	}>;
 	generatedAt: string;
 }
 

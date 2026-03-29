@@ -5,8 +5,8 @@ import { dirname, join, resolve } from "path";
  * Find the git HEAD path by walking up from cwd.
  * Handles both regular git repos (.git is a directory) and worktrees (.git is a file).
  */
-function findGitHeadPath(): string | null {
-	let dir = process.cwd();
+function findGitHeadPath(cwd: string): string | null {
+	let dir = cwd;
 	while (true) {
 		const gitPath = join(dir, ".git");
 		if (existsSync(gitPath)) {
@@ -43,8 +43,10 @@ export class FooterDataProvider {
 	private gitWatcher: FSWatcher | null = null;
 	private branchChangeCallbacks = new Set<() => void>();
 	private availableProviderCount = 0;
+	private cwd: string;
 
-	constructor() {
+	constructor(cwd: string) {
+		this.cwd = cwd;
 		this.setupGitWatcher();
 	}
 
@@ -53,7 +55,7 @@ export class FooterDataProvider {
 		if (this.cachedBranch !== undefined) return this.cachedBranch;
 
 		try {
-			const gitHeadPath = findGitHeadPath();
+			const gitHeadPath = findGitHeadPath(this.cwd);
 			if (!gitHeadPath) {
 				this.cachedBranch = null;
 				return null;
@@ -116,7 +118,7 @@ export class FooterDataProvider {
 			this.gitWatcher = null;
 		}
 
-		const gitHeadPath = findGitHeadPath();
+		const gitHeadPath = findGitHeadPath(this.cwd);
 		if (!gitHeadPath) return;
 
 		// Watch the directory containing HEAD, not HEAD itself.

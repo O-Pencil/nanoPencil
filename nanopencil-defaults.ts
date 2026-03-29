@@ -598,14 +598,18 @@ export function ensureNanopencilDefaultConfig(): void {
 }
 
 /**
- * 若未配置任何 Coding Plan API Key（百炼、千帆或方舟）：在 TTY 下提示输入并写入 auth.json 后刷新 registry；非 TTY 下报错退出。
- * 若至少有一个 Coding Plan 已配置，则跳过。
- * 仅在以 nanopencil 运行时、在创建 ModelRegistry 之后调用。
+ * Ensure nanoPencil has at least one usable model before startup continues.
+ *
+ * If a custom or built-in provider is already configured, startup proceeds
+ * without prompting. Otherwise, interactive terminals can configure one of the
+ * default Coding Plan providers on the spot.
  */
 export async function ensureNanopencilCodingPlanAuth(
 	authStorage: AuthStorage,
 	modelRegistry: ModelRegistry,
 ): Promise<void> {
+	if (modelRegistry.getAvailable().length > 0) return;
+
 	const dashscopeKey = await modelRegistry.getApiKeyForProvider(NANOPENCIL_DEFAULT_PROVIDER);
 	const qianfanKey = await modelRegistry.getApiKeyForProvider(NANOPENCIL_QIANFAN_CODING_PROVIDER);
 	const arkKey = await modelRegistry.getApiKeyForProvider(NANOPENCIL_ARK_CODING_PROVIDER);
@@ -615,10 +619,8 @@ export async function ensureNanopencilCodingPlanAuth(
 		const rl = createInterface({ input: process.stdin, output: process.stdout });
 		const choice = await new Promise<string>((resolve) => {
 			rl.question(
-				"请选择要配置的 Coding Plan：1) 百炼 (Alibaba) 2) 千帆 (Baidu) 3) 方舟 (Volcano) [1]: ",
-				(line) => {
-					resolve((line ?? "1").trim() || "1");
-				},
+				"Choose a Coding Plan provider to configure: 1) Alibaba DashScope 2) Baidu Qianfan 3) Volcano Ark [1]: ",
+				(line) => resolve((line ?? "1").trim() || "1"),
 			);
 		});
 		const provider =
@@ -629,26 +631,27 @@ export async function ensureNanopencilCodingPlanAuth(
 					: NANOPENCIL_DEFAULT_PROVIDER;
 		const hint =
 			choice === "2"
-				? "千帆 API Key（从 https://console.bce.baidu.com/qianfan/resource/subscribe 获取）"
+				? "Qianfan API key (from https://console.bce.baidu.com/qianfan/resource/subscribe)"
 				: choice === "3"
-					? "方舟 API Key（从 https://console.volcengine.com/ark/region:ark+cn-beijing/apikey 获取）"
-					: "百炼 API Key (sk-sp-...)";
+					? "Ark API key (from https://console.volcengine.com/ark/region:ark+cn-beijing/apikey)"
+					: "DashScope API key (sk-sp-...)";
 		const answer = await new Promise<string>((resolve) => {
-			rl.question(`请输入 ${hint}: `, (line) => {
+			rl.question(`Enter ${hint}: `, (line) => {
 				rl.close();
 				resolve((line ?? "").trim());
 			});
 		});
 		if (!answer) {
-			console.error("未输入 API Key，已退出。");
+			console.error("No API key provided. Exiting.");
 			process.exit(1);
 		}
 		authStorage.set(provider, { type: "api_key", key: answer });
 		modelRegistry.refresh();
-	} else {
-		console.error(
-			"未配置 Coding Plan API Key（百炼、千帆或方舟）。请先交互运行 nanopencil 并按要求输入 API Key。",
-		);
-		process.exit(1);
+		return;
 	}
+
+	console.error(
+		"No configured models are available yet. Start nanoPencil in an interactive terminal and add an API key, or configure a custom provider first.",
+	);
+	process.exit(1);
 }

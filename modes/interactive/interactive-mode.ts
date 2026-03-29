@@ -1709,6 +1709,7 @@ export class InteractiveMode {
       };
       opts?.signal?.addEventListener("abort", onAbort, { once: true });
 
+      this.dismissActiveExtensionPrompt(false);
       this.extensionSelector = new ExtensionSelectorComponent(
         title,
         options,
@@ -1739,11 +1740,7 @@ export class InteractiveMode {
    * Hide the extension selector.
    */
   private hideExtensionSelector(): void {
-    this.extensionSelector?.dispose();
-    this.editorContainer.clear();
-    this.editorContainer.addChild(this.editor);
-    this.extensionSelector = undefined;
-    this.ui.setFocus(this.editor);
+    this.dismissExtensionSelector();
     this.ui.requestRender();
   }
 
@@ -1783,6 +1780,7 @@ export class InteractiveMode {
       };
       opts?.signal?.addEventListener("abort", onAbort, { once: true });
 
+      this.dismissActiveExtensionPrompt(false);
       this.extensionInput = new ExtensionInputComponent(
         title,
         placeholder,
@@ -1814,11 +1812,7 @@ export class InteractiveMode {
    * Hide the extension input.
    */
   private hideExtensionInput(): void {
-    this.extensionInput?.dispose();
-    this.editorContainer.clear();
-    this.editorContainer.addChild(this.editor);
-    this.extensionInput = undefined;
-    this.ui.setFocus(this.editor);
+    this.dismissExtensionInput();
     this.ui.requestRender();
   }
 
@@ -1830,6 +1824,7 @@ export class InteractiveMode {
     prefill?: string,
   ): Promise<string | undefined> {
     return new Promise((resolve) => {
+      this.dismissActiveExtensionPrompt(false);
       this.extensionEditor = new ExtensionEditorComponent(
         this.ui,
         this.keybindings,
@@ -1856,10 +1851,7 @@ export class InteractiveMode {
    * Hide the extension editor.
    */
   private hideExtensionEditor(): void {
-    this.editorContainer.clear();
-    this.editorContainer.addChild(this.editor);
-    this.extensionEditor = undefined;
-    this.ui.setFocus(this.editor);
+    this.dismissExtensionEditor();
     this.ui.requestRender();
   }
 
@@ -1971,6 +1963,104 @@ export class InteractiveMode {
       return this.settingsManager.getShowMemoryTrace();
     }
     return this.settingsManager.getShowWorkingTrace();
+  }
+
+  private hasActiveExtensionPrompt(): boolean {
+    return !!(
+      this.extensionSelector ||
+      this.extensionInput ||
+      this.extensionEditor
+    );
+  }
+
+  private restoreEditorFocusIfPossible(): void {
+    if (this.hasActiveExtensionPrompt()) {
+      return;
+    }
+
+    const editorComponent = this.editor as Component;
+    if (this.editorContainer.children.includes(editorComponent)) {
+      this.ui.setFocus(editorComponent);
+    }
+  }
+
+  private dismissActiveExtensionPrompt(restoreEditorFocus = true): void {
+    if (this.extensionSelector) {
+      this.extensionSelector.dispose();
+      this.extensionSelector = undefined;
+    }
+
+    if (this.extensionInput) {
+      this.extensionInput.dispose();
+      this.extensionInput = undefined;
+    }
+
+    if (this.extensionEditor) {
+      this.extensionEditor = undefined;
+    }
+
+    this.editorContainer.clear();
+    this.editorContainer.addChild(this.editor);
+
+    if (restoreEditorFocus) {
+      this.restoreEditorFocusIfPossible();
+    }
+  }
+
+  private dismissExtensionSelector(restoreEditorFocus = true): void {
+    const selector = this.extensionSelector;
+    if (!selector) {
+      return;
+    }
+
+    this.extensionSelector = undefined;
+    selector.dispose();
+
+    if (this.editorContainer.children.includes(selector)) {
+      this.editorContainer.clear();
+      this.editorContainer.addChild(this.editor);
+    }
+
+    if (restoreEditorFocus) {
+      this.restoreEditorFocusIfPossible();
+    }
+  }
+
+  private dismissExtensionInput(restoreEditorFocus = true): void {
+    const input = this.extensionInput;
+    if (!input) {
+      return;
+    }
+
+    this.extensionInput = undefined;
+    input.dispose();
+
+    if (this.editorContainer.children.includes(input)) {
+      this.editorContainer.clear();
+      this.editorContainer.addChild(this.editor);
+    }
+
+    if (restoreEditorFocus) {
+      this.restoreEditorFocusIfPossible();
+    }
+  }
+
+  private dismissExtensionEditor(restoreEditorFocus = true): void {
+    const extensionEditor = this.extensionEditor;
+    if (!extensionEditor) {
+      return;
+    }
+
+    this.extensionEditor = undefined;
+
+    if (this.editorContainer.children.includes(extensionEditor)) {
+      this.editorContainer.clear();
+      this.editorContainer.addChild(this.editor);
+    }
+
+    if (restoreEditorFocus) {
+      this.restoreEditorFocusIfPossible();
+    }
   }
 
   /** Show a custom component with keyboard focus. Overlay mode renders on top of existing content. */
@@ -2577,6 +2667,7 @@ export class InteractiveMode {
           }
           this.pendingWorkingMessage = undefined;
         }
+        this.restoreEditorFocusIfPossible();
         this.ui.requestRender();
         break;
 
@@ -2744,6 +2835,7 @@ export class InteractiveMode {
 
         await this.checkShutdownRequested();
 
+        this.restoreEditorFocusIfPossible();
         this.ui.requestRender();
         break;
 

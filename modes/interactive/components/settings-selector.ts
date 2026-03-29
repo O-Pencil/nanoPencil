@@ -44,6 +44,8 @@ export interface SettingsConfig {
 	quietStartup: boolean;
 	clearOnShrink: boolean;
 	showTokenStats: boolean;
+	showWorkingTrace: boolean;
+	showMemoryTrace: boolean;
 }
 
 export interface SettingsCallbacks {
@@ -67,6 +69,8 @@ export interface SettingsCallbacks {
 	onQuietStartupChange: (enabled: boolean) => void;
 	onClearOnShrinkChange: (enabled: boolean) => void;
 	onShowTokenStatsChange: (enabled: boolean) => void;
+	onShowWorkingTraceChange: (enabled: boolean) => void;
+	onShowMemoryTraceChange: (enabled: boolean) => void;
 	onCancel: () => void;
 }
 
@@ -193,6 +197,20 @@ export class SettingsSelectorComponent extends Container {
 				label: "Quiet startup",
 				description: "Disable verbose printing at startup",
 				currentValue: config.quietStartup ? "true" : "false",
+				values: ["true", "false"],
+			},
+			{
+				id: "show-working-trace",
+				label: "Show working trace",
+				description: "Show coding and tool execution steps in chat",
+				currentValue: config.showWorkingTrace ? "true" : "false",
+				values: ["true", "false"],
+			},
+			{
+				id: "show-memory-trace",
+				label: "Show memory trace",
+				description: "Show NanoMem search, recall, and alignment traces in chat",
+				currentValue: config.showMemoryTrace ? "true" : "false",
 				values: ["true", "false"],
 			},
 			{
@@ -384,6 +402,12 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "quiet-startup":
 						callbacks.onQuietStartupChange(newValue === "true");
+						break;
+					case "show-working-trace":
+						callbacks.onShowWorkingTraceChange(newValue === "true");
+						break;
+					case "show-memory-trace":
+						callbacks.onShowMemoryTraceChange(newValue === "true");
 						break;
 					case "double-escape-action":
 						callbacks.onDoubleEscapeActionChange(newValue as "fork" | "tree");

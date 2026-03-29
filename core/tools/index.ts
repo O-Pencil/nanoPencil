@@ -48,6 +48,7 @@ export {
 	type ReadToolOptions,
 	readTool,
 } from "./read.js";
+export { createTimeTool, type TimeToolInput, timeTool } from "./time.js";
 export {
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_LINES,
@@ -73,16 +74,17 @@ import { createFindTool, findTool } from "./find.js";
 import { createGrepTool, grepTool } from "./grep.js";
 import { createLsTool, lsTool } from "./ls.js";
 import { createReadTool, type ReadToolOptions, readTool } from "./read.js";
+import { createTimeTool, timeTool } from "./time.js";
 import { createWriteTool, writeTool } from "./write.js";
 
 /** Tool type (AgentTool from pi-ai) */
 export type Tool = AgentTool<any>;
 
 // Default tools for full access mode (using process.cwd())
-export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool];
+export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool, timeTool];
 
 // Read-only tools for exploration without modification (using process.cwd())
-export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool];
+export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool, timeTool];
 
 // All available tools (using process.cwd())
 export const allTools = {
@@ -93,6 +95,7 @@ export const allTools = {
 	grep: grepTool,
 	find: findTool,
 	ls: lsTool,
+	time: timeTool,
 };
 
 export type ToolName = keyof typeof allTools;
@@ -113,6 +116,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
 		createBashTool(cwd, options?.bash),
 		createEditTool(cwd),
 		createWriteTool(cwd),
+		createTimeTool(),
 	];
 }
 
@@ -120,7 +124,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
  * Create read-only tools configured for a specific working directory.
  */
 export function createReadOnlyTools(cwd: string, options?: ToolsOptions): Tool[] {
-	return [createReadTool(cwd, options?.read), createGrepTool(cwd), createFindTool(cwd), createLsTool(cwd)];
+	return [createReadTool(cwd, options?.read), createGrepTool(cwd), createFindTool(cwd), createLsTool(cwd), createTimeTool()];
 }
 
 /**
@@ -135,6 +139,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		grep: createGrepTool(cwd),
 		find: createFindTool(cwd),
 		ls: createLsTool(cwd),
+		time: createTimeTool(),
 	};
 }
 
@@ -155,6 +160,9 @@ export const toolGuidance: Record<string, string> = {
 	find: "按 glob 模式查找文件（遵守 .gitignore）。适合查找特定名称的文件。",
 	ls: "列出目录内容。",
 };
+
+toolGuidance.time =
+	"Get the real current system time. Use this for time-sensitive confirmations like current date/time, today/tomorrow, deadlines, and temporal reasoning.";
 
 /**
  * Get guidance for a specific tool

@@ -55,6 +55,8 @@ export function buildSystemPrompt(
     second: "2-digit",
     timeZoneName: "short",
   });
+  const timeReasoningInstruction =
+    "\nFor exact current time or date-sensitive reasoning, use the `time` tool instead of relying only on this prompt timestamp.";
 
   const appendSection = appendSystemPrompt ? `\n\n${appendSystemPrompt}` : "";
 
@@ -96,6 +98,7 @@ export function buildSystemPrompt(
     prompt += `\n当前日期与时间：${dateTime}`;
     prompt += `\n当前工作目录：${resolvedCwd}`;
 
+    prompt += timeReasoningInstruction;
     return prompt;
   }
 
@@ -105,7 +108,7 @@ export function buildSystemPrompt(
   const examplesPath = getExamplesPath();
 
   // 根据所选工具构建工具列表（仅包含有描述的内置工具）
-  const tools = (selectedTools || ["read", "bash", "edit", "write"]).filter(
+  const tools = (selectedTools || ["read", "bash", "edit", "write", "time"]).filter(
     (t) => t in toolDescriptions,
   );
 
@@ -222,5 +225,6 @@ ${guidelines}
   prompt += `\n当前日期与时间：${dateTime}`;
   prompt += `\n当前工作目录：${resolvedCwd}`;
 
+  prompt += timeReasoningInstruction;
   return prompt;
 }

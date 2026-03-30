@@ -124,6 +124,24 @@ function asText(value: unknown): string {
 	}
 }
 
+function toolPayloadToText(value: unknown): string {
+	if (
+		value &&
+		typeof value === "object" &&
+		"content" in value &&
+		Array.isArray((value as { content?: unknown }).content)
+	) {
+		const text = (value as { content: Array<{ type?: string; text?: string }> }).content
+			.filter((block) => block?.type === "text" && typeof block.text === "string")
+			.map((block) => block.text)
+			.join("\n");
+		if (text.trim()) {
+			return text;
+		}
+	}
+	return asText(value);
+}
+
 function createSlashCommandsUpdate(session: AgentSession): AvailableCommand[] {
 	const commands = session.getSlashCommands();
 	const seen = new Set<string>();
@@ -154,6 +172,17 @@ function getMessageText(message: AgentMessage): string {
 		})
 		.filter((part) => part.length > 0)
 		.join("\n");
+}
+
+function isVisibleCustomMessage(message: AgentMessage): boolean {
+	return (
+		typeof message === "object" &&
+		message !== null &&
+		"role" in message &&
+		(message as { role?: unknown }).role === "custom" &&
+		"display" in message &&
+		(message as { display?: unknown }).display === true
+	);
 }
 
 function isMutatingTool(tool: AgentTool<any>): boolean {
@@ -430,6 +459,12 @@ class NanoPencilAgent implements acp.Agent {
 		});
 
 		try {
+			const extensionHandled = await this.session.tryExecuteExtensionCommand(userText);
+			if (extensionHandled) {
+				await this.emitSessionMetadata(sessionState);
+				return { stopReason: "end_turn" };
+			}
+
 			// @ts-expect-error - source is for internal use
 			await this.session.prompt(userText, { source: "acp" });
 			await this.emitSessionMetadata(sessionState);
@@ -1026,6 +1061,22 @@ class NanoPencilAgent implements acp.Agent {
 				break;
 			}
 
+			case "message_end":
+				if (isVisibleCustomMessage(event.message)) {
+					const text = getMessageText(event.message);
+					if (text.trim()) {
+						void this.connection.sessionUpdate({
+							sessionId,
+							update: {
+								sessionUpdate: "agent_message_chunk",
+								content: textToContent(text),
+								messageId: createMessageId(),
+							},
+						});
+					}
+				}
+				break;
+
 			case "tool_execution_start":
 				void this.connection.sessionUpdate({
 					sessionId,
@@ -1037,6 +1088,27 @@ class NanoPencilAgent implements acp.Agent {
 						status: "pending",
 						locations: [],
 						rawInput: event.args,
+					},
+				});
+				break;
+
+			case "tool_execution_update":
+				void this.connection.sessionUpdate({
+					sessionId,
+					update: {
+						sessionUpdate: "tool_call_update",
+						toolCallId: event.toolCallId,
+						status: "pending",
+						content: [
+							{
+								type: "content",
+								content: {
+									type: "text",
+									text: toolPayloadToText(event.partialResult),
+								},
+							},
+						] satisfies ToolCallContent[],
+						rawOutput: event.partialResult,
 					},
 				});
 				break;
@@ -1053,7 +1125,7 @@ class NanoPencilAgent implements acp.Agent {
 								type: "content",
 								content: {
 									type: "text",
-									text: asText(event.result),
+									text: toolPayloadToText(event.result),
 								},
 							},
 						] satisfies ToolCallContent[],

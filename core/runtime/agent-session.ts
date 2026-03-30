@@ -516,6 +516,14 @@ export class AgentSession {
     ];
   }
 
+  /**
+   * Try to execute an extension slash command directly.
+   * Returns true when a matching extension command was found, even if it failed internally.
+   */
+  async tryExecuteExtensionCommand(text: string): Promise<boolean> {
+    return this._tryExecuteExtensionCommand(text);
+  }
+
   // =========================================================================
   // Event Subscription
   // =========================================================================

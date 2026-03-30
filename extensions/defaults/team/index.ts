@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
 import { Type, type Static } from "@sinclair/typebox";
-import type { AgentToolResult } from "../../../core/extensions/types.js";
+import type { AgentToolResult, AgentToolUpdateCallback } from "../../../core/extensions/types.js";
 import type { ExecResult, ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "../../../core/extensions/types.js";
 import { getAgentDir } from "../../../config.js";
 import { DefaultResourceLoader } from "../../../core/config/resource-loader.js";
@@ -387,6 +387,55 @@ function formatState(state: TeamRunState): string {
 		lines.push(`Last error: ${state.lastError}`);
 	}
 	return lines.join("\n");
+}
+
+function createProgressReport(state: TeamRunState): TeamRunReport {
+	return {
+		id: state.id,
+		goal: state.goal,
+		mode: state.mode,
+		status: state.status,
+		startedAt: state.startedAt,
+		finishedAt: state.updatedAt,
+		plan: state.plan ?? createFallbackPlan(state.goal, state.mode),
+		results: [...state.results],
+		finalSummary: state.lastWorkerSummary ?? "",
+	};
+}
+
+function buildProgressUpdate(state: TeamRunState, message?: string): string {
+	const lines = [
+		`Team run ${state.id} is in stage "${state.stage}".`,
+		`Goal: ${summarizeGoal(state.goal, 120)}`,
+	];
+	if (message) {
+		lines.push(`Progress: ${message}`);
+	}
+	if (state.plan?.summary) {
+		lines.push(`Plan: ${state.plan.summary}`);
+	}
+	if (state.results.length > 0) {
+		lines.push(`Completed workers: ${state.results.length}`);
+	}
+	if (state.lastWorkerSummary) {
+		lines.push(`Latest result: ${state.lastWorkerSummary}`);
+	}
+	if (state.lastError) {
+		lines.push(`Last error: ${state.lastError}`);
+	}
+	return lines.join("\n");
+}
+
+function emitProgressUpdate(
+	onUpdate: AgentToolUpdateCallback<TeamRunReport> | undefined,
+	state: TeamRunState | undefined,
+	message?: string,
+): void {
+	if (!onUpdate || !state) return;
+	onUpdate({
+		content: [{ type: "text", text: buildProgressUpdate(state, message) }],
+		details: createProgressReport(state),
+	});
 }
 
 function formatReport(report: TeamRunReport): string {
@@ -835,6 +884,7 @@ async function orchestrateTeamRun(
 	ctx: ExtensionContext,
 	goal: string,
 	mode: TeamCommandMode,
+	onUpdate?: AgentToolUpdateCallback<TeamRunReport>,
 ): Promise<TeamRunReport> {
 	const controller = getController(pi);
 	const active = controller.getActive();
@@ -845,19 +895,36 @@ async function orchestrateTeamRun(
 	controller.update({ stage: "planning" });
 	persistState(pi, controller.getActive()!);
 	syncRunUi(ctx, controller.getActive());
+	emitProgressUpdate(onUpdate, controller.getActive(), "Creating the team plan.");
 	const plan = await createPlan(pi, ctx, goal, mode);
 	controller.update({ plan, stage: "parallel research" });
 	persistState(pi, controller.getActive()!);
 	syncRunUi(ctx, controller.getActive());
+	emitProgressUpdate(
+		onUpdate,
+		controller.getActive(),
+		`Plan ready. Launching ${plan.researchWorkers.length} research worker${plan.researchWorkers.length === 1 ? "" : "s"}.`,
+	);
 
 	const researchResults = await Promise.all(
-		plan.researchWorkers.map((worker) => runWorker(pi, ctx, goal, plan, worker, [])),
+		plan.researchWorkers.map(async (worker) => {
+			emitProgressUpdate(
+				onUpdate,
+				controller.getActive(),
+				`Started ${worker.role} (${worker.id}).`,
+			);
+			const result = await runWorker(pi, ctx, goal, plan, worker, []);
+			controller.appendResult(result);
+			persistState(pi, controller.getActive()!);
+			syncRunUi(ctx, controller.getActive());
+			emitProgressUpdate(
+				onUpdate,
+				controller.getActive(),
+				`${worker.role} finished with status ${result.status}.`,
+			);
+			return result;
+		}),
 	);
-	for (const result of researchResults) {
-		controller.appendResult(result);
-		persistState(pi, controller.getActive()!);
-		syncRunUi(ctx, controller.getActive());
-	}
 
 	const allResults = [...researchResults];
 	const executionMode = mode === "research" ? "research_only" : plan.executionMode;
@@ -872,10 +939,16 @@ async function orchestrateTeamRun(
 		controller.update({ stage: "implementation" });
 		persistState(pi, controller.getActive()!);
 		syncRunUi(ctx, controller.getActive());
+		emitProgressUpdate(onUpdate, controller.getActive(), "Starting the implementation worker.");
 		const implementationResult = await runWorker(pi, ctx, goal, plan, implementationWorker, allResults);
 		controller.appendResult(implementationResult);
 		persistState(pi, controller.getActive()!);
 		syncRunUi(ctx, controller.getActive());
+		emitProgressUpdate(
+			onUpdate,
+			controller.getActive(),
+			`Implementation worker finished with status ${implementationResult.status}.`,
+		);
 		allResults.push(implementationResult);
 
 		const reviewWorker: TeamWorkerSpec = {
@@ -888,10 +961,16 @@ async function orchestrateTeamRun(
 		controller.update({ stage: "review" });
 		persistState(pi, controller.getActive()!);
 		syncRunUi(ctx, controller.getActive());
+		emitProgressUpdate(onUpdate, controller.getActive(), "Starting the review worker.");
 		const reviewResult = await runWorker(pi, ctx, goal, plan, reviewWorker, allResults);
 		controller.appendResult(reviewResult);
 		persistState(pi, controller.getActive()!);
 		syncRunUi(ctx, controller.getActive());
+		emitProgressUpdate(
+			onUpdate,
+			controller.getActive(),
+			`Review worker finished with status ${reviewResult.status}.`,
+		);
 		allResults.push(reviewResult);
 	}
 
@@ -914,6 +993,14 @@ async function orchestrateTeamRun(
 		finalSummary: "",
 	};
 	const finalSummary = buildFinalSummary(provisionalReport);
+	controller.update({
+		stage: "finished",
+		status,
+		lastWorkerSummary: finalSummary,
+	});
+	persistState(pi, controller.getActive()!);
+	syncRunUi(ctx, controller.getActive());
+	emitProgressUpdate(onUpdate, controller.getActive(), `Team run finished with status ${status}.`);
 	const report = controller.finish(status, finalSummary);
 	if (!report) {
 		return { ...provisionalReport, finalSummary };
@@ -1019,15 +1106,22 @@ export default async function teamExtension(pi: ExtensionAPI) {
 			_toolCallId: string,
 			params: TeamToolParams,
 			_signal,
-			_onUpdate,
+			onUpdate,
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<TeamRunReport>> => {
 			ensureExplicitTeamTrigger(ctx, params.goal);
 			const controller = getController(pi);
 			const active = controller.start(params.goal, params.mode ?? "auto");
 			persistState(pi, active);
+			emitProgressUpdate(onUpdate, active, "Team run started.");
 			try {
-				const report = await orchestrateTeamRun(pi, ctx, params.goal, params.mode ?? "auto");
+				const report = await orchestrateTeamRun(
+					pi,
+					ctx,
+					params.goal,
+					params.mode ?? "auto",
+					onUpdate,
+				);
 				report.artifactPath = writeReportArtifact(report, ctx.cwd);
 				persistReport(pi, report);
 				return {
@@ -1037,6 +1131,7 @@ export default async function teamExtension(pi: ExtensionAPI) {
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				controller.update({ lastError: message, stage: "failed" });
+				emitProgressUpdate(onUpdate, controller.getActive(), message);
 				const report = controller.finish("failed", message) ?? {
 					id: active.id,
 					goal: params.goal,

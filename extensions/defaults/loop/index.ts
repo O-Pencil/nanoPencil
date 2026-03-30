@@ -50,6 +50,26 @@ function recordLoopEvent(pi: ExtensionAPI, message: string): void {
 	});
 }
 
+function publishLoopUpdate(
+	pi: ExtensionAPI,
+	bus: EventBus,
+	message: string,
+	type: "info" | "warning" | "error" = "info",
+): void {
+	recordLoopEvent(pi, message);
+	notify(bus, message, type);
+	pi.sendMessage({
+		customType: LOOP_CUSTOM_TYPE,
+		content: message,
+		display: true,
+		details: {
+			message,
+			level: type,
+			timestamp: Date.now(),
+		},
+	});
+}
+
 function notify(bus: EventBus, message: string, type: "info" | "warning" | "error" = "info"): void {
 	notifyByBus.get(bus)?.(message, type);
 }
@@ -294,7 +314,12 @@ function dispatchNextIteration(pi: ExtensionAPI, bus: EventBus, controller: Loop
 
 	const prompt = controller.buildPrompt();
 	controller.markDispatched();
-	notify(bus, `[Loop] Starting iteration ${task.currentIteration} for ${task.id}`, "info");
+	publishLoopUpdate(
+		pi,
+		bus,
+		`[Loop] Starting iteration ${task.currentIteration} for ${task.id}.`,
+		"info",
+	);
 	pi.sendUserMessage(prompt, { deliverAs: "followUp" });
 }
 
@@ -357,11 +382,15 @@ export default async function loopExtension(pi: ExtensionAPI) {
 			const failure = controller.recordFailure("Loop run ended without an assistant message.");
 			if (failure.action === "stop") {
 				const message = describeTerminalSnapshot(failure.snapshot);
-				recordLoopEvent(pi, message);
-				notify(bus, message, "warning");
+				publishLoopUpdate(pi, bus, message, "warning");
 				return;
 			}
-			recordLoopEvent(pi, `[Loop] Iteration failed. Retrying iteration ${failure.task?.currentIteration}.`);
+			publishLoopUpdate(
+				pi,
+				bus,
+				`[Loop] Iteration failed. Retrying iteration ${failure.task?.currentIteration}.`,
+				"warning",
+			);
 			dispatchNextIteration(pi, bus, controller);
 			return;
 		}
@@ -373,24 +402,24 @@ export default async function loopExtension(pi: ExtensionAPI) {
 			);
 			if (failure.action === "stop") {
 				const message = describeTerminalSnapshot(failure.snapshot);
-				recordLoopEvent(pi, message);
-				notify(bus, message, "warning");
+				publishLoopUpdate(pi, bus, message, "warning");
 				return;
 			}
-			recordLoopEvent(
+			publishLoopUpdate(
 				pi,
+				bus,
 				`[Loop] Missing or invalid loop-state block. Retrying iteration ${failure.task?.currentIteration}.`,
+				"warning",
 			);
 			dispatchNextIteration(pi, bus, controller);
 			return;
 		}
 
-		recordLoopEvent(pi, describeDecision(decision));
+		publishLoopUpdate(pi, bus, describeDecision(decision), "info");
 		const next = controller.finishTurn(decision);
 		if (next.action === "stop") {
 			const message = describeTerminalSnapshot(next.snapshot);
-			recordLoopEvent(pi, message);
-			notify(bus, message, decision.status === "complete" ? "info" : "warning");
+			publishLoopUpdate(pi, bus, message, decision.status === "complete" ? "info" : "warning");
 			return;
 		}
 
@@ -408,8 +437,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 			if (parsed.type === "help") {
 				const reason = parsed.reason === "empty" ? "Missing loop goal." : undefined;
 				const help = buildHelp(reason);
-				recordLoopEvent(pi, help);
-				notify(bus, help, "warning");
+				publishLoopUpdate(pi, bus, help, "warning");
 				return;
 			}
 
@@ -420,8 +448,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 					: state.lastTerminal
 						? formatSnapshot(state.lastTerminal)
 						: "[Loop] No loop task has been started in this session.";
-				recordLoopEvent(pi, message);
-				notify(bus, message, "info");
+				publishLoopUpdate(pi, bus, message, "info");
 				return;
 			}
 
@@ -429,8 +456,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 				const activeTask = controller.getActiveTask();
 				if (!activeTask) {
 					const message = "[Loop] No active loop is running.";
-					recordLoopEvent(pi, message);
-					notify(bus, message, "warning");
+					publishLoopUpdate(pi, bus, message, "warning");
 					return;
 				}
 
@@ -439,8 +465,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 					ctx.abort();
 				}
 				const message = `[Loop] Stopped loop ${activeTask.id}.`;
-				recordLoopEvent(pi, message);
-				notify(bus, message, "info");
+				publishLoopUpdate(pi, bus, message, "info");
 				return;
 			}
 
@@ -451,14 +476,12 @@ export default async function loopExtension(pi: ExtensionAPI) {
 					`Goal: ${task.goal}`,
 					`Safety limits: ${task.maxIterations} iterations, ${task.maxConsecutiveFailures} consecutive failures.`,
 				].join("\n");
-				recordLoopEvent(pi, message);
-				notify(bus, `[Loop] Started ${task.id}: ${summarizeGoal(task.goal)}`, "info");
+				publishLoopUpdate(pi, bus, message, "info");
 				dispatchNextIteration(pi, bus, controller);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				const output = `[Loop] ${message}`;
-				recordLoopEvent(pi, output);
-				notify(bus, output, "error");
+				publishLoopUpdate(pi, bus, output, "error");
 			}
 		},
 	});

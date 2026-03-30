@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.15] - 2026-03-31
+
+### Added
+- feat(acp): improve zed agent parity
+- feat(figma): improve remote MCP authentication flow
+- feat(agent): hide internal traces and improve time grounding
+- feat(mem): add graph-driven memory governance
+- feat(team): add multi-agent team orchestration extension
+- feat(providers): support custom protocol endpoints
+- feat(loop): replace timer loop with autonomous task loop
+
+### Fixed
+- fix(mcp): load runtime config from the active MCP path
+- fix(interactive): harden extension prompt focus flow
+- fix(runtime): tighten workspace handling and startup prompts @o-pencil-agent
+- fix(runtime): improve loop recovery and insights reporting
+- fix(deps): add zod runtime dependency
+- fix(ux): improve custom provider messaging
+- fix(providers): reopen and refresh custom provider edits
+- fix(providers): streamline custom provider setup
+- fix: extract clipboard image data before sending to model
+
+### Documentation
+- docs(prompt): refine project assistant charter @o-pencil-agent
+- docs(agents): require English for code strings and commits
+
+### Maintenance
+- chore(release): prepare 1.11.14 changelog
+- chore(release): prepare 1.11.13 changelog
+- chore(release): publish 1.11.12
+- chore(release): prepare 1.11.12 changelog
+- chore(release): publish 1.11.11
+- chore(release): publish 1.11.10
+- chore(release): publish 1.11.8
+- chore(release): publish 1.11.6
+- chore(release): publish 1.11.5
+
+
 ## [1.11.13] - 2026-03-29
 
 ### Added

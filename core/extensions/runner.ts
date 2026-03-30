@@ -332,7 +332,10 @@ export class ExtensionRunner {
 	}
 
 	hasUI(): boolean {
-		return this.uiContext !== noOpUIContext;
+		if (this.uiContext === noOpUIContext) {
+			return false;
+		}
+		return (this.uiContext as { __nonInteractive?: boolean }).__nonInteractive !== true;
 	}
 
 	getExtensionPaths(): string[] {

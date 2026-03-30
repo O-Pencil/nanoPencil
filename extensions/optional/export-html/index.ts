@@ -334,9 +334,9 @@ export default async function exportHtmlExtension(pi: ExtensionAPI) {
 				undefined,
 			);
 
-			console.log(`Session exported to: ${filePath}`);
+			console.error(`Session exported to: ${filePath}`);
 		},
 	});
 
-	console.log("[export-html] Extension loaded");
+	console.error("[export-html] Extension loaded");
 }

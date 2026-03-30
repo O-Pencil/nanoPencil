@@ -286,7 +286,7 @@ export default async function soulExtension(pi: ExtensionAPI) {
 		return;
 	}
 
-	console.log("[soul] Soul extension loaded successfully.");
+	console.error("[soul] Soul extension loaded successfully.");
 
 	// Register event handlers
 

@@ -19,7 +19,7 @@ const isDebugMode = process.env.NODE_ENV === "development" || (process.env.NODE_
 
 function mcpLog(...args: unknown[]): void {
   if (isDebugMode) {
-    console.log(...args);
+    console.error(...args);
   }
 }
 

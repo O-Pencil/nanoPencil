@@ -836,7 +836,65 @@ export async function main(args: string[]) {
 
 	if (parsed.acp) {
 		const { runAcpMode } = await import("./modes/acp/acp-mode.js");
-		await runAcpMode(session);
+		const createAcpSessionForCwd = async (workspaceCwd: string) => {
+			const resolvedWorkspaceCwd = resolveWorkingDirectory(workspaceCwd);
+			const workspaceSettingsManager = SettingsManager.create(resolvedWorkspaceCwd, agentDir);
+			reportSettingsErrors(workspaceSettingsManager, "acp startup");
+
+			const workspaceResourceLoader = new DefaultResourceLoader({
+				cwd: resolvedWorkspaceCwd,
+				agentDir,
+				settingsManager: workspaceSettingsManager,
+				additionalExtensionPaths: [...defaultExtPaths, ...(parsed.extensions ?? [])],
+				additionalSkillPaths: parsed.skills,
+				additionalPromptTemplatePaths: parsed.promptTemplates,
+				additionalThemePaths: parsed.themes,
+				noExtensions: parsed.noExtensions,
+				noSkills: parsed.noSkills,
+				noPromptTemplates: parsed.noPromptTemplates,
+				noThemes: parsed.noThemes,
+				systemPrompt: parsed.systemPrompt,
+				appendSystemPrompt: parsed.appendSystemPrompt,
+			});
+			await workspaceResourceLoader.reload();
+
+			const workspaceExtensionsResult = workspaceResourceLoader.getExtensions();
+			for (const { path, error } of workspaceExtensionsResult.errors) {
+				console.error(chalk.red(`Failed to load extension "${path}": ${error}`));
+			}
+			for (const { name, config } of workspaceExtensionsResult.runtime.pendingProviderRegistrations) {
+				modelRegistry.registerProvider(name, config);
+			}
+			workspaceExtensionsResult.runtime.pendingProviderRegistrations = [];
+
+			let workspaceScopedModels: ScopedModel[] = [];
+			if (modelPatterns && modelPatterns.length > 0) {
+				workspaceScopedModels = await resolveModelScope(modelPatterns, modelRegistry);
+			}
+
+			const workspaceSessionManager = parsed.noSession
+				? SessionManager.inMemory(resolvedWorkspaceCwd)
+				: SessionManager.create(resolvedWorkspaceCwd, parsed.sessionDir);
+			const { options: workspaceSessionOptions } = buildSessionOptions(
+				parsed,
+				workspaceScopedModels,
+				workspaceSessionManager,
+				modelRegistry,
+				workspaceSettingsManager,
+			);
+			workspaceSessionOptions.cwd = resolvedWorkspaceCwd;
+			workspaceSessionOptions.authStorage = authStorage;
+			workspaceSessionOptions.modelRegistry = modelRegistry;
+			workspaceSessionOptions.resourceLoader = workspaceResourceLoader;
+			workspaceSessionOptions.settingsManager = workspaceSettingsManager;
+			workspaceSessionOptions.enableMCP = sessionOptions.enableMCP;
+			workspaceSessionOptions.enableSoul = sessionOptions.enableSoul;
+
+			const { session: workspaceSession } = await createAgentSession(workspaceSessionOptions);
+			return workspaceSession;
+		};
+
+		await runAcpMode(session, { createSessionForCwd: createAcpSessionForCwd });
 	} else if (mode === "rpc") {
 		await runRpcMode(session);
 	} else if (isInteractive) {

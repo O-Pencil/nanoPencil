@@ -25,45 +25,43 @@ import type { ReadonlySessionManager } from "../../../core/session/session-manag
 const INTERVIEW_CUSTOM_TYPE = "interview_refined";
 
 const INTERVIEW_PROBE_SYSTEM_PROMPT = `
-你是 Interview 探测引擎（需求澄清器）。
+You are an "Interview probe" engine that clarifies ambiguous user requests.
 
-目标：
-1) 评估用户原始需求的“信息熵”（信息是否足够以直接开始实现）。
-2) 输出一个 completionScore（0 到 1，越高表示越清晰）。
-3) 若仍缺关键约束/目标/风格/验收标准：输出 missingSlots（按优先级从高到低）。
-4) 同时基于当前已知 answers 生成 refinedIntent：把用户需求重构成可执行的“清晰规格”，即使仍有待确认，也用占位符标记（例如：{待确认: xxx}）。
+Your goals:
+1) Estimate how complete the user's request is for immediate execution.
+2) Output a completionScore (0..1). Higher means clearer.
+3) If critical info is missing (goal/deliverable/constraints/style/acceptance), output missingSlots (highest priority first).
+4) Always generate refinedIntent: rewrite the request into an executable specification. If something is unknown, use an explicit placeholder (e.g. "{TBD: ...}").
 
-硬性要求：
-- 你必须只输出“单个合法 JSON 对象”，不得输出任何额外文本、markdown 代码块或解释。
-- JSON 字段：
-  - completionScore: number（0..1）
-  - refinedIntent: string（始终输出）
+Hard requirements:
+- Output MUST be a single valid JSON object only. No extra text, no markdown, no code fences.
+- JSON fields:
+  - completionScore: number (0..1)
+  - refinedIntent: string (always present, non-empty)
   - missingSlots: Array<{
       key: string,
       question: string,
       options?: string[],
       allowCustom?: boolean
     }>
-- 规则：
-  - 若缺失信息已足够直接开始实现，missingSlots 必须为空数组，并且 completionScore >= 0.8。
-	  - 若原始需求属于问候/闲聊/记忆确认/纯情绪表达（例如：晚上好、你还记得我吗、随便讲讲），则视为“信息已足够无需澄清”：missingSlots 必须为空数组，并且 completionScore 必须 >= 0.8；refinedIntent 只需对用户需求做简短复述或回应即可。
-  - missingSlots 最多返回 3 个（与 rounds 相匹配），优先返回最关键的一个。
-  - question 必须用中文且一句话问清楚（避免长段落）。
-  - options（若提供）必须是用户可直接选的短选项；allowCustom 表示允许输入自定义答案。
+- Rules:
+  - If the request is already clear enough to start implementing, missingSlots MUST be [], and completionScore MUST be >= 0.8.
+  - If the request is a greeting/small-talk/memory check/pure emotion (e.g. "hello", "do you remember me", "chat a bit"), treat it as clear enough: missingSlots MUST be [], completionScore MUST be >= 0.8, and refinedIntent can be a short restatement/response.
+  - missingSlots MUST contain at most 3 items.
+  - Prefer returning only the single most important missing slot.
+  - question MUST be a single concise sentence (no long paragraphs).
+  - options, when provided, MUST be short, directly selectable user options.
 `.trim();
 
 function clamp01(n: number): number {
 	return Math.max(0, Math.min(1, n));
 }
 
-function tryExtractJsonObject(text: string): unknown | undefined {
+function tryParseStrictJsonObject(text: string): unknown | undefined {
 	const trimmed = text.trim();
-	const firstBrace = trimmed.indexOf("{");
-	const lastBrace = trimmed.lastIndexOf("}");
-	if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) return undefined;
-	const jsonStr = trimmed.slice(firstBrace, lastBrace + 1);
+	if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return undefined;
 	try {
-		return JSON.parse(jsonStr);
+		return JSON.parse(trimmed);
 	} catch {
 		return undefined;
 	}
@@ -201,71 +199,130 @@ type ProbeOutput = {
 	missingSlots: MissingSlot[];
 };
 
+function buildProbeContext(input: {
+	originalIntent: string;
+	answers: Record<string, string>;
+	capabilities: {
+		hasUI: boolean;
+		mode: "interactive" | "nonInteractive";
+		cwd?: string;
+		model?: { provider?: string; id?: string; name?: string };
+	};
+}): string {
+	return [
+		"[Original request]",
+		input.originalIntent,
+		"",
+		"[Known answers (JSON)]",
+		JSON.stringify(input.answers),
+		"",
+		"[Runtime capabilities (JSON)]",
+		JSON.stringify(input.capabilities),
+	].join("\n").trim();
+}
+
+function normalizeMissingSlots(raw: unknown): MissingSlot[] {
+	if (!Array.isArray(raw)) return [];
+	const seen = new Set<string>();
+	const out: MissingSlot[] = [];
+	for (const s of raw) {
+		if (!s || typeof s !== "object") continue;
+		const key = typeof (s as any).key === "string" ? String((s as any).key).trim() : "";
+		const question = typeof (s as any).question === "string" ? String((s as any).question).trim() : "";
+		if (!key || !question) continue;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		const options =
+			Array.isArray((s as any).options) && (s as any).options.length > 0
+				? (s as any).options.map((v: any) => String(v).trim()).filter(Boolean).slice(0, 6)
+				: undefined;
+		const allowCustom = typeof (s as any).allowCustom === "boolean" ? (s as any).allowCustom : undefined;
+		out.push({
+			key: key.slice(0, 40),
+			question: question.slice(0, 220),
+			options,
+			allowCustom,
+		});
+		if (out.length >= 3) break;
+	}
+	return out;
+}
+
+function coerceProbeOutput(parsed: unknown, fallback: ProbeOutput): ProbeOutput {
+	if (!parsed || typeof parsed !== "object") return fallback;
+	const p = parsed as any;
+
+	let completionScore = clamp01(typeof p.completionScore === "number" ? p.completionScore : fallback.completionScore);
+	let refinedIntent =
+		typeof p.refinedIntent === "string" && p.refinedIntent.trim() ? p.refinedIntent.trim() : fallback.refinedIntent;
+	let missingSlots = normalizeMissingSlots(p.missingSlots);
+
+	// Consistency guards:
+	if (completionScore < 0.8 && missingSlots.length === 0) {
+		missingSlots = fallback.missingSlots;
+		completionScore = Math.min(0.6, completionScore || 0.6);
+	}
+	if (completionScore >= 0.8 && missingSlots.length > 0) {
+		missingSlots = [];
+	}
+	if (!refinedIntent.trim()) refinedIntent = fallback.refinedIntent;
+
+	return { completionScore, refinedIntent, missingSlots };
+}
+
 async function runProbe(
 	ctx: ExtensionContext,
 	originalIntent: string,
 	answers: Record<string, string>,
-	referenceSystemPrompt: string,
+	capabilities: {
+		hasUI: boolean;
+		mode: "interactive" | "nonInteractive";
+		cwd?: string;
+		model?: { provider?: string; id?: string; name?: string };
+	},
 ): Promise<ProbeOutput> {
-	const reference = truncateForPrompt(referenceSystemPrompt, 5000);
-	const userMessage = `
-【原始需求】
-${originalIntent}
-
-【当前已知回答（answers）】
-${JSON.stringify(answers)}
-
-【用于帮助你判断的当前 systemPrompt（包含 memory / soul 等注入）】
-${reference}
-`.trim();
-
+	const userMessage = buildProbeContext({ originalIntent, answers, capabilities });
 	const raw = await ctx.completeSimple(INTERVIEW_PROBE_SYSTEM_PROMPT, userMessage);
 	const fallback: ProbeOutput = {
 		completionScore: 0.25,
-		refinedIntent: `用户原始需求：${originalIntent}\n\n建议澄清：目标/交付物、约束/技术栈、风格与验收标准（均为待确认）。`,
+		refinedIntent: `Original request: ${originalIntent}\n\nMissing critical info (TBD): deliverable, constraints, acceptance criteria.`,
 		missingSlots: [
-			{ key: "deliverable", question: "这次你期望的最终交付物/输出是什么？（例如：代码、文档、PRD、测试、脚本）", allowCustom: true },
-			{ key: "constraints", question: "有哪些硬性约束？（例如：语言/框架、运行环境、必须用的库、不能做的事）", allowCustom: true },
-			{ key: "acceptance", question: "你希望如何验收？（例如：测试通过/性能指标/格式要求/示例输入输出）", allowCustom: true },
+			{
+				key: "deliverable",
+				question: "What is the final deliverable/output you want (e.g., code, doc, PRD, tests, script)?",
+				allowCustom: true,
+			},
+			{
+				key: "constraints",
+				question: "Any hard constraints (language/framework/runtime/must-use libraries/things to avoid)?",
+				allowCustom: true,
+			},
+			{
+				key: "acceptance",
+				question: "How should we validate/accept the result (tests, performance target, format, sample I/O)?",
+				allowCustom: true,
+			},
 		],
 	};
 
 	if (!raw) return fallback;
 
-	const parsed = tryExtractJsonObject(raw) as Partial<ProbeOutput> | undefined;
-	if (!parsed || typeof parsed !== "object") return fallback;
-
-	const completionScore = clamp01(typeof parsed.completionScore === "number" ? parsed.completionScore : fallback.completionScore);
-	const refinedIntent =
-		typeof parsed.refinedIntent === "string" && parsed.refinedIntent.trim()
-			? parsed.refinedIntent.trim()
-			: fallback.refinedIntent;
-	const missingSlotsRaw = Array.isArray(parsed.missingSlots) ? parsed.missingSlots : fallback.missingSlots;
-	const missingSlots: MissingSlot[] = missingSlotsRaw
-		.filter((s) => s && typeof (s as any).key === "string" && typeof (s as any).question === "string")
-		.slice(0, 3)
-		.map((s) => ({
-			key: String((s as any).key),
-			question: String((s as any).question),
-			options: Array.isArray((s as any).options) ? (s as any).options.map(String) : undefined,
-			allowCustom: typeof (s as any).allowCustom === "boolean" ? (s as any).allowCustom : undefined,
-		}));
-
-	return { completionScore, refinedIntent, missingSlots };
+	const parsed = tryParseStrictJsonObject(raw);
+	return coerceProbeOutput(parsed, fallback);
 }
 
 async function askSlotWithUI(ctx: ExtensionContext, round: number, slot: MissingSlot): Promise<string | undefined> {
-	const title = `Interview 澄清（${round}）：${slot.question}`;
+	const title = `Interview clarification (${round}): ${slot.question}`;
 	if (slot.options && slot.options.length > 0 && ctx.hasUI) {
 		const options = [...slot.options];
 		const allowCustom = slot.allowCustom === true;
 		const customIndex = allowCustom ? options.length : -1;
-		if (allowCustom) options.push("自定义/其他");
+		if (allowCustom) options.push("Other (custom)");
 
 		const choice = await ctx.ui.select(title, options);
 		if (!choice) return undefined;
-		if (customIndex !== -1 && choice === "自定义/其他") {
-			const v = await ctx.ui.input(`请输入自定义答案：${slot.key}`, slot.question);
+		if (customIndex !== -1 && choice === "Other (custom)") {
+			const v = await ctx.ui.input(`Enter a custom answer: ${slot.key}`, slot.question);
 			return v?.trim();
 		}
 		return choice.trim();
@@ -280,18 +337,25 @@ async function runInterview(
 	ctx: ExtensionContext,
 	originalIntent: string,
 	maxRounds: number,
-	referenceSystemPrompt: string,
 ): Promise<{
 	refinedIntent: string;
 	completionScore: number;
 	answers: Record<string, string>;
 	missingSlotsRemaining: MissingSlot[];
 }> {
+	const capabilities = {
+		hasUI: ctx.hasUI,
+		mode: ctx.hasUI ? ("interactive" as const) : ("nonInteractive" as const),
+		cwd: ctx.cwd,
+		model: ctx.model
+			? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as any).name }
+			: undefined,
+	};
 	const answers: Record<string, string> = {};
 
 	// Non-UI mode: probe only once (best-effort).
 	if (!ctx.hasUI) {
-		const probe = await runProbe(ctx, originalIntent, answers, referenceSystemPrompt);
+		const probe = await runProbe(ctx, originalIntent, answers, capabilities);
 		return {
 			refinedIntent: probe.refinedIntent,
 			completionScore: probe.completionScore,
@@ -302,13 +366,13 @@ async function runInterview(
 
 	let finalProbe: ProbeOutput | undefined;
 	for (let i = 1; i <= maxRounds; i++) {
-		const probe = await runProbe(ctx, originalIntent, answers, referenceSystemPrompt);
+		const probe = await runProbe(ctx, originalIntent, answers, capabilities);
 		finalProbe = probe;
 
 		if (probe.missingSlots.length === 0 || probe.completionScore >= 0.8) break;
 
 		const slot = probe.missingSlots[0];
-		ctx.ui.setWorkingMessage?.(`Interview：追问第 ${i} 轮...`);
+		ctx.ui.setWorkingMessage?.(`Interview: asking follow-up (${i})...`);
 		const value = await askSlotWithUI(ctx, i, slot);
 		ctx.ui.setWorkingMessage?.();
 
@@ -317,7 +381,7 @@ async function runInterview(
 	}
 
 	// If we broke early or still missing, run one last probe for best refinedIntent.
-	const ensureProbe = finalProbe ?? (await runProbe(ctx, originalIntent, answers, referenceSystemPrompt));
+	const ensureProbe = finalProbe ?? (await runProbe(ctx, originalIntent, answers, capabilities));
 	const missingSlotsRemaining = ensureProbe.missingSlots.filter((s) => answers[s.key] === undefined);
 
 	return {
@@ -348,22 +412,22 @@ function buildInjectionText(input: {
 			: "(无)";
 
 	return [
-		"【Interview Refined Intent】",
+		"[Interview Refined Intent]",
 		`completionScore: ${input.completionScore.toFixed(2)}`,
 		"",
-		"【原始需求】",
+		"[Original request]",
 		input.originalIntent,
 		"",
-		"【澄清后意图 refinedIntent】",
+		"[Refined intent]",
 		input.refinedIntent,
 		"",
-		"【已补全信息】",
+		"[Answered]",
 		answersLines,
 		"",
-		"【仍待确认】",
+		"[Still TBD]",
 		remainingLines,
 		"",
-		"请把上述 refinedIntent 当作本轮唯一的执行规格来源，直接开始规划与实现。",
+		"Use the refinedIntent above as the single source of truth for planning and execution.",
 	].join("\n");
 }
 
@@ -372,8 +436,8 @@ function buildToolResultText(refinedIntent: string): string {
 }
 
 const interviewToolSchema = Type.Object({
-	query: Type.String({ description: "用户原始需求/意图" }),
-	maxRounds: Type.Optional(Type.Number({ description: "最多追问轮数（默认 3）" })),
+	query: Type.String({ description: "The user's original request/intent" }),
+	maxRounds: Type.Optional(Type.Number({ description: "Max follow-up rounds (default: 3)" })),
 	answers: Type.Optional(Type.Record(Type.String(), Type.String())),
 });
 
@@ -384,21 +448,19 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 	// We keep this extension light by relying on default rendering.
 
 	pi.registerCommand("interview", {
-		description: "澄清模糊需求并注入 refinedIntent（类似 Cursor/Claude Interview）",
+		description: "Clarify an ambiguous request and inject a refined intent.",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const original = (args || "").trim() || getUserTextFromSessionManager(ctx.sessionManager) || "";
 			if (!original) {
-				ctx.ui.notify("Interview: 找不到要澄清的原始需求", "warning");
+				ctx.ui.notify("Interview: no request found to clarify", "warning");
 				return;
 			}
 
 			const maxRounds = 3;
-			const referenceSystemPrompt = ctx.getSystemPrompt();
 			const { refinedIntent, completionScore, answers, missingSlotsRemaining } = await runInterview(
 				ctx,
 				original,
 				maxRounds,
-				referenceSystemPrompt,
 			);
 
 			const injectionText = buildInjectionText({
@@ -431,18 +493,25 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 		name: "interview",
 		label: "Interview Clarifier",
 		description:
-			"当用户需求模糊时，调用此工具与用户交互式澄清关键目标/约束/风格/验收标准；返回 refinedIntent 供模型直接执行。",
+			"When a task request is ambiguous, interactively clarify goal/constraints/style/acceptance and return a refined intent.",
 		parameters: interviewToolSchema,
 		guidance:
-			"只有在用户提出的是“要落地的任务/需求”（非问候/闲聊/记忆确认），且在你评估后仍缺关键目标/约束/风格/验收标准，导致难以直接规划与实现时，才调用本工具；若已得到 custom 消息类型 interview_refined 注入，则不要重复澄清。闲聊/问候/记忆询问请勿调用。",
+			"Only use this tool for task-like requests that are missing critical details (goal/deliverable/constraints/style/acceptance). Do not use it for greetings/small talk/memory checks. If an interview_refined custom message is already present, do not repeat clarification.",
 		async execute(_toolCallId, params: InterviewToolInput, _signal, _onUpdate, ctx: ExtensionContext) {
 			const query = params.query;
 			const maxRounds = typeof params.maxRounds === "number" ? Math.max(1, Math.min(5, params.maxRounds)) : 3;
 			const answersFromModel = (params.answers ?? {}) as Record<string, string>;
 
 			// Start from provided answers (if any) then allow extra clarifications.
-			const referenceSystemPrompt = ctx.getSystemPrompt();
 			let answers = { ...answersFromModel };
+			const capabilities = {
+				hasUI: ctx.hasUI,
+				mode: ctx.hasUI ? ("interactive" as const) : ("nonInteractive" as const),
+				cwd: ctx.cwd,
+				model: ctx.model
+					? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as any).name }
+					: undefined,
+			};
 
 			if (isLoopManagedPrompt(query)) {
 				return {
@@ -473,7 +542,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 
 			// Non-UI / fallback: probe-only.
 			if (!ctx.hasUI) {
-				const probe = await runProbe(ctx, query, answers, referenceSystemPrompt);
+				const probe = await runProbe(ctx, query, answers, capabilities);
 				return {
 					content: [{ type: "text", text: buildToolResultText(probe.refinedIntent) }],
 					details: {
@@ -489,19 +558,19 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 			// UI mode: ask sequentially, using already-provided answers as starting point.
 			let finalProbe: ProbeOutput | undefined;
 			for (let i = 1; i <= maxRounds; i++) {
-				const probe = await runProbe(ctx, query, answers, referenceSystemPrompt);
+				const probe = await runProbe(ctx, query, answers, capabilities);
 				finalProbe = probe;
 				if (probe.missingSlots.length === 0 || probe.completionScore >= 0.8) break;
 
 				const slot = probe.missingSlots[0];
-				ctx.ui.setWorkingMessage?.(`Interview tool：追问第 ${i} 轮...`);
+				ctx.ui.setWorkingMessage?.(`Interview: asking follow-up (${i})...`);
 				const value = await askSlotWithUI(ctx, i, slot);
 				ctx.ui.setWorkingMessage?.();
 				if (!value) break;
 				answers[slot.key] = value;
 			}
 
-			const ensureProbe = finalProbe ?? (await runProbe(ctx, query, answers, referenceSystemPrompt));
+			const ensureProbe = finalProbe ?? (await runProbe(ctx, query, answers, capabilities));
 			const missingSlotsRemaining = ensureProbe.missingSlots.filter((s) => answers[s.key] === undefined);
 
 			const injectionText = buildInjectionText({
@@ -535,37 +604,69 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 		}
 
 		const maxRounds = 3;
-		const referenceSystemPrompt = event.systemPrompt;
+		const capabilities = {
+			hasUI: ctx.hasUI,
+			mode: ctx.hasUI ? ("interactive" as const) : ("nonInteractive" as const),
+			cwd: ctx.cwd,
+			model: ctx.model
+				? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as any).name }
+				: undefined,
+		};
 
 		// Visualization: notify start
-		ctx.ui.notify?.("Interview: 正在分析需求...", "info");
-		ctx.ui.setWorkingMessage?.("Interview: 分析中...");
+		ctx.ui.notify?.("Interview: analyzing request...", "info");
+		ctx.ui.setWorkingMessage?.("Interview: analyzing...");
 
 		try {
-			const { refinedIntent, completionScore, answers, missingSlotsRemaining } = await runInterview(
-				ctx,
-				original,
-				maxRounds,
-				referenceSystemPrompt,
-			);
+			// Probe-first decision: only clarify when the probe signals missing critical info.
+			const initialAnswers: Record<string, string> = {};
+			const probe = await runProbe(ctx, original, initialAnswers, capabilities);
+			const needsClarification = probe.completionScore < 0.8 && probe.missingSlots.length > 0;
+
+			// Clear working message early; follow-up UI will re-set if needed.
+			ctx.ui.setWorkingMessage?.();
+
+			// If already clear enough, do not inject any extra messages (avoid surprise/noise).
+			if (!needsClarification) {
+				ctx.ui.notify?.("Interview: request looks clear enough; skipping clarification", "info");
+				return undefined;
+			}
+
+			// UI mode: ask user whether to clarify now (avoid surprising interruptions).
+			let userWantsClarification = false;
+			if (ctx.hasUI) {
+				userWantsClarification = await ctx.ui.confirm(
+					"Interview clarification",
+					"I need 1 quick clarification to proceed. Ask now?",
+				);
+			}
+
+			const interviewResult = userWantsClarification
+				? await runInterview(ctx, original, maxRounds)
+				: {
+						refinedIntent: probe.refinedIntent,
+						completionScore: probe.completionScore,
+						answers: {},
+						missingSlotsRemaining: probe.missingSlots,
+					};
+
+			const { refinedIntent, completionScore, answers, missingSlotsRemaining } = interviewResult;
 
 			const asked = Object.keys(answers).length > 0;
 			const isClearEnough = missingSlotsRemaining.length === 0 && completionScore >= 0.8;
-
-			// Clear working message
-			ctx.ui.setWorkingMessage?.();
-
-			// If we didn't ask anything and the request is already clear, avoid injecting extra noise.
-			if (ctx.hasUI && !asked && isClearEnough) {
-				ctx.ui.notify?.("Interview: 需求已足够清晰，跳过澄清", "info");
-				return undefined;
-			}
 
 			// In non-UI modes we still inject refinedIntent so the main model has the best effort.
 			if (!refinedIntent.trim()) return undefined;
 
 			// Visualization: completion notification
-			ctx.ui.notify?.("Interview: 需求澄清完成", "info");
+			ctx.ui.notify?.(
+				asked
+					? "Interview: clarification complete"
+					: isClearEnough
+						? "Interview: refined intent generated"
+						: "Interview: refined intent generated (some items still TBD)",
+				"info",
+			);
 
 			const injectionText = buildInjectionText({
 				originalIntent: original,
@@ -577,10 +678,10 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 
 			// System prompt addition: prevent the model from repeatedly calling interview.
 			const systemPromptAddition = `
-请注意：
-1) 你在本轮已经通过 Interview 得到了澄清后的执行规格（custom 消息类型：${INTERVIEW_CUSTOM_TYPE}）。
-2) 请直接基于 refinedIntent 进行规划与实现。
-3) 若你认为仍缺少关键信息：请在最终执行计划中列出"待确认点"，但不要再次调用 interview 工具进行重复澄清。
+Note:
+1) This turn already has an Interview refined spec (custom type: ${INTERVIEW_CUSTOM_TYPE}).
+2) Plan and execute directly from refinedIntent.
+3) If anything is still unknown, list it as "TBD" in the final plan. Do not call the interview tool again this turn.
 `.trim();
 
 			return {
@@ -594,6 +695,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 						completion_score: completionScore,
 						answers,
 						missing_slots: missingSlotsRemaining.map((s) => ({ key: s.key, question: s.question })),
+						skipped_interaction: ctx.hasUI ? !userWantsClarification : true,
 					},
 				},
 				systemPrompt: systemPromptAddition,
@@ -602,7 +704,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 			// Clear working message on error
 			ctx.ui.setWorkingMessage?.();
 			// Never break the main agent due to interview.
-			ctx.ui.notify(`Interview: 澄清失败（${err instanceof Error ? err.message : String(err)}）`, "warning");
+			ctx.ui.notify(`Interview: failed (${err instanceof Error ? err.message : String(err)})`, "warning");
 			return undefined;
 		}
 	});

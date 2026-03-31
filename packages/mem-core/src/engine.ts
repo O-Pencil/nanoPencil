@@ -177,20 +177,53 @@ export class NanoMemEngine {
 	}
 
 	async consolidate(): Promise<MemoryEntry[]> {
+		const result = await this.consolidateDetailed();
+		return result.entries;
+	}
+
+	async consolidateDetailed(options?: { signal?: AbortSignal }): Promise<{
+		entries: MemoryEntry[];
+		stats: { episodesConsidered: number; added: number; updated: number; skipped: number };
+	}> {
 		const episodes = await loadEpisodes(this.episodesDir);
-		const newEntries = await consolidateEpisodes(episodes, this.cfg, this.llmFn);
-		if (!newEntries.length) return [];
+		const unconsolidatedCount = episodes.filter((ep) => !ep.consolidated).length;
+
+		if (options?.signal?.aborted) {
+			throw new Error("AbortError");
+		}
+
+		let newEntries: MemoryEntry[] = [];
+		try {
+			newEntries = await consolidateEpisodes(episodes, this.cfg, this.llmFn, options);
+		} catch (e) {
+			if (e instanceof Error && e.message === "AbortError") throw e;
+			throw e;
+		}
+		if (!newEntries.length) {
+			return { entries: [], stats: { episodesConsidered: unconsolidatedCount, added: 0, updated: 0, skipped: 0 } };
+		}
 
 		const knowledge = await loadEntries(this.knowledgePath);
 		const lessons = await loadEntries(this.lessonsPath);
 		const events = await loadEntries(this.eventsPath);
 		const allExisting = [...knowledge, ...lessons, ...events];
 
+		let added = 0;
+		let updated = 0;
+		let skipped = 0;
+
 		for (const entry of newEntries) {
+			if (options?.signal?.aborted) {
+				throw new Error("AbortError");
+			}
 			const target = entry.type === "lesson" ? lessons : entry.type === "event" ? events : knowledge;
 			const result = checkConsolidationEntry(target, entry, allExisting);
-			if (result.action === "skip") continue;
+			if (result.action === "skip") {
+				skipped++;
+				continue;
+			}
 			if (result.action === "update" && result.index !== undefined) {
+				updated++;
 				const existing = target[result.index]!;
 				target[result.index] = {
 					...existing,
@@ -202,10 +235,15 @@ export class NanoMemEngine {
 					lastAccessed: new Date().toISOString(),
 				};
 			} else {
+				added++;
 				linkNewEntry(entry, allExisting);
 				target.push(entry);
 				allExisting.push(entry);
 			}
+		}
+
+		if (options?.signal?.aborted) {
+			throw new Error("AbortError");
 		}
 
 		const hl = this.cfg.halfLife;
@@ -224,7 +262,10 @@ export class NanoMemEngine {
 		meta.lastConsolidation = new Date().toISOString();
 		await writeJson(this.metaPath, meta);
 
-		return newEntries;
+		return {
+			entries: newEntries,
+			stats: { episodesConsidered: unconsolidatedCount, added, updated, skipped },
+		};
 	}
 
 	// ─── Retrieval & Injection (Progressive Recall) ────────────

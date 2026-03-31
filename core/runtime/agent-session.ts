@@ -2410,6 +2410,7 @@ export class AgentSession {
             return undefined;
           }
         },
+        getSettings: () => this.settingsManager.getSettings(),
         isIdle: () => !this.isStreaming,
         abort: () => this.abort(),
         hasPendingMessages: () => this.pendingMessageCount > 0,

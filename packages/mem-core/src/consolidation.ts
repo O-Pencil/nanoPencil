@@ -22,22 +22,34 @@ export async function consolidateEpisodes(
 	episodes: Episode[],
 	cfg: NanomemConfig,
 	llmFn?: LlmFn,
+	options?: { signal?: AbortSignal },
 ): Promise<MemoryEntry[]> {
 	const unconsolidated = episodes.filter((ep) => !ep.consolidated);
 	if (unconsolidated.length < cfg.consolidationThreshold) return [];
+	if (options?.signal?.aborted) {
+		throw new Error("AbortError");
+	}
 
 	let newEntries: MemoryEntry[];
 	if (llmFn) {
-		newEntries = await llmConsolidation(unconsolidated, cfg, llmFn);
+		newEntries = await llmConsolidation(unconsolidated, cfg, llmFn, options?.signal);
 	} else {
 		newEntries = heuristicConsolidation(unconsolidated, cfg);
 	}
 
+	if (options?.signal?.aborted) {
+		throw new Error("AbortError");
+	}
 	for (const ep of unconsolidated) ep.consolidated = true;
 	return newEntries;
 }
 
-async function llmConsolidation(episodes: Episode[], cfg: NanomemConfig, llmFn: LlmFn): Promise<MemoryEntry[]> {
+async function llmConsolidation(
+	episodes: Episode[],
+	cfg: NanomemConfig,
+	llmFn: LlmFn,
+	signal?: AbortSignal,
+): Promise<MemoryEntry[]> {
 	const p = PROMPTS[cfg.locale] ?? PROMPTS.en;
 	const summary = episodes
 		.map(
@@ -46,7 +58,9 @@ async function llmConsolidation(episodes: Episode[], cfg: NanomemConfig, llmFn: 
 		)
 		.join("\n\n");
 
+	if (signal?.aborted) throw new Error("AbortError");
 	const raw = await llmFn(p.consolidationSystem, summary);
+	if (signal?.aborted) throw new Error("AbortError");
 
 	try {
 		const items = JSON.parse(raw) as Array<{

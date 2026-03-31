@@ -1220,6 +1220,7 @@ export class InteractiveMode {
           }
 
           this.chatContainer.clear();
+          this.addSessionNavigationBanner("Forked session");
           this.renderInitialMessages();
           this.editor.setText(result.selectedText);
           this.showStatus("Forked to new session");
@@ -1238,6 +1239,7 @@ export class InteractiveMode {
           }
 
           this.chatContainer.clear();
+          this.addSessionNavigationBanner("Navigated session tree");
           this.renderInitialMessages();
           if (result.editorText && !this.editor.getText().trim()) {
             this.editor.setText(result.editorText);
@@ -1307,6 +1309,7 @@ export class InteractiveMode {
       sessionManager: this.sessionManager,
       modelRegistry: this.session.modelRegistry,
       model: this.session.model,
+      getSettings: () => this.session.settingsManager.getSettings(),
       completeSimple: async (systemPrompt: string, userMessage: string) => {
         const model = this.session.model;
         if (!model) return undefined;
@@ -2627,6 +2630,19 @@ export class InteractiveMode {
     this.unsubscribe = this.session.subscribe(async (event) => {
       await this.handleEvent(event);
     });
+  }
+
+  private addSessionNavigationBanner(label: string): void {
+    const sessionName = this.sessionManager.getSessionName();
+    const sessionId = this.sessionManager.getSessionId();
+    const namePart = sessionName ? ` "${sessionName}"` : "";
+    const line = theme.fg(
+      "dim",
+      `↪ ${label} → session${namePart} (${sessionId})`,
+    );
+    this.chatContainer.addChild(new Spacer(1));
+    this.chatContainer.addChild(new Text(line, 1, 1));
+    this.chatContainer.addChild(new Spacer(1));
   }
 
   private async handleEvent(event: AgentSessionEvent): Promise<void> {
@@ -4464,6 +4480,7 @@ export class InteractiveMode {
           }
 
           this.chatContainer.clear();
+          this.addSessionNavigationBanner("Branched session");
           this.renderInitialMessages();
           this.editor.setText(result.selectedText);
           done();
@@ -4572,6 +4589,7 @@ export class InteractiveMode {
 
             // Update UI
             this.chatContainer.clear();
+            this.addSessionNavigationBanner("Navigated session tree");
             this.renderInitialMessages();
             if (result.editorText && !this.editor.getText().trim()) {
               this.editor.setText(result.editorText);
@@ -4665,6 +4683,7 @@ export class InteractiveMode {
 
     // Clear and re-render the chat
     this.chatContainer.clear();
+    this.addSessionNavigationBanner("Resumed session");
     this.renderInitialMessages();
     this.showStatus("Resumed session");
   }

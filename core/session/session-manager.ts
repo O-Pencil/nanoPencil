@@ -14,7 +14,7 @@ import {
 	writeFileSync,
 } from "fs";
 import { readdir, readFile, stat } from "fs/promises";
-import { join, resolve } from "path";
+import { basename, join, resolve } from "path";
 import { getAgentDir as getDefaultAgentDir, getSessionsDir } from "../../config.js";
 import {
 	type BashExecutionMessage,
@@ -647,6 +647,27 @@ async function listSessionsFromDir(
 	}
 
 	return sessions;
+}
+
+async function runWithConcurrency<T, R>(
+	items: T[],
+	concurrency: number,
+	fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+	const results: R[] = new Array(items.length);
+	let nextIndex = 0;
+
+	const worker = async () => {
+		while (true) {
+			const i = nextIndex++;
+			if (i >= items.length) return;
+			results[i] = await fn(items[i]!);
+		}
+	};
+
+	const poolSize = Math.max(1, Math.min(concurrency, items.length || 1));
+	await Promise.all(Array.from({ length: poolSize }, () => worker()));
+	return results;
 }
 
 /**
@@ -1396,6 +1417,38 @@ export class SessionManager {
 			return sessions;
 		} catch {
 			return [];
+		}
+	}
+
+	/**
+	 * Lightweight scan: count session files with mtime > sinceMs without reading file contents.
+	 * Designed for gate checks (e.g., auto-dream) where approximate counts are OK.
+	 */
+	static async countTouchedSince(
+		cwd: string,
+		sinceMs: number,
+		options?: { sessionDir?: string; excludeBasename?: string; concurrency?: number },
+	): Promise<number> {
+		const dir = options?.sessionDir ?? getDefaultSessionDir(cwd);
+		const concurrency = options?.concurrency ?? 64;
+		try {
+			if (!existsSync(dir)) return 0;
+			const files = (await readdir(dir))
+				.filter((f) => f.endsWith(".jsonl"))
+				.filter((f) => (options?.excludeBasename ? basename(f, ".jsonl") !== options.excludeBasename : true))
+				.map((f) => join(dir, f));
+
+			const mtimes = await runWithConcurrency(files, concurrency, async (file) => {
+				try {
+					const s = await stat(file);
+					return s.mtimeMs;
+				} catch {
+					return 0;
+				}
+			});
+			return mtimes.filter((m) => m > sinceMs).length;
+		} catch {
+			return 0;
 		}
 	}
 }

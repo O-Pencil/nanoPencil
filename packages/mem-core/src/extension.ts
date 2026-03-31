@@ -7,17 +7,32 @@
  * For non-NanoPencil hosts, import from the package root instead.
  */
 
-import { writeFileSync } from "node:fs";
-import { basename } from "node:path";
+import { existsSync, writeFileSync } from "node:fs";
+import { stat } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { ExtensionAPI, ExtensionContext } from "@pencil-agent/nano-pencil";
+import { SessionManager } from "@pencil-agent/nano-pencil";
 import { NanoMemEngine } from "./engine.js";
+import { readDreamLockMtimeMs, rollbackDreamLock, stampDreamLock, tryAcquireDreamLock } from "./dream-lock.js";
 import { renderFullInsightsHtml } from "./full-insights-html.js";
 import { renderInsightsHtml } from "./insights-html.js";
 import { extractTags } from "./scoring.js";
+import type { Meta } from "./types.js";
+import { loadEntries, loadMeta } from "./store.js";
 
 type LlmCapableContext = ExtensionContext & {
 	completeSimple?: (systemPrompt: string, userMessage: string) => Promise<string | undefined>;
+};
+
+type DreamTaskState = {
+	status: "idle" | "running" | "completed" | "failed" | "killed";
+	startedAtMs?: number;
+	endedAtMs?: number;
+	sessionsReviewing?: number;
+	lastError?: string;
+	priorLockMtimeMs?: number;
+	abort?: AbortController;
 };
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
@@ -148,10 +163,81 @@ function extractObservation(
 	}
 }
 
+function parseBoolEnv(name: string, defaultValue: boolean): boolean {
+	const raw = process.env[name];
+	if (raw == null) return defaultValue;
+	const v = raw.trim().toLowerCase();
+	if (["1", "true", "yes", "on"].includes(v)) return true;
+	if (["0", "false", "no", "off"].includes(v)) return false;
+	return defaultValue;
+}
+
+function parseIntEnv(name: string, defaultValue: number): number {
+	const raw = process.env[name];
+	if (!raw) return defaultValue;
+	const n = Number(raw);
+	return Number.isFinite(n) ? Math.floor(n) : defaultValue;
+}
+
+function getDreamConfig(ctx?: ExtensionContext) {
+	const settings = ctx?.getSettings?.();
+	const s = settings?.nanomem;
+	return {
+		enabled: s?.autoDream?.enabled ?? parseBoolEnv("NANOMEM_AUTO_DREAM_ENABLED", true),
+		minHours: s?.autoDream?.minHours ?? parseIntEnv("NANOMEM_AUTO_DREAM_MIN_HOURS", 24),
+		minSessions: s?.autoDream?.minSessions ?? parseIntEnv("NANOMEM_AUTO_DREAM_MIN_SESSIONS", 5),
+		scanIntervalMinutes:
+			s?.autoDream?.scanIntervalMinutes ?? parseIntEnv("NANOMEM_AUTO_DREAM_SCAN_INTERVAL_MINUTES", 10),
+		holderStaleMinutes: s?.dream?.lockStaleMinutes ?? parseIntEnv("NANOMEM_DREAM_LOCK_STALE_MINUTES", 60),
+	};
+}
+
+async function readMetaLastConsolidationMs(memoryDir: string): Promise<number> {
+	try {
+		const metaPath = join(memoryDir, "meta.json");
+		const meta = (await loadMeta(metaPath)) as Meta;
+		if (!meta.lastConsolidation) return 0;
+		const t = new Date(meta.lastConsolidation).getTime();
+		return Number.isFinite(t) ? t : 0;
+	} catch {
+		return 0;
+	}
+}
+
+async function countBaseMemoryEntries(memoryDir: string): Promise<number> {
+	const [knowledge, lessons, events] = await Promise.all([
+		loadEntries(join(memoryDir, "knowledge.json")),
+		loadEntries(join(memoryDir, "lessons.json")),
+		loadEntries(join(memoryDir, "events.json")),
+	]);
+	return knowledge.length + lessons.length + events.length;
+}
+
+function formatDreamSummary(params: {
+	added: number;
+	candidates: number;
+	memoryDir: string;
+}): string {
+	const { added, candidates, memoryDir } = params;
+	if (candidates <= 0) {
+		return `Dream: no consolidation needed.\nMemory dir: ${memoryDir}`;
+	}
+	return [
+		`Dream: consolidation completed.`,
+		`Candidates processed: ${candidates}`,
+		`New memories added: ${added}`,
+		`Memory dir: ${memoryDir}`,
+	].join("\n");
+}
+
 export default function nanomemExtension(pi: ExtensionAPI) {
 	const project = getProject();
 	const ctxTags = extractTags(process.cwd());
 	const engine = new NanoMemEngine();
+	const memoryDir = engine.cfg.memoryDir;
+	const lockPath = join(memoryDir, ".dream-lock");
+	let dreamTask: DreamTaskState = { status: "idle" };
+	let lastSessionScanAtMs = 0;
 
 	const pendingArgs = new Map<string, Record<string, unknown>>();
 	const observations: string[] = [];
@@ -185,11 +271,82 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		sessionStartedAt = getSystemTimeSnapshot();
 		const file = ctx.sessionManager.getSessionFile();
 		if (file) sessionId = basename(file, ".jsonl");
-		try {
-			await engine.consolidate();
-		} catch {
-			/* silent */
+
+		// Bind LLM if available early, so /dream and auto-dream can use it.
+		const llmCtx = ctx as LlmCapableContext;
+		if (llmCtx.completeSimple) {
+			engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
+				const out = await llmCtx.completeSimple?.(systemPrompt, userMessage);
+				return out ?? "";
+			});
 		}
+
+	});
+
+	const maybeRunAutoDream = async (ctx: ExtensionContext) => {
+		const cfg = getDreamConfig(ctx);
+		if (!cfg.enabled) return;
+		if (dreamTask.status === "running") return;
+
+		const lastAtMs = Math.max(await readMetaLastConsolidationMs(memoryDir), await readDreamLockMtimeMs(lockPath));
+		const hoursSince = (Date.now() - lastAtMs) / 3_600_000;
+		if (lastAtMs > 0 && hoursSince < cfg.minHours) return;
+
+		const scanIntervalMs = cfg.scanIntervalMinutes * 60_000;
+		if (Date.now() - lastSessionScanAtMs < scanIntervalMs) return;
+		lastSessionScanAtMs = Date.now();
+
+		const touchedCount = await SessionManager.countTouchedSince(ctx.cwd, lastAtMs, {
+			excludeBasename: sessionId,
+		});
+		if (touchedCount < cfg.minSessions) return;
+
+		const prior = await tryAcquireDreamLock(lockPath, cfg.holderStaleMinutes * 60_000);
+		if (prior === null) return;
+
+		const abort = new AbortController();
+		dreamTask = {
+			status: "running",
+			startedAtMs: Date.now(),
+			sessionsReviewing: touchedCount,
+			priorLockMtimeMs: prior,
+			abort,
+		};
+		ctx.ui.setStatus("nanomem", `Dream: running (${touchedCount} sessions)`);
+
+		try {
+			const result = await engine.consolidateDetailed({ signal: abort.signal });
+			dreamTask = {
+				status: "completed",
+				startedAtMs: dreamTask.startedAtMs,
+				endedAtMs: Date.now(),
+				sessionsReviewing: touchedCount,
+			};
+			ctx.ui.setStatus("nanomem", `Dream: completed (+${result.stats.added})`);
+			if (result.stats.added + result.stats.updated > 0 && ctx.hasUI) {
+				ctx.ui.notify(`Dream completed: +${result.stats.added} added, ${result.stats.updated} updated`, "info");
+			}
+		} catch (e) {
+			if (abort.signal.aborted || (e instanceof Error && e.message === "AbortError")) {
+				// kill path handles rollback
+				return;
+			}
+			dreamTask = {
+				status: "failed",
+				startedAtMs: dreamTask.startedAtMs,
+				endedAtMs: Date.now(),
+				sessionsReviewing: touchedCount,
+				lastError: e instanceof Error ? e.message : String(e),
+				priorLockMtimeMs: prior,
+			};
+			ctx.ui.setStatus("nanomem", "Dream: failed");
+			await rollbackDreamLock(lockPath, prior);
+		}
+	};
+
+	pi.on("turn_end", async (_event, ctx) => {
+		// Never block turn lifecycle
+		void maybeRunAutoDream(ctx).catch(() => {});
 	});
 
 	pi.on("before_agent_start", async (event) => {
@@ -278,6 +435,65 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			importance: Math.min(10, 3 + errors.length * 2 + Math.min(observations.length, 5)),
 			consolidated: false,
 		});
+	});
+
+	pi.registerCommand("dream", {
+		description: "Consolidate NanoMem episodes into durable memories. Usage: /dream [run|stop|status]",
+		handler: async (args, ctx) => {
+			const cmd = (args || "").trim().toLowerCase();
+
+			if (cmd === "stop" || cmd === "kill" || cmd === "cancel") {
+				if (dreamTask.status !== "running" || !dreamTask.abort) {
+					ctx.ui.notify("Dream: no background task is running.", "info");
+					return;
+				}
+				dreamTask.abort.abort();
+				dreamTask.status = "killed";
+				dreamTask.endedAtMs = Date.now();
+				ctx.ui.setStatus("nanomem", "Dream: killed");
+				if (typeof dreamTask.priorLockMtimeMs === "number") {
+					await rollbackDreamLock(lockPath, dreamTask.priorLockMtimeMs);
+				}
+				ctx.ui.notify("Dream: background task killed and lock rolled back.", "info");
+				return;
+			}
+
+			if (cmd === "status") {
+				const status = dreamTask.status;
+				const sessions = dreamTask.sessionsReviewing ?? 0;
+				const err = dreamTask.lastError ? `\nError: ${dreamTask.lastError}` : "";
+				ctx.ui.notify(`Dream status: ${status}${sessions ? ` (${sessions} sessions)` : ""}${err}`, "info");
+				return;
+			}
+
+			// Manual run: not gate-checked and not blocked by lock. Always stamps lock to suppress immediate auto-dream.
+			await stampDreamLock(lockPath);
+
+			const llmCtx = ctx as LlmCapableContext;
+			if (llmCtx.completeSimple) {
+				engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
+					const out = await llmCtx.completeSimple?.(systemPrompt, userMessage);
+					return out ?? "";
+				});
+			}
+
+			const result = await engine.consolidateDetailed();
+			const sample = result.entries
+				.slice(0, 5)
+				.map((e) => `- [${e.type}] ${e.name || e.summary || e.id}`)
+				.join("\n");
+			const summary = [
+				`Dream: consolidation completed.`,
+				`Episodes considered: ${result.stats.episodesConsidered}`,
+				`Added: ${result.stats.added} | Updated: ${result.stats.updated} | Skipped: ${result.stats.skipped}`,
+				`Memory dir: ${memoryDir}`,
+				sample ? "" : "",
+				sample ? `\nExamples:\n${sample}` : "",
+			]
+				.filter((x) => x !== "")
+				.join("\n");
+			ctx.ui.notify(summary, "info");
+		},
 	});
 
 	pi.registerCommand("mem-search", {

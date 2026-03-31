@@ -25,6 +25,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
+    "test": "node --test --import tsx test/dream-lock.test.ts test/dream-abort-and-scan.test.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -44,8 +45,9 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@pencil-agent/nano-pencil": "^1.10.1",
+    "@pencil-agent/nano-pencil": "file:../..",
     "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.9.3"
   },
   "repository": {

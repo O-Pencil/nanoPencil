@@ -30,6 +30,7 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
     name: "memory",
     description: "Show project memory and knowledge (NanoMem)",
   },
+  { name: "dream", description: "Consolidate project memory (NanoMem)" },
   { name: "export", description: "Export session to HTML file" },
   { name: "share", description: "Share session as a secret GitHub gist" },
   { name: "copy", description: "Copy last agent message to clipboard" },

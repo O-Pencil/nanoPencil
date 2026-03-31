@@ -94,6 +94,18 @@ export interface Settings {
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
+	/** NanoMem / Dream settings */
+	nanomem?: {
+		autoDream?: {
+			enabled?: boolean;
+			minHours?: number;
+			minSessions?: number;
+			scanIntervalMinutes?: number;
+		};
+		dream?: {
+			lockStaleMinutes?: number;
+		};
+	};
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -329,6 +341,11 @@ export class SettingsManager {
 
 	getProjectSettings(): Settings {
 		return structuredClone(this.projectSettings);
+	}
+
+	/** Get merged effective settings (project overrides global). */
+	getSettings(): Settings {
+		return structuredClone(this.settings);
 	}
 
 	reload(): void {

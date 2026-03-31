@@ -289,6 +289,9 @@ export interface ExtensionContext {
 	compact(options?: CompactOptions): void;
 	/** Get the current effective system prompt. */
 	getSystemPrompt(): string;
+
+	/** Get current merged settings (project overrides global). */
+	getSettings(): import("../config/settings-manager.js").Settings;
 }
 
 /**
@@ -1297,6 +1300,7 @@ export interface ExtensionContextActions {
 	getContextUsage: () => ContextUsage | undefined;
 	compact: (options?: CompactOptions) => void;
 	getSystemPrompt: () => string;
+	getSettings: () => import("../config/settings-manager.js").Settings;
 }
 
 /**

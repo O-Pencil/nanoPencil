@@ -11,6 +11,7 @@ coverage/
 .pi/images/
 _clipboard_*
 _paste/
+.nexus/
 nanomem-insights.html
 report.html
 *.html

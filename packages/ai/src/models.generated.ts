@@ -7765,6 +7765,23 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 80000,
 		} satisfies Model<"openai-completions">,
+		"kwaipilot/kat-coder-pro-v2": {
+			id: "kwaipilot/kat-coder-pro-v2",
+			name: "Kwaipilot: KAT-Coder-Pro V2",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: false,
+			input: ["text"],
+			cost: {
+				input: 0.3,
+				output: 1.2,
+				cacheRead: 0.06,
+				cacheWrite: 0,
+			},
+			contextWindow: 256000,
+			maxTokens: 80000,
+		} satisfies Model<"openai-completions">,
 		"meituan/longcat-flash-chat": {
 			id: "meituan/longcat-flash-chat",
 			name: "Meituan: LongCat Flash Chat",
@@ -10400,8 +10417,8 @@ export const MODELS = {
 			contextWindow: 131072,
 			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
-		"rekaai/reka-edge": {
-			id: "rekaai/reka-edge",
+		"reka/reka-edge": {
+			id: "reka/reka-edge",
 			name: "Reka Edge",
 			api: "openai-completions",
 			provider: "openrouter",

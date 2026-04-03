@@ -1,18 +1,10 @@
 /**
- * [INPUT]: extracted items, existing entries
- * [OUTPUT]: entries mutated via Mem0 four-operation pipeline (ADD/UPDATE/DELETE/NOOP)
- * [POS]: Implements Mem0 update semantics — slot-based, tag-overlap, and retract
- *
- * Key improvements over basic approach:
- * - UPDATE generalized: any entry type, tag overlap > 0.7 triggers content replacement
- * - DELETE: retract-type extractions find and remove matching entries
+ * [UPSTREAM]: Depends on ./config.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./types.js
+ * [SURFACE]: contentSimilarity, applyExtraction, checkConsolidationEntry, checkWorkDuplicate, applyWorkExtraction
+ * [LOCUS]: packages/mem-core/src/update.ts - Mem0 four-operation pipeline (ADD/UPDATE/DELETE/NOOP)
+ * [COVENANT]: Change update semantics → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/update.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import type { NanomemConfig } from "./config.js";
 import { linkNewEntry } from "./linking.js";

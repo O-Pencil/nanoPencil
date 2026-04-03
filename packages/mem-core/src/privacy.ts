@@ -1,14 +1,10 @@
 /**
- * [INPUT]: text content, MemoryEntry with scope/ttl
- * [OUTPUT]: sanitized text, scope-filtered entries, ttl-expired entries removed
- * [POS]: MemoryOps layer — scope isolation, TTL enforcement, PII filtering
+ * [UPSTREAM]: Depends on ./scoring.js, ./types.js
+ * [SURFACE]: filterPII, filterByScope, evictExpiredEntries, evictExpiredWork
+ * [LOCUS]: packages/mem-core/src/privacy.ts - scope isolation, TTL enforcement, PII filtering
+ * [COVENANT]: Change privacy logic → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/privacy.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { daysSince } from "./scoring.js";
 import type { MemoryEntry, MemoryScope, WorkEntry } from "./types.js";

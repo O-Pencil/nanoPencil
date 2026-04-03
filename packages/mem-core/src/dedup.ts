@@ -1,14 +1,10 @@
 /**
- * [INPUT]: MemoryEntry[] or WorkEntry[]
- * [OUTPUT]: Deduplicated arrays with merged relatedIds
- * [POS]: Batch dedup for CLI and cross-entry merge logic
+ * [UPSTREAM]: Depends on ./scoring.js, ./types.js, ./update.js
+ * [SURFACE]: dedupeMemoryEntries, dedupeWorkEntries, mergeRelatedIds
+ * [LOCUS]: packages/mem-core/src/dedup.ts - batch deduplication and cross-entry merge logic
+ * [COVENANT]: Change dedup algorithm → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/dedup.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { tagOverlap } from "./scoring.js";
 import type { MemoryEntry, WorkEntry } from "./types.js";

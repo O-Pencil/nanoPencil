@@ -1,14 +1,10 @@
 /**
- * [INPUT]: locale key
- * [OUTPUT]: prompt templates and injection labels in the selected locale
- * [POS]: i18n layer — all LLM prompts and user-facing strings go through here
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: PromptSet, getPrompts, PROMPTS (default English prompts), LOCALES
+ * [LOCUS]: packages/mem-core/src/i18n.ts - internationalization layer for all LLM prompts and user-facing strings
+ * [COVENANT]: Change prompt templates → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/i18n.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 export interface PromptSet {
 	extractionSystem: string;

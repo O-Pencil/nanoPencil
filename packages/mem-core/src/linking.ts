@@ -1,14 +1,10 @@
 /**
- * [INPUT]: new MemoryEntry, existing entries
- * [OUTPUT]: bidirectional relatedIds links established
- * [POS]: A-MEM style Zettelkasten linking — atomic storage + dynamic associations
+ * [UPSTREAM]: Depends on ./scoring.js, ./types.js
+ * [SURFACE]: GraphNeighbor, linkNewEntry, getRelatedSummaries, getGraphNeighborhood, getGraphContextSummaries, reinforceRelations
+ * [LOCUS]: packages/mem-core/src/linking.ts - A-MEM style Zettelkasten linking, atomic storage + dynamic associations
+ * [COVENANT]: Change linking algorithm → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/linking.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { tagOverlap } from "./scoring.js";
 import type { MemoryEntry, MemoryRelation } from "./types.js";

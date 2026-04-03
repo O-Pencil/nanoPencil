@@ -1,14 +1,10 @@
 /**
- * [INPUT]: FullInsightsReport, locale
- * [OUTPUT]: Standalone HTML report with Remix Icon and charts
- * [POS]: Pure renderer for full insights report
+ * [UPSTREAM]: Depends on ./i18n.js, ./types.js
+ * [SURFACE]: renderFullInsightsHtml
+ * [LOCUS]: packages/mem-core/src/full-insights-html.ts - pure HTML renderer for full insights report, includes Remix Icon and charts
+ * [COVENANT]: Change HTML format → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/full-insights-html.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { PROMPTS } from "./i18n.js";
 import type {

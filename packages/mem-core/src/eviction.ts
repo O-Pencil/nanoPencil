@@ -1,17 +1,10 @@
 /**
- * [INPUT]: MemoryEntry/WorkEntry, config weights
- * [OUTPUT]: utility score for eviction ordering
- * [POS]: Implements Utility-Weighted Memory eviction (Ebbinghaus-aligned)
- *
- * Formula: Utility = (w_freq * AccessFrequency + w_impact * BaseImpact) * e^(-lambda * Age)
- * Uses per-entry adaptive strength for the decay component.
+ * [UPSTREAM]: Depends on ./scoring.js, ./types.js
+ * [SURFACE]: EvictionWeights, utilityEntry, utilityWork
+ * [LOCUS]: packages/mem-core/src/eviction.ts - utility-weighted memory eviction (Ebbinghaus-aligned decay)
+ * [COVENANT]: Change eviction formula → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/eviction.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { daysSince, decay } from "./scoring.js";
 import type { MemoryEntry, WorkEntry } from "./types.js";

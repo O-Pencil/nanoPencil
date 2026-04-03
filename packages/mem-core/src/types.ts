@@ -1,14 +1,10 @@
 /**
- * [INPUT]: None (pure type definitions)
- * [OUTPUT]: All core data types for NanoMem
- * [POS]: Foundation layer — every other module imports from here
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: LlmFn, MemoryScope, MemoryRetention, MemoryStability, FacetData, MemoryEntry, MemoryRelation, Episode, WorkEntry, EventData, StateData
+ * [LOCUS]: packages/mem-core/src/types.ts - foundation layer type definitions for all memory data structures
+ * [COVENANT]: Change memory data model → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/types.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 /** Pluggable LLM function: system prompt + user message → raw text response */
 export type LlmFn = (systemPrompt: string, userMessage: string) => Promise<string>;

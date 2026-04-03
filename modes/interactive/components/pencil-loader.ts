@@ -20,7 +20,6 @@ export class PencilLoader extends Container {
 	private interval: NodeJS.Timeout | undefined;
 	private currentFrame = 0;
 	private textComponent: Text;
-	private messageComponent: Text;
 	private isStopped = false;
 
 	// Rotating diamond animation frames
@@ -37,11 +36,9 @@ export class PencilLoader extends Container {
 		this.message = message;
 
 		this.textComponent = new Text("", 0, 0);
-		this.messageComponent = new Text("", 0, 0);
 
 		this.addChild(new Spacer(1));
 		this.addChild(this.textComponent);
-		this.addChild(this.messageComponent);
 		this.addChild(new Spacer(1));
 
 		this.startAnimation();
@@ -71,7 +68,7 @@ export class PencilLoader extends Container {
 		this.message = message;
 		const frameChar = this.frames[this.currentFrame];
 		const diamond = this.theme.fg("accent", frameChar);
-		this.messageComponent.setText(`${diamond} ${this.message}`);
+		this.textComponent.setText(`${diamond} ${this.message}`);
 		this.tui.requestRender();
 	}
 

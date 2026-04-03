@@ -109,9 +109,11 @@ import { getLatestCompactionEntry } from "../session/session-manager.js";
 import type { SettingsManager } from "../config/settings-manager.js";
 import {
   BUILTIN_SLASH_COMMANDS,
+  getLocalizedCommands,
   type SlashCommandInfo,
   type SlashCommandLocation,
 } from "../slash-commands.js";
+import { t } from "../i18n/index.js";
 import { toSoulContext, extractSessionContext } from "../soul-integration.js";
 import { buildSystemPrompt } from "../prompt/system-prompt.js";
 import type { BashOperations } from "../tools/bash.js";
@@ -470,7 +472,9 @@ export class AgentSession {
    * Includes built-in commands, extension commands, prompt templates, and skills.
    */
   getSlashCommands(): SessionSlashCommandDescriptor[] {
-    const builtins: SessionSlashCommandDescriptor[] = BUILTIN_SLASH_COMMANDS.map(
+    // Get localized builtin commands
+    const localizedBuiltins = getLocalizedCommands(t);
+    const builtins: SessionSlashCommandDescriptor[] = localizedBuiltins.map(
       (command) => ({
         name: command.name,
         description: command.description,

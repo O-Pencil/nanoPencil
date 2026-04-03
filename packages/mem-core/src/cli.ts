@@ -25,6 +25,7 @@ Usage:
   nanomem forget <id>        Remove a memory entry by ID
   nanomem dedup              Deduplicate all memories (merge similar entries, keep best)
   nanomem export             Export all memories as JSON to stdout
+  nanomem export-v2          Export NanoMem v2 episodic bridge data as JSON to stdout
   nanomem insights [--output <path>]   Generate full HTML insights report (default: ./nanomem-insights.html)
   nanomem insights --simple [--output <path>]   Generate simple insights report (rules-only, no LLM)
   nanomem help               Show this help
@@ -33,13 +34,17 @@ Usage:
 	}
 
 	if (sub === "stats") {
-		const s = await engine.getStats();
+		const [s, v2] = await Promise.all([engine.getStats(), engine.getV2Stats()]);
 		console.log(`Sessions: ${s.totalSessions}`);
 		console.log(`Knowledge: ${s.knowledge}`);
 		console.log(`Lessons: ${s.lessons}`);
 		console.log(`Preferences: ${s.preferences}`);
 		console.log(`Work: ${s.work}`);
 		console.log(`Episodes: ${s.episodes}`);
+		console.log(`V2 Episodes: ${v2.episodes}`);
+		console.log(`V2 Episode Facets: ${v2.facets}`);
+		console.log(`V2 Procedures: ${v2.procedural}`);
+		console.log(`V2 Links: ${v2.links}`);
 		return;
 	}
 
@@ -84,6 +89,12 @@ Usage:
 
 	if (sub === "export") {
 		const data = await engine.exportAll();
+		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
+	if (sub === "export-v2") {
+		const data = await engine.exportAllV2();
 		console.log(JSON.stringify(data, null, 2));
 		return;
 	}

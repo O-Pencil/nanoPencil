@@ -1,17 +1,10 @@
 /**
- * [INPUT]: NanomemConfig, optional LlmFn
- * [OUTPUT]: NanoMemEngine — unified API for memory CRUD, injection, consolidation
- * [POS]: Facade layer — composes store, scoring, eviction, update, linking, privacy, extraction, consolidation
- *
- * Host products create an engine instance and call its methods.
- * No dependency on any specific AI framework — LLM is pluggable.
+ * [UPSTREAM]: Depends on node:path, ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js
+ * [SURFACE]: NanoMemEngine class - unified API for memory CRUD, injection, consolidation
+ * [LOCUS]: packages/mem-core/src/engine.ts - facade layer composing all memory subsystems
+ * [COVENANT]: Change engine API → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/engine.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { join } from "node:path";
 import { getConfig, type NanomemConfig } from "./config.js";
@@ -59,6 +52,22 @@ import type {
 	StruggleInsight,
 	WorkEntry,
 } from "./types.js";
+import {
+	getV2Paths,
+	loadV2Episodes,
+	loadV2Facets,
+	loadV2Links,
+	loadV2Meta,
+	loadV2Procedural,
+	saveV2Episodes,
+	saveV2Facets,
+	saveV2Links,
+	saveV2Meta,
+	saveV2Procedural,
+	type NanoMemV2Paths,
+} from "./store-v2.js";
+import { compileProcedureFromEpisode } from "./procedural-v2.js";
+import type { EpisodeFacet, EpisodeMemory, FacetKind, MemoryLink, ProceduralMemory } from "./types-v2.js";
 import { applyExtraction, checkConsolidationEntry, checkWorkDuplicate } from "./update.js";
 
 export class NanoMemEngine {
@@ -73,6 +82,7 @@ export class NanoMemEngine {
 	private workPath: string;
 	private metaPath: string;
 	private episodesDir: string;
+	private v2Paths: NanoMemV2Paths;
 
 	constructor(overrides?: Partial<NanomemConfig>, llmFn?: LlmFn) {
 		this.cfg = getConfig(overrides);
@@ -85,6 +95,7 @@ export class NanoMemEngine {
 		this.workPath = join(this.cfg.memoryDir, "work.json");
 		this.metaPath = join(this.cfg.memoryDir, "meta.json");
 		this.episodesDir = join(this.cfg.memoryDir, "episodes");
+		this.v2Paths = getV2Paths(this.cfg.memoryDir);
 	}
 
 	setLlmFn(fn: LlmFn): void {
@@ -180,6 +191,26 @@ export class NanoMemEngine {
 		const meta = await loadMeta(this.metaPath);
 		meta.totalSessions++;
 		await writeJson(this.metaPath, meta);
+		await this.syncEpisodeToV2(ep);
+	}
+
+	async getV2EpisodeMemories(): Promise<EpisodeMemory[]> {
+		return loadV2Episodes(this.v2Paths);
+	}
+
+	async getV2Snapshot(): Promise<{
+		episodes: EpisodeMemory[];
+		facets: EpisodeFacet[];
+		procedural: ProceduralMemory[];
+		links: MemoryLink[];
+	}> {
+		const [episodes, facets, procedural, links] = await Promise.all([
+			loadV2Episodes(this.v2Paths),
+			loadV2Facets(this.v2Paths),
+			loadV2Procedural(this.v2Paths),
+			loadV2Links(this.v2Paths),
+		]);
+		return { episodes, facets, procedural, links };
 	}
 
 	async consolidate(): Promise<MemoryEntry[]> {
@@ -277,7 +308,7 @@ export class NanoMemEngine {
 	// ─── Retrieval & Injection (Progressive Recall) ────────────
 
 	async getMemoryInjection(project: string, contextTags: string[], scope?: MemoryScope): Promise<string> {
-		const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork] = await Promise.all([
+		const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork, allV2Episodes, allV2EpisodeFacets, allProcedural] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
 			loadEntries(this.eventsPath),
@@ -285,6 +316,9 @@ export class NanoMemEngine {
 			loadEntries(this.facetsPath),
 			loadEpisodes(this.episodesDir),
 			loadWork(this.workPath),
+			loadV2Episodes(this.v2Paths),
+			loadV2Facets(this.v2Paths),
+			loadV2Procedural(this.v2Paths),
 		]);
 
 		const knowledge = this.filterAndCleanEntries(allKnowledge, scope);
@@ -294,6 +328,9 @@ export class NanoMemEngine {
 		const facets = this.filterAndCleanEntries(allFacets, scope);
 		const work = this.filterAndCleanWork(allWork, scope);
 		const episodes = filterByScope(allEpisodes, scope);
+		const v2Episodes = this.filterAndCleanV2Episodes(allV2Episodes, project, scope);
+		const v2EpisodeFacets = this.filterAndCleanV2Facets(allV2EpisodeFacets, project, scope);
+		const procedural = this.filterAndCleanProcedural(allProcedural, project, scope);
 
 		const hl = this.cfg.halfLife;
 		const sw = this.cfg.scoreWeights;
@@ -311,12 +348,26 @@ export class NanoMemEngine {
 		const totalChars = this.cfg.tokenBudget * 4;
 		const activeChars = Math.floor(totalChars * pr.budgetActive);
 		const cueChars = Math.floor(totalChars * pr.budgetCue);
+		const proceduralChars = Math.floor(totalChars * 0.18);
 
 		// Entry length helpers
 		const activeLen = (e: MemoryEntry) =>
 			(e.name?.length || 0) + (e.summary?.length || 0) + (e.detail?.length || 0) + 30;
 		const cueLen = (e: MemoryEntry) => (e.name?.length || 0) + (e.summary?.length || 0) + 30;
 		const scoreFn = (e: MemoryEntry) => scoreEntry(e, project, contextTags, hl, sw);
+		const proceduralLen = (pItem: ProceduralMemory) =>
+			(pItem.name?.length || 0) + (pItem.summary?.length || 0) + pItem.steps.reduce((sum, step) => sum + step.text.length, 0) + 60;
+		const proceduralCueLen = (pItem: ProceduralMemory) =>
+			(pItem.name?.length || 0) + (pItem.summary?.length || 0) + 40;
+		const proceduralScoreFn = (pItem: ProceduralMemory) => this.scoreProceduralMemory(pItem, project, contextTags);
+		const episodeMemoryLen = (item: EpisodeMemory) => (item.title?.length || 0) + item.summary.length + 40;
+		const episodeFacetLen = (item: EpisodeFacet) =>
+			item.searchText.length + (item.anchorText?.length || 0) + (item.summary?.length || 0) + 40;
+		const episodeCueLen = (item: EpisodeMemory) => (item.title?.length || 0) + item.summary.length + 36;
+		const episodeFacetCueLen = (item: EpisodeFacet) =>
+			item.searchText.length + (item.summary?.length || 0) + (item.anchorText?.length || 0) + 36;
+		const episodeScoreFn = (item: EpisodeMemory) => this.scoreEpisodeMemory(item, project, contextTags);
+		const episodeFacetScoreFn = (item: EpisodeFacet) => this.scoreEpisodeFacet(item, project, contextTags);
 
 		// Active tier: pick top entries with full detail, split budget across categories
 		const activeBudgetPer = Math.floor(activeChars / 5);
@@ -325,6 +376,24 @@ export class NanoMemEngine {
 		const activeEvents = pickTop(tieredEvents.active, scoreFn, activeLen, activeBudgetPer);
 		const activePrefs = pickTop(tieredPrefs.active, scoreFn, activeLen, activeBudgetPer);
 		const activeFacets = pickTop(tieredFacets.active, scoreFn, activeLen, activeBudgetPer);
+		const activeProcedural = pickTop(
+			procedural.filter((item) => proceduralScoreFn(item) >= 0.45),
+			proceduralScoreFn,
+			proceduralLen,
+			Math.max(400, Math.floor(proceduralChars * 0.55)),
+		);
+		const activeEpisodeMemories = pickTop(
+			v2Episodes.filter((item) => episodeScoreFn(item) >= 0.45),
+			episodeScoreFn,
+			episodeMemoryLen,
+			Math.max(320, Math.floor(activeChars * 0.18)),
+		);
+		const activeEpisodeFacets = pickTop(
+			v2EpisodeFacets.filter((item) => episodeFacetScoreFn(item) >= 0.42),
+			episodeFacetScoreFn,
+			episodeFacetLen,
+			Math.max(320, Math.floor(activeChars * 0.18)),
+		);
 
 		const activeSeeds = [...activeKnowledge, ...activeLessons, ...activeEvents, ...activePrefs, ...activeFacets];
 		const allEntries = [...allKnowledge, ...allLessons, ...allEvents, ...allPrefs, ...allFacets];
@@ -361,6 +430,24 @@ export class NanoMemEngine {
 			(w) => w.goal.length + w.summary.length + 30,
 			cueBudgetPer,
 		);
+		const cueProcedural = pickTop(
+			procedural.filter((item) => !activeProcedural.some((activeItem) => activeItem.id === item.id)),
+			proceduralScoreFn,
+			proceduralCueLen,
+			Math.max(280, Math.floor(proceduralChars * 0.45)),
+		);
+		const cueEpisodeMemories = pickTop(
+			v2Episodes.filter((item) => !activeEpisodeMemories.some((activeItem) => activeItem.id === item.id)),
+			episodeScoreFn,
+			episodeCueLen,
+			Math.max(220, Math.floor(cueChars * 0.12)),
+		);
+		const cueEpisodeFacets = pickTop(
+			v2EpisodeFacets.filter((item) => !activeEpisodeFacets.some((activeItem) => activeItem.id === item.id)),
+			episodeFacetScoreFn,
+			episodeFacetCueLen,
+			Math.max(220, Math.floor(cueChars * 0.12)),
+		);
 
 		// Reinforce all recalled entries (Active + Cue) via spaced repetition
 		const allRecalledKnowledge = [...activeKnowledge, ...dedupedCueKnowledge];
@@ -375,6 +462,9 @@ export class NanoMemEngine {
 		await this.reinforceEntries(allRecalledPrefs, allPrefs, this.preferencesPath);
 		await this.reinforceEntries(allRecalledFacets, allFacets, this.facetsPath);
 		await this.reinforceWork(topWork, allWork);
+		await this.reinforceEpisodeMemories([...activeEpisodeMemories, ...cueEpisodeMemories], allV2Episodes);
+		await this.reinforceEpisodeFacets([...activeEpisodeFacets, ...cueEpisodeFacets], allV2EpisodeFacets);
+		await this.reinforceProcedural([...activeProcedural, ...cueProcedural], allProcedural);
 
 		// Optional reconsolidation for low-relevance recalled entries
 		if (this.llmFn) {
@@ -389,6 +479,9 @@ export class NanoMemEngine {
 				events: activeEvents,
 				preferences: activePrefs,
 				facets: activeFacets,
+				episodeMemories: activeEpisodeMemories,
+				episodeFacets: activeEpisodeFacets,
+				procedural: activeProcedural,
 			},
 			{
 				knowledge: dedupedCueKnowledge,
@@ -398,6 +491,9 @@ export class NanoMemEngine {
 				facets: dedupedCueFacets,
 				episodes: topEpisodes,
 				work: topWork,
+				episodeMemories: cueEpisodeMemories,
+				episodeFacets: cueEpisodeFacets,
+				procedural: cueProcedural,
 			},
 			allEntries,
 			graphContext,
@@ -597,6 +693,26 @@ export class NanoMemEngine {
 		};
 	}
 
+	async getV2Stats(): Promise<{
+		episodes: number;
+		facets: number;
+		procedural: number;
+		links: number;
+	}> {
+		const [episodes, facets, procedural, links] = await Promise.all([
+			loadV2Episodes(this.v2Paths),
+			loadV2Facets(this.v2Paths),
+			loadV2Procedural(this.v2Paths),
+			loadV2Links(this.v2Paths),
+		]);
+		return {
+			episodes: episodes.length,
+			facets: facets.length,
+			procedural: procedural.length,
+			links: links.length,
+		};
+	}
+
 	// ─── Direct Access (for CLI, testing) ────────────────────────
 
 	async getAllEntries(): Promise<{
@@ -621,6 +737,210 @@ export class NanoMemEngine {
 
 	async getAllEpisodes(): Promise<Episode[]> {
 		return loadEpisodes(this.episodesDir);
+	}
+
+	private async syncEpisodeToV2(ep: Episode): Promise<void> {
+		const [episodes, facets, links, procedural, meta] = await Promise.all([
+			loadV2Episodes(this.v2Paths),
+			loadV2Facets(this.v2Paths),
+			loadV2Links(this.v2Paths),
+			loadV2Procedural(this.v2Paths),
+			loadV2Meta(this.v2Paths),
+		]);
+
+		const now = new Date().toISOString();
+		const episodeId = this.makeEpisodeMemoryId(ep);
+		const mapped = this.mapEpisodeToV2(ep, now);
+		const nextEpisodes = episodes.filter((existing) => existing.id !== episodeId);
+		nextEpisodes.push(mapped.episode);
+
+		const nextFacets = facets.filter((facet) => facet.episodeId !== episodeId);
+		nextFacets.push(...mapped.facets);
+
+		const facetIds = new Set(mapped.facets.map((facet) => facet.id));
+		const nextLinks = links.filter(
+			(link) =>
+				link.fromId !== episodeId &&
+				link.toId !== episodeId &&
+				!facetIds.has(link.fromId) &&
+				!facetIds.has(link.toId),
+		);
+		nextLinks.push(...mapped.links);
+
+		const nextProcedural = procedural.filter((item) => !item.sourceEpisodeIds?.includes(episodeId));
+		const compiledProcedure = compileProcedureFromEpisode(mapped.episode, mapped.facets, now);
+		if (compiledProcedure) {
+			nextProcedural.push(compiledProcedure);
+			mapped.episode.derivedProcedureIds = [compiledProcedure.id];
+			nextEpisodes[nextEpisodes.length - 1] = mapped.episode;
+		}
+
+		await Promise.all([
+			saveV2Episodes(this.v2Paths, nextEpisodes),
+			saveV2Facets(this.v2Paths, nextFacets),
+			saveV2Links(this.v2Paths, nextLinks),
+			saveV2Procedural(this.v2Paths, nextProcedural),
+			saveV2Meta(this.v2Paths, {
+				...meta,
+				version: 2,
+				lastMigrationAt: meta.lastMigrationAt ?? now,
+			}),
+		]);
+	}
+
+	private mapEpisodeToV2(
+		ep: Episode,
+		now: string,
+	): {
+		episode: EpisodeMemory;
+		facets: EpisodeFacet[];
+		links: MemoryLink[];
+	} {
+		const episodeId = this.makeEpisodeMemoryId(ep);
+		const baseTags = [...new Set([...(ep.tags ?? []), ...extractTags(`${ep.project} ${ep.summary} ${ep.userGoal ?? ""}`)])];
+		const facetDefs: Array<{
+			facetType: FacetKind;
+			searchText: string;
+			anchorText?: string;
+			summary?: string;
+			detail?: string;
+			outcomeScore?: number;
+			causalRole?: EpisodeFacet["causalRole"];
+		}> = [];
+
+		if (ep.userGoal?.trim()) {
+			facetDefs.push({
+				facetType: "goal",
+				searchText: ep.userGoal.trim(),
+				anchorText: ep.summary,
+				summary: `Goal: ${ep.userGoal.trim()}`,
+			});
+		}
+
+		for (const error of ep.errors.slice(0, 8)) {
+			if (!error.trim()) continue;
+			facetDefs.push({
+				facetType: "error",
+				searchText: error.trim(),
+				anchorText: ep.summary,
+				summary: `Error: ${error.trim()}`,
+				causalRole: "signal",
+				outcomeScore: Math.max(1, 6 - ep.errors.length),
+			});
+		}
+
+		for (const observation of ep.keyObservations.slice(0, 8)) {
+			if (!observation.trim()) continue;
+			facetDefs.push({
+				facetType: "insight",
+				searchText: observation.trim(),
+				anchorText: ep.summary,
+				summary: `Insight: ${observation.trim()}`,
+				causalRole: "resolution",
+				outcomeScore: Math.min(10, ep.importance),
+			});
+		}
+
+		if (ep.summary.trim()) {
+			facetDefs.push({
+				facetType: "outcome",
+				searchText: ep.summary.trim().slice(0, 200),
+				anchorText: ep.summary.trim(),
+				summary: ep.summary.trim(),
+				detail: [ep.userGoal ? `Goal: ${ep.userGoal}` : "", ep.errors.length ? `Errors: ${ep.errors.join("; ")}` : ""]
+					.filter(Boolean)
+					.join("\n"),
+				causalRole: ep.errors.length > 0 ? "effect" : "signal",
+				outcomeScore: ep.errors.length > 0 ? Math.max(3, ep.importance - 1) : ep.importance,
+			});
+		}
+
+		const facets: EpisodeFacet[] = facetDefs.map((facet, index) => {
+			const facetId = `${episodeId}:facet:${index + 1}`;
+			const facetTags = [
+				...new Set([
+					...baseTags,
+					facet.facetType,
+					...extractTags(`${facet.searchText} ${facet.summary ?? ""} ${facet.anchorText ?? ""}`),
+				]),
+			].slice(0, 40);
+			return {
+				id: facetId,
+				kind: "facet" as const,
+				episodeId,
+				facetType: facet.facetType,
+				searchText: facet.searchText,
+				anchorText: facet.anchorText,
+				summary: facet.summary,
+				detail: facet.detail,
+				accessCount: 0,
+				importance: Math.max(1, Math.min(10, ep.importance)),
+				salience: Math.max(1, Math.min(10, facet.outcomeScore ?? ep.importance)),
+				confidence: 0.7,
+				retention: ep.importance >= 8 ? ("key-event" as const) : ("ambient" as const),
+				stability: ep.errors.length > 0 ? ("situational" as const) : ("stable" as const),
+				tags: facetTags,
+				sourceEpisodeIds: [episodeId],
+				evidence: [],
+				scope: { ...ep.scope, project: ep.project },
+				createdAt: ep.startedAt ?? `${ep.date}T00:00:00.000Z`,
+				updatedAt: now,
+				entityRefs: [],
+				aliases: [],
+				causalRole: facet.causalRole,
+				outcomeScore: facet.outcomeScore,
+			};
+		});
+
+		const links = facets.map((facet) => ({
+			id: `${episodeId}->${facet.id}`,
+			fromId: episodeId,
+			toId: facet.id,
+			type: "has-facet" as const,
+			weight: 1,
+			explicit: true,
+			createdAt: now,
+			updatedAt: now,
+			evidence: [],
+		}));
+
+		const episode: EpisodeMemory = {
+			id: episodeId,
+			kind: "episode",
+			sessionId: ep.sessionId,
+			title: ep.userGoal || ep.summary.slice(0, 80),
+			summary: ep.summary,
+			startedAt: ep.startedAt,
+			endedAt: ep.endedAt,
+			timeZone: ep.timeZone,
+			userGoal: ep.userGoal,
+			outcome: ep.errors.length ? "high-friction" : "completed",
+			accessCount: 0,
+			importance: Math.max(1, Math.min(10, ep.importance)),
+			salience: Math.max(1, Math.min(10, ep.importance + Math.min(ep.errors.length, 2))),
+			confidence: 0.85,
+			retention: ep.importance >= 8 ? ("key-event" as const) : ("ambient" as const),
+			stability: ep.errors.length > 0 ? ("situational" as const) : ("stable" as const),
+			tags: baseTags.slice(0, 40),
+			sourceEpisodeIds: [episodeId],
+			evidence: [],
+			scope: { ...ep.scope, project: ep.project },
+			createdAt: ep.startedAt ?? `${ep.date}T00:00:00.000Z`,
+			updatedAt: now,
+			filesModified: ep.filesModified,
+			toolsUsed: ep.toolsUsed,
+			entities: [],
+			facetIds: facets.map((facet) => facet.id),
+			derivedSemanticIds: [],
+			derivedProcedureIds: [],
+			consolidatedAt: ep.consolidated ? now : undefined,
+		};
+
+		return { episode, facets, links };
+	}
+
+	private makeEpisodeMemoryId(ep: Episode): string {
+		return `episode:${ep.sessionId}`;
 	}
 
 	/** Deduplicate all memory and work entries, merge relatedIds, save. Returns counts of removed duplicates. */
@@ -787,6 +1107,21 @@ export class NanoMemEngine {
 			loadMeta(this.metaPath),
 		]);
 		return { knowledge, lessons, events, preferences, facets, work, episodes, meta };
+	}
+
+	async exportAllV2(): Promise<{
+		episodes: EpisodeMemory[];
+		facets: EpisodeFacet[];
+		procedural: ProceduralMemory[];
+		links: MemoryLink[];
+	}> {
+		const [episodes, facets, procedural, links] = await Promise.all([
+			loadV2Episodes(this.v2Paths),
+			loadV2Facets(this.v2Paths),
+			loadV2Procedural(this.v2Paths),
+			loadV2Links(this.v2Paths),
+		]);
+		return { episodes, facets, procedural, links };
 	}
 
 	// ─── Full Insights Report ────────────────────────────────────────
@@ -1030,6 +1365,68 @@ export class NanoMemEngine {
 		return filterByScope(evictExpiredWork(entries), scope);
 	}
 
+	private filterAndCleanProcedural(
+		entries: ProceduralMemory[],
+		project: string,
+		scope?: MemoryScope,
+	): ProceduralMemory[] {
+		return entries.filter((entry) => {
+			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
+			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
+			if (entry.scope?.project && entry.scope.project !== project) return false;
+			return entry.status !== "deprecated" && entry.status !== "superseded";
+		});
+	}
+
+	private filterAndCleanV2Episodes(entries: EpisodeMemory[], project: string, scope?: MemoryScope): EpisodeMemory[] {
+		return entries.filter((entry) => {
+			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
+			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
+			if (entry.scope?.project && entry.scope.project !== project) return false;
+			return true;
+		});
+	}
+
+	private filterAndCleanV2Facets(entries: EpisodeFacet[], project: string, scope?: MemoryScope): EpisodeFacet[] {
+		return entries.filter((entry) => {
+			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
+			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
+			if (entry.scope?.project && entry.scope.project !== project) return false;
+			return true;
+		});
+	}
+
+	private scoreEpisodeMemory(entry: EpisodeMemory, project: string, contextTags: string[]): number {
+		const projectBoost = entry.scope?.project === project ? 1 : 0.55;
+		const tagScore = tagOverlap(entry.tags, contextTags);
+		const summaryTags = extractTags(`${entry.title ?? ""} ${entry.summary} ${entry.userGoal ?? ""} ${entry.outcome ?? ""}`);
+		const semanticScore = tagOverlap(summaryTags, contextTags);
+		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+		const salienceBoost = (entry.salience ?? entry.importance) / 10;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.18 + salienceBoost * 0.22;
+	}
+
+	private scoreEpisodeFacet(entry: EpisodeFacet, project: string, contextTags: string[]): number {
+		const projectBoost = entry.scope?.project === project ? 1 : 0.55;
+		const tagScore = tagOverlap(entry.tags, contextTags);
+		const semanticTags = extractTags(`${entry.searchText} ${entry.anchorText ?? ""} ${entry.summary ?? ""}`);
+		const semanticScore = tagOverlap(semanticTags, contextTags);
+		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+		const salienceBoost = (entry.salience ?? entry.importance) / 10;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.24;
+	}
+
+	private scoreProceduralMemory(entry: ProceduralMemory, project: string, contextTags: string[]): number {
+		const projectBoost = entry.scope?.project === project ? 1 : 0.55;
+		const tagScore = tagOverlap(entry.tags, contextTags);
+		const summaryTags = extractTags(`${entry.searchText} ${entry.summary} ${entry.contextText ?? ""}`);
+		const semanticScore = tagOverlap(summaryTags, contextTags);
+		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+		const statusBoost = entry.status === "active" ? 0.2 : entry.status === "draft" ? 0.05 : -0.2;
+		const salienceBoost = (entry.salience ?? entry.importance) / 10;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.2 + statusBoost;
+	}
+
 	private async reinforceEntries(recalled: MemoryEntry[], all: MemoryEntry[], savePath: string): Promise<void> {
 		const ids = new Set(recalled.map((e) => e.id));
 		const now = new Date().toISOString();
@@ -1043,6 +1440,45 @@ export class NanoMemEngine {
 		reinforceRelations(recalled, all);
 		const pathConfig = this.getMemoryPathConfigs().find((config) => config.path === savePath);
 		await this.persistEntries(savePath, all, pathConfig?.max ?? this.cfg.maxEntries.knowledge);
+	}
+
+	private async reinforceProcedural(recalled: ProceduralMemory[], all: ProceduralMemory[]): Promise<void> {
+		if (!recalled.length) return;
+		const ids = new Set(recalled.map((entry) => entry.id));
+		const now = new Date().toISOString();
+		for (const entry of all) {
+			if (!ids.has(entry.id)) continue;
+			entry.accessCount = (entry.accessCount ?? 0) + 1;
+			entry.lastAccessedAt = now;
+			entry.updatedAt = entry.updatedAt || now;
+		}
+		await saveV2Procedural(this.v2Paths, all);
+	}
+
+	private async reinforceEpisodeMemories(recalled: EpisodeMemory[], all: EpisodeMemory[]): Promise<void> {
+		if (!recalled.length) return;
+		const ids = new Set(recalled.map((entry) => entry.id));
+		const now = new Date().toISOString();
+		for (const entry of all) {
+			if (!ids.has(entry.id)) continue;
+			entry.accessCount = (entry.accessCount ?? 0) + 1;
+			entry.lastAccessedAt = now;
+			entry.updatedAt = entry.updatedAt || now;
+		}
+		await saveV2Episodes(this.v2Paths, all);
+	}
+
+	private async reinforceEpisodeFacets(recalled: EpisodeFacet[], all: EpisodeFacet[]): Promise<void> {
+		if (!recalled.length) return;
+		const ids = new Set(recalled.map((entry) => entry.id));
+		const now = new Date().toISOString();
+		for (const entry of all) {
+			if (!ids.has(entry.id)) continue;
+			entry.accessCount = (entry.accessCount ?? 0) + 1;
+			entry.lastAccessedAt = now;
+			entry.updatedAt = entry.updatedAt || now;
+		}
+		await saveV2Facets(this.v2Paths, all);
 	}
 
 	private detectAlignmentConflicts(
@@ -1195,6 +1631,9 @@ export class NanoMemEngine {
 			events: MemoryEntry[];
 			preferences: MemoryEntry[];
 			facets: MemoryEntry[];
+			episodeMemories: EpisodeMemory[];
+			episodeFacets: EpisodeFacet[];
+			procedural: ProceduralMemory[];
 		},
 		cue: {
 			knowledge: MemoryEntry[];
@@ -1204,12 +1643,17 @@ export class NanoMemEngine {
 			facets: MemoryEntry[];
 			episodes: Episode[];
 			work: WorkEntry[];
+			episodeMemories: EpisodeMemory[];
+			episodeFacets: EpisodeFacet[];
+			procedural: ProceduralMemory[];
 		},
 		allEntries: MemoryEntry[],
 		graphContext: GraphNeighbor[],
 		p: PromptSet,
 	): string {
 		const sections: string[] = [];
+		const proceduralSectionTitle = "Procedures";
+		const episodicSectionTitle = "Episode Threads";
 
 		// ── Active tier: full detail ──
 		const activeLines: string[] = [];
@@ -1253,9 +1697,29 @@ export class NanoMemEngine {
 		for (const e of active.preferences) pushActiveEntry(e);
 		for (const e of active.facets) activeLines.push(formatActiveFacet(e));
 		for (const e of active.events) keyEventLines.push(formatActiveEvent(e));
+		const episodicLines = active.episodeMemories.map((entry) => {
+			const goal = entry.userGoal ? ` | Goal: ${entry.userGoal}` : "";
+			const outcome = entry.outcome ? ` | Outcome: ${entry.outcome}` : "";
+			return `- [ID: ${entry.id}] **${entry.title || "Episode"}**: ${entry.summary}${goal}${outcome}`;
+		});
+		const episodicFacetLines = active.episodeFacets.map((entry) => {
+			const detail = entry.anchorText ? `\n  ${entry.anchorText}` : "";
+			return `- [ID: ${entry.id}] [${entry.facetType}] **${entry.searchText}**${detail}`;
+		});
+		const proceduralLines = active.procedural.map((entry) => {
+			const steps = entry.steps.slice(0, 4).map((step, index) => `${index + 1}. ${step.text}`).join("\n  ");
+			const boundaries = entry.boundaries ? `\n  Boundaries: ${entry.boundaries}` : "";
+			return `- [ID: ${entry.id}] **${entry.name}**: ${entry.summary}\n  ${steps}${boundaries}`;
+		});
 
 		if (activeLines.length) {
 			sections.push(`### ${p.sectionActiveMemories}\n${activeLines.join("\n")}`);
+		}
+		if (episodicLines.length || episodicFacetLines.length) {
+			sections.push(`### ${episodicSectionTitle}\n${[...episodicLines, ...episodicFacetLines].join("\n")}`);
+		}
+		if (proceduralLines.length) {
+			sections.push(`### ${proceduralSectionTitle}\n${proceduralLines.join("\n")}`);
 		}
 		if (keyEventLines.length) {
 			sections.push(`### ${p.sectionKeyEvents ?? "Key Events"}\n${keyEventLines.join("\n")}`);
@@ -1298,6 +1762,15 @@ export class NanoMemEngine {
 		for (const e of cue.events) cueLines.push(formatCueEvent(e));
 		for (const e of cue.preferences) cueLines.push(formatCueEntry(e));
 		for (const e of cue.facets) cueLines.push(formatCueFacet(e));
+		for (const episode of cue.episodeMemories) {
+			cueLines.push(`- [ID: ${episode.id}] [episode] **${episode.title || "Episode"}**: ${episode.summary}`);
+		}
+		for (const facet of cue.episodeFacets) {
+			cueLines.push(`- [ID: ${facet.id}] [episode-${facet.facetType}] **${facet.searchText}**: ${facet.summary || facet.anchorText || ""}`);
+		}
+		for (const procedure of cue.procedural) {
+			cueLines.push(`- [ID: ${procedure.id}] [procedural] **${procedure.name}**: ${procedure.summary}`);
+		}
 
 		// Episodes in cue layer (no ID-based recall)
 		for (const ep of cue.episodes) {

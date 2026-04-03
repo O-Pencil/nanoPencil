@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/agent-core/src/types.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type {
 	AssistantMessageEvent,
 	ImageContent,

@@ -1,10 +1,9 @@
 /**
- * Tool Source Interface
- *
- * Abstracts the concept of a "tool source" - where tools come from.
- * This enables decoupling core from specific tool protocols (MCP, extension, builtin).
+ * [UPSTREAM]: Depends on extensions/types
+ * [SURFACE]: ToolSourceType, ToolSource, SourceTool
+ * [LOCUS]: core/tools/source.ts - tool source abstraction (builtin, MCP, extension)
+ * [COVENANT]: Change tool sources → update this header
  */
-
 import type { ToolDefinition } from "../extensions/types.js";
 
 export type ToolSourceType = "builtin" | "mcp" | "extension";

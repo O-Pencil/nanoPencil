@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/tool-execution.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import * as os from "node:os";
 import {
 	Box,

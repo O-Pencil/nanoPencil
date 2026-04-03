@@ -1,5 +1,10 @@
 #!/usr/bin/env tsx
-
+/**
+ * [UPSTREAM]: Depends on node:fs, node:path, node:url, ai types
+ * [SURFACE]: Generates models.generated.ts from remote API
+ * [LOCUS]: packages/ai/scripts/generate-models.ts - model generation script
+ * [COVENANT]: Script for code generation
+ */
 import { writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";

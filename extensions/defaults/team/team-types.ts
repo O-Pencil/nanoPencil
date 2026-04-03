@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: TeamCommandMode, TeamRunStatus, TeamWorkerMode, TeamWorkerSpec, TeamPlan
+ * [LOCUS]: extensions/defaults/team/team-types.ts - team types
+ * [COVENANT]: Change types → update this header
+ */
 export type TeamCommandMode = "auto" | "research" | "execute";
 
 export type TeamRunStatus = "running" | "completed" | "failed" | "stopped";

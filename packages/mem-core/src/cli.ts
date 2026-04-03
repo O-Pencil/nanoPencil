@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * [INPUT]: process.argv
- * [OUTPUT]: stats | search <query> | forget <id> | export | insights — terminal output or JSON or HTML
- * [POS]: Standalone CLI for NanoMem — no host dependency
+ * [UPSTREAM]: Depends on node:fs, engine, insights
+ * [SURFACE]: NanoMem CLI - stats, search, forget, export, insights commands
+ * [LOCUS]: packages/mem-core/src/cli.ts - NanoMem standalone CLI
+ * [COVENANT]: Change CLI → update this header
  */
 
 import { writeFileSync } from "node:fs";

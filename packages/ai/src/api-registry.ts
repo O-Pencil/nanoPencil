@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/api-registry.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type {
 	Api,
 	AssistantMessageEventStream,

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/truncated-text.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { Component } from "../tui.js";
 import { truncateToWidth, visibleWidth } from "../utils.js";
 

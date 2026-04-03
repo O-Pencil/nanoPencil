@@ -1,10 +1,9 @@
 /**
- * Custom message types and transformers for the coding agent.
- *
- * Extends the base AgentMessage type with coding-agent specific message types,
- * and provides a transformer to convert them to LLM-compatible messages.
+ * [UPSTREAM]: Depends on agent-core, ai
+ * [SURFACE]: AgentMessage extensions, convertToLlm(), message transformers
+ * [LOCUS]: core/messages.ts - custom message types and LLM transformers
+ * [COVENANT]: Change message types → update this header
  */
-
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ImageContent, Message, TextContent } from "@pencil-agent/ai";
 

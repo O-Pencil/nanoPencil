@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/stream.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import "./providers/register-builtins.js";
 import "./utils/http-proxy.js";
 

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/input.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { getEditorKeybindings } from "../keybindings.js";
 import { KillRing } from "../kill-ring.js";
 import { type Component, CURSOR_MARKER, type Focusable } from "../tui.js";

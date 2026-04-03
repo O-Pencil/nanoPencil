@@ -1,5 +1,10 @@
 #!/usr/bin/env tsx
-
+/**
+ * [UPSTREAM]: Depends on canvas, node:fs, node:path, node:url
+ * [SURFACE]: Generates test image for unit tests
+ * [LOCUS]: packages/ai/scripts/generate-test-image.ts - test data generation
+ * [COVENANT]: Script for test data
+ */
 import { createCanvas } from "canvas";
 import { writeFileSync } from "fs";
 import { join, dirname } from "path";

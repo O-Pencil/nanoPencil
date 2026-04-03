@@ -1,10 +1,9 @@
 /**
- * Model Switcher
- *
- * Encapsulates model selection, cycling, and fallback logic.
- * This coordinator manages model switching operations.
+ * [UPSTREAM]: Depends on ai, agent-core
+ * [SURFACE]: ModelCycleResult, ModelSwitcher class
+ * [LOCUS]: core/model/switcher.ts - model selection and cycling logic
+ * [COVENANT]: Change model switcher → update this header
  */
-
 import type { Model } from "@pencil-agent/ai";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import { modelsAreEqual } from "@pencil-agent/ai";

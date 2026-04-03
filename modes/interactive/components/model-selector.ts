@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/model-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { type Model, modelsAreEqual } from "@pencil-agent/ai";
 import {
 	Container,

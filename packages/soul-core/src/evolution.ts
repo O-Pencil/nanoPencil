@@ -3,6 +3,12 @@
  * [OUTPUT]: Personality and value deltas (evolution)
  * [POS]: Evolution engine - implements learning algorithms
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/evolution.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type {
   SoulProfile,

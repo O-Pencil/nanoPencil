@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: ./config.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { existsSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { dirname, join, resolve } from "path";

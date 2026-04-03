@@ -4,6 +4,12 @@
  * Provides HTML export functionality for sessions.
  * This extension registers the /export command.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/optional/export-html/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { AgentState } from "@pencil-agent/agent-core";
 import { dirname, join } from "node:path";

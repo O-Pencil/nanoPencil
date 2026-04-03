@@ -1,6 +1,12 @@
 /**
  * Minimal TUI implementation with differential rendering
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/tui.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import * as fs from "node:fs";
 import * as os from "node:os";

@@ -1,10 +1,9 @@
 /**
- * RPC protocol types for headless operation.
- *
- * Commands are sent as JSON lines on stdin.
- * Responses and events are emitted as JSON lines on stdout.
+ * [UPSTREAM]: Depends on agent-core, ai, core/runtime, core/bash-executor, core/session/compaction
+ * [SURFACE]: RpcCommand, RpcResponse, RpcSessionState, RpcSlashCommand types
+ * [LOCUS]: modes/rpc/rpc-types.ts - RPC protocol type definitions
+ * [COVENANT]: Change RPC types → update this header
  */
-
 import type { AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
 import type { ImageContent, Model } from "@pencil-agent/ai";
 import type { SessionStats } from "../../core/runtime/agent-session.js";

@@ -3,6 +3,12 @@
  * [OUTPUT]: extracted memory items (via LLM) or heuristic fallback
  * [POS]: Dual-path extraction — LLM when available, regex heuristics otherwise
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/extraction.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { NanomemConfig } from "./config.js";
 import { PROMPTS } from "./i18n.js";

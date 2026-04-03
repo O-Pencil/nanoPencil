@@ -1,10 +1,9 @@
 /**
- * MCP (Model Context Protocol) Client
- *
- * Provides client functionality to connect to MCP servers and call their tools.
- * Supports stdio transport with JSON-RPC framing.
+ * [UPSTREAM]: Depends on child_process, node:fs, config, auth-storage, mcp-config
+ * [SURFACE]: MCPClient class, MCPServerConfig, MCPTool, MCPToolResult
+ * [LOCUS]: core/mcp/mcp-client.ts - MCP client for JSON-RPC over stdio
+ * [COVENANT]: Change MCP client → update this header
  */
-
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";

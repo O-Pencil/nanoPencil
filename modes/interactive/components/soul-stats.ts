@@ -3,6 +3,12 @@
  * [OUTPUT]: Formatted display of Soul stats and personality
  * [POS]: Interactive mode component for /soul command
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/soul-stats.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 // @ts-ignore - soul package is bundled at runtime
 import type { SoulManager } from "@pencil-agent/soul";

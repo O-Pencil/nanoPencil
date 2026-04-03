@@ -1,9 +1,9 @@
 /**
- * API Key Guidance for MCP Tools
- *
- * Provides user-friendly instructions for obtaining API keys for various MCP servers.
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: APIKeyGuidance, getAPIKeyGuidance(), formatGuidanceMessage()
+ * [LOCUS]: core/mcp/mcp-guidance.ts - API key guidance for MCP servers
+ * [COVENANT]: Change guidance → update this header
  */
-
 export interface APIKeyGuidance {
 	/** Server ID */
 	serverId: string;

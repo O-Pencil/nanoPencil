@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/settings-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import type { Transport } from "@pencil-agent/ai";
 import {

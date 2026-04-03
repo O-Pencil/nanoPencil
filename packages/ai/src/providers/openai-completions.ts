@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/openai-completions.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import OpenAI from "openai";
 import type {
 	ChatCompletionAssistantMessageParam,

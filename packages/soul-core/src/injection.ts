@@ -3,6 +3,12 @@
  * [OUTPUT]: Prompt injections for system message
  * [POS]: Expression layer - converts soul to prompt text
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/injection.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { SoulProfile, InteractionContext, ExpertiseArea } from "./types.js";
 

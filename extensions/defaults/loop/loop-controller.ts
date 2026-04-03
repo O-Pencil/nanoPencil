@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/loop/loop-controller.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { randomBytes } from "node:crypto";
 import type {
 	LoopControllerState,

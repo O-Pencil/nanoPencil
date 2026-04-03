@@ -1,6 +1,12 @@
 /**
  * Reusable countdown timer for dialog components.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/countdown-timer.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { TUI } from "@pencil-agent/tui";
 

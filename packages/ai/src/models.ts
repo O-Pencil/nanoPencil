@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/models.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { MODELS } from "./models.generated.js";
 import type { Api, KnownProvider, Model, Usage } from "./types.js";
 

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on tui, node:fs, node:path, config
+ * [SURFACE]: AppKeybinding, KeybindingsManager, KeybindingsConfig
+ * [LOCUS]: core/keybindings.ts - application-level keybindings management
+ * [COVENANT]: Change keybindings → update this header
+ */
 import {
 	DEFAULT_EDITOR_KEYBINDINGS,
 	type EditorAction,

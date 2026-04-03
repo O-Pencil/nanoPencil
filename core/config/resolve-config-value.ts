@@ -1,8 +1,9 @@
 /**
- * Resolve configuration values that may be shell commands, environment variables, or literals.
- * Used by auth-storage.ts and model-registry.ts.
+ * [UPSTREAM]: Depends on child_process
+ * [SURFACE]: resolveConfigValue()
+ * [LOCUS]: core/config/resolve-config-value.ts - resolve config values (shell, env, literal)
+ * [COVENANT]: Change value resolution → update this header
  */
-
 import { execSync } from "child_process";
 
 // Cache for shell command results (persists for process lifetime)

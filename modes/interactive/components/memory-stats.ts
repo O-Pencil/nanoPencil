@@ -3,6 +3,12 @@
  * [OUTPUT]: Formatted display of memory stats
  * [POS]: Interactive mode component for /memory command
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/memory-stats.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 // Use any type for NanoMemEngine since it's a local package
 interface NanoMemEngine {

@@ -3,6 +3,12 @@
  * [OUTPUT]: Unified Soul management API
  * [POS]: Main entry point - composes all Soul modules
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/manager.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type {
   SoulProfile,

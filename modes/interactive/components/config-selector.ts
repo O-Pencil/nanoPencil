@@ -1,6 +1,12 @@
 /**
  * TUI component for managing package resources (enable/disable)
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/config-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { basename, dirname, join, relative } from "node:path";
 import {

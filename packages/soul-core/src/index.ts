@@ -3,6 +3,12 @@
  * [OUTPUT]: Public API surface for Soul
  * [POS]: Barrel export - hosts all public exports
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 export type {
   // Core types

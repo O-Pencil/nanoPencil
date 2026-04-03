@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/dream-lock.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { existsSync } from "node:fs";
 import { readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 

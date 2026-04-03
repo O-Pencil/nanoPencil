@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/anthropic.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import Anthropic from "@anthropic-ai/sdk";
 import type {
 	ContentBlockParam,

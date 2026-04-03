@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/autocomplete.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { spawnSync } from "child_process";
 import { readdirSync, statSync } from "fs";
 import { homedir } from "os";

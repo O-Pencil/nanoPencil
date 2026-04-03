@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/markdown.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { marked, type Token } from "marked";
 import { isImageLine } from "../terminal-image.js";
 import type { Component } from "../tui.js";

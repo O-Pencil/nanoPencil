@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/utils/json-parse.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { parse as partialParse } from "partial-json";
 
 /**

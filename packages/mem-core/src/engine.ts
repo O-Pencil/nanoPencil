@@ -6,6 +6,12 @@
  * Host products create an engine instance and call its methods.
  * No dependency on any specific AI framework — LLM is pluggable.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/engine.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { join } from "node:path";
 import { getConfig, type NanomemConfig } from "./config.js";

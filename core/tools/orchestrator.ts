@@ -1,10 +1,9 @@
 /**
- * Tool Orchestrator
- *
- * Encapsulates tool registration, lookup, and management.
- * This coordinator provides a clean interface for tool operations.
+ * [UPSTREAM]: Depends on agent-core, extensions
+ * [SURFACE]: ToolInfo, ToolOrchestrator class
+ * [LOCUS]: core/tools/orchestrator.ts - tool registration, lookup, and management
+ * [COVENANT]: Change orchestrator → update this header
  */
-
 import type { AgentTool } from "@pencil-agent/agent-core";
 import type { ToolDefinition } from "../extensions/index.js";
 

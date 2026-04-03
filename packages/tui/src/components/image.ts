@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/image.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import {
 	getCapabilities,
 	getImageDimensions,

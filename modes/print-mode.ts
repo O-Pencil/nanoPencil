@@ -1,11 +1,15 @@
 /**
- * Print mode (single-shot): Send prompts, output result, exit.
- *
- * Used for:
- * - `pi -p "prompt"` - text output
- * - `pi --mode json "prompt"` - JSON event stream
+ * [UPSTREAM]: Depends on ai, core/runtime/agent-session
+ * [SURFACE]: PrintModeOptions, runPrintMode()
+ * [LOCODE]: modes/print-mode.ts - non-interactive batch processing mode
+ * [COVENANT]: Change print mode → update P2 modes/CLAUDE.md
  */
-
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: ./modes/print-mode.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { AssistantMessage, ImageContent } from "@pencil-agent/ai";
 import type { AgentSession } from "../core/runtime/agent-session.js";
 

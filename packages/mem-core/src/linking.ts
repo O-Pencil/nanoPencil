@@ -3,6 +3,12 @@
  * [OUTPUT]: bidirectional relatedIds links established
  * [POS]: A-MEM style Zettelkasten linking — atomic storage + dynamic associations
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/linking.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { tagOverlap } from "./scoring.js";
 import type { MemoryEntry, MemoryRelation } from "./types.js";

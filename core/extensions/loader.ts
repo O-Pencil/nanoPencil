@@ -1,9 +1,9 @@
 /**
- * Extension loader - loads TypeScript extension modules using jiti.
- *
- * Uses @mariozechner/jiti fork with virtualModules support for compiled Bun binaries.
+ * [UPSTREAM]: Depends on node:fs, node:module, node:os, node:path, @mariozechner/jiti, bundled packages
+ * [SURFACE]: ExtensionLoader, discoverAndLoadExtensions, loadExtensions, loadExtensionFromFactory
+ * [LOCUS]: core/extensions/loader.ts - extension discovery and loading via jiti
+ * [COVENANT]: Change loading mechanism → update P2 core/CLAUDE.md and extensions/CLAUDE.md
  */
-
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as os from "node:os";

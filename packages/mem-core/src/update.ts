@@ -7,6 +7,12 @@
  * - UPDATE generalized: any entry type, tag overlap > 0.7 triggers content replacement
  * - DELETE: retract-type extractions find and remove matching entries
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/update.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { NanomemConfig } from "./config.js";
 import { linkNewEntry } from "./linking.js";

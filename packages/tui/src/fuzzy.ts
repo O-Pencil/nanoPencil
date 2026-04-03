@@ -3,6 +3,12 @@
  * Matches if all query characters appear in order (not necessarily consecutive).
  * Lower score = better match.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/fuzzy.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 export interface FuzzyMatch {
 	matches: boolean;

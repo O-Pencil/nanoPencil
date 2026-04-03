@@ -3,6 +3,12 @@
  * [OUTPUT]: prompt templates and injection labels in the selected locale
  * [POS]: i18n layer — all LLM prompts and user-facing strings go through here
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/i18n.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 export interface PromptSet {
 	extractionSystem: string;

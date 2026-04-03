@@ -1,7 +1,9 @@
 /**
- * 系统提示词构建与项目上下文加载
+ * [UPSTREAM]: Depends on config, skills, tools
+ * [SURFACE]: BuildSystemPromptOptions, buildSystemPrompt()
+ * [LOCUS]: core/prompt/system-prompt.ts - system prompt building and context loading
+ * [COVENANT]: Change system prompt → update this header
  */
-
 import { getDocsPath, getExamplesPath, getReadmePath } from "../../config.js";
 import { formatSkillsForPrompt, type Skill } from "../skills.js";
 import { getToolGuidance, toolGuidance } from "../tools/index.js";

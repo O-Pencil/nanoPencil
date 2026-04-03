@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/footer.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { type Component, truncateToWidth, visibleWidth } from "@pencil-agent/tui";
 import type { AgentSession } from "../../../core/runtime/agent-session.js";
 import type { ReadonlyFooterDataProvider } from "../../../core/footer-data-provider.js";

@@ -2,6 +2,12 @@
  * Proxy stream function for apps that route LLM calls through a server.
  * The server manages auth and proxies requests to LLM providers.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/agent-core/src/proxy.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 // Internal import for JSON parsing utility
 import {

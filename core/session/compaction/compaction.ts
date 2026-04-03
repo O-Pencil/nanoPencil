@@ -1,10 +1,9 @@
 /**
- * Context compaction for long sessions.
- *
- * Pure functions for compaction logic. The session manager handles I/O,
- * and after compaction the session is reloaded.
+ * [UPSTREAM]: Depends on agent-core, ai, messages.ts, session-manager.ts, utils.ts
+ * [SURFACE]: CompactionController, compactSession, CompactionResult
+ * [LOCUS]: core/session/compaction/compaction.ts - context window management via summarization
+ * [COVENANT]: Change compaction logic → update P2 core/CLAUDE.md
  */
-
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { AssistantMessage, Model, Usage } from "@pencil-agent/ai";
 import { completeSimple } from "@pencil-agent/ai";

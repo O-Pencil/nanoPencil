@@ -1,11 +1,9 @@
 /**
- * Credential storage for API keys and OAuth tokens.
- * Handles loading, saving, and refreshing credentials from auth.json.
- *
- * Uses file locking to prevent race conditions when multiple pi instances
- * try to refresh tokens simultaneously.
+ * [UPSTREAM]: Depends on ai, node:fs, proper-lockfile, config
+ * [SURFACE]: AuthStorage class, credential management
+ * [LOCUS]: core/config/auth-storage.ts - credential storage for API keys and OAuth
+ * [COVENANT]: Change auth storage → update this header
  */
-
 import {
 	getEnvApiKey,
 	getOAuthApiKey,

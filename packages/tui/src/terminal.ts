@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/terminal.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import { setKittyProtocolActive } from "./keys.js";

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/provider-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
 import {
 	getCustomProtocolProviderDefinition,

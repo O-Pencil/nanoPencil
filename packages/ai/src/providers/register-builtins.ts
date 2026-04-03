@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/register-builtins.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { clearApiProviders, registerApiProvider } from "../api-registry.js";
 import { streamBedrock, streamSimpleBedrock } from "./amazon-bedrock.js";
 import { streamAnthropic, streamSimpleAnthropic } from "./anthropic.js";

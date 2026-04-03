@@ -7,6 +7,12 @@
  *   LLM-powered (preferred): produces high-quality semantic extraction
  *   Heuristic fallback: frequency-based file/error extraction
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/consolidation.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { NanomemConfig } from "./config.js";
 import { PROMPTS } from "./i18n.js";

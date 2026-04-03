@@ -6,6 +6,12 @@
  * Formula: Utility = (w_freq * AccessFrequency + w_impact * BaseImpact) * e^(-lambda * Age)
  * Uses per-entry adaptive strength for the decay component.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/eviction.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { daysSince, decay } from "./scoring.js";
 import type { MemoryEntry, WorkEntry } from "./types.js";

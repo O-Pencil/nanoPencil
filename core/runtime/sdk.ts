@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on agent-core, ai, core/config/*, core/tools/*, core/session/*, core/mcp-*
+ * [SURFACE]: createAgentSession(options) → AgentSession + load results
+ * [LOCUS]: SDK factory; creates all services with DI, wires up extensions
+ * [COVENANT]: Change SDK signature → update P1 architecture diagram
+ */
 import { join } from "node:path";
 import {
   Agent,

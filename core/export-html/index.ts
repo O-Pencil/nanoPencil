@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on agent-core, node:fs, node:path, config, modes/theme, extensions, session
+ * [SURFACE]: ToolHtmlRenderer, exportSessionToHtml()
+ * [LOCUS]: core/export-html/index.ts - HTML export functionality
+ * [COVENANT]: Change export → update this header
+ */
 import type { AgentState } from "@pencil-agent/agent-core";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { basename, join } from "path";

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs, node:os, node:path, config, utils/frontmatter
+ * [SURFACE]: PromptTemplate, loadPromptTemplates(), PromptTemplateLoader
+ * [LOCUS]: core/prompt/prompt-templates.ts - prompt template loading and management
+ * [COVENANT]: Change prompt templates → update this header
+ */
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, isAbsolute, join, resolve, sep } from "path";

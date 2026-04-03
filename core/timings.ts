@@ -1,8 +1,9 @@
 /**
- * Central timing instrumentation for startup profiling.
- * Enable with PI_TIMING=1 environment variable.
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: time(), printTimings()
+ * [LOCUS]: core/timings.ts - central timing instrumentation
+ * [COVENANT]: Change timings → update this header
  */
-
 const ENABLED = process.env.PI_TIMING === "1";
 const timings: Array<{ label: string; ms: number }> = [];
 let lastTime = Date.now();

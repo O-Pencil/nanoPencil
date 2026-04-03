@@ -1,6 +1,12 @@
 /**
  * Armin says hi! A fun easter egg with animated XBM art.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/armin.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { Component, TUI } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";

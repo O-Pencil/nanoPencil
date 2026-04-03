@@ -10,6 +10,12 @@
  * - In non-UI modes (RPC/print), the extension must not block on dialogs; it falls back to probe-only refined intent.
  * - The extension should never throw on user cancel; it should proceed with best-effort placeholders.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/interview/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { type Static, Type } from "@sinclair/typebox";
 import type {

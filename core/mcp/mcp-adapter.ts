@@ -1,9 +1,9 @@
 /**
- * MCP Tool Adapter
- *
- * Adapts MCP tools to work with NanoPencil's tool system.
+ * [UPSTREAM]: Depends on extensions, mcp-client, mcp-guidance
+ * [SURFACE]: createMCPTool(), loadMCPTools(), getMCPToolDisplayName()
+ * [LOCUS]: core/mcp/mcp-adapter.ts - adapts MCP tools to NanoPencil tool system
+ * [COVENANT]: Change MCP adapter → update this header
  */
-
 import type { ToolDefinition } from "../extensions/index.js";
 import type { MCPClient, MCPTool } from "./mcp-client.js";
 import { formatGuidanceMessage, getAPIKeyGuidance } from "./mcp-guidance.js";

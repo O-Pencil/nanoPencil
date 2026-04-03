@@ -2,6 +2,12 @@
  * PencilLoader - Custom loader with rotating diamond animation
  * Uses ◆◇◈ symbols for a smooth loading indicator
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/pencil-loader.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import type { Theme } from "../theme/theme.js";

@@ -3,6 +3,12 @@
  * [OUTPUT]: Default SoulConfig merged with overrides
  * [POS]: Configuration layer - provides defaults and validation
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/config.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { SoulConfig } from "./types.js";
 import { join } from "node:path";

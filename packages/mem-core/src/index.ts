@@ -3,6 +3,12 @@
  * [OUTPUT]: Public API surface for nanomem
  * [POS]: Barrel export — hosts import NanoMemEngine, getConfig, types from here
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 export type { NanomemConfig, ProgressiveRecallConfig } from "./config.js";
 export { getConfig } from "./config.js";

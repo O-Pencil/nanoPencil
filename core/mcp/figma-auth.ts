@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on ai, node:fs, node:http, node:os, node:path, node:child_process
+ * [SURFACE]: registerFigmaMcpOAuthProvider()
+ * [LOCUS]: core/mcp/figma-auth.ts - Figma OAuth integration for MCP servers
+ * [COVENANT]: Change Figma auth → update this header
+ */
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@pencil-agent/ai";
 import { registerOAuthProvider } from "@pencil-agent/ai";
 import { existsSync, readFileSync } from "node:fs";

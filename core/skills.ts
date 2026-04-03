@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs, ignore, node:os, node:path, config, utils/frontmatter, diagnostics
+ * [SURFACE]: Skill, loadSkills(), formatSkillsForPrompt()
+ * [LOCUS]: core/skills.ts - skill loading and management
+ * [COVENANT]: Change skills → update this header
+ */
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "fs";
 import ignore from "ignore";
 import { homedir } from "os";

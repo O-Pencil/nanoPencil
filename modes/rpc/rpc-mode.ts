@@ -1,16 +1,9 @@
 /**
- * RPC mode: Headless operation with JSON stdin/stdout protocol.
- *
- * Used for embedding the agent in other applications.
- * Receives commands as JSON on stdin, outputs events and responses as JSON on stdout.
- *
- * Protocol:
- * - Commands: JSON objects with `type` field, optional `id` for correlation
- * - Responses: JSON objects with `type: "response"`, `command`, `success`, and optional `data`/`error`
- * - Events: AgentSessionEvent objects streamed as they occur
- * - Extension UI: Extension UI requests are emitted, client responds with extension_ui_response
+ * [UPSTREAM]: Depends on node:crypto, core/runtime/agent-session, core/extensions
+ * [SURFACE]: runRpcMode(), RpcMode class
+ * [LOCUS]: modes/rpc/rpc-mode.ts - IDE integration via JSON-RPC over stdin/stdout
+ * [COVENANT]: Change RPC protocol → update P2 modes/CLAUDE.md
  */
-
 import * as crypto from "node:crypto";
 import * as readline from "readline";
 import type { AgentSession } from "../../core/runtime/agent-session.js";

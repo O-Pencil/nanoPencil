@@ -3,6 +3,12 @@
  * [OUTPUT]: Persistent storage backed by NanoMem
  * [POS]: Storage layer - bridges Soul and NanoMem
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/store.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";

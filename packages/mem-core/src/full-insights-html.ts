@@ -3,6 +3,12 @@
  * [OUTPUT]: Standalone HTML report with Remix Icon and charts
  * [POS]: Pure renderer for full insights report
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/full-insights-html.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { PROMPTS } from "./i18n.js";
 import type {

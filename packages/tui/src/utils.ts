@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/utils.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { eastAsianWidth } from "get-east-asian-width";
 
 // Grapheme segmenter (shared instance)

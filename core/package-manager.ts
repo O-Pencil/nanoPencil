@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on child_process, node:crypto, node:fs, node:os, node:path, ignore, minimatch, config, utils/git, settings-manager
+ * [SURFACE]: DefaultPackageManager class, package installation and management
+ * [LOCUS]: core/package-manager.ts - npm package manager integration
+ * [COVENANT]: Change package manager → update this header
+ */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";

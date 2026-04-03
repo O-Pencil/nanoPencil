@@ -2,6 +2,12 @@
  * Agent class that uses the agent-loop directly.
  * No transport abstraction - calls streamSimple via the loop.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/agent-core/src/agent.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import {
 	getModel,

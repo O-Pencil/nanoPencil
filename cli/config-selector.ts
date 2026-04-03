@@ -1,7 +1,9 @@
 /**
- * TUI config selector for `pi config` command
+ * [UPSTREAM]: Depends on tui, core/config, modes/interactive/components
+ * [SURFACE]: ConfigSelectorOptions, ConfigSelector, runConfigSelector()
+ * [LOCUS]: cli/config-selector.ts - TUI config selector for `pi config` command
+ * [COVENANT]: Change config selector → update this header
  */
-
 import { ProcessTerminal, TUI } from "@pencil-agent/tui";
 import type { ResolvedPaths } from "../core/package-manager.js";
 import type { SettingsManager } from "../core/config/settings-manager.js";

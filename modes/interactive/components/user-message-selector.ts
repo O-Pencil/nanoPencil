@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/user-message-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { type Component, Container, getEditorKeybindings, Spacer, Text, truncateToWidth } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";

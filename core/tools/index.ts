@@ -1,3 +1,10 @@
+/**
+ * [UPSTREAM]: Depends on bash.ts, read.ts, edit.ts, write.ts, grep.ts, find.ts, ls.ts, source.ts
+ * [SURFACE]: Tool registry, all tool creators and types
+ * [LOCUS]: Tool system public API; consumed by SDK and orchestrator
+ * [COVENANT]: Add new tool → update P2 core/CLAUDE.md member list
+ */
+
 export {
 	type BashOperations,
 	type BashSpawnContext,

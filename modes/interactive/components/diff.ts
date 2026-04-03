@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/diff.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import * as Diff from "diff";
 import { theme } from "../theme/theme.js";
 

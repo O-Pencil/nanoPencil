@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs, node:path, child_process, config, settings-manager
+ * [SURFACE]: getShellConfig(), getShellEnv(), killProcessTree(), shell utilities
+ * [LOCUS]: core/utils/shell.ts - shell detection and utilities
+ * [COVENANT]: Change shell utilities → update this header
+ */
 import { existsSync } from "node:fs";
 import { delimiter } from "node:path";
 import { spawn, spawnSync } from "child_process";

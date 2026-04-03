@@ -6,6 +6,12 @@
  * Key innovation: uses per-entry adaptive strength (not global half-life)
  * for Recency, implementing Ebbinghaus spaced repetition.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/scoring.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { Episode, InjectionLevel, MemoryEntry, WorkEntry } from "./types.js";
 import type { ProgressiveRecallConfig } from "./config.js";

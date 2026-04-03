@@ -1,9 +1,9 @@
 /**
- * MCP Configuration Management
- *
- * Manages MCP server configurations stored in ~/.nanopencil/agent/mcp.json
+ * [UPSTREAM]: Depends on node:fs, node:path, node:os, config, mcp-client
+ * [SURFACE]: MCPConfig, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers()
+ * [LOCUS]: core/mcp/mcp-config.ts - MCP server configuration management
+ * [COVENANT]: Change MCP config → update this header
  */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";

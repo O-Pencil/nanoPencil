@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on all component files
+ * [SURFACE]: UI component barrel exports
+ * [LOCUS]: modes/interactive/components/index.ts - component barrel
+ * [COVENANT]: Change components → update this header
+ */
 // UI Components for extensions
 export { ArminComponent } from "./armin.js";
 export { AssistantMessageComponent } from "./assistant-message.js";

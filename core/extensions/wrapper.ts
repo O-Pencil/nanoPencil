@@ -1,7 +1,9 @@
 /**
- * Tool wrappers for extensions.
+ * [UPSTREAM]: Depends on agent-core, extensions/runner, extensions/types
+ * [SURFACE]: wrapRegisteredTool()
+ * [LOCUS]: core/extensions/wrapper.ts - wraps RegisteredTool into AgentTool
+ * [COVENANT]: Change wrapper → update this header
  */
-
 import type { AgentTool, AgentToolUpdateCallback } from "@pencil-agent/agent-core";
 import type { ExtensionRunner } from "./runner.js";
 import type { RegisteredTool, ToolCallEventResult } from "./types.js";

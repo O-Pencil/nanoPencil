@@ -2,6 +2,12 @@
  * Agent loop that works with AgentMessage throughout.
  * Transforms to Message[] only at the LLM call boundary.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/agent-core/src/agent-loop.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import {
 	type AssistantMessage,

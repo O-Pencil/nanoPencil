@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: ResourceCollision, ResourceDiagnostic
+ * [LOCUS]: core/diagnostics.ts - resource collision and diagnostic types
+ * [COVENANT]: Change diagnostics → update this header
+ */
 export interface ResourceCollision {
 	resourceType: "extension" | "skill" | "prompt" | "theme";
 	name: string; // skill name, command/tool/flag name, prompt name, theme name

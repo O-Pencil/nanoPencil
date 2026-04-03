@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/theme/theme.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@pencil-agent/tui";

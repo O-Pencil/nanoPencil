@@ -1,10 +1,9 @@
 /**
- * ACP (Agent Client Protocol) mode: Headless operation with JSON-RPC 2.0.
- *
- * Used for integrating with ACP-compatible editors like Zed and JetBrains.
- * Communication via stdin/stdout using JSON-RPC 2.0 messages.
+ * [UPSTREAM]: Depends on @agentclientprotocol/sdk, agent-core, ai
+ * [SURFACE]: runAcpMode(), AcpMode class
+ * [LOCUS]: modes/acp/acp-mode.ts - ACP protocol integration
+ * [COVENANT]: Change ACP mode → update this header
  */
-
 import * as acp from "@agentclientprotocol/sdk";
 import type { AgentMessage, AgentTool } from "@pencil-agent/agent-core";
 import type { Model } from "@pencil-agent/ai";

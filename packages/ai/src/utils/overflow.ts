@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/utils/overflow.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { AssistantMessage } from "../types.js";
 
 /**

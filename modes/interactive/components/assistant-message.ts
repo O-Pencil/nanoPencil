@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/assistant-message.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { AssistantMessage } from "@pencil-agent/ai";
 import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";

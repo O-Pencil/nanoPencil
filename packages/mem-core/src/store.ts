@@ -3,6 +3,12 @@
  * [OUTPUT]: async JSON read/write with directory auto-creation
  * [POS]: Persistence layer — all other modules go through here
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/store.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";

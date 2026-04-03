@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/text.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { Component } from "../tui.js";
 import { applyBackgroundToLine, visibleWidth, wrapTextWithAnsi } from "../utils.js";
 

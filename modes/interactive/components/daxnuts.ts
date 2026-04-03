@@ -3,6 +3,12 @@
  *
  * A heartfelt tribute to dax (@thdxr) for providing free Kimi K2.5 access via OpenCode.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/daxnuts.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { Component, TUI } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";

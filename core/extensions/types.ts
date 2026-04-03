@@ -1,13 +1,9 @@
 /**
- * Extension system types.
- *
- * Extensions are TypeScript modules that can:
- * - Subscribe to agent lifecycle events
- * - Register LLM-callable tools
- * - Register commands, keyboard shortcuts, and CLI flags
- * - Interact with the user via UI primitives
+ * [UPSTREAM]: Depends on agent-core, ai, tui - all extension-related types
+ * [SURFACE]: All extension types: Extension, ExtensionContext, HookEvent types, ToolDefinition, etc.
+ * [LOCUS]: core/extensions/types.ts - type definitions for extension system API
+ * [COVENANT]: This is the API contract; change types → notify extension authors
  */
-
 import type {
 	AgentMessage,
 	AgentToolResult,

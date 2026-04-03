@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/google.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import {
 	type GenerateContentConfig,
 	type GenerateContentParameters,

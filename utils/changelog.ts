@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs
+ * [SURFACE]: ChangelogEntry, parseChangelog()
+ * [LOCUS]: utils/changelog.ts - changelog parsing
+ * [COVENANT]: Change changelog → update this header
+ */
 import { existsSync, readFileSync } from "fs";
 
 export interface ChangelogEntry {

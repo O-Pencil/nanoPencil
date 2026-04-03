@@ -1,5 +1,8 @@
 /**
- * Run modes for the coding agent.
+ * [UPSTREAM]: Depends on interactive/, print/, rpc/, acp/ modes
+ * [SURFACE]: Barrel exports for all run modes
+ * [LOCUS]: Mode selection entry point; consumed by main.ts
+ * [COVENANT]: Add new mode → update P2 modes/CLAUDE.md
  */
 
 export { InteractiveMode, type InteractiveModeOptions } from "./interactive/interactive-mode.js";

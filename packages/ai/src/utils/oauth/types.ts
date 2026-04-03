@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/utils/oauth/types.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { Api, Model } from "../../types.js";
 
 export type OAuthCredentials = {

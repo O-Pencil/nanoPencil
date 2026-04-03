@@ -1,6 +1,12 @@
 /**
  * One-time migrations that run on startup.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: ./migrations.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import chalk from "chalk";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";

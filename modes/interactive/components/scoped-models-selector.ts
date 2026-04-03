@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/scoped-models-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { Model } from "@pencil-agent/ai";
 import {
 	Container,

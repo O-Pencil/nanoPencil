@@ -4,6 +4,12 @@
  * 若 models.json 已存在，会合并默认模型（补充缺失并更新 contextWindow/maxTokens）。
  * 同时若 .PENCIL.md 不存在，会写入默认全局上下文文件，用户安装即可自带。
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: ./nanopencil-defaults.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";

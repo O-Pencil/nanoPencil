@@ -1,9 +1,9 @@
 /**
- * MCP Manager
- *
- * Manages MCP client lifecycle and tool integration.
+ * [UPSTREAM]: Depends on mcp/mcp-client, mcp/mcp-adapter, mcp/mcp-config, extensions
+ * [SURFACE]: MCPManager class
+ * [LOCUS]: core/mcp-manager.ts - MCP client lifecycle and tool integration
+ * [COVENANT]: Change MCP manager → update this header
  */
-
 import { MCPClient, type MCPServerConfig } from "./mcp/mcp-client.js";
 import { loadMCPTools } from "./mcp/mcp-adapter.js";
 import { listEnabledMCPServers } from "./mcp/mcp-config.js";

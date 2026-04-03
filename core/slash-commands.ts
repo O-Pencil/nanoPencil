@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: SlashCommandInfo, BuiltinSlashCommand, slashCommand definitions
+ * [LOCUS]: core/slash-commands.ts - slash command types and registry
+ * [COVENANT]: Change slash commands → update this header
+ */
 export type SlashCommandSource = "extension" | "prompt" | "skill";
 
 export type SlashCommandLocation = "user" | "project" | "path";

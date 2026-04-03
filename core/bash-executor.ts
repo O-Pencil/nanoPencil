@@ -1,11 +1,9 @@
 /**
- * Bash command execution with streaming support and cancellation.
- *
- * This module provides a unified bash execution implementation used by:
- * - AgentSession.executeBash() for interactive and RPC modes
- * - Direct calls from modes that need bash execution
+ * [UPSTREAM]: Depends on node:crypto, node:fs, node:os, node:path, child_process, strip-ansi, utils/shell
+ * [SURFACE]: executeBash(), executeBashWithOperations(), BashResult
+ * [LOCUS]: core/bash-executor.ts - unified bash execution with streaming
+ * [COVENANT]: Change bash execution → update this header
  */
-
 import { randomBytes } from "node:crypto";
 import { createWriteStream, type WriteStream } from "node:fs";
 import { tmpdir } from "node:os";

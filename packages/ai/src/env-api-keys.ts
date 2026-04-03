@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs, node:os, node:path (lazy loaded)
+ * [SURFACE]: Environment-based API key utilities
+ * [LOCUS]: packages/ai/src/env-api-keys.ts - environment variable key access
+ * [COVENANT]: Change key access → update this header
+ */
 // NEVER convert to top-level imports - breaks browser/Vite builds (web-ui)
 let _existsSync: typeof import("node:fs").existsSync | null = null;
 let _homedir: typeof import("node:os").homedir | null = null;

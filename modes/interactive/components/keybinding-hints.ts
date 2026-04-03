@@ -1,6 +1,12 @@
 /**
  * Utilities for formatting keybinding hints in the UI.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/keybinding-hints.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { type EditorAction, getEditorKeybindings, type KeyId } from "@pencil-agent/tui";
 import type { AppAction, KeybindingsManager } from "../../../core/keybindings.js";

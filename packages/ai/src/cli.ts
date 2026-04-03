@@ -1,5 +1,10 @@
 #!/usr/bin/env node
-
+/**
+ * [UPSTREAM]: Depends on node:fs, readline, oauth utils
+ * [SURFACE]: OAuth CLI tool for managing AI provider credentials
+ * [LOCUS]: packages/ai/src/cli.ts - AI package CLI
+ * [COVENANT]: Change CLI → update this header
+ */
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { createInterface } from "readline";
 import { getOAuthProvider, getOAuthProviders } from "./utils/oauth/index.js";

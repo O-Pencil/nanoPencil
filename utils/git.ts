@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on hosted-git-info
+ * [SURFACE]: GitSource, parseGitUrl(), isGitSource(), getGitCloneUrl()
+ * [LOCUS]: utils/git.ts - git URL parsing and utilities
+ * [COVENANT]: Change git utils → update this header
+ */
 import hostedGitInfo from "hosted-git-info";
 
 /**

@@ -16,6 +16,12 @@
  * Based on code from OpenTUI (https://github.com/anomalyco/opentui)
  * MIT License - Copyright (c) 2025 opentui
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/stdin-buffer.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { EventEmitter } from "events";
 

@@ -3,6 +3,12 @@
  * [OUTPUT]: NanomemConfig — memory dir, token budget, scoring weights, etc.
  * [POS]: Shared by engine and adapters; host products configure via this
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/config.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { homedir } from "node:os";
 import { join } from "node:path";

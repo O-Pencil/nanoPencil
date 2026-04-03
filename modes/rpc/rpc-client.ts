@@ -1,9 +1,9 @@
 /**
- * RPC Client for programmatic access to the coding agent.
- *
- * Spawns the agent in RPC mode and provides a typed API for all operations.
+ * [UPSTREAM]: Depends on child_process, readline, agent-core, ai, core/runtime, core/bash-executor, core/session/compaction
+ * [SURFACE]: RpcClient class, RpcClientOptions
+ * [LOCUS]: modes/rpc/rpc-client.ts - programmatic RPC client
+ * [COVENANT]: Change RPC client → update this header
  */
-
 import { type ChildProcess, spawn } from "node:child_process";
 import * as readline from "node:readline";
 import type { AgentEvent, AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";

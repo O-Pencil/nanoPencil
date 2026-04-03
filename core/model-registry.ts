@@ -1,7 +1,9 @@
 /**
- * Model registry - manages built-in and custom models, provides API key resolution.
+ * [UPSTREAM]: Depends on ai, typebox, config modules
+ * [SURFACE]: ModelRegistry class, model definitions, API key resolution
+ * [LOCUS]: core/model-registry.ts - model catalog and credential management
+ * [COVENANT]: Change registry structure → update P2 core/CLAUDE.md
  */
-
 import {
 	type Api,
 	type AssistantMessageEventStream,

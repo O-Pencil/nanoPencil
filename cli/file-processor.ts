@@ -1,7 +1,9 @@
 /**
- * Process @file CLI arguments into text content and image attachments
+ * [UPSTREAM]: Depends on node:fs/promises, ai, chalk, core/tools/path-utils, modes/utils
+ * [SURFACE]: ProcessedFiles, processFileArguments()
+ * [LOCUS]: cli/file-processor.ts - process @file CLI arguments into content
+ * [COVENANT]: Change file processing → update this header
  */
-
 import { access, readFile, stat } from "node:fs/promises";
 import type { ImageContent } from "@pencil-agent/ai";
 import chalk from "chalk";

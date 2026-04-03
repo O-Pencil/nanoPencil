@@ -5,6 +5,12 @@
  * into a single entry. Supports yank (paste most recent) and yank-pop
  * (cycle through older entries).
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/kill-ring.ts - 
+ * [COVENANT]: Change → update this header
+ */
 export class KillRing {
 	private ring: string[] = [];
 

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: LoopStatus, LoopDecisionStatus, LoopDecision, LoopTaskState
+ * [LOCUS]: extensions/defaults/loop/loop-types.ts - loop types
+ * [COVENANT]: Change types → update this header
+ */
 export type LoopStatus = "running" | "complete" | "blocked" | "stopped" | "failed";
 
 export type LoopDecisionStatus = "continue" | "complete" | "blocked";

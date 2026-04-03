@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/openai-responses-shared.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type OpenAI from "openai";
 import type {
 	Tool as OpenAITool,

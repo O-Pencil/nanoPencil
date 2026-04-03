@@ -3,6 +3,12 @@
  * [OUTPUT]: Standalone HTML report
  * [POS]: Pure renderer, no side effects
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/insights-html.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { PROMPTS } from "./i18n.js";
 import type { InsightsReport, MemoryEntry, PatternInsight, StruggleInsight } from "./types.js";

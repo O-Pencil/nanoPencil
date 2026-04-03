@@ -1,5 +1,8 @@
 /**
- * Extension system for lifecycle events and custom tools.
+ * [UPSTREAM]: Depends on loader.ts, runner.ts, types.ts, wrapper.ts
+ * [SURFACE]: Extension loading, lifecycle management, event types
+ * [LOCUS]: Extension system public API; consumed by SDK and extensions themselves
+ * [COVENANT]: Export changes → update P2 core/CLAUDE.md
  */
 
 export type { SlashCommandInfo, SlashCommandLocation, SlashCommandSource } from "../slash-commands.js";

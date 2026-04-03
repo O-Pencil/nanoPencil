@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/show-images-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
 import { getSelectListTheme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";

@@ -1,7 +1,9 @@
 /**
- * Shared command execution utilities for extensions and custom tools.
+ * [UPSTREAM]: Depends on child_process
+ * [SURFACE]: ExecOptions, exec()
+ * [LOCUS]: core/exec.ts - shared command execution utilities
+ * [COVENANT]: Change exec utilities → update this header
  */
-
 import { spawn } from "node:child_process";
 
 /**

@@ -6,6 +6,12 @@
  * This file is the ONLY module that depends on @pencil-agent/nano-pencil types.
  * For non-NanoPencil hosts, import from the package root instead.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/extension.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync, writeFileSync } from "node:fs";
 import { stat } from "node:fs/promises";

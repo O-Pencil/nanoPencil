@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on agent-core, ai, node:fs, node:crypto, config.ts
+ * [SURFACE]: SessionManager class, session persistence, branching, forking
+ * [LOCUS]: core/session/session-manager.ts - session state persistence to JSONL
+ * [COVENANT]: Change persistence format → update P2 core/CLAUDE.md
+ */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ImageContent, Message, TextContent } from "@pencil-agent/ai";
 import { randomUUID } from "crypto";

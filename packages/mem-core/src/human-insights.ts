@@ -3,6 +3,12 @@
  * [OUTPUT]: developer persona, evidence-backed insights, and root-cause analysis
  * [POS]: LLM-powered usage review generation
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/human-insights.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type {
 	DeveloperPersona,

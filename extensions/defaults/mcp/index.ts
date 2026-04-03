@@ -4,6 +4,12 @@
  * Provides MCP (Model Context Protocol) guidance resources.
  * Runtime MCP tool loading is handled by the AgentSession SDK.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/mcp/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";

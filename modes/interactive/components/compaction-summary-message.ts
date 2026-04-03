@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/compaction-summary-message.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
 import type { CompactionSummaryMessage } from "../../../core/messages.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";

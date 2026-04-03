@@ -2,6 +2,12 @@
  * link-world 扩展：执行 /link-world 时让 AI 读取同目录下的安装文档并按要求安装。
  * 安装后自动提供 internet-search Skill。
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/link-world/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

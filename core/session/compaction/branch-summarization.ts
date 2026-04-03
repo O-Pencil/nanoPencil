@@ -1,10 +1,9 @@
 /**
- * Branch summarization for tree navigation.
- *
- * When navigating to a different point in the session tree, this generates
- * a summary of the branch being left so context isn't lost.
+ * [UPSTREAM]: Depends on agent-core, ai, messages, utils, compaction types
+ * [SURFACE]: summarizeBranch()
+ * [LOCUS]: core/session/compaction/branch-summarization.ts - branch summarization
+ * [COVENANT]: Change branch summarization → update this header
  */
-
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { Model } from "@pencil-agent/ai";
 import { completeSimple } from "@pencil-agent/ai";

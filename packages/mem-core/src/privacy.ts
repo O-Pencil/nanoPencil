@@ -3,6 +3,12 @@
  * [OUTPUT]: sanitized text, scope-filtered entries, ttl-expired entries removed
  * [POS]: MemoryOps layer — scope isolation, TTL enforcement, PII filtering
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/privacy.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { daysSince } from "./scoring.js";
 import type { MemoryEntry, MemoryScope, WorkEntry } from "./types.js";

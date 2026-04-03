@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on yaml
+ * [SURFACE]: parseFrontmatter(), stripFrontmatter()
+ * [LOCUS]: utils/frontmatter.ts - YAML frontmatter parsing
+ * [COVENANT]: Change frontmatter → update this header
+ */
 import yaml from "yaml";
 
 type ParsedFrontmatter<T extends Record<string, unknown>> = {

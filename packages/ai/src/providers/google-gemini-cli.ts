@@ -3,6 +3,12 @@
  * Shared implementation for both google-gemini-cli and google-antigravity providers.
  * Uses the Cloud Code Assist API endpoint to access Gemini and Claude models.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/google-gemini-cli.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { Content, ThinkingConfig } from "@google/genai";
 import { calculateCost } from "../models.js";

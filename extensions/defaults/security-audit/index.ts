@@ -8,6 +8,12 @@
  *
  * [POS]: Entry point - composes all components and registers with extension system
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/security-audit/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";

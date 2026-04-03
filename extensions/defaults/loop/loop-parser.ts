@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/loop/loop-parser.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { ParsedLoopCommand } from "./loop-types.js";
 
 export function parseLoopCommand(input: string): ParsedLoopCommand {

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/keybindings.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { type KeyId, matchesKey } from "./keys.js";
 
 /**

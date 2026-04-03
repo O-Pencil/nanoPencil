@@ -9,6 +9,12 @@
  *
  * This is a DEFAULT extension - automatically loaded with NanoPencil unless disabled.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/soul/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";

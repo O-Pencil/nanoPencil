@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/session-selector-search.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { fuzzyMatch } from "@pencil-agent/tui";
 import type { SessionInfo } from "../../../core/session/session-manager.js";
 

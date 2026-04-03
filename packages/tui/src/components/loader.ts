@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/loader.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { TUI } from "../tui.js";
 import { Text } from "./text.js";
 

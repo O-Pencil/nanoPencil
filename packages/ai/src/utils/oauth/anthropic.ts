@@ -1,6 +1,12 @@
 /**
  * Anthropic OAuth flow (Claude Pro/Max)
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/utils/oauth/anthropic.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { generatePKCE } from "./pkce.js";
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "./types.js";

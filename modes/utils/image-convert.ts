@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on utils/photon
+ * [SURFACE]: convertToPng()
+ * [LOCUS]: modes/utils/image-convert.ts - image format conversion
+ * [COVENANT]: Change image convert → update this header
+ */
 import { loadPhoton } from "../../utils/photon.js";
 
 /**

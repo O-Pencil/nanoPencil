@@ -5,6 +5,12 @@
  * NOTE: This module uses Node.js http.createServer for the OAuth callback.
  * It is only intended for CLI use, not browser environments.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/utils/oauth/google-gemini-cli.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { Server } from "node:http";
 import { generatePKCE } from "./pkce.js";

@@ -1,9 +1,9 @@
 /**
- * [INPUT]: personaId（或无）
- * [OUTPUT]: activePersonaId / persona 目录下的关键路径
- * [POS]: Persona 管理层（只负责状态与路径解析，不负责注入/重载）
+ * [UPSTREAM]: Depends on node:fs, node:path, config
+ * [SURFACE]: PersonaManager class, persona state and path management
+ * [LOCUS]: core/persona/persona-manager.ts - persona management layer
+ * [COVENANT]: Change persona → update this header
  */
-
 import { existsSync, readdirSync, readFileSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { getAgentDir } from "../../config.js";

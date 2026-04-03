@@ -1,6 +1,12 @@
 /**
  * Simple text input component for extensions.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/extension-input.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";

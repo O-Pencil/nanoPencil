@@ -1,6 +1,12 @@
 /**
  * Loop extension: autonomous goal execution until the task is complete.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/loop/index.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions/types.js";

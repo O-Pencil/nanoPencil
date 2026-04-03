@@ -1,8 +1,9 @@
 /**
- * Shared diff computation utilities for the edit tool.
- * Used by both edit.ts (for execution) and tool-execution.ts (for preview rendering).
+ * [UPSTREAM]: Depends on diff, node:fs, path-utils
+ * [SURFACE]: detectLineEnding(), fuzzyFindText(), generateDiffString(), normalize functions
+ * [LOCUS]: core/tools/edit-diff.ts - shared diff computation for edit tool
+ * [COVENANT]: Change diff utilities → update this header
  */
-
 import * as Diff from "diff";
 import { constants } from "fs";
 import { access, readFile } from "fs/promises";

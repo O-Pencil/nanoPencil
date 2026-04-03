@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on child_process, clipboard-native, utils/photon
+ * [SURFACE]: ClipboardImage, readClipboardImage(), isWaylandSession()
+ * [LOCUS]: modes/utils/clipboard-image.ts - clipboard image operations
+ * [COVENANT]: Change clipboard image → update this header
+ */
 import { spawnSync } from "child_process";
 
 import { clipboard } from "./clipboard-native.js";

@@ -3,6 +3,12 @@
  * [OUTPUT]: FullInsightsReport — stats, charts, narrative (LLM or rule fallback)
  * [POS]: Aggregation + optional LLM for full insights report
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/full-insights.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { PROMPTS } from "./i18n.js";
 import type {

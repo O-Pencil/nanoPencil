@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/tui/src/components/editor.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete.js";
 import { getEditorKeybindings } from "../keybindings.js";
 import { matchesKey } from "../keys.js";

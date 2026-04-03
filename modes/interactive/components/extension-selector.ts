@@ -2,6 +2,12 @@
  * Generic selector component for extensions.
  * Displays a list of string options with keyboard navigation.
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/extension-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { Container, type Focusable, getEditorKeybindings, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:events
+ * [SURFACE]: EventBus, EventBusController, createEventBus()
+ * [LOCUS]: core/runtime/event-bus.ts - typed event emission system
+ * [COVENANT]: Change event bus → update this header
+ */
 import { EventEmitter } from "node:events";
 
 export interface EventBus {

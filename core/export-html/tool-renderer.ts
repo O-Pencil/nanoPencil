@@ -1,10 +1,9 @@
 /**
- * Tool HTML renderer for custom tools in HTML export.
- *
- * Renders custom tool calls and results to HTML by invoking their TUI renderers
- * and converting the ANSI output to HTML.
+ * [UPSTREAM]: Depends on ai, modes/theme, extensions, export-html/ansi-to-html
+ * [SURFACE]: ToolHtmlRendererDeps, renderToolToHtml()
+ * [LOCUS]: core/export-html/tool-renderer.ts - renders tools to HTML
+ * [COVENANT]: Change tool renderer → update this header
  */
-
 import type { ImageContent, TextContent } from "@pencil-agent/ai";
 import type { Theme } from "../../modes/interactive/theme/theme.js";
 import type { ToolDefinition } from "../extensions/types.js";

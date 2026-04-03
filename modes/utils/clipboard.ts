@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on child_process, os, clipboard-image
+ * [SURFACE]: copyToClipboard(), readFromClipboard()
+ * [LOCUS]: modes/utils/clipboard.ts - cross-platform clipboard operations
+ * [COVENANT]: Change clipboard → update this header
+ */
 import { execSync, spawn } from "child_process";
 import { platform } from "os";
 import { isWaylandSession } from "./clipboard-image.js";

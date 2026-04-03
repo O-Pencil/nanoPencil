@@ -14,6 +14,12 @@
  * - Simplify: 代码简化扩展（extensions/optional/simplify/）
  * - export-html: HTML 导出扩展（extensions/optional/export-html/）
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: ./builtin-extensions.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";

@@ -3,6 +3,12 @@
  * [OUTPUT]: All core data types for NanoMem
  * [POS]: Foundation layer — every other module imports from here
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/types.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 /** Pluggable LLM function: system prompt + user message → raw text response */
 export type LlmFn = (systemPrompt: string, userMessage: string) => Promise<string>;

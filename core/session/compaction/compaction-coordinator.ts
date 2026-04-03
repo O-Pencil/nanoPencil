@@ -1,10 +1,9 @@
 /**
- * Compaction Coordinator
- *
- * Encapsulates compaction trigger logic, execution, and result handling.
- * This coordinator manages context compression for token budget management.
+ * [UPSTREAM]: Depends on agent-core, compaction/index
+ * [SURFACE]: CompactionCoordinatorOptions, CompactionCoordinator class
+ * [LOCUS]: core/session/compaction/compaction-coordinator.ts - compaction coordination
+ * [COVENANT]: Change coordinator → update this header
  */
-
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { CompactionPreparation, CompactionResult } from "./index.js";
 

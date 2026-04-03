@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/oauth-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import { getOAuthProviders, type OAuthProviderInterface } from "@pencil-agent/ai";
 import { Container, getEditorKeybindings, Spacer, TruncatedText } from "@pencil-agent/tui";
 import type { AuthStorage } from "../../../core/config/auth-storage.js";

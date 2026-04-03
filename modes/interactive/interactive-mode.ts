@@ -1,8 +1,9 @@
 /**
- * Interactive mode for the coding agent.
- * Handles TUI rendering and user interaction, delegating business logic to AgentSession.
+ * [UPSTREAM]: Depends on agent-core, ai, tui, core/* (session, model, config, tools)
+ * [SURFACE]: InteractiveMode class, runInteractiveMode()
+ * [LOCUS]: modes/interactive/interactive-mode.ts - TUI orchestration hub
+ * [COVENANT]: Change TUI behavior → update P2 modes/CLAUDE.md
  */
-
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs, node:path, chalk, extensions/loader, theme, diagnostics
+ * [SURFACE]: DefaultResourceLoader, ResourceLoader, ResourceDiagnostic
+ * [LOCUS]: core/config/resource-loader.ts - discovers and loads extensions, skills, themes
+ * [COVENANT]: Change resource loading → update P2 core/CLAUDE.md
+ */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";

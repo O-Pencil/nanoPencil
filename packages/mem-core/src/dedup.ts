@@ -3,6 +3,12 @@
  * [OUTPUT]: Deduplicated arrays with merged relatedIds
  * [POS]: Batch dedup for CLI and cross-entry merge logic
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/mem-core/src/dedup.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 import { tagOverlap } from "./scoring.js";
 import type { MemoryEntry, WorkEntry } from "./types.js";

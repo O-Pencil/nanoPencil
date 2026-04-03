@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": ".",
@@ -20,6 +20,7 @@
       "nanosoul": ["./packages/nanosoul/src"],
       "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
     },
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "*.ts",

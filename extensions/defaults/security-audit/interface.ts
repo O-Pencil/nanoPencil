@@ -6,6 +6,12 @@
  *
  * [POS]: Interface layer - defines contract for pluggable security engines
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: extensions/defaults/security-audit/interface.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 /**
  * Security check result levels

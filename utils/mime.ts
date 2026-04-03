@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs/promises, file-type
+ * [SURFACE]: detectSupportedImageMimeTypeFromFile(), isImageMimeType()
+ * [LOCUS]: utils/mime.ts - MIME type detection for images
+ * [COVENANT]: Change mime detection → update this header
+ */
 import { open } from "node:fs/promises";
 import { fileTypeFromBuffer } from "file-type";
 

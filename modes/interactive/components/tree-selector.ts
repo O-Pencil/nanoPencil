@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/tree-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import {
 	type Component,
 	Container,

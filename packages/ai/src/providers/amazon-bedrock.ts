@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/ai/src/providers/amazon-bedrock.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import {
 	BedrockRuntimeClient,
 	type BedrockRuntimeClientConfig,

@@ -3,6 +3,12 @@
  * [OUTPUT]: All core data types for Soul engine
  * [POS]: Foundation layer - every other module imports from here
  */
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: packages/soul-core/src/types.ts - 
+ * [COVENANT]: Change → update this header
+ */
 
 /**
  * Personality dimensions based on Big Five + NanoPencil-specific traits

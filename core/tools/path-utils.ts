@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on node:fs, node:os, node:path
+ * [SURFACE]: resolveReadPath(), resolveToCwd(), path utilities
+ * [LOCUS]: core/tools/path-utils.ts - path manipulation utilities for tools
+ * [COVENANT]: Change path utilities → update this header
+ */
 import { accessSync, constants } from "node:fs";
 import * as os from "node:os";
 import { isAbsolute, resolve as resolvePath } from "node:path";

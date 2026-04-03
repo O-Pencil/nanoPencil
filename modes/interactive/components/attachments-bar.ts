@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/attachments-bar.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import * as path from "node:path";
 import { Container, Spacer, Text, type Component } from "@pencil-agent/tui";
 import type { Theme } from "../theme/theme.js";

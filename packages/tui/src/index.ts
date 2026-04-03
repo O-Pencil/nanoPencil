@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on all tui components
+ * [SURFACE]: TUI barrel exports
+ * [LOCUS]: packages/tui/src/index.ts - TUI package entry point
+ * [COVENANT]: Change exports → update package.json exports
+ */
 // Core TUI interfaces and classes
 
 // Autocomplete support

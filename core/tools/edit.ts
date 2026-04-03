@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on agent-core, node:fs, edit-diff.ts, path-utils.ts
+ * [SURFACE]: EditTool, editTool, createEditTool, EditToolInput, EditOperations
+ * [LOCUS]: core/tools/edit.ts - filesystem mutation via diff application; consumed by orchestrator
+ * [COVENANT]: Change edit behavior → update core/CLAUDE.md member list
+ */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { constants } from "fs";

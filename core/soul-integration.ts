@@ -1,9 +1,9 @@
 /**
- * [INPUT]: SoulOptions
- * [OUTPUT]: Configured SoulManager with NanoPencil defaults
- * [POS]: Integration layer - bridges Soul and NanoPencil
+ * [UPSTREAM]: Depends on runtime/sdk, node:path, node:fs, node:url, node:os, node:module
+ * [SURFACE]: isSoulEnabled(), toSoulContext(), createSoulManager()
+ * [LOCUS]: core/soul-integration.ts - bridges Soul and NanoPencil
+ * [COVENANT]: Change soul integration → update this header
  */
-
 import type { CreateAgentSessionOptions } from "./runtime/sdk.js";
 import { join, resolve } from "node:path";
 import { getAgentDir } from "../config.js";

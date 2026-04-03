@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: ImageProtocol, TerminalCapabilities, CellDimensions, ImageDimensions, ImageLayout
+ * [LOCUS]: packages/tui/src/terminal-image.ts - terminal image protocol support
+ * [COVENANT]: Change image protocol → update this header
+ */
 export type ImageProtocol = "kitty" | "iterm2" | null;
 
 export interface TerminalCapabilities {

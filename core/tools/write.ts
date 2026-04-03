@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: Depends on agent-core, node:fs/promises, path-utils.ts
+ * [SURFACE]: WriteTool, writeTool, createWriteTool, WriteToolInput
+ * [LOCUS]: core/tools/write.ts - filesystem creation/overwrite; consumed by orchestrator
+ * [COVENANT]: Change write behavior → update core/CLAUDE.md member list
+ */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { mkdir as fsMkdir, writeFile as fsWriteFile } from "fs/promises";

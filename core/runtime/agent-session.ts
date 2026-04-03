@@ -1,18 +1,17 @@
 /**
- * AgentSession - Core abstraction for agent lifecycle and session management.
- *
- * This class is shared between all run modes (interactive, print, rpc).
- * It encapsulates:
- * - Agent state access
- * - Event subscription with automatic session persistence
- * - Model and thinking level management
- * - Compaction (manual and auto)
+ * [UPSTREAM]: Depends on agent-core, ai, core/tools/*, core/session/*, core/config/*
+ * [SURFACE]: AgentSession class, session lifecycle, event emission
+ * [LOCUS]: Central runtime hub; all modes delegate to this class
+ * [COVENANT]: This is the most critical file; any change requires doc verification
+ * 
+ * Handles:
+ * - Agent state and message loop
+ * - Session persistence
+ * - Model/thinking level switching
+ * - Compaction coordination
  * - Bash execution
- * - Session switching and branching
- *
- * Modes use this class and add their own I/O layer on top.
+ * - Session branching
  */
-
 import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type {

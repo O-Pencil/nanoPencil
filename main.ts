@@ -1,8 +1,8 @@
 /**
- * Main entry point for the coding agent CLI.
- *
- * This file handles CLI argument parsing and translates them into
- * createAgentSession() options. The SDK does the heavy lifting.
+ * [UPSTREAM]: Depends on cli/*, core/*, modes/*, packages/*, config.ts
+ * [SURFACE]: Main CLI handler, orchestrates SDK initialization and mode dispatch
+ * [LOCUS]: CLI layer; parses args → CreateAgentSessionOptions → mode selection
+ * [COVENANT]: Change CLI options → update this file and AGENTS.md
  */
 
 import { type ImageContent, modelsAreEqual, supportsXhigh } from "@pencil-agent/ai";

@@ -1,3 +1,9 @@
+/**
+ * [UPSTREAM]: 
+ * [SURFACE]: 
+ * [LOCUS]: modes/interactive/components/thinking-selector.ts - 
+ * [COVENANT]: Change → update this header
+ */
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
 import { getSelectListTheme } from "../theme/theme.js";

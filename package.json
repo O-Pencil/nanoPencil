@@ -46,6 +46,13 @@
     "dashscope"
   ],
   "license": "GPL-3.0",
+  "workspaces": [
+    "packages/agent-core",
+    "packages/ai",
+    "packages/tui",
+    "packages/mem-core",
+    "packages/soul-core"
+  ],
   "engines": {
     "node": ">=20"
   },

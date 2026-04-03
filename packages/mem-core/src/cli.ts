@@ -22,10 +22,12 @@ async function main(): Promise<void> {
 Usage:
   nanomem stats              Show memory counts (sessions, knowledge, lessons, preferences, work, episodes, facets)
   nanomem search <query>     Search memories by query text
+  nanomem search-v2 <query>  Semantic search across V2 episode/facet/procedure memory
   nanomem forget <id>        Remove a memory entry by ID
   nanomem dedup              Deduplicate all memories (merge similar entries, keep best)
   nanomem export             Export all memories as JSON to stdout
   nanomem export-v2          Export NanoMem v2 episodic bridge data as JSON to stdout
+  nanomem sync-v2-embeddings Sync the V2 embedding index
   nanomem insights [--output <path>]   Generate full HTML insights report (default: ./nanomem-insights.html)
   nanomem insights --simple [--output <path>]   Generate simple insights report (rules-only, no LLM)
   nanomem help               Show this help
@@ -43,8 +45,12 @@ Usage:
 		console.log(`Episodes: ${s.episodes}`);
 		console.log(`V2 Episodes: ${v2.episodes}`);
 		console.log(`V2 Episode Facets: ${v2.facets}`);
+		console.log(`V2 Semantic: ${v2.semantic}`);
 		console.log(`V2 Procedures: ${v2.procedural}`);
 		console.log(`V2 Links: ${v2.links}`);
+		console.log(`V2 Embeddings: ${v2.embeddings}`);
+		if (v2.lastEmbeddingSyncAt) console.log(`V2 Last Embedding Sync: ${v2.lastEmbeddingSyncAt}`);
+		if (v2.lastReconsolidationAt) console.log(`V2 Last Reconsolidation: ${v2.lastReconsolidationAt}`);
 		return;
 	}
 
@@ -57,6 +63,23 @@ Usage:
 		}
 		for (const e of results) {
 			console.log(`[${e.type}] ${e.id} — ${(e.summary || e.detail || e.content || "").slice(0, 100)}`);
+		}
+		return;
+	}
+
+	if (sub === "search-v2") {
+		const query = args.slice(1).join(" ").trim();
+		if (!query) {
+			console.error("Usage: nanomem search-v2 <query>");
+			process.exit(1);
+		}
+		const results = await engine.searchV2Memories(query);
+		if (!results.length) {
+			console.log("No matching V2 memories.");
+			return;
+		}
+		for (const item of results) {
+			console.log(`[${item.kind}] ${item.id} (${item.score.toFixed(3)}) — ${item.title}: ${item.summary.slice(0, 120)}`);
 		}
 		return;
 	}
@@ -96,6 +119,16 @@ Usage:
 	if (sub === "export-v2") {
 		const data = await engine.exportAllV2();
 		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
+	if (sub === "sync-v2-embeddings") {
+		const count = await engine.syncV2Embeddings();
+		if (count === 0) {
+			console.log("No embeddings synced. Embeddings are currently disabled.");
+			return;
+		}
+		console.log(`Synced V2 embeddings for ${count} items.`);
 		return;
 	}
 

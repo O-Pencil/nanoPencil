@@ -74,6 +74,20 @@ export interface EmbeddingRef {
 	vectorId: string;
 }
 
+export type EmbeddingFn = (texts: string[]) => Promise<number[][]>;
+
+export interface EmbeddingIndexRecord {
+	id: string;
+	memoryId: string;
+	memoryKind: "episode" | "facet" | "semantic" | "procedural";
+	model: string;
+	dim: number;
+	checksum: string;
+	text: string;
+	vector: number[];
+	updatedAt: string;
+}
+
 export interface EvidenceRef {
 	id: string;
 	sourceType: EvidenceSourceType;

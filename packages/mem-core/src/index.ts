@@ -6,16 +6,28 @@
  */
 
 
-export type { NanomemConfig, ProgressiveRecallConfig } from "./config.js";
+export type { EmbeddingConfig, NanomemConfig, ProgressiveRecallConfig } from "./config.js";
 export { getConfig } from "./config.js";
 export { NanoMemEngine } from "./engine.js";
+export { createHashedEmbeddingFn } from "./hash-embedding.js";
 export type { PromptSet } from "./i18n.js";
 export { PROMPTS } from "./i18n.js";
 export { renderInsightsHtml } from "./insights-html.js";
 export { renderFullInsightsHtml } from "./full-insights-html.js";
+export {
+	checksumText,
+	cosineSimilarity,
+	getEmbeddingIndexPath,
+	loadEmbeddingIndex,
+	queryEmbeddingIndex,
+	saveEmbeddingIndex,
+	syncEmbeddingIndex,
+} from "./embedding-index.js";
+export { consolidateV2Memories } from "./consolidate-v2.js";
 export { getGraphNeighborhoodBySeeds, getRelatedSummaries, linkNewEntry, reinforceRelations } from "./linking.js";
 export { evictExpiredEntries, evictExpiredWork, filterByScope, filterPII, matchesScope } from "./privacy.js";
 export { compileProcedureFromEpisode } from "./procedural-v2.js";
+export { reconsolidateV2Memories } from "./reconsolidate-v2.js";
 export {
 	getV2Paths,
 	loadV2Episodes,
@@ -77,6 +89,8 @@ export type {
 export type {
 	AbstractionLevel,
 	BaseMemoryV2,
+	EmbeddingFn,
+	EmbeddingIndexRecord,
 	EmbeddingRef,
 	EpisodeFacet,
 	EpisodeMemory,

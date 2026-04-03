@@ -1,14 +1,10 @@
 /**
- * [INPUT]: process.env, optional overrides
- * [OUTPUT]: NanomemConfig — memory dir, token budget, scoring weights, etc.
- * [POS]: Shared by engine and adapters; host products configure via this
+ * [UPSTREAM]: Depends on node:os, node:path, ./types.js
+ * [SURFACE]: ProgressiveRecallConfig, NanomemConfig, getConfig, BudgetConfig, ScoreWeights
+ * [LOCUS]: packages/mem-core/src/config.ts - configuration management for memory system
+ * [COVENANT]: Change config structure → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/config.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -27,6 +23,13 @@ export interface ProgressiveRecallConfig {
 	forceRecentHours: number;
 	/** Force entries with importance >= this value to Active tier */
 	forceImportanceMin: number;
+}
+
+export interface EmbeddingConfig {
+	enabled: boolean;
+	model: string;
+	dim: number;
+	autoSync: boolean;
 }
 
 export interface NanomemConfig {
@@ -50,6 +53,8 @@ export interface NanomemConfig {
 	progressiveRecall: ProgressiveRecallConfig;
 	/** Default forgetting windows for less important memories */
 	forgetting: { ambientTtlDays: number; workTtlDays: number };
+	/** Embedding configuration for semantic episodic/procedural recall */
+	embeddings: EmbeddingConfig;
 }
 
 const DEFAULT_BUDGET = {
@@ -90,11 +95,20 @@ const DEFAULT_FORGETTING = {
 	ambientTtlDays: 45,
 	workTtlDays: 21,
 } as const;
+const DEFAULT_EMBEDDINGS: EmbeddingConfig = {
+	enabled: true,
+	model: "local-hash-v1",
+	dim: 256,
+	autoSync: true,
+};
 
 export function getConfig(overrides?: Partial<NanomemConfig>): NanomemConfig {
 	const tokenBudget = Number(process.env.NANOMEM_TOKEN_BUDGET) || 6000;
 	const memoryDir = process.env.NANOMEM_MEMORY_DIR || overrides?.memoryDir || join(homedir(), ".nanomem", "memory");
 	const locale = (process.env.NANOMEM_LOCALE as "en" | "zh") || overrides?.locale || "en";
+	const embeddingsEnabled = process.env.NANOMEM_EMBEDDINGS_ENABLED;
+	const embeddingsDim = Number(process.env.NANOMEM_EMBEDDINGS_DIM) || DEFAULT_EMBEDDINGS.dim;
+	const embeddingsModel = process.env.NANOMEM_EMBEDDINGS_MODEL || DEFAULT_EMBEDDINGS.model;
 	return {
 		memoryDir,
 		tokenBudget: overrides?.tokenBudget ?? tokenBudget,
@@ -109,5 +123,13 @@ export function getConfig(overrides?: Partial<NanomemConfig>): NanomemConfig {
 		strengthGrowthFactor: overrides?.strengthGrowthFactor ?? 1.5,
 		progressiveRecall: overrides?.progressiveRecall ?? { ...DEFAULT_PROGRESSIVE_RECALL },
 		forgetting: overrides?.forgetting ?? { ...DEFAULT_FORGETTING },
+		embeddings:
+			overrides?.embeddings ??
+			{
+				enabled: embeddingsEnabled ? embeddingsEnabled.toLowerCase() !== "false" : DEFAULT_EMBEDDINGS.enabled,
+				model: embeddingsModel,
+				dim: embeddingsDim,
+				autoSync: DEFAULT_EMBEDDINGS.autoSync,
+			},
 	};
 }

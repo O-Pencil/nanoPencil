@@ -9,8 +9,16 @@
 import { join } from "node:path";
 import { getConfig, type NanomemConfig } from "./config.js";
 import { consolidateEpisodes } from "./consolidation.js";
+import { consolidateV2Memories } from "./consolidate-v2.js";
+import {
+	queryEmbeddingIndex,
+	syncEmbeddingIndex,
+	type EmbeddingSourceItem,
+	loadEmbeddingIndex,
+} from "./embedding-index.js";
 import { utilityEntry, utilityWork } from "./eviction.js";
 import { extractMemories, extractWork } from "./extraction.js";
+import { createHashedEmbeddingFn } from "./hash-embedding.js";
 import type { PromptSet } from "./i18n.js";
 import { PROMPTS } from "./i18n.js";
 import {
@@ -35,6 +43,7 @@ import {
 import { deduplicateMemoryEntries, deduplicateWorkEntries } from "./dedup.js";
 import { buildFullInsightsReport } from "./full-insights.js";
 import { generateHumanInsights } from "./human-insights.js";
+import { reconsolidateV2Memories } from "./reconsolidate-v2.js";
 import type {
 	DeveloperPersona,
 	Episode,
@@ -59,20 +68,23 @@ import {
 	loadV2Links,
 	loadV2Meta,
 	loadV2Procedural,
+	loadV2Semantic,
 	saveV2Episodes,
 	saveV2Facets,
 	saveV2Links,
 	saveV2Meta,
 	saveV2Procedural,
+	saveV2Semantic,
 	type NanoMemV2Paths,
 } from "./store-v2.js";
 import { compileProcedureFromEpisode } from "./procedural-v2.js";
-import type { EpisodeFacet, EpisodeMemory, FacetKind, MemoryLink, ProceduralMemory } from "./types-v2.js";
+import type { EmbeddingFn, EpisodeFacet, EpisodeMemory, FacetKind, MemoryLink, ProceduralMemory, SemanticMemory } from "./types-v2.js";
 import { applyExtraction, checkConsolidationEntry, checkWorkDuplicate } from "./update.js";
 
 export class NanoMemEngine {
 	readonly cfg: NanomemConfig;
 	private llmFn?: LlmFn;
+	private embeddingFn?: EmbeddingFn;
 
 	private knowledgePath: string;
 	private lessonsPath: string;
@@ -87,6 +99,9 @@ export class NanoMemEngine {
 	constructor(overrides?: Partial<NanomemConfig>, llmFn?: LlmFn) {
 		this.cfg = getConfig(overrides);
 		this.llmFn = llmFn;
+		if (this.cfg.embeddings.enabled) {
+			this.embeddingFn = createHashedEmbeddingFn(this.cfg.embeddings.dim);
+		}
 		this.knowledgePath = join(this.cfg.memoryDir, "knowledge.json");
 		this.lessonsPath = join(this.cfg.memoryDir, "lessons.json");
 		this.eventsPath = join(this.cfg.memoryDir, "events.json");
@@ -100,6 +115,10 @@ export class NanoMemEngine {
 
 	setLlmFn(fn: LlmFn): void {
 		this.llmFn = fn;
+	}
+
+	setEmbeddingFn(fn: EmbeddingFn): void {
+		this.embeddingFn = fn;
 	}
 
 	// ─── Extraction ──────────────────────────────────────────────
@@ -201,16 +220,78 @@ export class NanoMemEngine {
 	async getV2Snapshot(): Promise<{
 		episodes: EpisodeMemory[];
 		facets: EpisodeFacet[];
+		semantic: import("./types-v2.js").SemanticMemory[];
 		procedural: ProceduralMemory[];
 		links: MemoryLink[];
 	}> {
-		const [episodes, facets, procedural, links] = await Promise.all([
+		const [episodes, facets, semantic, procedural, links] = await Promise.all([
 			loadV2Episodes(this.v2Paths),
 			loadV2Facets(this.v2Paths),
+			loadV2Semantic(this.v2Paths),
 			loadV2Procedural(this.v2Paths),
 			loadV2Links(this.v2Paths),
 		]);
-		return { episodes, facets, procedural, links };
+		return { episodes, facets, semantic, procedural, links };
+	}
+
+	async searchV2Memories(
+		query: string,
+		limit = 10,
+		scope?: MemoryScope,
+	): Promise<Array<{ kind: "episode" | "facet" | "semantic" | "procedural"; id: string; title: string; summary: string; score: number }>> {
+		const snapshot = await this.getV2Snapshot();
+		const project = (scope as { project?: string } | undefined)?.project ?? "";
+		const episodes = this.filterAndCleanV2Episodes(snapshot.episodes, project, scope);
+		const facets = this.filterAndCleanV2Facets(snapshot.facets, project, scope);
+		const semantic = this.filterAndCleanV2Semantic(snapshot.semantic, project, scope);
+		const procedural = this.filterAndCleanProcedural(snapshot.procedural, project, scope);
+		const matches = await this.querySemanticCandidates(query, project, scope, episodes, facets, semantic, procedural);
+		const episodeById = new Map(episodes.map((entry) => [entry.id, entry]));
+		const facetById = new Map(facets.map((entry) => [entry.id, entry]));
+		const semanticById = new Map(semantic.map((entry) => [entry.id, entry]));
+		const proceduralById = new Map(procedural.map((entry) => [entry.id, entry]));
+		const results: Array<{ kind: "episode" | "facet" | "semantic" | "procedural"; id: string; title: string; summary: string; score: number }> = [];
+		for (const match of matches.slice(0, limit)) {
+			if (match.memoryKind === "episode") {
+				const entry = episodeById.get(match.memoryId);
+				if (entry) {
+					results.push({ kind: "episode", id: entry.id, title: entry.title || "Episode", summary: entry.summary, score: match.score });
+				}
+				continue;
+			}
+			if (match.memoryKind === "facet") {
+				const entry = facetById.get(match.memoryId);
+				if (entry) {
+					results.push({ kind: "facet", id: entry.id, title: entry.searchText, summary: entry.summary || entry.anchorText || "", score: match.score });
+				}
+				continue;
+			}
+			if (match.memoryKind === "semantic") {
+				const entry = semanticById.get(match.memoryId);
+				if (entry) {
+					results.push({ kind: "semantic", id: entry.id, title: entry.name, summary: entry.summary, score: match.score });
+				}
+				continue;
+			}
+			const entry = proceduralById.get(match.memoryId);
+			if (entry) {
+				results.push({ kind: "procedural", id: entry.id, title: entry.name, summary: entry.summary, score: match.score });
+			}
+		}
+		return results;
+	}
+
+	async syncV2Embeddings(model = this.cfg.embeddings.model): Promise<number> {
+		if (!this.embeddingFn) return 0;
+		const snapshot = await this.getV2Snapshot();
+		const items = this.buildEmbeddingSourceItems(snapshot.episodes, snapshot.facets, snapshot.semantic, snapshot.procedural);
+		await syncEmbeddingIndex(this.cfg.memoryDir, model, items, this.embeddingFn);
+		const meta = await loadV2Meta(this.v2Paths);
+		await saveV2Meta(this.v2Paths, {
+			...meta,
+			lastEmbeddingSyncAt: new Date().toISOString(),
+		});
+		return items.length;
 	}
 
 	async consolidate(): Promise<MemoryEntry[]> {
@@ -243,6 +324,14 @@ export class NanoMemEngine {
 		const knowledge = await loadEntries(this.knowledgePath);
 		const lessons = await loadEntries(this.lessonsPath);
 		const events = await loadEntries(this.eventsPath);
+		const [v2Episodes, v2Facets, v2Procedural, v2Semantic] = await Promise.all([
+			loadV2Episodes(this.v2Paths),
+			loadV2Facets(this.v2Paths),
+			loadV2Procedural(this.v2Paths),
+			loadV2Semantic(this.v2Paths),
+		]);
+		const v2Consolidated = consolidateV2Memories(v2Episodes, v2Facets, v2Procedural, this.cfg);
+		newEntries = [...newEntries, ...v2Consolidated.entries];
 		const allExisting = [...knowledge, ...lessons, ...events];
 
 		let added = 0;
@@ -291,6 +380,23 @@ export class NanoMemEngine {
 			saveEntries(this.eventsPath, events, this.cfg.maxEntries.events, (e) => utilityEntry(e, hl, ew)),
 		]);
 
+		const nextSemantic = [...v2Semantic];
+		for (const item of v2Consolidated.semantic) {
+			if (!nextSemantic.some((existing) => tagOverlap(existing.tags, item.tags) >= 0.8 && existing.semanticType === item.semanticType)) {
+				nextSemantic.push(item);
+			}
+		}
+		for (const episode of v2Episodes) {
+			const derived = v2Consolidated.episodeSemanticMap.get(episode.id);
+			if (!derived?.length) continue;
+			episode.derivedSemanticIds = [...new Set([...(episode.derivedSemanticIds ?? []), ...derived])];
+			episode.consolidatedAt = episode.consolidatedAt ?? new Date().toISOString();
+		}
+		await Promise.all([
+			saveV2Episodes(this.v2Paths, v2Episodes),
+			saveV2Semantic(this.v2Paths, nextSemantic),
+		]);
+
 		for (const ep of episodes) {
 			if (ep.consolidated) await persistEpisode(this.episodesDir, ep);
 		}
@@ -308,7 +414,7 @@ export class NanoMemEngine {
 	// ─── Retrieval & Injection (Progressive Recall) ────────────
 
 	async getMemoryInjection(project: string, contextTags: string[], scope?: MemoryScope): Promise<string> {
-		const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork, allV2Episodes, allV2EpisodeFacets, allProcedural] = await Promise.all([
+		const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork, allV2Episodes, allV2EpisodeFacets, allV2Semantic, allProcedural] = await Promise.all([
 			loadEntries(this.knowledgePath),
 			loadEntries(this.lessonsPath),
 			loadEntries(this.eventsPath),
@@ -318,6 +424,7 @@ export class NanoMemEngine {
 			loadWork(this.workPath),
 			loadV2Episodes(this.v2Paths),
 			loadV2Facets(this.v2Paths),
+			loadV2Semantic(this.v2Paths),
 			loadV2Procedural(this.v2Paths),
 		]);
 
@@ -330,12 +437,35 @@ export class NanoMemEngine {
 		const episodes = filterByScope(allEpisodes, scope);
 		const v2Episodes = this.filterAndCleanV2Episodes(allV2Episodes, project, scope);
 		const v2EpisodeFacets = this.filterAndCleanV2Facets(allV2EpisodeFacets, project, scope);
+		const v2Semantic = this.filterAndCleanV2Semantic(allV2Semantic, project, scope);
 		const procedural = this.filterAndCleanProcedural(allProcedural, project, scope);
 
 		const hl = this.cfg.halfLife;
 		const sw = this.cfg.scoreWeights;
 		const pr = this.cfg.progressiveRecall;
 		const p = PROMPTS[this.cfg.locale] ?? PROMPTS.en;
+		const semanticQuery = [project, ...contextTags].join(" ").trim();
+		const semanticCandidates = await this.querySemanticCandidates(
+			semanticQuery,
+			project,
+			scope,
+			v2Episodes,
+			v2EpisodeFacets,
+			v2Semantic,
+			procedural,
+		);
+		const semanticEpisodeIds = new Set(
+			semanticCandidates.filter((item) => item.memoryKind === "episode").map((item) => item.memoryId),
+		);
+		const semanticFacetIds = new Set(
+			semanticCandidates.filter((item) => item.memoryKind === "facet").map((item) => item.memoryId),
+		);
+		const semanticProcedureIds = new Set(
+			semanticCandidates.filter((item) => item.memoryKind === "procedural").map((item) => item.memoryId),
+		);
+		const semanticV2SemanticIds = new Set(
+			semanticCandidates.filter((item) => item.memoryKind === "semantic").map((item) => item.memoryId),
+		);
 
 		// Tier all MemoryEntry categories
 		const tieredKnowledge = tierEntries(knowledge, project, contextTags, hl, sw, pr);
@@ -366,8 +496,12 @@ export class NanoMemEngine {
 		const episodeCueLen = (item: EpisodeMemory) => (item.title?.length || 0) + item.summary.length + 36;
 		const episodeFacetCueLen = (item: EpisodeFacet) =>
 			item.searchText.length + (item.summary?.length || 0) + (item.anchorText?.length || 0) + 36;
+		const semanticMemoryLen = (item: SemanticMemory) =>
+			(item.name?.length || 0) + item.summary.length + (item.detail?.length || 0) + 40;
+		const semanticMemoryCueLen = (item: SemanticMemory) => (item.name?.length || 0) + item.summary.length + 36;
 		const episodeScoreFn = (item: EpisodeMemory) => this.scoreEpisodeMemory(item, project, contextTags);
 		const episodeFacetScoreFn = (item: EpisodeFacet) => this.scoreEpisodeFacet(item, project, contextTags);
+		const semanticMemoryScoreFn = (item: SemanticMemory) => this.scoreV2SemanticMemory(item, project, contextTags);
 
 		// Active tier: pick top entries with full detail, split budget across categories
 		const activeBudgetPer = Math.floor(activeChars / 5);
@@ -377,22 +511,28 @@ export class NanoMemEngine {
 		const activePrefs = pickTop(tieredPrefs.active, scoreFn, activeLen, activeBudgetPer);
 		const activeFacets = pickTop(tieredFacets.active, scoreFn, activeLen, activeBudgetPer);
 		const activeProcedural = pickTop(
-			procedural.filter((item) => proceduralScoreFn(item) >= 0.45),
+			procedural.filter((item) => semanticProcedureIds.has(item.id) || proceduralScoreFn(item) >= 0.45),
 			proceduralScoreFn,
 			proceduralLen,
 			Math.max(400, Math.floor(proceduralChars * 0.55)),
 		);
 		const activeEpisodeMemories = pickTop(
-			v2Episodes.filter((item) => episodeScoreFn(item) >= 0.45),
+			v2Episodes.filter((item) => semanticEpisodeIds.has(item.id) || episodeScoreFn(item) >= 0.45),
 			episodeScoreFn,
 			episodeMemoryLen,
 			Math.max(320, Math.floor(activeChars * 0.18)),
 		);
 		const activeEpisodeFacets = pickTop(
-			v2EpisodeFacets.filter((item) => episodeFacetScoreFn(item) >= 0.42),
+			v2EpisodeFacets.filter((item) => semanticFacetIds.has(item.id) || episodeFacetScoreFn(item) >= 0.42),
 			episodeFacetScoreFn,
 			episodeFacetLen,
 			Math.max(320, Math.floor(activeChars * 0.18)),
+		);
+		const activeSemanticMemories = pickTop(
+			v2Semantic.filter((item) => semanticV2SemanticIds.has(item.id) || semanticMemoryScoreFn(item) >= 0.42),
+			semanticMemoryScoreFn,
+			semanticMemoryLen,
+			Math.max(280, Math.floor(activeChars * 0.16)),
 		);
 
 		const activeSeeds = [...activeKnowledge, ...activeLessons, ...activeEvents, ...activePrefs, ...activeFacets];
@@ -448,6 +588,12 @@ export class NanoMemEngine {
 			episodeFacetCueLen,
 			Math.max(220, Math.floor(cueChars * 0.12)),
 		);
+		const cueSemanticMemories = pickTop(
+			v2Semantic.filter((item) => !activeSemanticMemories.some((activeItem) => activeItem.id === item.id)),
+			semanticMemoryScoreFn,
+			semanticMemoryCueLen,
+			Math.max(220, Math.floor(cueChars * 0.12)),
+		);
 
 		// Reinforce all recalled entries (Active + Cue) via spaced repetition
 		const allRecalledKnowledge = [...activeKnowledge, ...dedupedCueKnowledge];
@@ -464,7 +610,16 @@ export class NanoMemEngine {
 		await this.reinforceWork(topWork, allWork);
 		await this.reinforceEpisodeMemories([...activeEpisodeMemories, ...cueEpisodeMemories], allV2Episodes);
 		await this.reinforceEpisodeFacets([...activeEpisodeFacets, ...cueEpisodeFacets], allV2EpisodeFacets);
+		await this.reinforceV2SemanticMemories([...activeSemanticMemories, ...cueSemanticMemories], allV2Semantic);
 		await this.reinforceProcedural([...activeProcedural, ...cueProcedural], allProcedural);
+		await this.reconsolidateV2AfterRecall(
+			allV2Episodes,
+			allV2EpisodeFacets,
+			allProcedural,
+			[...activeEpisodeMemories, ...cueEpisodeMemories],
+			[...activeEpisodeFacets, ...cueEpisodeFacets],
+			[...activeProcedural, ...cueProcedural],
+		);
 
 		// Optional reconsolidation for low-relevance recalled entries
 		if (this.llmFn) {
@@ -481,6 +636,7 @@ export class NanoMemEngine {
 				facets: activeFacets,
 				episodeMemories: activeEpisodeMemories,
 				episodeFacets: activeEpisodeFacets,
+				semanticMemories: activeSemanticMemories,
 				procedural: activeProcedural,
 			},
 			{
@@ -493,6 +649,7 @@ export class NanoMemEngine {
 				work: topWork,
 				episodeMemories: cueEpisodeMemories,
 				episodeFacets: cueEpisodeFacets,
+				semanticMemories: cueSemanticMemories,
 				procedural: cueProcedural,
 			},
 			allEntries,
@@ -696,20 +853,31 @@ export class NanoMemEngine {
 	async getV2Stats(): Promise<{
 		episodes: number;
 		facets: number;
+		semantic: number;
 		procedural: number;
 		links: number;
+		embeddings: number;
+		lastEmbeddingSyncAt?: string;
+		lastReconsolidationAt?: string;
 	}> {
-		const [episodes, facets, procedural, links] = await Promise.all([
+		const [episodes, facets, semantic, procedural, links, embeddingIndex, meta] = await Promise.all([
 			loadV2Episodes(this.v2Paths),
 			loadV2Facets(this.v2Paths),
+			loadV2Semantic(this.v2Paths),
 			loadV2Procedural(this.v2Paths),
 			loadV2Links(this.v2Paths),
+			loadEmbeddingIndex(this.cfg.memoryDir),
+			loadV2Meta(this.v2Paths),
 		]);
 		return {
 			episodes: episodes.length,
 			facets: facets.length,
+			semantic: semantic.length,
 			procedural: procedural.length,
 			links: links.length,
+			embeddings: embeddingIndex.records.length,
+			lastEmbeddingSyncAt: meta.lastEmbeddingSyncAt,
+			lastReconsolidationAt: meta.lastReconsolidationAt,
 		};
 	}
 
@@ -786,6 +954,9 @@ export class NanoMemEngine {
 				lastMigrationAt: meta.lastMigrationAt ?? now,
 			}),
 		]);
+		if (this.cfg.embeddings.enabled && this.cfg.embeddings.autoSync && this.embeddingFn) {
+			await this.syncV2Embeddings();
+		}
 	}
 
 	private mapEpisodeToV2(
@@ -1112,16 +1283,18 @@ export class NanoMemEngine {
 	async exportAllV2(): Promise<{
 		episodes: EpisodeMemory[];
 		facets: EpisodeFacet[];
+		semantic: import("./types-v2.js").SemanticMemory[];
 		procedural: ProceduralMemory[];
 		links: MemoryLink[];
 	}> {
-		const [episodes, facets, procedural, links] = await Promise.all([
+		const [episodes, facets, semantic, procedural, links] = await Promise.all([
 			loadV2Episodes(this.v2Paths),
 			loadV2Facets(this.v2Paths),
+			loadV2Semantic(this.v2Paths),
 			loadV2Procedural(this.v2Paths),
 			loadV2Links(this.v2Paths),
 		]);
-		return { episodes, facets, procedural, links };
+		return { episodes, facets, semantic, procedural, links };
 	}
 
 	// ─── Full Insights Report ────────────────────────────────────────
@@ -1373,7 +1546,7 @@ export class NanoMemEngine {
 		return entries.filter((entry) => {
 			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
 			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
-			if (entry.scope?.project && entry.scope.project !== project) return false;
+			if (project && entry.scope?.project && entry.scope.project !== project) return false;
 			return entry.status !== "deprecated" && entry.status !== "superseded";
 		});
 	}
@@ -1382,7 +1555,7 @@ export class NanoMemEngine {
 		return entries.filter((entry) => {
 			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
 			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
-			if (entry.scope?.project && entry.scope.project !== project) return false;
+			if (project && entry.scope?.project && entry.scope.project !== project) return false;
 			return true;
 		});
 	}
@@ -1391,13 +1564,86 @@ export class NanoMemEngine {
 		return entries.filter((entry) => {
 			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
 			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
-			if (entry.scope?.project && entry.scope.project !== project) return false;
+			if (project && entry.scope?.project && entry.scope.project !== project) return false;
 			return true;
 		});
 	}
 
+	private filterAndCleanV2Semantic(entries: SemanticMemory[], project: string, scope?: MemoryScope): SemanticMemory[] {
+		return entries.filter((entry) => {
+			if (scope?.userId && entry.scope?.userId && entry.scope.userId !== scope.userId) return false;
+			if (scope?.agentId && entry.scope?.agentId && entry.scope.agentId !== scope.agentId) return false;
+			if (project && entry.scope?.project && entry.scope.project !== project) return false;
+			return !entry.supersededById;
+		});
+	}
+
+	private buildEmbeddingSourceItems(
+		episodes: EpisodeMemory[],
+		facets: EpisodeFacet[],
+		semantic: SemanticMemory[],
+		procedural: ProceduralMemory[],
+	): EmbeddingSourceItem[] {
+		const episodeItems: EmbeddingSourceItem[] = episodes.map((entry) => ({
+			memoryId: entry.id,
+			memoryKind: "episode",
+			text: [entry.title ?? "", entry.summary, entry.userGoal ?? "", entry.outcome ?? ""].filter(Boolean).join("\n"),
+		}));
+		const facetItems: EmbeddingSourceItem[] = facets.map((entry) => ({
+			memoryId: entry.id,
+			memoryKind: "facet",
+			text: [entry.searchText, entry.summary ?? "", entry.anchorText ?? "", entry.detail ?? ""].filter(Boolean).join("\n"),
+		}));
+		const semanticItems: EmbeddingSourceItem[] = semantic.map((entry) => ({
+			memoryId: entry.id,
+			memoryKind: "semantic",
+			text: [entry.name, entry.summary, entry.detail ?? ""].filter(Boolean).join("\n"),
+		}));
+		const proceduralItems: EmbeddingSourceItem[] = procedural.map((entry) => ({
+			memoryId: entry.id,
+			memoryKind: "procedural",
+			text: [
+				entry.name,
+				entry.searchText,
+				entry.summary,
+				entry.contextText ?? "",
+				entry.boundaries ?? "",
+				entry.steps.map((step) => step.text).join("\n"),
+			]
+				.filter(Boolean)
+				.join("\n"),
+		}));
+		return [...episodeItems, ...facetItems, ...semanticItems, ...proceduralItems];
+	}
+
+	private async querySemanticCandidates(
+		queryText: string,
+		project: string,
+		scope: MemoryScope | undefined,
+		episodes: EpisodeMemory[],
+		facets: EpisodeFacet[],
+		semantic: SemanticMemory[],
+		procedural: ProceduralMemory[],
+	): Promise<Array<{ memoryId: string; memoryKind: "episode" | "facet" | "semantic" | "procedural"; score: number }>> {
+		if (!this.embeddingFn || !queryText.trim()) return [];
+		const items = this.buildEmbeddingSourceItems(episodes, facets, semantic, procedural);
+		if (!items.length) return [];
+		await syncEmbeddingIndex(this.cfg.memoryDir, this.cfg.embeddings.model, items, this.embeddingFn);
+		const matches = await queryEmbeddingIndex(this.cfg.memoryDir, this.cfg.embeddings.model, queryText, this.embeddingFn, 12);
+		const visibleIds = new Set([
+			...episodes.map((entry) => entry.id),
+			...facets.map((entry) => entry.id),
+			...semantic.map((entry) => entry.id),
+			...procedural.map((entry) => entry.id),
+		]);
+		return matches
+			.filter((match) => visibleIds.has(match.memoryId))
+			.map((match) => ({ memoryId: match.memoryId, memoryKind: match.memoryKind, score: match.score }))
+			.filter((match) => match.score >= 0.18);
+	}
+
 	private scoreEpisodeMemory(entry: EpisodeMemory, project: string, contextTags: string[]): number {
-		const projectBoost = entry.scope?.project === project ? 1 : 0.55;
+		const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
 		const tagScore = tagOverlap(entry.tags, contextTags);
 		const summaryTags = extractTags(`${entry.title ?? ""} ${entry.summary} ${entry.userGoal ?? ""} ${entry.outcome ?? ""}`);
 		const semanticScore = tagOverlap(summaryTags, contextTags);
@@ -1407,7 +1653,7 @@ export class NanoMemEngine {
 	}
 
 	private scoreEpisodeFacet(entry: EpisodeFacet, project: string, contextTags: string[]): number {
-		const projectBoost = entry.scope?.project === project ? 1 : 0.55;
+		const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
 		const tagScore = tagOverlap(entry.tags, contextTags);
 		const semanticTags = extractTags(`${entry.searchText} ${entry.anchorText ?? ""} ${entry.summary ?? ""}`);
 		const semanticScore = tagOverlap(semanticTags, contextTags);
@@ -1416,8 +1662,18 @@ export class NanoMemEngine {
 		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.24;
 	}
 
+	private scoreV2SemanticMemory(entry: SemanticMemory, project: string, contextTags: string[]): number {
+		const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
+		const tagScore = tagOverlap(entry.tags, contextTags);
+		const semanticTags = extractTags(`${entry.name} ${entry.summary} ${entry.detail ?? ""}`);
+		const semanticScore = tagOverlap(semanticTags, contextTags);
+		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+		const salienceBoost = (entry.salience ?? entry.importance) / 10;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.14 + salienceBoost * 0.2;
+	}
+
 	private scoreProceduralMemory(entry: ProceduralMemory, project: string, contextTags: string[]): number {
-		const projectBoost = entry.scope?.project === project ? 1 : 0.55;
+		const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
 		const tagScore = tagOverlap(entry.tags, contextTags);
 		const summaryTags = extractTags(`${entry.searchText} ${entry.summary} ${entry.contextText ?? ""}`);
 		const semanticScore = tagOverlap(summaryTags, contextTags);
@@ -1479,6 +1735,46 @@ export class NanoMemEngine {
 			entry.updatedAt = entry.updatedAt || now;
 		}
 		await saveV2Facets(this.v2Paths, all);
+	}
+
+	private async reinforceV2SemanticMemories(recalled: SemanticMemory[], all: SemanticMemory[]): Promise<void> {
+		if (!recalled.length) return;
+		const ids = new Set(recalled.map((entry) => entry.id));
+		const now = new Date().toISOString();
+		for (const entry of all) {
+			if (!ids.has(entry.id)) continue;
+			entry.accessCount = (entry.accessCount ?? 0) + 1;
+			entry.lastAccessedAt = now;
+			entry.updatedAt = entry.updatedAt || now;
+		}
+		await saveV2Semantic(this.v2Paths, all);
+	}
+
+	private async reconsolidateV2AfterRecall(
+		episodes: EpisodeMemory[],
+		facets: EpisodeFacet[],
+		procedural: ProceduralMemory[],
+		recalledEpisodes: EpisodeMemory[],
+		recalledFacets: EpisodeFacet[],
+		recalledProcedural: ProceduralMemory[],
+	): Promise<void> {
+		const reconsolidated = reconsolidateV2Memories(
+			episodes,
+			facets,
+			procedural,
+			recalledEpisodes.map((entry) => entry.id),
+			recalledFacets.map((entry) => entry.id),
+			recalledProcedural.map((entry) => entry.id),
+		);
+		await Promise.all([
+			saveV2Episodes(this.v2Paths, reconsolidated.episodes),
+			saveV2Facets(this.v2Paths, reconsolidated.facets),
+			saveV2Procedural(this.v2Paths, reconsolidated.procedural),
+			saveV2Meta(this.v2Paths, {
+				...(await loadV2Meta(this.v2Paths)),
+				lastReconsolidationAt: new Date().toISOString(),
+			}),
+		]);
 	}
 
 	private detectAlignmentConflicts(
@@ -1633,6 +1929,7 @@ export class NanoMemEngine {
 			facets: MemoryEntry[];
 			episodeMemories: EpisodeMemory[];
 			episodeFacets: EpisodeFacet[];
+			semanticMemories: SemanticMemory[];
 			procedural: ProceduralMemory[];
 		},
 		cue: {
@@ -1645,6 +1942,7 @@ export class NanoMemEngine {
 			work: WorkEntry[];
 			episodeMemories: EpisodeMemory[];
 			episodeFacets: EpisodeFacet[];
+			semanticMemories: SemanticMemory[];
 			procedural: ProceduralMemory[];
 		},
 		allEntries: MemoryEntry[],
@@ -1654,6 +1952,7 @@ export class NanoMemEngine {
 		const sections: string[] = [];
 		const proceduralSectionTitle = "Procedures";
 		const episodicSectionTitle = "Episode Threads";
+		const semanticSectionTitle = "Semantic Abstractions";
 
 		// ── Active tier: full detail ──
 		const activeLines: string[] = [];
@@ -1706,6 +2005,10 @@ export class NanoMemEngine {
 			const detail = entry.anchorText ? `\n  ${entry.anchorText}` : "";
 			return `- [ID: ${entry.id}] [${entry.facetType}] **${entry.searchText}**${detail}`;
 		});
+		const semanticLines = active.semanticMemories.map((entry) => {
+			const detail = entry.detail ? `\n  ${entry.detail}` : "";
+			return `- [ID: ${entry.id}] [${entry.semanticType}] **${entry.name}**: ${entry.summary}${detail}`;
+		});
 		const proceduralLines = active.procedural.map((entry) => {
 			const steps = entry.steps.slice(0, 4).map((step, index) => `${index + 1}. ${step.text}`).join("\n  ");
 			const boundaries = entry.boundaries ? `\n  Boundaries: ${entry.boundaries}` : "";
@@ -1717,6 +2020,9 @@ export class NanoMemEngine {
 		}
 		if (episodicLines.length || episodicFacetLines.length) {
 			sections.push(`### ${episodicSectionTitle}\n${[...episodicLines, ...episodicFacetLines].join("\n")}`);
+		}
+		if (semanticLines.length) {
+			sections.push(`### ${semanticSectionTitle}\n${semanticLines.join("\n")}`);
 		}
 		if (proceduralLines.length) {
 			sections.push(`### ${proceduralSectionTitle}\n${proceduralLines.join("\n")}`);
@@ -1767,6 +2073,9 @@ export class NanoMemEngine {
 		}
 		for (const facet of cue.episodeFacets) {
 			cueLines.push(`- [ID: ${facet.id}] [episode-${facet.facetType}] **${facet.searchText}**: ${facet.summary || facet.anchorText || ""}`);
+		}
+		for (const semantic of cue.semanticMemories) {
+			cueLines.push(`- [ID: ${semantic.id}] [semantic-${semantic.semanticType}] **${semantic.name}**: ${semantic.summary}`);
 		}
 		for (const procedure of cue.procedural) {
 			cueLines.push(`- [ID: ${procedure.id}] [procedural] **${procedure.name}**: ${procedure.summary}`);

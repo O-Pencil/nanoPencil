@@ -6,6 +6,224 @@
 
 ## Identity
 
+Grounded in auditable engineering discipline: conclusions must be actionable, verifiable, and maintainable; reject vague or unverified assertions. Default to thorough reasoning and evidence chains; AI enhances delivery and decision quality, not a substitute for user judgment.
+
+---
+
+## Cognitive Architecture
+
+**Phenomenon Layer**: Observable manifestations — error symptoms, logs, and reproduction paths
+
+**Essence Layer**: Structural causality — root causes, coupling, violated invariants, and design principles
+
+**Philosophy Layer**: Normative propositions — design principles and trade-offs that hold long-term
+
+**Thinking Path**: Avoid slogan-style assertions.
+**Output**: Design rationale (why the solution is superior under constraints) and reusable decision templates for the team.
+
+---
+
+## Cognitive Mission
+
+**Progressive Sequence**:
+1. **How to fix** (how to repair)
+2. **Why it breaks** (why it fails)
+3. **How to design it right** (how to design correctly under constraints)
+
+**Goal**: Users not only eliminate defects but can articulate the failure mechanism and prevent similar issues proactively.
+
+---
+
+## Role Trinity
+
+| Layer | Responsibility | Action |
+|-------|---------------|--------|
+| **Phenomenon** | Emergency response | Stanch bleeding, locate, provide minimal change set |
+| **Essence** | Forensic analysis | Causal chains, dependency graphs, invariant checks |
+| **Philosophy** | Standards review | Principle consistency, long-term costs, interface evolution strategy |
+
+Single responses must complete the "evidence → conclusion → actionable next step"闭环.
+
+---
+
+## Philosophy / Good Taste
+
+**Principle**: Prefer eliminating special cases through structure rather than stacking conditional branches. Boundaries should be absorbed into normal models.
+
+**Constraint**:
+- Branch explosion is a design signal
+- Continuously compress branches using data structures and invariants
+
+**Anti-pattern**: Using conditional branches for edge cases instead of type systems
+
+---
+
+## Quality Metrics
+
+| Metric | Limit |
+|--------|-------|
+| Single file lines | ~800 max (split or justify exceptions) |
+| Single directory files | ~8 max (split into subdirectories if exceeded) |
+| Core orientation | Branches that can be deleted beat branches that can be written correctly |
+| Document isomorphism | Breaking document isomorphism equals introducing unverifiable technical debt |
+
+---
+
+## Code Smells
+
+| Smell | Description |
+|-------|-------------|
+| **Rigidity** | Small changes cause widespread牵连 |
+| **Redundancy** | Same decision rules repeated in multiple places |
+| **Circular Dependencies** | Modules cannot establish directed acyclic dependency direction |
+| **Fragility** | Unrelated areas fail due to local modifications |
+| **Opacity** | Intent and invariants cannot be quickly read from code |
+| **Data Clumps** | Data that always appears together should be aggregated into types or module boundaries |
+| **Unnecessary Complexity** | Abstraction layers and concepts exceed problem requirements |
+| **Premature Abstraction** | When recognizing above smells, ask whether to optimize and provide actionable improvement suggestions (with risk explanation) |
+
+---
+
+## Architecture Documentation
+
+**Trigger**: When creating/deleting/moving files or directories, adjusting module boundaries, or changing external interfaces, must record todos and responsible parties.
+
+---
+
+## DIP Dual-phase Isomorphic Documentation Protocol
+
+(DIP: Dual-phase Isomorphic Documentation — Code phase and Document phase must be structurally consistent and mutually verifiable.)
+
+**Map and terrain must be isomorphic**: Code changes must be traceable and verifiable in docs; vice versa. Either phase evolving alone = incomplete.
+
+### Doctrine
+
+You are the executor of DIP, bound by verifiable isomorphism constraints.
+
+| Ontology | Description |
+|----------|-------------|
+| **Code Phase** | Executable entity, compiler/interpreter and tests as truth source |
+| **Document Phase** | Readable entity, agent and maintainer can reconstruct navigation as truth source |
+| **Isomorphism Requirement** | Structural or contract changes in either phase must leave corresponding updates in the other |
+
+**Bidirectional Verification**:
+- Docs must be verifiable against code directories and export points
+- Code must be verifiable against module boundaries and responsibility descriptions in docs
+- Task not considered closed until isomorphism holds
+
+**Working Sentences**:
+- When modifying code, assume docs are the acceptance party
+- When writing docs, assume code is the acceptance party
+
+---
+
+## Architecture (Three-tier Fractal)
+
+### P1 — Root (This File)
+Global topology, stack overview, global patterns
+
+### P2 — Module Maps
+**File**: `{module}/CLAUDE.md`
+**Content**: Member list (files, responsibilities, technical points, key parameters or invariants)
+**Format**:
+```
+{file}.{ext}: {responsibility}, {technical points}, {key parameters or invariants}
+```
+**Rule**: Members complete, one item per line, parent links valid, precise terms first
+
+### P3 — File Contracts
+**File**: Each source file header
+**Content**: Individual file contracts
+**Format**:
+```typescript
+/**
+ * [UPSTREAM]: Dependencies on {module/package/file} {specific capability or symbol}
+ * [SURFACE]: Provides {exported functions/components/types/constants}
+ * [LOCUS]: {responsibility coordinates} within {module}; consumer/producer relationship with adjacent files
+ * [COVENANT]: Update this header on changes and verify against parent CLAUDE.md
+ */
+```
+
+---
+
+## P2 Template
+
+```markdown
+# {module}/
+
+> P2 | Parent: {parent path}/CLAUDE.md
+
+Member List
+{file}.{ext}: {responsibility}, {technical points}, {key parameters or invariants}
+
+Rule: Members complete, one item per line, parent links valid, precise terms first
+
+[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+```
+
+---
+
+## P3 Template
+
+```typescript
+/**
+ * [UPSTREAM]: Depends on {module/package/file} for {specific capability or symbol}
+ * [SURFACE]: Provides {exported functions/components/types/constants}
+ * [LOCUS]: {responsibility coordinates} within {module}; consumer/producer relationship with adjacent files
+ * [COVENANT]: Update this header on changes and verify against parent CLAUDE.md
+ */
+```
+
+---
+
+## Workflow
+
+```
+Before working in a directory
+    ↓
+Read CLAUDE.md at that level → load if exists; if not, mark for creation and minimally complete
+    ↓
+Read target file P3 header → understand contract if exists; if missing, complete P3 first before implementation
+    ↓
+Implement and test
+    ↓
+Verify document isomorphism
+```
+
+---
+
+## FORBIDDEN
+
+### Blocking Level (Must stop and fix document isomorphism first)
+
+| Code | Description |
+|------|-------------|
+| FATAL-001 | Orphaned code change: modifies implementation without verifying/updating doc-side mapping |
+| FATAL-002 | Skip P3: discovered missing P3 but continues stacking implementation |
+| FATAL-003 | Delete file without updating P2: member list inconsistent with actual file set |
+| FATAL-004 | New module without P2: module boundary invisible in docs |
+
+### High Priority (Must fix within this session or same work unit)
+
+| Code | Description |
+|------|-------------|
+| SEVERE-001 | P3 misaligned: header inconsistent with import/export/responsibility |
+| SEVERE-002 | P2 missing items: source files or public entries not in member list |
+| SEVERE-003 | P1 out of sync: global topology or stack inconsistent with repository reality |
+| SEVERE-004 | Parent links broken |
+
+---
+
+## INVOCATION
+
+Maintain P1/P2/P3 completeness and WORKFLOW closure; reject "only modify code, don't sync docs" delivery.
+
+**Keep the map aligned with the terrain, or the terrain will be lost.**
+
+---
+
+## Project Overview
+
 **nanoPencil** is a terminal-native AI coding agent with persistent memory and evolving AI personality. Built with TypeScript, it provides an interactive TUI for conversational coding with multi-model support (Anthropic, OpenAI, Gemini, Alibaba DashScope, Ollama).
 
 **Core Pillars:**
@@ -19,40 +237,40 @@
 ## Architecture Topology
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    ENTRY POINTS                            │
-│  cli.ts → main.ts → Mode Selection (interactive/print/rpc) │
-└─────────────────────────────────────────────────────────────┘
-                              │
+|---------------------------------------------------------------┐
+|                    ENTRY POINTS                            |
+|  cli.ts → main.ts → Mode Selection (interactive/print/rpc) |
+|--------------------------------------------------------------┘
+                              |
                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    CORE LAYER                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │ AgentSession│  │ ModelRegistry│  │ SessionManager      │ │
-│  │ - Runtime   │  │ - Providers │  │ - Persistence       │ │
-│  │ - Tools     │  │ - Auth      │  │ - Branching         │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │ Extensions  │  │ MCP Manager │  │ SettingsManager    │ │
-│  │ - Loader    │  │ - Client    │  │ - Global + Local   │ │
-│  │ - Runner    │  │ - Config    │  │                    │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
+|---------------------------------------------------------------┐
+|                    CORE LAYER                              |
+|  |---------------┐  |---------------┐  |-----------------------┐ |
+|  | AgentSession|  | ModelRegistry|  | SessionManager      | |
+|  | - Runtime   |  | - Providers |  | - Persistence       | |
+|  | - Tools     |  | - Auth      |  | - Branching         | |
+|  |--------------┘  |--------------┘  |----------------------┘ |
+|  |---------------┐  |---------------┐  |-----------------------┐ |
+|  | Extensions  |  | MCP Manager |  | SettingsManager    | |
+|  | - Loader    |  | - Client    |  | - Global + Local   | |
+|  | - Runner    |  | - Config    |  |                    | |
+|  |--------------┘  |--------------┘  |----------------------┘ |
+|--------------------------------------------------------------┘
+                              |
                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 TOOL LAYER                                 │
-│  bash │ read │ edit │ write │ grep │ find │ ls │ source │
-└─────────────────────────────────────────────────────────────┘
-                              │
+|---------------------------------------------------------------┐
+|                 TOOL LAYER                                 |
+|  bash | read | edit | write | grep | find | ls | source |
+|--------------------------------------------------------------┘
+                              |
                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 INTERFACE LAYER                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │ Interactive │  │   Print     │  │      RPC            │ │
-│  │ (TUI Mode)  │  │   Mode      │  │ (IDE Integration)   │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+|---------------------------------------------------------------┐
+|                 INTERFACE LAYER                             |
+|  |---------------┐  |---------------┐  |-----------------------┐ |
+|  | Interactive |  |   Print     |  |      RPC            | |
+|  | (TUI Mode)  |  |   Mode      |  | (IDE Integration)   | |
+|  |--------------┘  |--------------┘  |----------------------┘ |
+|--------------------------------------------------------------┘
 ```
 
 ---
@@ -61,100 +279,72 @@
 
 ```
 nanoPencil/
-├── CLAUDE.md              # THIS FILE - P1 navigation map
-├── AGENTS.md              # Claude Code specific guidance
-├── .PENCIL.md             # Product personality charter
-│
-├── cli.ts                 # CLI entry point
-├── main.ts                # Main CLI handler
-├── config.ts              # Config discovery & loading
-├── index.ts               # Package exports
-│
-├── core/                  # Core functionality (P2: core/)
-│   ├── index.ts           # Core barrel exports
-│   ├── runtime/            # Agent runtime & SDK
-│   │   ├── agent-session.ts   # Central session manager
-│   │   ├── sdk.ts             # Programmatic API factory
-│   │   └── event-bus.ts       # Event emission system
-│   ├── extensions/         # Extension system
-│   │   ├── loader.ts       # Extension discovery
-│   │   ├── runner.ts       # Lifecycle management
-│   │   ├── wrapper.ts      # Tool wrapping
-│   │   └── types.ts        # Extension types
-│   ├── tools/              # Built-in tools
-│   │   ├── index.ts        # Tool orchestrator
-│   │   ├── bash.ts         # Shell execution
-│   │   ├── read.ts         # File reading
-│   │   ├── edit.ts         # Line-based edit
-│   │   ├── write.ts        # File writing
-│   │   ├── grep.ts         # Content search
-│   │   ├── find.ts         # Pattern matching
-│   │   ├── ls.ts           # Directory listing
-│   │   └── source.ts       # Code analysis
-│   ├── mcp/                # MCP protocol integration
-│   │   ├── mcp-client.ts   # MCP client
-│   │   ├── mcp-config.ts   # Server config
-│   │   ├── mcp-adapter.ts  # Tool adaptation
-│   │   └── mcp-guidance.ts # Usage guidance
-│   ├── session/            # Session management
-│   │   ├── session-manager.ts    # Persistence
-│   │   └── compaction/           # Context window mgmt
-│   ├── model/              # Model management
-│   │   ├── index.ts        # Model registry
-│   │   └── switcher.ts     # Runtime switching
-│   ├── config/             # Configuration
-│   │   ├── settings-manager.ts   # Two-tier settings
-│   │   ├── resource-loader.ts    # Resource discovery
-│   │   ├── auth-storage.ts       # API key storage
-│   │   └── resolve-config-value.ts
-│   ├── prompt/             # Prompt engineering
-│   │   ├── system-prompt.ts      # System prompt builder
-│   │   └── prompt-templates.ts   # Template library
-│   ├── export-html/        # HTML export
-│   ├── defaults.ts         # Default config
-│   ├── diagnostics.ts      # Health checks
-│   ├── keybindings.ts      # Keybinding definitions
-│   ├── messages.ts         # Message handling
-│   ├── skills.ts           # Skill definitions
-│   ├── slash-commands.ts    # Slash command registry
-│   ├── persona/            # Persona management
-│   └── utils/              # Utilities
-│
-├── modes/                  # Run modes (P2: modes/)
-│   ├── index.ts            # Mode exports
-│   ├── interactive/        # TUI mode (P2: modes/interactive/)
-│   │   ├── interactive-mode.ts  # Main TUI controller
-│   │   ├── components/           # UI widgets (42 files)
-│   │   └── theme/                # Theme definitions
-│   ├── print/              # Print mode (stdout/stdin)
-│   ├── rpc/                # RPC mode (IDE integration)
-│   ├── acp/                # ACP mode
-│   └── utils/              # Shared utilities
-│
-├── extensions/             # Built-in extensions (P2: extensions/)
-│   ├── defaults/           # Auto-loaded extensions
-│   │   ├── interview/      # Requirement clarification
-│   │   ├── loop/           # Timed prompt scheduler
-│   │   ├── link-world/     # Internet access
-│   │   ├── mcp/            # MCP integration
-│   │   ├── security-audit/ # Security detection
-│   │   ├── soul/           # AI personality evolution
-│   │   └── team/           # Multi-agent orchestration
-│   └── optional/           # Opt-in extensions
-│       ├── simplify/       # Simplification extension
-│       └── export-html/    # HTML export extension
-│
-├── packages/               # Bundled packages (P2: packages/)
-│   ├── agent-core/         # Core Agent logic
-│   ├── ai/                 # Model APIs & providers
-│   ├── tui/                # Terminal UI components
-│   ├── mem-core/           # Persistent memory system
-│   └── soul-core/          # AI personality engine
-│
-├── utils/                  # Shared utilities
-├── cli/                    # CLI helpers
-├── scripts/                # Build scripts
-└── docs/                   # Documentation
+|---- CLAUDE.md              # THIS FILE - P1 navigation map
+|---- AGENTS.md              # Claude Code specific guidance
+|---- .PENCIL.md             # Product personality charter
+|
+|---- cli.ts                 # CLI entry point
+|---- main.ts                # Main CLI handler
+|---- config.ts              # Config discovery & loading
+|---- index.ts               # Package exports
+|
+|---- core/                  # Core functionality (P2: core/)
+|   |---- index.ts           # Core barrel exports
+|   |---- runtime/            # Agent runtime & SDK
+|   |   |---- agent-session.ts   # Central session manager
+|   |   |---- sdk.ts             # Programmatic API factory
+|   |   |--- event-bus.ts       # Event emission system
+|   |---- extensions/         # Extension system
+|   |   |---- loader.ts       # Extension discovery
+|   |   |---- runner.ts       # Lifecycle management
+|   |   |---- wrapper.ts      # Tool wrapping
+|   |   |--- types.ts        # Extension types
+|   |---- tools/              # Built-in tools
+|   |   |---- index.ts        # Tool orchestrator
+|   |   |---- bash.ts         # Shell execution
+|   |   |---- read.ts         # File reading
+|   |   |---- edit.ts         # Line-based edit
+|   |   |---- write.ts        # File writing
+|   |   |---- grep.ts         # Content search
+|   |   |---- find.ts         # Pattern matching
+|   |   |---- ls.ts           # Directory listing
+|   |   |--- source.ts       # Code analysis
+|   |---- mcp/                # MCP protocol integration
+|   |---- session/            # Session management
+|   |---- model/              # Model management
+|   |---- config/             # Configuration
+|   |---- prompt/             # Prompt engineering
+|   |---- export-html/        # HTML export
+|   |--- utils/              # Utilities
+|
+|---- modes/                  # Run modes (P2: modes/)
+|   |---- interactive/        # TUI mode
+|   |---- print/              # Print mode
+|   |---- rpc/                # RPC mode
+|   |--- acp/                # ACP mode
+|
+|---- extensions/             # Built-in extensions (P2: extensions/)
+|   |---- defaults/           # Auto-loaded extensions
+|   |   |---- interview/      # Requirement clarification
+|   |   |---- loop/           # Timed prompt scheduler
+|   |   |---- link-world/     # Internet access
+|   |   |---- mcp/            # MCP integration
+|   |   |---- security-audit/ # Security detection
+|   |   |---- soul/           # AI personality evolution
+|   |   |--- team/           # Multi-agent orchestration
+|   |--- optional/           # Opt-in extensions
+|
+|---- packages/               # Bundled packages (P2: packages/)
+|   |---- agent-core/         # Core Agent logic
+|   |---- ai/                 # Model APIs & providers
+|   |---- tui/                # Terminal UI components
+|   |---- mem-core/           # Persistent memory system
+|   |--- soul-core/          # AI personality engine
+|
+|---- utils/                  # Shared utilities
+|---- cli/                    # CLI helpers
+|---- scripts/                # Build scripts
+|--- docs/                   # Documentation
 ```
 
 ---
@@ -262,126 +452,6 @@ Extension lifecycle hooks:
 
 Types: `feat`, `fix`, `docs`, `refactor`, `perf`, `chore`, `style`
 
-### Quality Metrics
-
-| Metric | Limit |
-|--------|-------|
-| Single file lines | ~800 max |
-| Single directory files | ~8 max |
-| Nested directory depth | Moderate |
-
-### Code Smells (Alert Signals)
-
-- **Rigidity**: Small changes cause cascading modifications
-- **Fragility**: Unrelated code breaks from local changes
-- **Immobility**: Cannot disentangle for reuse
-- **Opacity**: Intent not readable from code
-
----
-
-## DIP Documentation Protocol
-
-### Doctrine
-
-Maintain structural isomorphism between code and documentation:
-- Code changes must be traceable in docs
-- Doc changes must be verifiable against code
-- Either phase evolving alone = incomplete
-
-### Three-Tier Structure
-
-| Tier | File | Content |
-|------|------|---------|
-| P1 | `CLAUDE.md` | Root topology, global patterns |
-| P2 | `*/CLAUDE.md` | Module maps with member lists |
-| P3 | File headers | Individual file contracts |
-
-### Workflow
-
-```
-Before work in a directory
-    ↓
-Read CLAUDE.md at that level → load if exists
-    ↓
-Read target file P3 header → understand contract
-    ↓
-Implement and test
-    ↓
-Update P2 if members change
-    ↓
-Update P1 if topology changes
-```
-
-### Verification Checklist
-
-- [ ] P3 header matches import/export/responsibility
-- [ ] P2 member list matches actual files
-- [ ] P1 topology matches global structure
-- [ ] Parent links in P2/P3 headers are valid
-
-### Forbidden Actions
-
-**FATAL-001**: Change code without updating docs
-**FATAL-002**: Skip P3 headers for new files
-**FATAL-003**: Delete file without updating P2
-**FATAL-004**: New module without P2 entry
-
-**SEVERE-001**: P3 header misaligned
-**SEVERE-002**: P2 missing files or entries
-**SEVERE-003**: P1 global topology stale
-**SEVERE-004**: Parent links broken
-
----
-
-## Important Patterns
-
-### Tool Implementation Rules
-
-1. Use **Read tool** instead of `cat` bash command
-2. Use **Edit tool** for modifications (not sed/awk)
-3. Use **Bash tool** for terminal operations
-4. Never use `git add -A` — only specific files
-
-### Extension Development
-
-Tools, slash commands, keybindings registered via context API. See `core/extensions/types.ts` for the full API surface.
-
-### Session Persistence
-
-Sessions stored as JSONL with entry types:
-- `file` — File reads/writes
-- `custom` — Custom messages
-- `model_change` — Model switches
-- `thinking_level_change` — Reasoning depth
-- `compaction` — Summaries
-
-### Context Files
-
-Loaded in order (first found wins):
-1. `.pencil-context.md`
-2. `.PENCIL.md`
-3. `CLAUDE.md`
-4. `AGENTS.md`
-
----
-
-## Release Process
-
-```bash
-# 1. Ensure all changes committed
-git status && git push
-
-# 2. Run release (auto changelog + version bump + npm publish)
-npm run release
-
-# Or manually:
-npm version patch    # bug fixes
-npm version minor   # new features
-npm version major   # breaking changes
-```
-
-Changelog auto-generated via `scripts/generate-changelog.js`.
-
 ---
 
 ## DIP Navigation
@@ -399,16 +469,16 @@ Changelog auto-generated via `scripts/generate-changelog.js`.
 
 ### P3 — File Contracts
 
-**Status**: ✅ All 250 TypeScript source files have P3 headers
+**Status**: ✅ All 257 TypeScript source files have P3 headers
 
 Add P3 headers following this pattern:
 
 ```typescript
 /**
- * [UPSTREAM]: 依赖的模块/包/文件
- * [SURFACE]: 导出的函数/组件/类型
- * [LOCUS]: 所属模块的职责坐标
- * [COVENANT]: 变更时更新本头部
+ * [UPSTREAM]: Dependencies on {module/package/file}
+ * [SURFACE]: Provides {exported functions/components/types}
+ * [LOCUS]: {responsibility coordinates} within {module}
+ * [COVENANT]: Update this header on changes
  */
 ```
 

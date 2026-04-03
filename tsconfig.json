@@ -19,8 +19,7 @@
     "paths": {
       "nanosoul": ["./packages/nanosoul/src"],
       "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
-    },
-    "ignoreDeprecations": "6.0"
+    }
   },
   "include": [
     "*.ts",
@@ -31,4 +30,7 @@
     "extensions/**/*.ts",
   ],
   "exclude": ["node_modules", "dist"],
+  "tscInternal": {
+    "preservedWhitespace": true
+  }
 }

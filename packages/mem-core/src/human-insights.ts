@@ -1,14 +1,10 @@
 /**
- * [INPUT]: ExportAllResult, LlmFn, locale
- * [OUTPUT]: developer persona, evidence-backed insights, and root-cause analysis
- * [POS]: LLM-powered usage review generation
+ * [UPSTREAM]: Depends on ./types.js, ./i18n.js
+ * [SURFACE]: DeveloperPersona, HumanInsightsReport, generateHumanInsights
+ * [LOCUS]: packages/mem-core/src/human-insights.ts - LLM-powered usage review generation with developer persona analysis
+ * [COVENANT]: Change insights format → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/human-insights.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import type {
 	DeveloperPersona,

@@ -1,14 +1,10 @@
 /**
- * [INPUT]: file paths, data objects
- * [OUTPUT]: async JSON read/write with directory auto-creation
- * [POS]: Persistence layer — all other modules go through here
+ * [UPSTREAM]: Depends on node:fs, node:fs/promises, node:path, ./types.js
+ * [SURFACE]: readJson, writeJson, deriveNameFromContent, deriveSummaryFromContent, ensureDir
+ * [LOCUS]: packages/mem-core/src/store.ts - persistence layer for JSON storage, all other modules go through here
+ * [COVENANT]: Change storage format → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/store.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";

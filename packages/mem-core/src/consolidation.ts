@@ -1,18 +1,10 @@
 /**
- * [INPUT]: unconsolidated episodes, LlmFn (optional), config
- * [OUTPUT]: newly extracted MemoryEntries (facts + lessons) promoted to long-term storage
- * [POS]: Episodic→Semantic consolidation — heart of multi-store memory model
- *
- * Two modes:
- *   LLM-powered (preferred): produces high-quality semantic extraction
- *   Heuristic fallback: frequency-based file/error extraction
+ * [UPSTREAM]: Depends on ./config.js, ./i18n.js, ./scoring.js, ./store.js, ./types.js
+ * [SURFACE]: consolidateEpisodes, extractFactsFromEpisodes, extractLessonsFromEpisodes
+ * [LOCUS]: packages/mem-core/src/consolidation.ts - episodic→semantic consolidation, heart of multi-store memory model
+ * [COVENANT]: Change consolidation logic → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/consolidation.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import type { NanomemConfig } from "./config.js";
 import { PROMPTS } from "./i18n.js";

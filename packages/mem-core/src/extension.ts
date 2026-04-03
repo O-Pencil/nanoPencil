@@ -1,17 +1,13 @@
 /**
- * [INPUT]: NanoPencil ExtensionAPI
- * [OUTPUT]: Registers lifecycle hooks that drive NanoMemEngine
- * [POS]: Thin adapter — bridges NanoPencil events to the host-agnostic engine
+ * [UPSTREAM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/nano-pencil
+ * [SURFACE]: default export (Extension), nanomem extension for NanoPencil integration
+ * [LOCUS]: packages/mem-core/src/extension.ts - thin adapter bridging NanoPencil events to host-agnostic NanoMemEngine
+ * [COVENANT]: Change extension hooks → update this header and verify against packages/mem-core/CLAUDE.md
  *
- * This file is the ONLY module that depends on @pencil-agent/nano-pencil types.
- * For non-NanoPencil hosts, import from the package root instead.
+ * NOTE: This is the ONLY module that depends on @pencil-agent/nano-pencil types.
+ * For non-NanoPencil hosts, import from the package root (index.ts) instead.
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/extension.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { existsSync, writeFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -420,27 +416,34 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		// Save episode if there was tool activity OR substantial conversation goal
 		const hasActivity = observations.length > 0 || errors.length > 0;
 		const hasGoal = sessionGoal && sessionGoal.length > 10;
-		if (!hasActivity && !hasGoal) return;
+
+		if (!hasActivity && !hasGoal) {
+			return;
+		}
 
 		const sessionEndedAt = getSystemTimeSnapshot();
 
-		await engine.saveEpisode({
-			sessionId,
-			project,
-			date: sessionEndedAt.date,
-			startedAt: sessionStartedAt.iso,
-			endedAt: sessionEndedAt.iso,
-			timeZone: sessionEndedAt.timeZone,
-			summary: observations.slice(0, 10).join("; ") || sessionGoal?.slice(0, 100) || "Conversation session",
-			userGoal: sessionGoal,
-			filesModified: [...filesModified],
-			toolsUsed: { ...toolsUsed },
-			keyObservations: observations.slice(0, 20),
-			errors: [...errors],
-			tags: [...extractTags(project), ...extractTags([...filesModified].join(" "))],
-			importance: Math.min(10, 3 + errors.length * 2 + Math.min(observations.length, 5)),
-			consolidated: false,
-		});
+		try {
+			await engine.saveEpisode({
+				sessionId,
+				project,
+				date: sessionEndedAt.date,
+				startedAt: sessionStartedAt.iso,
+				endedAt: sessionEndedAt.iso,
+				timeZone: sessionEndedAt.timeZone,
+				summary: observations.slice(0, 10).join("; ") || sessionGoal?.slice(0, 100) || "Conversation session",
+				userGoal: sessionGoal,
+				filesModified: [...filesModified],
+				toolsUsed: { ...toolsUsed },
+				keyObservations: observations.slice(0, 20),
+				errors: [...errors],
+				tags: [...extractTags(project), ...extractTags([...filesModified].join(" "))],
+				importance: Math.min(10, 3 + errors.length * 2 + Math.min(observations.length, 5)),
+				consolidated: false,
+			});
+		} catch (err) {
+			console.error("[nanomem] session_shutdown: failed to save episode:", err);
+		}
 	});
 
 	pi.registerCommand("dream", {

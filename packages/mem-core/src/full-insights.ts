@@ -1,14 +1,10 @@
 /**
- * [INPUT]: exportAll() result, optional LlmFn, locale
- * [OUTPUT]: FullInsightsReport — stats, charts, narrative (LLM or rule fallback)
- * [POS]: Aggregation + optional LLM for full insights report
+ * [UPSTREAM]: Depends on ./i18n.js, ./types.js
+ * [SURFACE]: FullInsightsReport, generateFullInsights
+ * [LOCUS]: packages/mem-core/src/full-insights.ts - aggregation + optional LLM for comprehensive insights report
+ * [COVENANT]: Change insights format → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/full-insights.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { PROMPTS } from "./i18n.js";
 import type {

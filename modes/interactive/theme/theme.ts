@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs, node:path, @sinclair/typebox, @sinclair/typebox/compiler, chalk
+ * [SURFACE]: Theme, getAvailableThemes, ThemeInfo, getAvailableThemesWithPaths, loadThemeFromPath
  * [LOCUS]: modes/interactive/theme/theme.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@pencil-agent/tui";

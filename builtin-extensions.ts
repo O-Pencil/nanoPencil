@@ -1,24 +1,8 @@
 /**
- * NanoPencil 内置扩展注册表
- *
- * 管理 NanoPencil 默认加载的内置扩展路径：
- * - NanoMem: 持久化记忆扩展（packages/mem-core/）
- * - Soul: AI 人格进化扩展（extensions/defaults/soul/）
- * - Interview: 模糊需求澄清扩展（extensions/defaults/interview/）
- * - Loop: /loop 定时任务扩展（extensions/defaults/loop/）
- * - MCP: MCP 工具扩展（extensions/defaults/mcp/）
- * - LinkWorld: 互联网访问扩展（extensions/defaults/link-world/）
- * - SecurityAudit: 安全审计扩展（extensions/defaults/security-audit/）
- *
- * 可选扩展（通过配置启用）：
- * - Simplify: 代码简化扩展（extensions/optional/simplify/）
- * - export-html: HTML 导出扩展（extensions/optional/export-html/）
- */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: ./builtin-extensions.ts - 
- * [COVENANT]: Change → update this header
+ * [UPSTREAM]: Depends on node:fs, node:path, config
+ * [SURFACE]: BuiltinExtension, getBuiltinExtensionPaths(), builtInExtensions
+ * [LOCUS]: builtin-extensions.ts - built-in extension registry for NanoPencil
+ * [COVENANT]: Change built-in extensions → update this header
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -3,11 +3,12 @@
  * Displays a list of string options with keyboard navigation.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [SURFACE]: ExtensionSelectorOptions, ExtensionSelectorComponent
  * [LOCUS]: modes/interactive/components/extension-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { Container, type Focusable, getEditorKeybindings, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";

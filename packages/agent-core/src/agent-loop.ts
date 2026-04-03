@@ -3,11 +3,12 @@
  * Transforms to Message[] only at the LLM call boundary.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: agentLoop, agentLoopContinue
  * [LOCUS]: packages/agent-core/src/agent-loop.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import {
 	type AssistantMessage,

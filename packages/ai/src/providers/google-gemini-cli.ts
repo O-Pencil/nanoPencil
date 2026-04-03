@@ -4,11 +4,12 @@
  * Uses the Cloud Code Assist API endpoint to access Gemini and Claude models.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [SURFACE]: GoogleGeminiCliOptions, extractRetryDelay, streamGoogleGeminiCli, streamSimpleGoogleGeminiCli, buildRequest
  * [LOCUS]: packages/ai/src/providers/google-gemini-cli.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { Content, ThinkingConfig } from "@google/genai";
 import { calculateCost } from "../models.js";

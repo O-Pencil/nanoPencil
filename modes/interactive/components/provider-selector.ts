@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [SURFACE]: ProviderSelectorComponent
  * [LOCUS]: modes/interactive/components/provider-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
 import {
 	getCustomProtocolProviderDefinition,

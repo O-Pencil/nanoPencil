@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [SURFACE]: CustomMessageComponent
  * [LOCUS]: modes/interactive/components/custom-message.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { TextContent } from "@pencil-agent/ai";
 import type { Component } from "@pencil-agent/tui";
 import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";

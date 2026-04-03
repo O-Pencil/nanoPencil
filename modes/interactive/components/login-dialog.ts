@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, ../theme/theme.js, ./dynamic-border.js
+ * [SURFACE]: LoginDialogComponent
  * [LOCUS]: modes/interactive/components/login-dialog.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { getOAuthProviders } from "@pencil-agent/ai";
 import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import { exec } from "child_process";

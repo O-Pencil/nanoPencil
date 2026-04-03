@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: inferCopilotInitiator, hasCopilotVisionInput, buildCopilotDynamicHeaders
  * [LOCUS]: packages/ai/src/providers/github-copilot-headers.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { Message } from "../types.js";
 
 // Copilot expects X-Initiator to indicate whether the request is user-initiated

@@ -3,11 +3,12 @@
  * Supports Ctrl+G for external editor.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:child_process, node:fs, node:os, node:path, ../theme/theme.js
+ * [SURFACE]: ExtensionEditorComponent
  * [LOCUS]: modes/interactive/components/extension-editor.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";

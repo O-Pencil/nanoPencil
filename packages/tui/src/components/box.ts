@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../utils.js
+ * [SURFACE]: Box
  * [LOCUS]: packages/tui/src/components/box.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { Component } from "../tui.js";
 import { applyBackgroundToLine, visibleWidth } from "../utils.js";
 

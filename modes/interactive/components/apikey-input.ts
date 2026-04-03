@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on readline
+ * [SURFACE]: ApiKeyInputOptions
  * [LOCUS]: modes/interactive/components/apikey-input.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { createInterface } from "readline";
 
 export interface ApiKeyInputOptions {

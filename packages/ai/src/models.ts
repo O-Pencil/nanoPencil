@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./models.generated.js
+ * [SURFACE]: getModel, getProviders, getModels, calculateCost, supportsXhigh
  * [LOCUS]: packages/ai/src/models.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { MODELS } from "./models.generated.js";
 import type { Api, KnownProvider, Model, Usage } from "./types.js";
 

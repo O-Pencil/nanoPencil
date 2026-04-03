@@ -4,11 +4,12 @@
  * [POS]: Expression layer - converts soul to prompt text
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: generatePersonalityDirective, generateValueGuidance, generateCognitiveStyleHint, generateEmotionalContext, generateExpertiseContext
  * [LOCUS]: packages/soul-core/src/injection.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { SoulProfile, InteractionContext, ExpertiseArea } from "./types.js";
 

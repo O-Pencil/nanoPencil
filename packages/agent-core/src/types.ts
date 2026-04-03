@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool
  * [LOCUS]: packages/agent-core/src/types.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type {
 	AssistantMessageEvent,
 	ImageContent,

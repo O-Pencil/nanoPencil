@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: EventStream, AssistantMessageEventStream, createAssistantMessageEventStream
  * [LOCUS]: packages/ai/src/utils/event-stream.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { AssistantMessage, AssistantMessageEvent } from "../types.js";
 
 // Generic event stream class for async iteration

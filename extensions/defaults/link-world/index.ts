@@ -3,11 +3,12 @@
  * 安装后自动提供 internet-search Skill。
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs, node:path, node:url, child_process, @pencil-agent/tui
+ * [SURFACE]: Extension interface
  * [LOCUS]: extensions/defaults/link-world/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

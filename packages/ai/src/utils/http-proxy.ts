@@ -6,11 +6,12 @@
  * ES modules are cached, so importing multiple times is safe - setup only runs once.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: Extension interface
  * [LOCUS]: packages/ai/src/utils/http-proxy.ts - 
  * [COVENANT]: Change → update this header
  */
+
 if (typeof process !== "undefined" && process.versions?.node) {
 	import("undici").then((m) => {
 		const { EnvHttpProxyAgent, setGlobalDispatcher } = m;

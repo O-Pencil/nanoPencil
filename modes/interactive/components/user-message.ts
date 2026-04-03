@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [SURFACE]: UserMessageComponent
  * [LOCUS]: modes/interactive/components/user-message.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { Container, Markdown, type MarkdownTheme, Spacer } from "@pencil-agent/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 

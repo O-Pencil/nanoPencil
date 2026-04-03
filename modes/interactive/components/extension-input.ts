@@ -2,11 +2,12 @@
  * Simple text input component for extensions.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [SURFACE]: ExtensionInputOptions, ExtensionInputComponent
  * [LOCUS]: modes/interactive/components/extension-input.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";

@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [SURFACE]: GoogleOptions, streamGoogle, streamSimpleGoogle
  * [LOCUS]: packages/ai/src/providers/google.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import {
 	type GenerateContentConfig,
 	type GenerateContentParameters,

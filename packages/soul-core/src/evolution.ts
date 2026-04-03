@@ -4,11 +4,12 @@
  * [POS]: Evolution engine - implements learning algorithms
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: SoulEvolutionEngine, PatternInsight
  * [LOCUS]: packages/soul-core/src/evolution.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type {
   SoulProfile,

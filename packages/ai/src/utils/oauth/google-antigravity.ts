@@ -6,11 +6,12 @@
  * It is only intended for CLI use, not browser environments.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./pkce.js
+ * [SURFACE]: antigravityOAuthProvider
  * [LOCUS]: packages/ai/src/utils/oauth/google-antigravity.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { Server } from "node:http";
 import { generatePKCE } from "./pkce.js";

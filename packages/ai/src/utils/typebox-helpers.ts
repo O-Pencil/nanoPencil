@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @sinclair/typebox
+ * [SURFACE]: StringEnum
  * [LOCUS]: packages/ai/src/utils/typebox-helpers.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { type TUnsafe, Type } from "@sinclair/typebox";
 
 /**

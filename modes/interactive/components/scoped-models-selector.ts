@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../theme/theme.js, ./dynamic-border.js
+ * [SURFACE]: ModelsConfig, ModelsCallbacks, ScopedModelsSelectorComponent
  * [LOCUS]: modes/interactive/components/scoped-models-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { Model } from "@pencil-agent/ai";
 import {
 	Container,

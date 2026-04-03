@@ -1,0 +1,38 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: slashCommands - English translations for slash command descriptions
+ * [LOCUS]: core/i18n/slash-commands.ts - English slash command translations
+ * [COVENANT]: Change English translations here
+ */
+
+export const slashCommands = {
+	settings: "Open settings menu",
+	model: "Select model (opens selector UI)",
+	"scoped-models": "Enable/disable models for Ctrl+P cycling",
+	apikey: "Update API key for current provider",
+	mcp: "Manage MCP servers (list, enable, disable)",
+	soul: "Show AI personality and stats (Soul)",
+	persona: "Switch AI persona/personality pack",
+	memory: "Show project memory and knowledge (NanoMem)",
+	dream: "Consolidate project memory (NanoMem)",
+	export: "Export session to HTML file",
+	share: "Share session as a secret GitHub gist",
+	copy: "Copy last agent message to clipboard",
+	name: "Set session display name",
+	session: "Show session info and stats",
+	usage: "Show token usage and cost stats",
+	changelog: "Show changelog entries",
+	hotkeys: "Show all keyboard shortcuts",
+	fork: "Create a new fork from a previous message",
+	tree: "Navigate session tree (switch branches)",
+	login: "Login with OAuth provider",
+	logout: "Logout from OAuth provider",
+	new: "Start a new session",
+	update: "Check for NanoPencil updates",
+	compact: "Manually compact the session context",
+	resume: "Resume a different session",
+	reload: "Reload extensions, skills, prompts, and themes",
+	"link-world": "Install link-world for internet access (Twitter, YouTube, etc.)",
+	quit: "Quit NanoPencil",
+	language: "Switch language (English/中文)",
+};

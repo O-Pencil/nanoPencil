@@ -1,0 +1,83 @@
+/**
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: i18n, t(), setLocale(), getLocale(), AVAILABLE_LOCALES, type Locale
+ * [LOCUS]: core/i18n/index.ts - internationalization core
+ * [COVENANT]: Change translations → update this module
+ */
+
+export type Locale = "en" | "zh";
+
+export const AVAILABLE_LOCALES: Locale[] = ["en", "zh"];
+
+export const LOCALE_NAMES: Record<Locale, string> = {
+	en: "English",
+	zh: "中文",
+};
+
+let currentLocale: Locale = "en";
+
+export function getLocale(): Locale {
+	return currentLocale;
+}
+
+export function setLocale(locale: Locale): void {
+	if (AVAILABLE_LOCALES.includes(locale)) {
+		currentLocale = locale;
+	}
+}
+
+// Import all translation modules
+import { slashCommands as slashCommandsEn } from "./slash-commands.js";
+import { messages as messagesEn } from "./messages.js";
+import { themes as themesEn } from "./themes.js";
+
+import { slashCommands as slashCommandsZh } from "./slash-commands.zh.js";
+import { messages as messagesZh } from "./messages.zh.js";
+import { themes as themesZh } from "./themes.zh.js";
+
+export type SlashCommands = typeof slashCommandsEn;
+export type Messages = typeof messagesEn;
+export type Themes = typeof themesEn;
+
+const translations: Record<Locale, { slashCommands: SlashCommands; messages: Messages; themes: Themes }> = {
+	en: { slashCommands: slashCommandsEn, messages: messagesEn, themes: themesEn },
+	zh: { slashCommands: slashCommandsZh, messages: messagesZh, themes: themesZh },
+};
+
+export interface TranslationPaths {
+	slashCommands: string[];
+	messages: string[];
+	themes: string[];
+}
+
+export function t(path: string): string {
+	const parts = path.split(".");
+	const locale = translations[currentLocale];
+
+	if (parts[0] === "slash") {
+		return getNestedValue(locale.slashCommands as unknown as Record<string, unknown>, parts.slice(1));
+	}
+	if (parts[0] === "msg") {
+		return getNestedValue(locale.messages as unknown as Record<string, unknown>, parts.slice(1));
+	}
+	if (parts[0] === "theme") {
+		return getNestedValue(locale.themes as unknown as Record<string, unknown>, parts.slice(1));
+	}
+
+	return path; // Return path if not found
+}
+
+function getNestedValue(obj: Record<string, unknown>, keys: string[]): string {
+	let result: unknown = obj;
+	for (const key of keys) {
+		if (result && typeof result === "object" && key in result) {
+			result = (result as Record<string, unknown>)[key];
+		} else {
+			return keys.join(".");
+		}
+	}
+	return typeof result === "string" ? result : keys.join(".");
+}
+
+// Re-export slash commands with translations
+export { slashCommandsEn, slashCommandsZh };

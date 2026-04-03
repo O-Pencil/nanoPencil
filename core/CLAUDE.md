@@ -22,6 +22,22 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `index.ts`: Barrel exports for core API surface, re-exports runtime, tools, extensions
 
+### Internationalization (`core/i18n/`)
+
+`index.ts`: i18n core - locale management, translation function `t()`, P3: SURFACE `i18n`, `t()`, `setLocale()`, `getLocale()`, `AVAILABLE_LOCALES`
+
+`slash-commands.ts`: English translations for slash command descriptions, P3: SURFACE `slashCommands`
+
+`slash-commands.zh.ts`: Chinese translations for slash command descriptions
+
+`messages.ts`: English translations for general UI messages, P3: SURFACE `messages`
+
+`messages.zh.ts`: Chinese translations for general UI messages
+
+`themes.ts`: English translations for theme names
+
+`themes.zh.ts`: Chinese translations for theme names
+
 ### Runtime Layer (`core/runtime/`)
 
 `agent-session.ts`: Central session manager — wraps Agent, manages lifecycle, coordinates compaction, emits events, P3: UPSTREAM agent-core/Agent; SURFACE createAgentSession(), AgentSession class; LOCUS runtime orchestration hub

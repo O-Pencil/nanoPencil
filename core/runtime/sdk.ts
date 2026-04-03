@@ -1,5 +1,5 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, core/config/*, core/tools/*, core/session/*, core/mcp-*
+ * [UPSTREAM]: Depends on agent-core, ai, core/config/*, core/tools/*, core/session/*, core/mcp-*, i18n/*
  * [SURFACE]: createAgentSession(options) → AgentSession + load results
  * [LOCUS]: SDK factory; creates all services with DI, wires up extensions
  * [COVENANT]: Change SDK signature → update P1 architecture diagram
@@ -199,6 +199,12 @@ export async function createAgentSession(
   const cwd = options.cwd ?? process.cwd();
   const agentDir = options.agentDir ?? getDefaultAgentDir();
   let resourceLoader = options.resourceLoader;
+
+  // Initialize i18n with locale from settings (or default to English)
+  const tempSettingsManager = options.settingsManager ?? SettingsManager.create(cwd, agentDir);
+  const locale = tempSettingsManager.getSettings().locale ?? "en";
+  const { setLocale } = await import("../i18n/index.js");
+  setLocale(locale);
 
   // Use provided or create AuthStorage and ModelRegistry
   const authPath = options.agentDir ? join(agentDir, "auth.json") : undefined;

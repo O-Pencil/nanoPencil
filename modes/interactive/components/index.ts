@@ -6,6 +6,7 @@
  */
 // UI Components for extensions
 export { ArminComponent } from "./armin.js";
+export { AttachmentsBarComponent } from "./attachments-bar.js";
 export { AssistantMessageComponent } from "./assistant-message.js";
 export { promptForApiKey } from "./apikey-input.js";
 export { BashExecutionComponent } from "./bash-execution.js";

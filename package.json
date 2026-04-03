@@ -1,6 +1,6 @@
 {
   "name": "@pencil-agent/nano-pencil",
-  "version": "1.11.17",
+  "version": "1.11.18",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Based on pi; supports DashScope Coding Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
@@ -59,9 +59,6 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.16.1",
     "@mariozechner/jiti": "^2.6.2",
-    "@pencil-agent/agent-core": "0.0.1",
-    "@pencil-agent/ai": "0.0.1",
-    "@pencil-agent/tui": "0.0.1",
     "@silvia-odwyer/photon-node": "^0.3.4",
     "chalk": "^5.5.0",
     "cli-highlight": "^2.1.11",

@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui
+ * [SURFACE]: ParsedSearchQuery, MatchResult, hasSessionName, parseSearchQuery, matchSession
  * [LOCUS]: modes/interactive/components/session-selector-search.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { fuzzyMatch } from "@pencil-agent/tui";
 import type { SessionInfo } from "../../../core/session/session-manager.js";
 

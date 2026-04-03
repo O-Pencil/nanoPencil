@@ -5,11 +5,12 @@
  * It is only intended for CLI use, not browser environments.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./pkce.js
+ * [SURFACE]: openaiCodexOAuthProvider
  * [LOCUS]: packages/ai/src/utils/oauth/openai-codex.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 // NEVER convert to top-level imports - breaks browser/Vite builds (web-ui)
 let _randomBytes: typeof import("node:crypto").randomBytes | null = null;

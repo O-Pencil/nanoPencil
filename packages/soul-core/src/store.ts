@@ -4,11 +4,12 @@
  * [POS]: Storage layer - bridges Soul and NanoMem
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs/promises, node:fs, node:path
+ * [SURFACE]: SoulStore
  * [LOCUS]: packages/soul-core/src/store.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";

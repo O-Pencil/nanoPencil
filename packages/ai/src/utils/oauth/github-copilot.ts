@@ -2,11 +2,12 @@
  * GitHub Copilot OAuth flow
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../../models.js
+ * [SURFACE]: normalizeDomain, getGitHubCopilotBaseUrl, githubCopilotOAuthProvider
  * [LOCUS]: packages/ai/src/utils/oauth/github-copilot.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { getModels } from "../../models.js";
 import type { Api, Model } from "../../types.js";

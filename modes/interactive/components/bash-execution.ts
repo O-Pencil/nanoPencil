@@ -2,11 +2,12 @@
  * Component for displaying bash command execution with streaming output.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, strip-ansi, ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [SURFACE]: BashExecutionComponent
  * [LOCUS]: modes/interactive/components/bash-execution.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { Container, Loader, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import stripAnsi from "strip-ansi";

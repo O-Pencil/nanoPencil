@@ -4,11 +4,12 @@
  * [POS]: Interactive mode component for /soul command
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: formatSoulStats
  * [LOCUS]: modes/interactive/components/soul-stats.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 // @ts-ignore - soul package is bundled at runtime
 import type { SoulManager } from "@pencil-agent/soul";

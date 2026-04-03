@@ -10,11 +10,12 @@
  * 内置扩展：自动随 nanopencil 加载
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, fs, path
+ * [SURFACE]: Extension interface
  * [LOCUS]: extensions/optional/simplify/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { complete, getModel } from "@pencil-agent/ai";
 import { Container, Markdown, matchesKey, Text } from "@pencil-agent/tui";

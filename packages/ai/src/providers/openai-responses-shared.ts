@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../models.js, ../utils/json-parse.js, ../utils/sanitize-unicode.js, ./transform-messages.js
+ * [SURFACE]: OpenAIResponsesStreamOptions, ConvertResponsesMessagesOptions, ConvertResponsesToolsOptions, convertResponsesMessages, convertResponsesTools
  * [LOCUS]: packages/ai/src/providers/openai-responses-shared.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type OpenAI from "openai";
 import type {
 	Tool as OpenAITool,

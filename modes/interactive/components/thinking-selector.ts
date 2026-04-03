@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [SURFACE]: ThinkingSelectorComponent
  * [LOCUS]: modes/interactive/components/thinking-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
 import { getSelectListTheme } from "../theme/theme.js";

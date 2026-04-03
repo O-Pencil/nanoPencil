@@ -1,13 +1,9 @@
 /**
- * One-time migrations that run on startup.
+ * [UPSTREAM]: Depends on chalk, node:fs, node:path, config
+ * [SURFACE]: runMigrations(), showDeprecationWarnings()
+ * [LOCUS]: migrations.ts - one-time migrations that run on startup
+ * [COVENANT]: Change migrations → update this header
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: ./migrations.ts - 
- * [COVENANT]: Change → update this header
- */
-
 import chalk from "chalk";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
 import { dirname, join } from "path";

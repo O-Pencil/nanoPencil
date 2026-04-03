@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @anthropic-ai/sdk, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/json-parse.js
+ * [SURFACE]: AnthropicOptions, streamAnthropic, streamSimpleAnthropic
  * [LOCUS]: packages/ai/src/providers/anthropic.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import Anthropic from "@anthropic-ai/sdk";
 import type {
 	ContentBlockParam,

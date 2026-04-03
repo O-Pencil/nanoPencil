@@ -3,11 +3,12 @@
  * Used by both tool-execution.ts and bash-execution.ts for consistent behavior.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui
+ * [SURFACE]: VisualTruncateResult, truncateToVisualLines
  * [LOCUS]: modes/interactive/components/visual-truncate.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { Text } from "@pencil-agent/tui";
 

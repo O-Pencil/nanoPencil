@@ -1,16 +1,9 @@
 /**
- * NanoPencil 默认配置：支持阿里云百炼、百度千帆、火山方舟、MiniMax、智谱 Coding Plan 与本地 Ollama。
- * 首次运行会确保 ~/.nanopencil/agent/ 下存在默认 models.json（各 Coding Plan 无 apiKey，由 main 提示输入并存 auth.json；ollama 使用 apiKey "ollama"）。
- * 若 models.json 已存在，会合并默认模型（补充缺失并更新 contextWindow/maxTokens）。
- * 同时若 .PENCIL.md 不存在，会写入默认全局上下文文件，用户安装即可自带。
+ * [UPSTREAM]: Depends on node:fs, node:path, ai, config
+ * [SURFACE]: Provider constants, ensureNanopencilDefaultConfig(), ensureNanopencilCodingPlanAuth()
+ * [LOCUS]: nanopencil-defaults.ts - default configuration for Chinese AI providers
+ * [COVENANT]: Change defaults → update this header
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: ./nanopencil-defaults.ts - 
- * [COVENANT]: Change → update this header
- */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { createInterface } from "readline";

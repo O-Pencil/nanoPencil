@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on child_process, fs, os, path, ./fuzzy.js
+ * [SURFACE]: AutocompleteItem, SlashCommand, AutocompleteProvider, CombinedAutocompleteProvider
  * [LOCUS]: packages/tui/src/autocomplete.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { spawnSync } from "child_process";
 import { readdirSync, statSync } from "fs";
 import { homedir } from "os";

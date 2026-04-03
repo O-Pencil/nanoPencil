@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../keybindings.js, ../utils.js
+ * [SURFACE]: SelectItem, SelectListTheme, SelectList
  * [LOCUS]: packages/tui/src/components/select-list.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { getEditorKeybindings } from "../keybindings.js";
 import type { Component } from "../tui.js";
 import { truncateToWidth } from "../utils.js";

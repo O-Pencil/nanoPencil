@@ -4,11 +4,12 @@
  * [POS]: Foundation layer - every other module imports from here
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: PersonalityVector, CognitiveStyle, ValueSystem, EmotionalState, ExpertiseArea
  * [LOCUS]: packages/soul-core/src/types.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 /**
  * Personality dimensions based on Big Five + NanoPencil-specific traits

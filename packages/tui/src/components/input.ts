@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../keybindings.js, ../kill-ring.js, ../tui.js, ../undo-stack.js, ../utils.js
+ * [SURFACE]: Input
  * [LOCUS]: packages/tui/src/components/input.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { getEditorKeybindings } from "../keybindings.js";
 import { KillRing } from "../kill-ring.js";
 import { type Component, CURSOR_MARKER, type Focusable } from "../tui.js";

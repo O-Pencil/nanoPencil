@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [SURFACE]: GoogleVertexOptions, streamGoogleVertex, streamSimpleGoogleVertex
  * [LOCUS]: packages/ai/src/providers/google-vertex.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import {
 	type GenerateContentConfig,
 	type GenerateContentParameters,

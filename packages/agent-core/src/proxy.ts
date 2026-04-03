@@ -3,11 +3,12 @@
  * The server manages auth and proxies requests to LLM providers.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: ProxyStreamOptions, streamProxy
  * [LOCUS]: packages/agent-core/src/proxy.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 // Internal import for JSON parsing utility
 import {

@@ -6,11 +6,12 @@
  * (cycle through older entries).
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: KillRing
  * [LOCUS]: packages/tui/src/kill-ring.ts - 
  * [COVENANT]: Change → update this header
  */
+
 export class KillRing {
 	private ring: string[] = [];
 

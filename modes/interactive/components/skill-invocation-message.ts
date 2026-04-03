@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
+ * [SURFACE]: SkillInvocationMessageComponent
  * [LOCUS]: modes/interactive/components/skill-invocation-message.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { Box, Markdown, type MarkdownTheme, Text } from "@pencil-agent/tui";
 import type { ParsedSkillBlock } from "../../../core/runtime/agent-session.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";

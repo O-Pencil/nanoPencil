@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: ApiProvider, registerApiProvider, getApiProvider, getApiProviders, unregisterApiProviders
  * [LOCUS]: packages/ai/src/api-registry.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type {
 	Api,
 	AssistantMessageEventStream,

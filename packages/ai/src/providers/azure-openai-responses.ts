@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on openai, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ./openai-responses-shared.js
+ * [SURFACE]: AzureOpenAIResponsesOptions, streamAzureOpenAIResponses, streamSimpleAzureOpenAIResponses
  * [LOCUS]: packages/ai/src/providers/azure-openai-responses.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { AzureOpenAI } from "openai";
 import type { ResponseCreateParamsStreaming } from "openai/resources/responses/responses.js";
 import { getEnvApiKey } from "../env-api-keys.js";

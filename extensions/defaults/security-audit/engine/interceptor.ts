@@ -6,11 +6,12 @@
  * [POS]: Engine layer - implements interception mechanism
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./detector.js, ./logger.js
+ * [SURFACE]: InterceptorResult, Interceptor
  * [LOCUS]: extensions/defaults/security-audit/engine/interceptor.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { SecurityCheckResult, SecurityConfig, AuditEvent, AuditEventType } from "../interface.js";
 import { DangerDetector } from "./detector.js";

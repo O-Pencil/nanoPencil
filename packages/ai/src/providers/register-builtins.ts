@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../api-registry.js, ./amazon-bedrock.js, ./anthropic.js, ./azure-openai-responses.js, ./google.js
+ * [SURFACE]: registerBuiltInApiProviders, resetApiProviders
  * [LOCUS]: packages/ai/src/providers/register-builtins.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { clearApiProviders, registerApiProvider } from "../api-registry.js";
 import { streamBedrock, streamSimpleBedrock } from "./amazon-bedrock.js";
 import { streamAnthropic, streamSimpleAnthropic } from "./anthropic.js";

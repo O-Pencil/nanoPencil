@@ -3,11 +3,12 @@
  * Works in both Node.js 20+ and browsers.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: Extension interface
  * [LOCUS]: packages/ai/src/utils/oauth/pkce.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 /**
  * Encode bytes as base64url string.

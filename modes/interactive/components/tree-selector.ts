@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [SURFACE]: TreeSelectorComponent
  * [LOCUS]: modes/interactive/components/tree-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import {
 	type Component,
 	Container,

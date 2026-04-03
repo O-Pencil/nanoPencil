@@ -3,11 +3,12 @@
  * No transport abstraction - calls streamSimple via the loop.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./agent-loop.js
+ * [SURFACE]: AgentOptions, Agent
  * [LOCUS]: packages/agent-core/src/agent.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import {
 	getModel,

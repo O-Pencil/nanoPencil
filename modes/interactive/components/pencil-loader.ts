@@ -3,11 +3,12 @@
  * Uses ◆◇◈ symbols for a smooth loading indicator
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui
+ * [SURFACE]: PencilLoader
  * [LOCUS]: modes/interactive/components/pencil-loader.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import type { Theme } from "../theme/theme.js";

@@ -1,29 +1,30 @@
 /**
+ * [UPSTREAM]: Depends on core/extensions/types.ts, core/session/session-manager.ts
+ * [SURFACE]: Extension with /interview command, interview tool, and lightweight before_agent_start hook
+ * [LOCUS]: extensions/defaults/interview - requirement clarification extension
+ * [COVENANT]: Update this header on changes and verify against extensions/CLAUDE.md
+ *
  * Interview Extension - Clarify ambiguous user requests.
  *
  * Provides:
  * - /interview command: force an interactive clarification and inject refined intent.
  * - interview tool: allow the model to auto-trigger clarification via tool_call.
- * - before_agent_start hook: preprocess each user prompt and inject refined intent when needed.
+ * - before_agent_start hook: lightweight synchronous check (NO blocking LLM calls or UI interactions).
  *
- * Key implementation constraints:
- * - In non-UI modes (RPC/print), the extension must not block on dialogs; it falls back to probe-only refined intent.
- * - The extension should never throw on user cancel; it should proceed with best-effort placeholders.
- */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: extensions/defaults/interview/index.ts - 
- * [COVENANT]: Change → update this header
+ * Design principle:
+ * - The before_agent_start hook MUST be synchronous and fast (<10ms).
+ * - NO LLM calls (runProbe) in before_agent_start - they cause unpredictable delays.
+ * - NO UI interactions (confirm dialogs) in before_agent_start - they block the agent loop.
+ * - If interview is needed, return a lightweight hint and let the Agent decide whether to call the interview tool.
  */
 
 import { type Static, Type } from "@sinclair/typebox";
 import type {
-	ExtensionAPI,
 	BeforeAgentStartEvent,
 	BeforeAgentStartEventResult,
-	ExtensionContext,
+	ExtensionAPI,
 	ExtensionCommandContext,
+	ExtensionContext,
 	RegisteredCommand,
 } from "../../../core/extensions/types.js";
 import type { ReadonlySessionManager } from "../../../core/session/session-manager.js";
@@ -73,11 +74,6 @@ function tryParseStrictJsonObject(text: string): unknown | undefined {
 	}
 }
 
-function truncateForPrompt(str: string, maxChars: number): string {
-	if (str.length <= maxChars) return str;
-	return str.slice(0, maxChars);
-}
-
 const LOOP_PROMPT_PREFIX = "[LOOP:";
 
 function isLoopManagedPrompt(prompt: string): boolean {
@@ -92,11 +88,8 @@ function isLoopManagedPrompt(prompt: string): boolean {
 }
 
 /**
- * Check if interview should be triggered based on prompt content and context.
- * Only triggers for:
- * 1. Explicit /interview command (handled separately)
- * 2. Task-like requests that likely need clarification
- * 4. NOT after persona switch (flag set by interactive-mode)
+ * Check if the prompt looks like a task that might need clarification.
+ * This is a SYNCHRONOUS heuristic check - no LLM calls.
  */
 function isTaskLikePrompt(prompt: string): boolean {
 	const p = prompt.trim();
@@ -106,7 +99,7 @@ function isTaskLikePrompt(prompt: string): boolean {
 	const taskVerbPattern =
 		/(做|写|实现|开发|设计|制作|生成|编写|搭建|部署|构建|修复|优化|重构|改进|完善|输出|交付|策划|规划|说明)/;
 	const outputPattern =
-		/(网站|作品集|页面|前端|后端|UI|界面|代码|程序|脚本|文档|README|PRD|测试|单元测试|接口|API|数据库|SQL|功能|需求|方案|计划)/;
+		/(网站|作品集|页面|前端|后端|UI|界面|代码|程序|脚本|文档|README|PRD|测试|单元测试|接口|API|数据库|SQL|功能|需求|方案|计划|系统|平台|应用|模块|服务|组件)/;
 
 	// "review/debug" intent e.g. "帮我看看这段代码/报错"
 	const reviewPattern = /(看看|检查|分析|debug|定位|排查)/i;
@@ -154,21 +147,55 @@ function isNonTaskPrompt(prompt: string): boolean {
 	return false;
 }
 
-function shouldRunInterview(prompt: string): boolean {
-	// Check if we just switched persona - skip interview on first message after switch
+/**
+ * Check if the prompt is detailed enough that it probably doesn't need clarification.
+ * Longer prompts with technical details are likely self-sufficient.
+ */
+function isDetailedPrompt(prompt: string): boolean {
+	const p = prompt.trim();
+
+	// Prompts over 150 characters likely have enough context
+	if (p.length > 150) return true;
+
+	// Contains specific technical terms that indicate clarity
+	const technicalTerms = /(react|vue|angular|node|typescript|javascript|python|rust|go|java|docker|kubernetes|api|rest|graphql|sql|mongodb|redis|aws|gcp|azure|linux|macos|windows)/i;
+	if (technicalTerms.test(p)) return true;
+
+	// Contains file paths or code references
+	const codeReferences = /(\.\w+|\/\w+|\\w+|\.\w{1,4}\b|`[^`]+`)/;
+	if (codeReferences.test(p)) return true;
+
+	// Debug/review requests - user will provide code/error context
+	// e.g., "帮我看看这段代码", "检查下这个报错", "debug一下"
+	const debugPattern = /(看看|检查|分析|debug|定位|排查|review|审查|诊断)/i;
+	const debugTargetPattern = /(代码|报错|错误|bug|异常|日志|log|问题|脚本|程序|函数|方法)/i;
+	if (debugPattern.test(p) && debugTargetPattern.test(p)) return true;
+
+	return false;
+}
+
+/**
+ * Synchronous check whether interview might be beneficial.
+ * NO LLM calls, NO UI interactions - just heuristic checks.
+ */
+function shouldSuggestInterview(prompt: string): boolean {
+	// Skip after persona switch
 	if (process.env.PI_JUST_SWITCHED_PERSONA === "true") {
 		return false;
 	}
 
-	// Loop-generated follow-up turns should stay autonomous and never re-open interview.
+	// Skip loop-managed prompts
 	if (isLoopManagedPrompt(prompt)) {
 		return false;
 	}
 
-	// Avoid triggering interview for greetings/small-talk/memory questions.
+	// Skip non-task prompts (greetings, chitchat, etc.)
 	if (isNonTaskPrompt(prompt)) return false;
 
-	// Trigger only when request looks task-like; actual "need clarification" is decided in probe/completionScore.
+	// Skip detailed prompts that likely have enough context
+	if (isDetailedPrompt(prompt)) return false;
+
+	// Only suggest for task-like prompts
 	return isTaskLikePrompt(prompt);
 }
 
@@ -177,14 +204,14 @@ function getUserTextFromSessionManager(sm: ReadonlySessionManager): string | und
 	for (let i = entries.length - 1; i >= 0; i--) {
 		const entry = entries[i];
 		if (entry.type !== "message") continue;
-		const msg = entry.message as any;
+		const msg = entry.message as unknown as Record<string, unknown>;
 		if (msg.role !== "user") continue;
 		const content = msg.content;
 		if (typeof content === "string") return content;
 		if (Array.isArray(content)) {
 			const parts = content
-				.filter((b) => b && b.type === "text" && typeof b.text === "string")
-				.map((b) => b.text);
+				.filter((b: Record<string, unknown>) => b && b.type === "text" && typeof b.text === "string")
+				.map((b: Record<string, unknown>) => b.text as string);
 			const text = parts.join("\n").trim();
 			if (text) return text;
 		}
@@ -233,21 +260,21 @@ function normalizeMissingSlots(raw: unknown): MissingSlot[] {
 	const out: MissingSlot[] = [];
 	for (const s of raw) {
 		if (!s || typeof s !== "object") continue;
-		const key = typeof (s as any).key === "string" ? String((s as any).key).trim() : "";
-		const question = typeof (s as any).question === "string" ? String((s as any).question).trim() : "";
+		const key = typeof (s as Record<string, unknown>).key === "string" ? String((s as Record<string, unknown>).key).trim() : "";
+		const question = typeof (s as Record<string, unknown>).question === "string" ? String((s as Record<string, unknown>).question).trim() : "";
 		if (!key || !question) continue;
 		if (seen.has(key)) continue;
 		seen.add(key);
 		const options =
-			Array.isArray((s as any).options) && (s as any).options.length > 0
-				? (s as any).options.map((v: any) => String(v).trim()).filter(Boolean).slice(0, 6)
+			Array.isArray((s as Record<string, unknown>).options) && (s as Record<string, unknown>).options
+				? ((s as Record<string, unknown>).options as unknown[]).map((v: unknown) => String(v).trim()).filter(Boolean).slice(0, 6)
 				: undefined;
-		const allowCustom = typeof (s as any).allowCustom === "boolean" ? (s as any).allowCustom : undefined;
+		const allowCustom = typeof (s as Record<string, unknown>).allowCustom === "boolean" ? (s as Record<string, unknown>).allowCustom : undefined;
 		out.push({
 			key: key.slice(0, 40),
 			question: question.slice(0, 220),
-			options,
-			allowCustom,
+			options: options as string[] | undefined,
+			allowCustom: allowCustom as boolean | undefined,
 		});
 		if (out.length >= 3) break;
 	}
@@ -256,11 +283,11 @@ function normalizeMissingSlots(raw: unknown): MissingSlot[] {
 
 function coerceProbeOutput(parsed: unknown, fallback: ProbeOutput): ProbeOutput {
 	if (!parsed || typeof parsed !== "object") return fallback;
-	const p = parsed as any;
+	const p = parsed as Record<string, unknown>;
 
 	let completionScore = clamp01(typeof p.completionScore === "number" ? p.completionScore : fallback.completionScore);
 	let refinedIntent =
-		typeof p.refinedIntent === "string" && p.refinedIntent.trim() ? p.refinedIntent.trim() : fallback.refinedIntent;
+		typeof p.refinedIntent === "string" && p.refinedIntent.toString().trim() ? p.refinedIntent.toString().trim() : fallback.refinedIntent;
 	let missingSlots = normalizeMissingSlots(p.missingSlots);
 
 	// Consistency guards:
@@ -354,7 +381,7 @@ async function runInterview(
 		mode: ctx.hasUI ? ("interactive" as const) : ("nonInteractive" as const),
 		cwd: ctx.cwd,
 		model: ctx.model
-			? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as any).name }
+			? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as unknown as Record<string, unknown>).name as string | undefined }
 			: undefined,
 	};
 	const answers: Record<string, string> = {};
@@ -411,11 +438,11 @@ function buildInjectionText(input: {
 	const answersLines =
 		answeredKeys.length > 0
 			? answeredKeys.map((k) => `- ${k}: ${input.answers[k]}`).join("\n")
-			: "(无)";
+			: "(none)";
 	const remainingLines =
 		remainingKeys.length > 0
 			? remainingKeys.map((k) => `- ${k}`).join("\n")
-			: "(无)";
+			: "(none)";
 
 	return [
 		"[Interview Refined Intent]",
@@ -450,9 +477,7 @@ const interviewToolSchema = Type.Object({
 type InterviewToolInput = Static<typeof interviewToolSchema>;
 
 export default async function interviewExtension(pi: ExtensionAPI) {
-	// Minimal custom message renderer is optional - default renderer already supports Markdown.
-	// We keep this extension light by relying on default rendering.
-
+	// Register /interview command for manual clarification
 	pi.registerCommand("interview", {
 		description: "Clarify an ambiguous request and inject a refined intent.",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
@@ -495,6 +520,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 		},
 	} satisfies Omit<RegisteredCommand, "name">);
 
+	// Register interview tool for Agent to call when needed
 	pi.registerTool({
 		name: "interview",
 		label: "Interview Clarifier",
@@ -515,7 +541,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 				mode: ctx.hasUI ? ("interactive" as const) : ("nonInteractive" as const),
 				cwd: ctx.cwd,
 				model: ctx.model
-					? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as any).name }
+					? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as unknown as Record<string, unknown>).name as string | undefined }
 					: undefined,
 			};
 
@@ -600,119 +626,36 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.on("before_agent_start", async (event: BeforeAgentStartEvent, ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
+	// ============================================================================
+	// CRITICAL: before_agent_start hook - SYNCHRONOUS ONLY
+	// ============================================================================
+	//
+	// This hook MUST be fast (<10ms). NO LLM calls, NO UI interactions.
+	// If interview might be beneficial, return a lightweight hint and let the Agent
+	// decide whether to call the interview tool.
+	//
+	// Previous implementation had race conditions:
+	// - runProbe() is async LLM call (1-5 seconds)
+	// - ctx.ui.confirm() blocks waiting for user
+	// - These could complete AFTER the agent started, causing surprise popups
+	//
+	pi.on("before_agent_start", async (event: BeforeAgentStartEvent, _ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
 		const original = event.prompt?.trim();
 		if (!original) return undefined;
 
-		// Check if interview should run based on prompt content and context
-		if (!shouldRunInterview(original)) {
+		// FAST SYNCHRONOUS CHECK ONLY - no async operations
+		if (!shouldSuggestInterview(original)) {
 			return undefined;
 		}
 
-		const maxRounds = 3;
-		const capabilities = {
-			hasUI: ctx.hasUI,
-			mode: ctx.hasUI ? ("interactive" as const) : ("nonInteractive" as const),
-			cwd: ctx.cwd,
-			model: ctx.model
-				? { provider: ctx.model.provider, id: ctx.model.id, name: (ctx.model as any).name }
-				: undefined,
+		// Return a lightweight system prompt hint.
+		// Let the Agent decide whether to call the interview tool.
+		// This is non-blocking and won't cause race conditions.
+		return {
+			systemPrompt: `
+[Interview Hint]
+The user's request may benefit from clarification. If the request seems ambiguous or missing critical details (goal/deliverable/constraints/acceptance criteria), consider using the 'interview' tool to interactively clarify before proceeding. If the request is already clear enough to start implementing, proceed directly without clarification.
+`.trim(),
 		};
-
-		// Visualization: notify start
-		ctx.ui.notify?.("Interview: analyzing request...", "info");
-		ctx.ui.setWorkingMessage?.("Interview: analyzing...");
-
-		try {
-			// Probe-first decision: only clarify when the probe signals missing critical info.
-			const initialAnswers: Record<string, string> = {};
-			const probe = await runProbe(ctx, original, initialAnswers, capabilities);
-			const needsClarification = probe.completionScore < 0.8 && probe.missingSlots.length > 0;
-
-			// Clear working message early; follow-up UI will re-set if needed.
-			ctx.ui.setWorkingMessage?.();
-
-			// If already clear enough, do not inject any extra messages (avoid surprise/noise).
-			if (!needsClarification) {
-				ctx.ui.notify?.("Interview: request looks clear enough; skipping clarification", "info");
-				return undefined;
-			}
-
-			// UI mode: ask user whether to clarify now (avoid surprising interruptions).
-			let userWantsClarification = false;
-			if (ctx.hasUI) {
-				userWantsClarification = await ctx.ui.confirm(
-					"Interview clarification",
-					"I need 1 quick clarification to proceed. Ask now?",
-				);
-			}
-
-			const interviewResult = userWantsClarification
-				? await runInterview(ctx, original, maxRounds)
-				: {
-						refinedIntent: probe.refinedIntent,
-						completionScore: probe.completionScore,
-						answers: {},
-						missingSlotsRemaining: probe.missingSlots,
-					};
-
-			const { refinedIntent, completionScore, answers, missingSlotsRemaining } = interviewResult;
-
-			const asked = Object.keys(answers).length > 0;
-			const isClearEnough = missingSlotsRemaining.length === 0 && completionScore >= 0.8;
-
-			// In non-UI modes we still inject refinedIntent so the main model has the best effort.
-			if (!refinedIntent.trim()) return undefined;
-
-			// Visualization: completion notification
-			ctx.ui.notify?.(
-				asked
-					? "Interview: clarification complete"
-					: isClearEnough
-						? "Interview: refined intent generated"
-						: "Interview: refined intent generated (some items still TBD)",
-				"info",
-			);
-
-			const injectionText = buildInjectionText({
-				originalIntent: original,
-				refinedIntent,
-				completionScore,
-				answers,
-				missingSlotsRemaining,
-			});
-
-			// System prompt addition: prevent the model from repeatedly calling interview.
-			const systemPromptAddition = `
-Note:
-1) This turn already has an Interview refined spec (custom type: ${INTERVIEW_CUSTOM_TYPE}).
-2) Plan and execute directly from refinedIntent.
-3) If anything is still unknown, list it as "TBD" in the final plan. Do not call the interview tool again this turn.
-`.trim();
-
-			return {
-				message: {
-					customType: INTERVIEW_CUSTOM_TYPE,
-					content: injectionText,
-					display: true,
-					details: {
-						original_intent: original,
-						refined_intent: refinedIntent,
-						completion_score: completionScore,
-						answers,
-						missing_slots: missingSlotsRemaining.map((s) => ({ key: s.key, question: s.question })),
-						skipped_interaction: ctx.hasUI ? !userWantsClarification : true,
-					},
-				},
-				systemPrompt: systemPromptAddition,
-			};
-		} catch (err) {
-			// Clear working message on error
-			ctx.ui.setWorkingMessage?.();
-			// Never break the main agent due to interview.
-			ctx.ui.notify(`Interview: failed (${err instanceof Error ? err.message : String(err)})`, "warning");
-			return undefined;
-		}
 	});
 }
-

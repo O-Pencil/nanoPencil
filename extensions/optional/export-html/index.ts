@@ -5,11 +5,12 @@
  * This extension registers the /export command.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:path, node:url, ../../../core/session/session-manager.js, ../../../config.js, ../../../modes/interactive/theme/theme.js
+ * [SURFACE]: exportSessionToHtml, exportFromFile, type ToolHtmlRenderer, type ExportOptions, ExtExportOptions
  * [LOCUS]: extensions/optional/export-html/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { AgentState } from "@pencil-agent/agent-core";
 import { dirname, join } from "node:path";

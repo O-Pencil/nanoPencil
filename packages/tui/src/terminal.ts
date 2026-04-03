@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs, node:module, ./keys.js, ./stdin-buffer.js
+ * [SURFACE]: Terminal, ProcessTerminal
  * [LOCUS]: packages/tui/src/terminal.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import { setKittyProtocolActive } from "./keys.js";

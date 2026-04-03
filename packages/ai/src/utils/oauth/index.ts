@@ -9,11 +9,12 @@
  * - Antigravity (Gemini 3, Claude, GPT-OSS via Google Cloud)
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./anthropic.js, ./github-copilot.js, ./google-antigravity.js, ./google-gemini-cli.js, ./openai-codex.js
+ * [SURFACE]: anthropicOAuthProvider, loginAnthropic, refreshAnthropicToken, antigravityOAuthProvider, loginAntigravity
  * [LOCUS]: packages/ai/src/utils/oauth/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 // Set up HTTP proxy for fetch() calls (respects HTTP_PROXY, HTTPS_PROXY env vars)
 import "../http-proxy.js";

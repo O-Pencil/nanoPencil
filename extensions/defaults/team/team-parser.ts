@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: parseTeamCommand, buildTeamHelp
  * [LOCUS]: extensions/defaults/team/team-parser.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { TeamCommandMode } from "./team-types.js";
 
 export type TeamCommand =

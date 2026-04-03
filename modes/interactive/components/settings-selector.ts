@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../theme/theme.js, ./dynamic-border.js
+ * [SURFACE]: SettingsConfig, SettingsCallbacks, SettingsSelectorComponent
  * [LOCUS]: modes/interactive/components/settings-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import type { Transport } from "@pencil-agent/ai";
 import {

@@ -8,6 +8,9 @@ coverage/
 .env
 .env.local
 .claude/
+.pi/images/
+_clipboard_*
+_paste/
 nanomem-insights.html
 report.html
 *.html

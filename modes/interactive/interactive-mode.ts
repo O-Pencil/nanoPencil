@@ -115,6 +115,7 @@ import { ensureTool } from "../../core/utils/tools-manager.js";
 import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
 import { formatDimensionNote, resizeImage } from "../utils/image-resize.js";
 import { ArminComponent } from "./components/armin.js";
+import { AttachmentsBarComponent } from "./components/attachments-bar.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
@@ -208,6 +209,8 @@ export interface InteractiveModeOptions {
 }
 
 export class InteractiveMode {
+  private static clipboardImageSeq = 0;
+  private clipboardImageFiles: string[] = [];
   private session: AgentSession;
   private ui: TUI;
   private chatContainer: Container;
@@ -311,6 +314,12 @@ export class InteractiveMode {
   private customHeader: (Component & { dispose?(): void }) | undefined =
     undefined;
 
+  // Attachments state
+  private attachments: { path: string; mimeType?: string }[] = [];
+  private selectedAttachmentIndex: number = -1;
+  private attachmentsContainer: Container | undefined = undefined;
+  private attachmentsBar: AttachmentsBarComponent | undefined = undefined;
+
   // Convenience accessors
   private get agent() {
     return this.session.agent;
@@ -354,6 +363,8 @@ export class InteractiveMode {
     );
     this.editor = this.defaultEditor;
     this.editorContainer = new Container();
+    this.attachmentsContainer = new Container();
+    this.editorContainer.addChild(this.attachmentsContainer);
     this.editorContainer.addChild(this.editor as Component);
     this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
@@ -469,6 +480,9 @@ export class InteractiveMode {
 
   async init(): Promise<void> {
     if (this.isInitialized) return;
+
+    // Clean up stale clipboard image files from previous sessions
+    this.cleanupStaleClipboardFiles();
 
     // Do not show changelog on startup; version check will prompt to update CLI when newer version exists
 
@@ -2191,6 +2205,8 @@ export class InteractiveMode {
     this.defaultEditor.onEscape = () => {
       if (this.loadingAnimation) {
         this.restoreQueuedMessagesToEditor({ abort: true });
+      } else if (this.session.isStreaming) {
+        this.agent.abort();
       } else if (this.session.isBashRunning) {
         this.session.abortBash();
       } else if (this.isBashMode) {
@@ -2269,6 +2285,11 @@ export class InteractiveMode {
     this.defaultEditor.onPasteImage = () => {
       this.handleClipboardImagePaste();
     };
+
+    // Handle attachment navigation keys (arrow keys, delete)
+    this.defaultEditor.onAttachmentKey = (data: string) => {
+      return this.handleAttachmentKeyNavigation(data);
+    };
   }
 
   private async handleClipboardImagePaste(): Promise<void> {
@@ -2278,19 +2299,155 @@ export class InteractiveMode {
         return;
       }
 
-      // Write to temp file
-      const tmpDir = os.tmpdir();
+      // Save to a dedicated _paste/ directory so the model finds ONLY
+      // the clipboard image when browsing (avoids confusion with other
+      // image files like IMG_*.JPG in the project root).
       const ext = extensionForImageMimeType(image.mimeType) ?? "png";
-      const fileName = `pi-clipboard-${crypto.randomUUID()}.${ext}`;
-      const filePath = path.join(tmpDir, fileName);
+      const seq = ++InteractiveMode.clipboardImageSeq;
+      const fileName = `image_${seq}.${ext}`;
+      const pasteDir = path.join(this.session.cwd, "_paste");
+      fs.mkdirSync(pasteDir, { recursive: true });
+      const filePath = path.join(pasteDir, fileName);
       fs.writeFileSync(filePath, Buffer.from(image.bytes));
 
-      // Insert file path directly
-      this.editor.insertTextAtCursor?.(filePath);
+      // Track for cleanup and add to attachments list
+      this.clipboardImageFiles.push(filePath);
+      this.attachments.push({ path: filePath, mimeType: image.mimeType });
+      this.updateAttachmentsBar();
       this.ui.requestRender();
     } catch {
       // Silently ignore clipboard errors (may not have permission, etc.)
     }
+  }
+
+  private updateAttachmentsBar(): void {
+    if (!this.attachmentsContainer) return;
+
+    this.attachmentsContainer.clear();
+
+    if (this.attachments.length === 0) {
+      this.attachmentsBar = undefined;
+      this.editorContainer.removeChild(this.attachmentsContainer);
+      return;
+    }
+
+    // Ensure attachmentsContainer is placed before the editor in the layout
+    if (!this.editorContainer.children.includes(this.attachmentsContainer)) {
+      const editorIdx = this.editorContainer.children.indexOf(
+        this.editor as Component,
+      );
+      if (editorIdx >= 0) {
+        this.editorContainer.children.splice(
+          editorIdx,
+          0,
+          this.attachmentsContainer,
+        );
+      } else {
+        this.editorContainer.addChild(this.attachmentsContainer);
+      }
+    }
+
+    const themeName = this.settingsManager.getTheme();
+    const theme = getThemeByName(themeName || "dark") ?? getThemeByName("dark")!;
+    this.attachmentsBar = new AttachmentsBarComponent(
+      this.attachments,
+      this.selectedAttachmentIndex,
+      theme,
+    );
+    this.attachmentsContainer.addChild(this.attachmentsBar);
+  }
+
+  private deleteAttachment(index: number): void {
+    if (index < 0 || index >= this.attachments.length) return;
+
+    // Remove the attachment file
+    const attachment = this.attachments[index];
+    try {
+      fs.unlinkSync(attachment.path);
+    } catch {
+      // Ignore file deletion errors
+    }
+
+    this.attachments.splice(index, 1);
+    if (this.selectedAttachmentIndex >= this.attachments.length) {
+      this.selectedAttachmentIndex = this.attachments.length - 1;
+    }
+    this.updateAttachmentsBar();
+    this.ui.requestRender();
+  }
+
+  private handleAttachmentKeyNavigation(data: string): boolean {
+    if (this.attachments.length === 0) return false;
+
+    // Only intercept up/down arrows when multiple attachments need navigation.
+    // With a single attachment, let the editor handle arrows for history browsing.
+    if (this.attachments.length > 1) {
+      if (matchesKey(data, "up")) {
+        if (this.selectedAttachmentIndex < 0) {
+          this.selectedAttachmentIndex = 0;
+        } else if (this.selectedAttachmentIndex > 0) {
+          this.selectedAttachmentIndex--;
+        }
+        this.updateAttachmentsBar();
+        this.ui.requestRender();
+        return true;
+      }
+
+      if (matchesKey(data, "down")) {
+        if (this.selectedAttachmentIndex < 0) {
+          this.selectedAttachmentIndex = 0;
+        } else if (this.selectedAttachmentIndex < this.attachments.length - 1) {
+          this.selectedAttachmentIndex++;
+        }
+        this.updateAttachmentsBar();
+        this.ui.requestRender();
+        return true;
+      }
+    }
+
+    // Delete/backspace only removes attachment when one is explicitly selected
+    if (
+      this.selectedAttachmentIndex >= 0 &&
+      (matchesKey(data, "delete") || matchesKey(data, "backspace"))
+    ) {
+      this.deleteAttachment(this.selectedAttachmentIndex);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Convert attachment files to ImageContent array for sending to the model.
+   * Reads each file, base64-encodes, and resizes.
+   */
+  private async processAttachmentFiles(attachments: { path: string; mimeType?: string }[]): Promise<ImageContent[]> {
+    const result: ImageContent[] = [];
+    for (const attachment of attachments) {
+      try {
+        if (!fs.existsSync(attachment.path)) continue;
+        const mimeType =
+          attachment.mimeType ??
+          (await detectSupportedImageMimeTypeFromFile(attachment.path));
+        if (!mimeType) continue;
+
+        const content = fs.readFileSync(attachment.path);
+        const base64Content = content.toString("base64");
+        const resized = await resizeImage({
+          type: "image",
+          data: base64Content,
+          mimeType,
+        });
+        result.push({
+          type: "image",
+          mimeType: resized.mimeType,
+          data: resized.data,
+        });
+      } catch {
+        // Skip unreadable attachment files
+      }
+    }
+    return result;
   }
 
   /**
@@ -2573,12 +2730,36 @@ export class InteractiveMode {
         this.editor.addToHistory?.(text);
         this.editor.setText("");
         const steerResult = await this.extractImagesFromText(text);
-        await this.session.prompt(steerResult.text, {
+        const steerImages = steerResult.images;
+        let steerAttachmentPaths: string[] = [];
+        if (this.attachments.length > 0) {
+          const pendingAttachments = this.attachments.splice(0);
+          this.selectedAttachmentIndex = -1;
+          this.updateAttachmentsBar();
+          this.ui.requestRender();
+          steerAttachmentPaths = pendingAttachments.map((a) => a.path);
+        }
+        // Drop images if model doesn't support them
+        const steerModel = this.session.model;
+        if (
+          (steerImages.length > 0 || steerAttachmentPaths.length > 0) &&
+          steerModel &&
+          !steerModel.input.includes("image")
+        ) {
+          steerImages.length = 0;
+          steerAttachmentPaths = [];
+        }
+        let steerPromptText = steerResult.text;
+        if (steerAttachmentPaths.length > 0) {
+          const cwd = this.session.cwd;
+          const refs = steerAttachmentPaths
+            .map((p) => `@${path.relative(cwd, p).replace(/\\/g, "/")}`)
+            .join(" ");
+          steerPromptText = refs + "  " + steerPromptText;
+        }
+        await this.session.prompt(steerPromptText, {
           streamingBehavior: "steer",
-          images:
-            steerResult.images.length > 0
-              ? steerResult.images
-              : undefined,
+          images: steerImages.length > 0 ? steerImages : undefined,
         });
         this.updatePendingMessagesDisplay();
         this.ui.requestRender();
@@ -2602,6 +2783,42 @@ export class InteractiveMode {
       const { text: processedText, images } =
         await this.extractImagesFromText(text);
 
+      // Collect and clear pending attachments upfront (ensures cleanup even on error).
+      // Clipboard images are saved under .pi/images/ so models can read them via
+      // file tools — this is more reliable than inline base64 (some models like
+      // Kimi K2.5 re-map inline images to internal server paths that break MCP).
+      let attachmentPaths: string[] = [];
+      if (this.attachments.length > 0) {
+        const pendingAttachments = this.attachments.splice(0);
+        this.selectedAttachmentIndex = -1;
+        this.updateAttachmentsBar();
+        this.ui.requestRender();
+        attachmentPaths = pendingAttachments.map((a) => a.path);
+      }
+
+      // Check model image support; warn and drop images if not supported
+      if (images.length > 0 || attachmentPaths.length > 0) {
+        const currentModel = this.session.model;
+        if (currentModel && !currentModel.input.includes("image")) {
+          this.showWarning(
+            `Model "${currentModel.name}" does not support image input. Images have been removed from this message.`,
+          );
+          images.length = 0;
+          attachmentPaths = [];
+        }
+      }
+
+      // Build image references using the relative path (_paste/image_N.ext).
+      // Prepended before user text so the model processes it first.
+      let imageRefPrefix = "";
+      if (attachmentPaths.length > 0) {
+        const cwd = this.session.cwd;
+        const refs = attachmentPaths
+          .map((p) => `@${path.relative(cwd, p).replace(/\\/g, "/")}`)
+          .join(" ");
+        imageRefPrefix = refs + "  ";
+      }
+
       if (!processedText.startsWith("/")) {
         const displayContent: (TextContent | ImageContent)[] = [
           { type: "text", text: processedText },
@@ -2620,7 +2837,10 @@ export class InteractiveMode {
       try {
         // Clear persona switch flag - interview should now run normally for subsequent messages
         delete process.env.PI_JUST_SWITCHED_PERSONA;
-        await this.session.prompt(processedText, {
+        const promptText = imageRefPrefix
+          ? imageRefPrefix + processedText
+          : processedText;
+        await this.session.prompt(promptText, {
           images: images.length > 0 ? images : undefined,
         });
       } catch (error: unknown) {
@@ -2637,7 +2857,60 @@ export class InteractiveMode {
       }
       this.updatePendingMessagesDisplay();
       this.ui.requestRender();
+
+      // Clean up temporary clipboard image files from project root
+      this.cleanupClipboardImages();
     };
+  }
+
+  private cleanupStaleClipboardFiles(): void {
+    try {
+      const cwd = this.session.cwd;
+
+      // Clean old-format root files (_clipboard_*.png)
+      for (const entry of fs.readdirSync(cwd)) {
+        if (/^_clipboard_\d+\.\w+$/.test(entry)) {
+          try { fs.unlinkSync(path.join(cwd, entry)); } catch { /* best-effort */ }
+        }
+      }
+
+      // Clean _paste/ directory from previous sessions
+      const pasteDir = path.join(cwd, "_paste");
+      if (fs.existsSync(pasteDir)) {
+        for (const entry of fs.readdirSync(pasteDir)) {
+          try { fs.unlinkSync(path.join(pasteDir, entry)); } catch { /* best-effort */ }
+        }
+        try { fs.rmdirSync(pasteDir); } catch { /* best-effort */ }
+      }
+    } catch {
+      // Ignore errors during cleanup
+    }
+  }
+
+  private cleanupClipboardImages(): void {
+    for (const filePath of this.clipboardImageFiles) {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch {
+        // Best-effort cleanup
+      }
+    }
+    this.clipboardImageFiles = [];
+
+    // Remove _paste/ directory if empty
+    try {
+      const pasteDir = path.join(this.session.cwd, "_paste");
+      if (fs.existsSync(pasteDir)) {
+        const remaining = fs.readdirSync(pasteDir);
+        if (remaining.length === 0) {
+          fs.rmdirSync(pasteDir);
+        }
+      }
+    } catch {
+      // Best-effort
+    }
   }
 
   private subscribeToAgent(): void {

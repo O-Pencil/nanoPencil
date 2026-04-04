@@ -5123,10 +5123,6 @@ export class InteractiveMode {
 
     for (const provider of apiKeyProviders) {
       if (providerIds.has(provider.id)) continue;
-      const hasModels = this.session.modelRegistry
-        .getAll()
-        .some((model) => model.provider === provider.id);
-      if (!hasModels) continue;
       items.push({
         id: provider.id,
         name: provider.name,

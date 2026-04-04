@@ -336,7 +336,7 @@ export default async function soulExtension(pi: ExtensionAPI) {
 				}
 
 				return {
-					systemPrompt: systemPromptAddition,
+					systemPrompt: `${event.systemPrompt}${systemPromptAddition}`,
 				};
 			}
 		} catch (error) {

@@ -220,6 +220,8 @@ export interface V2Meta {
 	lastMigrationAt?: string;
 	lastEmbeddingSyncAt?: string;
 	lastReconsolidationAt?: string;
+	lastMaintenanceAt?: string;
+	lastMaintenanceVersion?: number;
 }
 
 export interface NanoMemV2Snapshot {

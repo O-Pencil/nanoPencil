@@ -119,6 +119,8 @@ export interface Meta {
 	totalSessions: number;
 	lastConsolidation?: string;
 	version: number;
+	lastMaintenanceAt?: string;
+	lastMaintenanceVersion?: number;
 }
 
 /** Mem0-style update operations */

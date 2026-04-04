@@ -907,6 +907,60 @@ export class NanoMemEngine {
 		return loadEpisodes(this.episodesDir);
 	}
 
+	async runStartupMaintenance(maintenanceVersion = 1): Promise<{
+		ran: boolean;
+		deduplicated: {
+			knowledge: number;
+			lessons: number;
+			events: number;
+			preferences: number;
+			facets: number;
+			work: number;
+			total: number;
+		};
+		migratedEpisodesToV2: number;
+	}> {
+		const [meta, v2Meta] = await Promise.all([loadMeta(this.metaPath), loadV2Meta(this.v2Paths)]);
+		const alreadyMaintained =
+			(meta.lastMaintenanceVersion ?? 0) >= maintenanceVersion &&
+			(v2Meta.lastMaintenanceVersion ?? 0) >= maintenanceVersion;
+		if (alreadyMaintained) {
+			return {
+				ran: false,
+				deduplicated: { knowledge: 0, lessons: 0, events: 0, preferences: 0, facets: 0, work: 0, total: 0 },
+				migratedEpisodesToV2: 0,
+			};
+		}
+
+		const now = new Date().toISOString();
+		const deduplicated = await this.deduplicateAll();
+		const episodes = await this.getAllEpisodes();
+		for (const episode of episodes) {
+			await this.syncEpisodeToV2(episode);
+		}
+
+		await Promise.all([
+			writeJson(this.metaPath, {
+				...(await loadMeta(this.metaPath)),
+				lastMaintenanceAt: now,
+				lastMaintenanceVersion: maintenanceVersion,
+			}),
+			saveV2Meta(this.v2Paths, {
+				...(await loadV2Meta(this.v2Paths)),
+				version: 2,
+				lastMaintenanceAt: now,
+				lastMaintenanceVersion: maintenanceVersion,
+				lastMigrationAt: (await loadV2Meta(this.v2Paths)).lastMigrationAt ?? now,
+			}),
+		]);
+
+		return {
+			ran: true,
+			deduplicated,
+			migratedEpisodesToV2: episodes.length,
+		};
+	}
+
 	private async syncEpisodeToV2(ep: Episode): Promise<void> {
 		const [episodes, facets, links, procedural, meta] = await Promise.all([
 			loadV2Episodes(this.v2Paths),

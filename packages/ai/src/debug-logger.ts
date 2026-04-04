@@ -73,9 +73,21 @@ class DebugLogger {
 	}
 
 	/**
+	 * Re-check environment variables (for when they change after initialization)
+	 */
+	refreshFromEnv(): void {
+		this.enabled = this.detectEnabled();
+		this.level = LOG_LEVELS[this.detectLevel()];
+	}
+
+	/**
 	 * Check if a specific level is enabled
 	 */
 	private isLevelEnabled(level: DebugLogLevel): boolean {
+		// Re-check environment on each log call to handle late-set env vars
+		if (!this.enabled && process.env.NANOPENCIL_DEBUG === "1") {
+			this.refreshFromEnv();
+		}
 		return this.enabled && LOG_LEVELS[level] <= this.level;
 	}
 

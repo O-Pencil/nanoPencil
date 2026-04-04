@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.31] - 2026-04-04
+
+### Added
+- feat(auth): expose openrouter in login selector
+- feat(presence): add gentle proactive chat extension
+- feat(mem-core): retain superseded procedural rows on merge
+- feat(interview): synchronous before_agent_start hook and heuristics
+- feat(mem-core): release v1.1.0
+- feat(mem-core): add semantic recall and reconsolidation loop
+- feat(i18n): add internationalization support (EN/ZH)
+- feat(mem-core): add v2 episodic and procedural memory bridge
+- feat(dream): add abortable consolidation and auto-dream gating
+
+### Fixed
+- fix(nanopencil): OpenRouter 在 /login 与精简内置模型列表
+- fix(memory): verify insights and startup presence behavior
+- fix(auth): preserve provider api keys in config flows
+- fix(presence): wait for ui readiness before greeting
+- fix(tui): stabilize startup presence and user echo
+- fix(memory): prioritize conversation preferences in recall
+- fix(presence): show startup greeting after UI init
+- fix(memory): shift runtime recall toward V2
+- fix(memory): back up legacy data before maintenance
+- fix(memory): stabilize recall and startup maintenance
+- fix(release): rebuild bundled packages before publish
+- fix(ci): add workspaces config for npm workspace commands
+- fix(tui): prevent duplicate Working messages in PencilLoader
+- fix(interview): stabilize trigger and clarification flow
+
+### Documentation
+- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+
+### Maintenance
+- chore(ai): update model definitions
+- chore(release): publish v1.11.18
+- chore(release): v1.11.17
+
+
 ## [1.11.15] - 2026-03-30
 
 ### Added

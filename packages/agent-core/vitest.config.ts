@@ -1,7 +1,7 @@
 /**
  * [UPSTREAM]: Depends on vitest/config
- * [SURFACE]: Extension interface
- * [LOCUS]: ./packages/agent-core/vitest.config.ts - 
+ * [SURFACE]: Vitest defaults
+ * [LOCUS]: ./packages/agent-core/vitest.config.ts -
  * [COVENANT]: Change → update this header
  */
 

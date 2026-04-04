@@ -11,7 +11,7 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { ExtensionAPI, ExtensionContext } from "@pencil-agent/nano-pencil";
 import { SessionManager } from "@pencil-agent/nano-pencil";
@@ -638,9 +638,13 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("mem-insights", {
-		description: "Generate NanoMem full insights HTML report (uses LLM when available)",
-		handler: async (args, ctx) => {
+	const runMemInsights = async (args: string | undefined, ctx: ExtensionContext) => {
+		ctx.ui.setStatus("nanomem", "Generating insights...");
+		const requestedPath = args?.trim() || "./nanomem-insights.html";
+		const outputPath = resolve(process.cwd(), requestedPath);
+		ctx.ui.notify(`NanoMem: generating insights report -> ${outputPath}`, "info");
+
+		try {
 			const llmCtx = ctx as LlmCapableContext;
 			if (llmCtx.completeSimple) {
 				engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
@@ -649,10 +653,23 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 				});
 			}
 
-			const outputPath = args?.trim() || "./nanomem-insights.html";
-			ctx.ui.notify("NanoMem: Generating full insights report...", "info");
+			let enhanced: {
+				report: Awaited<ReturnType<NanoMemEngine["generateFullInsights"]>>;
+				persona?: Awaited<ReturnType<NanoMemEngine["generateEnhancedInsights"]>>["persona"];
+				humanInsights: Awaited<ReturnType<NanoMemEngine["generateEnhancedInsights"]>>["humanInsights"];
+				rootCauses: Awaited<ReturnType<NanoMemEngine["generateEnhancedInsights"]>>["rootCauses"];
+			};
+			try {
+				enhanced = await engine.generateEnhancedInsights();
+			} catch {
+				enhanced = {
+					report: await engine.generateFullInsights(),
+					persona: undefined,
+					humanInsights: [],
+					rootCauses: [],
+				};
+			}
 
-			const enhanced = await engine.generateEnhancedInsights();
 			const html = renderFullInsightsHtml(
 				({
 					...enhanced.report,
@@ -668,8 +685,19 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			);
 
 			writeFileSync(outputPath, html, "utf-8");
-			ctx.ui.notify(`NanoMem: Insights report written to ${outputPath}`, "info");
-		},
+			ctx.ui.notify(`NanoMem: insights report written to ${outputPath}`, "info");
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			ctx.ui.notify(`NanoMem: failed to generate insights report: ${message}`, "error");
+			throw error;
+			} finally {
+				ctx.ui.setStatus("nanomem", "");
+			}
+		};
+
+	pi.registerCommand("mem-insights", {
+		description: "Generate NanoMem full insights HTML report (uses LLM when available)",
+		handler: runMemInsights,
 	});
 
 	pi.registerCommand("mem-align", {

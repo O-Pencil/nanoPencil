@@ -1,6 +1,6 @@
 {
   "name": "@pencil-agent/nano-pencil",
-  "version": "1.11.28",
+  "version": "1.11.29",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Based on pi; supports DashScope Coding Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
@@ -28,6 +28,7 @@
     "copy:extensions": "node -e \"\nconst fs=require('fs');\nconst p=require('path');\nfunction c(s,d){\n  if(fs.existsSync(d))fs.rmSync(d,{recursive:true,force:true});\n  if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});\n  fs.readdirSync(s).forEach(f=>{\n    const sp=p.join(s,f),dp=p.join(d,f);\n    fs.statSync(sp).isDirectory()?c(sp,dp):fs.copyFileSync(sp,dp)\n  })\n}\n// Copy defaults extensions\n\nc('extensions/defaults/security-audit','dist/extensions/defaults/security-audit');\nc('extensions/defaults/soul','dist/extensions/defaults/soul');\nc('extensions/defaults/presence','dist/extensions/defaults/presence');\nc('extensions/defaults/interview','dist/extensions/defaults/interview');\nc('extensions/defaults/loop','dist/extensions/defaults/loop');\nc('extensions/defaults/team','dist/extensions/defaults/team');\nc('extensions/defaults/mcp','dist/extensions/defaults/mcp');\n// Copy optional extensions\nc('extensions/optional/simplify','dist/extensions/optional/simplify');\nc('extensions/optional/export-html','dist/extensions/optional/export-html');\nconsole.log('Extensions copied to dist/');\n\"",
     "bundle:packages": "node scripts/bundle-deps.js",
     "watch": "tsc --watch",
+    "test:presence": "node --test --import tsx test/presence-opening.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
     "prepublishOnly": "npm run build",
     "changelog": "node scripts/generate-changelog.js",

@@ -52,7 +52,7 @@ export interface NanomemConfig {
 	/** Progressive recall injection configuration */
 	progressiveRecall: ProgressiveRecallConfig;
 	/** Default forgetting windows for less important memories */
-	forgetting: { ambientTtlDays: number; workTtlDays: number };
+	forgetting: { ambientTtlDays: number; workTtlDays: number; reviveCooldownDays: number };
 	/** Embedding configuration for semantic episodic/procedural recall */
 	embeddings: EmbeddingConfig;
 }
@@ -94,6 +94,7 @@ const DEFAULT_PROGRESSIVE_RECALL: ProgressiveRecallConfig = {
 const DEFAULT_FORGETTING = {
 	ambientTtlDays: 45,
 	workTtlDays: 21,
+	reviveCooldownDays: 7,
 } as const;
 const DEFAULT_EMBEDDINGS: EmbeddingConfig = {
 	enabled: true,

@@ -25,8 +25,12 @@ Usage:
   nanomem search-v2 <query>  Semantic search across V2 episode/facet/procedure memory
   nanomem forget <id>        Remove a memory entry by ID
   nanomem dedup              Deduplicate all memories (merge similar entries, keep best)
+  nanomem archive            Archive stale low-value memories into _archive/
+  nanomem restore <id>       Restore one archived memory item by ID
   nanomem export             Export all memories as JSON to stdout
   nanomem export-v2          Export NanoMem v2 episodic bridge data as JSON to stdout
+  nanomem export-archive     Export archived memories as JSON to stdout
+  nanomem inspect-v2         Inspect V2 memory chains and conflict signals
   nanomem sync-v2-embeddings Sync the V2 embedding index
   nanomem insights [--output <path>]   Generate full HTML insights report (default: ./nanomem-insights.html)
   nanomem insights --simple [--output <path>]   Generate simple insights report (rules-only, no LLM)
@@ -42,11 +46,19 @@ Usage:
 		console.log(`Lessons: ${s.lessons}`);
 		console.log(`Preferences: ${s.preferences}`);
 		console.log(`Work: ${s.work}`);
+		console.log(`Archived Knowledge: ${s.archivedKnowledge}`);
+		console.log(`Archived Lessons: ${s.archivedLessons}`);
+		console.log(`Archived Events: ${s.archivedEvents}`);
+		console.log(`Archived Preferences: ${s.archivedPreferences}`);
+		console.log(`Archived Facets: ${s.archivedFacets}`);
+		console.log(`Archived Work: ${s.archivedWork}`);
 		console.log(`Episodes: ${s.episodes}`);
 		console.log(`V2 Episodes: ${v2.episodes}`);
 		console.log(`V2 Episode Facets: ${v2.facets}`);
 		console.log(`V2 Semantic: ${v2.semantic}`);
 		console.log(`V2 Procedures: ${v2.procedural}`);
+		console.log(`Archived V2 Semantic: ${v2.archivedSemantic}`);
+		console.log(`Archived V2 Procedures: ${v2.archivedProcedural}`);
 		console.log(`V2 Links: ${v2.links}`);
 		console.log(`V2 Embeddings: ${v2.embeddings}`);
 		if (v2.lastEmbeddingSyncAt) console.log(`V2 Last Embedding Sync: ${v2.lastEmbeddingSyncAt}`);
@@ -110,8 +122,43 @@ Usage:
 		return;
 	}
 
+	if (sub === "archive") {
+		const result = await engine.archiveStaleMemories();
+		if (result.total === 0) {
+			console.log("No stale memories were archived.");
+			return;
+		}
+		console.log(`Archived ${result.total} stale memory item(s):`);
+		if (result.knowledge) console.log(`  knowledge: ${result.knowledge}`);
+		if (result.lessons) console.log(`  lessons: ${result.lessons}`);
+		if (result.events) console.log(`  events: ${result.events}`);
+		if (result.preferences) console.log(`  preferences: ${result.preferences}`);
+		if (result.facets) console.log(`  facets: ${result.facets}`);
+		if (result.work) console.log(`  work: ${result.work}`);
+		if (result.semantic) console.log(`  semantic: ${result.semantic}`);
+		if (result.procedural) console.log(`  procedural: ${result.procedural}`);
+		return;
+	}
+
+	if (sub === "restore") {
+		const id = args[1];
+		if (!id) {
+			console.error("Usage: nanomem restore <id>");
+			process.exit(1);
+		}
+		const result = await engine.restoreArchivedEntry(id);
+		console.log(result.ok ? `Restored archived ${result.location} entry ${id}` : `Archived entry ${id} not found`);
+		return;
+	}
+
 	if (sub === "export") {
 		const data = await engine.exportAll();
+		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
+	if (sub === "export-archive") {
+		const data = await engine.exportArchive();
 		console.log(JSON.stringify(data, null, 2));
 		return;
 	}
@@ -119,6 +166,44 @@ Usage:
 	if (sub === "export-v2") {
 		const data = await engine.exportAllV2();
 		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
+	if (sub === "inspect-v2") {
+		const data = await engine.inspectV2Memory();
+		console.log(`Episodes: ${data.counts.episodes}`);
+		console.log(`Facets: ${data.counts.facets}`);
+		console.log(`Semantic: ${data.counts.semantic}`);
+		console.log(`Procedural: ${data.counts.procedural}`);
+		console.log(`Active Procedural: ${data.counts.activeProcedural}`);
+		console.log(`Superseded Procedural: ${data.counts.supersededProcedural}`);
+		console.log(`Procedure Chains: ${data.counts.procedureChains}`);
+		console.log(`Procedural Conflicts: ${data.counts.proceduralConflicts}`);
+		console.log(`Semantic Conflicts: ${data.counts.semanticConflicts}`);
+
+		if (data.procedureChains.length) {
+			console.log("\nProcedure Version Chains:");
+			for (const chain of data.procedureChains) {
+				console.log(`- ${chain.name} [${chain.status}] depth=${chain.versionDepth} root=${chain.rootId}`);
+				console.log(`  ${chain.ids.join(" -> ")}`);
+			}
+		}
+
+		if (data.proceduralConflicts.length) {
+			console.log("\nProcedural Conflict Signals:");
+			for (const conflict of data.proceduralConflicts.slice(0, 20)) {
+				console.log(
+					`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) score=${conflict.score} — ${conflict.reason}`,
+				);
+			}
+		}
+
+		if (data.semanticConflicts.length) {
+			console.log("\nSemantic Conflict Signals:");
+			for (const conflict of data.semanticConflicts.slice(0, 20)) {
+				console.log(`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) — ${conflict.reason}`);
+			}
+		}
 		return;
 	}
 

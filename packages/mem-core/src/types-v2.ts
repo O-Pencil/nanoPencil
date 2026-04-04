@@ -112,6 +112,9 @@ export interface BaseMemoryV2 {
 	confidence: number;
 	retention: MemoryRetentionV2;
 	stability: MemoryStabilityV2;
+	archivedAt?: string;
+	archiveReason?: string;
+	revivedAt?: string;
 	validFrom?: string;
 	validTo?: string;
 	ttlDays?: number;

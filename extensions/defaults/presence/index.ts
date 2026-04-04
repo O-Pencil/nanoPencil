@@ -6,7 +6,7 @@
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
-import type { ExtensionAPI, ExtensionContext, SessionStartEvent } from "../../../core/extensions/types.js";
+import type { ExtensionAPI, ExtensionContext, SessionReadyEvent, SessionStartEvent } from "../../../core/extensions/types.js";
 
 const PRESENCE_MESSAGE_TYPE = "presence";
 const OPENING_DELAY_MS = 1200;
@@ -162,11 +162,15 @@ function startPresenceLoop(pi: ExtensionAPI, _event: SessionStartEvent, ctx: Ext
 		return undefined;
 	});
 
-	scheduleOpening(pi, ctx, state, OPENING_DELAY_MS);
-
 	state.idleTimer = setInterval(() => {
 		maybeSendIdleReminder(pi, ctx, state);
 	}, IDLE_POLL_MS);
+}
+
+function handleSessionReady(pi: ExtensionAPI, _event: SessionReadyEvent, ctx: ExtensionContext, state: PresenceState): void {
+	if (!ctx.hasUI || state.openingSent) return;
+	state.openingStartedAt = Date.now();
+	scheduleOpening(pi, ctx, state, OPENING_DELAY_MS);
 }
 
 export default async function presenceExtension(pi: ExtensionAPI) {
@@ -192,6 +196,10 @@ export default async function presenceExtension(pi: ExtensionAPI) {
 
 	pi.on("session_start", (event, ctx) => {
 		startPresenceLoop(pi, event, ctx, state);
+	});
+
+	pi.on("session_ready", (event, ctx) => {
+		handleSessionReady(pi, event, ctx, state);
 	});
 
 	pi.on("input", () => {

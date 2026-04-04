@@ -99,6 +99,10 @@ function canSendPresence(ctx: ExtensionContext): boolean {
 	return ctx.hasUI && ctx.isIdle() && !ctx.hasPendingMessages() && !hasDraftText(ctx);
 }
 
+function canSendOpening(ctx: ExtensionContext): boolean {
+	return ctx.hasUI && !hasDraftText(ctx);
+}
+
 function pickLine(lines: readonly string[], seed: number): string {
 	const index = Math.abs(seed) % lines.length;
 	return lines[index] ?? lines[0]!;
@@ -115,7 +119,7 @@ function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): voi
 
 function maybeSendOpening(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): boolean {
 	if (state.openingSent) return true;
-	if (!canSendPresence(ctx)) return false;
+	if (!canSendOpening(ctx)) return false;
 	const conversationCount = countConversationEntries(ctx);
 	const lastConversationAt = getLastConversationTimestamp(ctx);
 	const seed = conversationCount === 0 ? Date.now() : lastConversationAt ?? Date.now();

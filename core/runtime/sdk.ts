@@ -471,7 +471,7 @@ export async function createAgentSession(
       const soulMgr = await createSoulManager();
       if (soulMgr) {
         soulManager = soulMgr;
-        await soulManager.initialize();
+        await soulMgr.initialize();
         time("soul.initialize");
       } else {
         console.warn(

@@ -68,6 +68,7 @@ import {
 import {
   type AgentSession,
   type AgentSessionEvent,
+  CycleModelError,
   parseSkillBlock,
 } from "../../core/runtime/agent-session.js";
 import type { CompactionResult } from "../../core/session/compaction/index.js";
@@ -3738,7 +3739,20 @@ export class InteractiveMode {
         );
       }
     } catch (error) {
-      this.showError(error instanceof Error ? error.message : String(error));
+      // Check if this is an OAuth provider that needs re-login
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Check for CycleModelError with provider info
+      if (error instanceof CycleModelError && error.provider) {
+        const cred = this.session.modelRegistry.authStorage.get(error.provider);
+        if (cred?.type === "oauth" || error.code === "oauth_expired") {
+          this.showError(`${errorMsg}\nUse /login ${error.provider} to re-authenticate.`);
+        } else {
+          this.showError(errorMsg);
+        }
+      } else {
+        this.showError(errorMsg);
+      }
     }
   }
 
@@ -4628,9 +4642,15 @@ export class InteractiveMode {
             this.checkDaxnutsEasterEgg(model);
           } catch (error) {
             done();
-            this.showError(
-              error instanceof Error ? error.message : String(error),
-            );
+            // Check if this is an OAuth provider that needs re-login
+            const errorMsg = error instanceof Error ? error.message : String(error);
+
+            // Check for CycleModelError with provider info
+            if (error instanceof CycleModelError && error.provider) {
+              this.showError(`${errorMsg}\nUse /login ${error.provider} to re-authenticate.`);
+            } else {
+              this.showError(errorMsg);
+            }
           }
         },
         () => {

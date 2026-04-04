@@ -220,8 +220,17 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 						// Process content buffer, handling <thinking>...</thinking> tags
 						while (contentBuffer.length > 0) {
 							if (inThinkingTag) {
-								// Check for closing tag
-								const endIndex = contentBuffer.indexOf("</thinking>");
+								// Check for closing tags: </thinking>, </think>
+								const closingTags = ["</thinking>", "</think>"];
+								let endIndex = -1;
+								let matchedClosingTagLength = 0;
+								for (const tag of closingTags) {
+									const idx = contentBuffer.indexOf(tag);
+									if (idx !== -1 && (endIndex === -1 || idx < endIndex)) {
+										endIndex = idx;
+										matchedClosingTagLength = tag.length;
+									}
+								}
 								if (endIndex !== -1) {
 									const thinkingContent = contentBuffer.slice(0, endIndex);
 									if (thinkingContent) {
@@ -245,7 +254,7 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 											});
 										}
 									}
-									contentBuffer = contentBuffer.slice(endIndex + "</thinking>".length);
+									contentBuffer = contentBuffer.slice(endIndex + matchedClosingTagLength);
 									inThinkingTag = false;
 									// Finish thinking block
 									if (currentBlock && currentBlock.type === "thinking") {
@@ -278,12 +287,22 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 								}
 							} else {
 								// Not in thinking tag, check for opening tag
-								const startIndex = contentBuffer.indexOf("<thinking>");
+								// Support: <thinking>, <think>
+								const openingTags = ["<thinking>", "<think>"];
+								let startIndex = -1;
+								let matchedOpeningTagLength = 0;
+								for (const tag of openingTags) {
+									const idx = contentBuffer.indexOf(tag);
+									if (idx !== -1 && (startIndex === -1 || idx < startIndex)) {
+										startIndex = idx;
+										matchedOpeningTagLength = tag.length;
+									}
+								}
 								if (startIndex !== -1) {
-									// Found <thinking> tag
+									// Found thinking tag
 									// Process any text before the tag
 									const textBefore = contentBuffer.slice(0, startIndex);
-									contentBuffer = contentBuffer.slice(startIndex + "<thinking>".length);
+									contentBuffer = contentBuffer.slice(startIndex + matchedOpeningTagLength);
 									inThinkingTag = true;
 
 									if (textBefore) {

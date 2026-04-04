@@ -370,6 +370,9 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			const maintenance = await engine.runStartupMaintenance(1);
 			if (maintenance.ran && ctx.hasUI) {
 				const notes: string[] = [];
+				if (maintenance.backupPath) {
+					notes.push(`backup saved to ${maintenance.backupPath}`);
+				}
 				if (maintenance.deduplicated.total > 0) {
 					notes.push(`deduped ${maintenance.deduplicated.total} entries`);
 				}

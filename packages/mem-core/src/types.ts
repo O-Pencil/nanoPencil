@@ -121,6 +121,8 @@ export interface Meta {
 	version: number;
 	lastMaintenanceAt?: string;
 	lastMaintenanceVersion?: number;
+	lastBackupAt?: string;
+	lastBackupVersion?: number;
 }
 
 /** Mem0-style update operations */

@@ -5,7 +5,7 @@
  * [COVENANT]: Change engine API → update this header and verify against packages/mem-core/CLAUDE.md
  */
 
-
+import { cp, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { getConfig, type NanomemConfig } from "./config.js";
 import { consolidateEpisodes } from "./consolidation.js";
@@ -909,6 +909,7 @@ export class NanoMemEngine {
 
 	async runStartupMaintenance(maintenanceVersion = 1): Promise<{
 		ran: boolean;
+		backupPath?: string;
 		deduplicated: {
 			knowledge: number;
 			lessons: number;
@@ -927,12 +928,14 @@ export class NanoMemEngine {
 		if (alreadyMaintained) {
 			return {
 				ran: false,
+				backupPath: undefined,
 				deduplicated: { knowledge: 0, lessons: 0, events: 0, preferences: 0, facets: 0, work: 0, total: 0 },
 				migratedEpisodesToV2: 0,
 			};
 		}
 
 		const now = new Date().toISOString();
+		const backupPath = await this.createMaintenanceBackup(meta, v2Meta, maintenanceVersion, now);
 		const deduplicated = await this.deduplicateAll();
 		const episodes = await this.getAllEpisodes();
 		for (const episode of episodes) {
@@ -944,6 +947,8 @@ export class NanoMemEngine {
 				...(await loadMeta(this.metaPath)),
 				lastMaintenanceAt: now,
 				lastMaintenanceVersion: maintenanceVersion,
+				lastBackupAt: meta.lastBackupAt ?? now,
+				lastBackupVersion: Math.max(meta.lastBackupVersion ?? 0, maintenanceVersion),
 			}),
 			saveV2Meta(this.v2Paths, {
 				...(await loadV2Meta(this.v2Paths)),
@@ -951,14 +956,69 @@ export class NanoMemEngine {
 				lastMaintenanceAt: now,
 				lastMaintenanceVersion: maintenanceVersion,
 				lastMigrationAt: (await loadV2Meta(this.v2Paths)).lastMigrationAt ?? now,
+				lastBackupAt: v2Meta.lastBackupAt ?? now,
+				lastBackupVersion: Math.max(v2Meta.lastBackupVersion ?? 0, maintenanceVersion),
 			}),
 		]);
 
 		return {
 			ran: true,
+			backupPath,
 			deduplicated,
 			migratedEpisodesToV2: episodes.length,
 		};
+	}
+
+	private async createMaintenanceBackup(
+		meta: Meta,
+		v2Meta: { lastBackupVersion?: number },
+		maintenanceVersion: number,
+		now: string,
+	): Promise<string | undefined> {
+		const alreadyBackedUp =
+			(meta.lastBackupVersion ?? 0) >= maintenanceVersion &&
+			(v2Meta.lastBackupVersion ?? 0) >= maintenanceVersion;
+		if (alreadyBackedUp) return undefined;
+
+		const safeTimestamp = now.replace(/[:.]/g, "-");
+		const backupRoot = join(this.cfg.memoryDir, "_backups");
+		const backupDir = join(backupRoot, `maintenance-v${maintenanceVersion}-${safeTimestamp}`);
+		await mkdir(backupDir, { recursive: true });
+
+		const filesToCopy = [
+			this.knowledgePath,
+			this.lessonsPath,
+			this.eventsPath,
+			this.preferencesPath,
+			this.facetsPath,
+			this.workPath,
+			this.metaPath,
+		];
+		for (const filePath of filesToCopy) {
+			try {
+				await cp(filePath, join(backupDir, filePath.split("/").pop() ?? "unknown.json"));
+			} catch {
+				// Missing files are fine for first-run users.
+			}
+		}
+
+		for (const dirName of ["episodes", "v2"]) {
+			const sourceDir = join(this.cfg.memoryDir, dirName);
+			try {
+				await readdir(sourceDir);
+				await cp(sourceDir, join(backupDir, dirName), { recursive: true });
+			} catch {
+				// Skip directories that do not exist yet.
+			}
+		}
+
+		await writeJson(join(backupDir, "manifest.json"), {
+			createdAt: now,
+			maintenanceVersion,
+			memoryDir: this.cfg.memoryDir,
+		});
+
+		return backupDir;
 	}
 
 	private async syncEpisodeToV2(ep: Episode): Promise<void> {

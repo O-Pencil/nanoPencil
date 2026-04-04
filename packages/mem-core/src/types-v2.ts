@@ -222,6 +222,8 @@ export interface V2Meta {
 	lastReconsolidationAt?: string;
 	lastMaintenanceAt?: string;
 	lastMaintenanceVersion?: number;
+	lastBackupAt?: string;
+	lastBackupVersion?: number;
 }
 
 export interface NanoMemV2Snapshot {

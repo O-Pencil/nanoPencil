@@ -9,10 +9,11 @@ import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
 import type { ExtensionAPI, ExtensionContext, SessionStartEvent } from "../../../core/extensions/types.js";
 
 const PRESENCE_MESSAGE_TYPE = "presence";
-const OPENING_DELAY_MS = 600;
+const OPENING_DELAY_MS = 1200;
+const OPENING_RETRY_MS = 500;
+const OPENING_RETRY_WINDOW_MS = 10_000;
 const IDLE_POLL_MS = 15000;
 const LONG_IDLE_MS = 4 * 60 * 1000;
-const OPENING_RETURN_THRESHOLD_MS = 10 * 60 * 1000;
 
 const OPENING_LINES = [
 	"I am here.",
@@ -33,6 +34,8 @@ const LONG_IDLE_LINES = [
 type PresenceState = {
 	lastActivityAt: number;
 	idleReminderSent: boolean;
+	openingStartedAt?: number;
+	openingSent: boolean;
 	openingTimer?: ReturnType<typeof setTimeout>;
 	idleTimer?: ReturnType<typeof setInterval>;
 	unsubscribeInput?: () => void;
@@ -42,6 +45,7 @@ function createState(): PresenceState {
 	return {
 		lastActivityAt: Date.now(),
 		idleReminderSent: false,
+		openingSent: false,
 	};
 }
 
@@ -109,17 +113,30 @@ function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): voi
 	touch(state);
 }
 
-function maybeSendOpening(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): void {
-	if (!canSendPresence(ctx)) return;
+function maybeSendOpening(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): boolean {
+	if (state.openingSent) return true;
+	if (!canSendPresence(ctx)) return false;
 	const conversationCount = countConversationEntries(ctx);
-	if (conversationCount === 0) {
-		sendPresence(pi, state, pickLine(OPENING_LINES, Date.now()));
-		return;
-	}
 	const lastConversationAt = getLastConversationTimestamp(ctx);
-	if (lastConversationAt === undefined) return;
-	if (Date.now() - lastConversationAt < OPENING_RETURN_THRESHOLD_MS) return;
-	sendPresence(pi, state, pickLine(OPENING_LINES, Date.now()));
+	const seed = conversationCount === 0 ? Date.now() : lastConversationAt ?? Date.now();
+	sendPresence(pi, state, pickLine(OPENING_LINES, seed));
+	state.openingSent = true;
+	return true;
+}
+
+function scheduleOpening(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState, delayMs: number): void {
+	state.openingTimer = setTimeout(() => {
+		const sent = maybeSendOpening(pi, ctx, state);
+		if (sent) {
+			state.openingTimer = undefined;
+			return;
+		}
+		if (!state.openingStartedAt || Date.now() - state.openingStartedAt >= OPENING_RETRY_WINDOW_MS) {
+			state.openingTimer = undefined;
+			return;
+		}
+		scheduleOpening(pi, ctx, state, OPENING_RETRY_MS);
+	}, delayMs);
 }
 
 function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): void {
@@ -133,6 +150,8 @@ function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: P
 function startPresenceLoop(pi: ExtensionAPI, _event: SessionStartEvent, ctx: ExtensionContext, state: PresenceState): void {
 	clearTimers(state);
 	touch(state);
+	state.openingSent = false;
+	state.openingStartedAt = Date.now();
 
 	if (!ctx.hasUI) return;
 
@@ -143,9 +162,7 @@ function startPresenceLoop(pi: ExtensionAPI, _event: SessionStartEvent, ctx: Ext
 		return undefined;
 	});
 
-	state.openingTimer = setTimeout(() => {
-		maybeSendOpening(pi, ctx, state);
-	}, OPENING_DELAY_MS);
+	scheduleOpening(pi, ctx, state, OPENING_DELAY_MS);
 
 	state.idleTimer = setInterval(() => {
 		maybeSendIdleReminder(pi, ctx, state);

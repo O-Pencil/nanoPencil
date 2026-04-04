@@ -544,6 +544,21 @@ export class ModelRegistry {
 	}
 
 	/**
+	 * Get models with valid API keys (async, validates OAuth tokens).
+	 * This checks and refreshes OAuth tokens, filtering out expired ones.
+	 */
+	async getAvailableAsync(): Promise<Model<Api>[]> {
+		const result: Model<Api>[] = [];
+		for (const model of this.models) {
+			const apiKey = await this.authStorage.getApiKey(model.provider);
+			if (apiKey) {
+				result.push(model);
+			}
+		}
+		return result;
+	}
+
+	/**
 	 * Find a model by provider and ID.
 	 */
 	find(provider: string, modelId: string): Model<Api> | undefined {

@@ -53,13 +53,14 @@ export class ModelSwitcher {
 	}
 
 	/**
-	 * Get models with API keys
+	 * Get models with API keys (async, validates OAuth tokens)
 	 */
 	async getModelsWithApiKey(): Promise<Model<any>[]> {
 		const available = this.options.getAvailableModels();
 		const result: Model<any>[] = [];
 		for (const model of available) {
-			if (await this.hasApiKey(model)) {
+			const apiKey = await this.options.getApiKey(model);
+			if (apiKey) {
 				result.push(model);
 			}
 		}
@@ -134,9 +135,10 @@ export class ModelSwitcher {
 
 	/**
 	 * Cycle through all available models
+	 * Skips models with expired OAuth tokens.
 	 */
 	private async cycleAvailableModel(direction: "forward" | "backward"): Promise<ModelCycleResult | undefined> {
-		const available = await this.getModelsWithApiKey();
+		const available = this.options.getAvailableModels();
 		if (available.length <= 1) return undefined;
 
 		const currentModel = this.getModel();
@@ -146,13 +148,36 @@ export class ModelSwitcher {
 
 		if (currentIndex === -1) currentIndex = 0;
 		const len = available.length;
-		const nextIndex =
-			direction === "forward"
-				? (currentIndex + 1) % len
-				: (currentIndex - 1 + len) % len;
 
-		const next = available[nextIndex];
+		// Find next model with valid API key, skipping expired OAuth tokens
+		let nextIndex = currentIndex;
+		let attempts = 0;
+		let next: Model<any> | undefined;
 		const previousModel = currentModel;
+
+		while (attempts < len - 1) {
+			attempts++;
+			nextIndex =
+				direction === "forward"
+					? (nextIndex + 1) % len
+					: (nextIndex - 1 + len) % len;
+
+			const candidate = available[nextIndex];
+			if (!candidate) continue;
+
+			// Use async getApiKey to validate OAuth tokens
+			const apiKey = await this.options.getApiKey(candidate);
+			if (apiKey) {
+				next = candidate;
+				break;
+			}
+			// No valid key - skip this model and continue cycling
+		}
+
+		if (!next) {
+			// No models have valid API keys
+			return undefined;
+		}
 
 		// Set the new model
 		this.options.setModelOnAgent(next);

@@ -1963,14 +1963,6 @@ export class InteractiveMode {
     message: string,
     type?: "info" | "warning" | "error",
   ): void {
-    if (
-      type !== "error" &&
-      this.isMemoryTraceMessage(message) &&
-      !this.settingsManager.getShowMemoryTrace()
-    ) {
-      return;
-    }
-
     if (type === "error") {
       this.showError(message);
     } else if (type === "warning") {
@@ -1978,10 +1970,6 @@ export class InteractiveMode {
     } else {
       this.showStatus(message);
     }
-  }
-
-  private isMemoryTraceMessage(message: string): boolean {
-    return message.startsWith("NanoMem");
   }
 
   private shouldRenderToolTrace(toolName: string): boolean {

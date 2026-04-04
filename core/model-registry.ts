@@ -214,10 +214,21 @@ function applyModelOverride(model: Model<Api>, override: ModelOverride): Model<A
 export const clearApiKeyCache = clearConfigValueCache;
 
 /**
+ * NanoPencil (`useOnlyCustomModels`): only these OpenRouter entries ship from the built-in catalog.
+ * OpenRouter exposes hundreds of models; listing all in `/model` is noisy. Users add arbitrary model ids
+ * in models.json (same string as on openrouter.ai) — merged with these defaults by provider+id.
+ */
+const NANOPENCIL_OPENROUTER_BUILTIN_MODEL_IDS: readonly string[] = ["openrouter/auto", "openrouter/free"];
+
+/**
  * Model registry - loads and manages models, resolves API keys via AuthStorage.
  */
 export interface ModelRegistryOptions {
-	/** When true, only load models from models.json (no built-in providers). Used by NanoPencil. */
+	/**
+	 * When true, only load models from models.json (no full built-in catalog). Used by NanoPencil.
+	 * Exception: a small OpenRouter built-in set (`openrouter/auto`, `openrouter/free`) so `/login` and
+	 * `/model` work without pasting ids; add any other OpenRouter model id in models.json.
+	 */
 	useOnlyCustomModels?: boolean;
 	/** Provider id(s) for which apiKey is optional in models.json (key stored in auth.json later). Used by NanoPencil. */
 	allowOptionalApiKeyForProvider?: string | string[];
@@ -286,7 +297,11 @@ export class ModelRegistry {
 			// Keep built-in models even if custom models failed to load
 		}
 
-		const builtInModels = this.useOnlyCustomModels ? [] : this.loadBuiltInModels(overrides, modelOverrides);
+		const builtInModels = this.useOnlyCustomModels
+			? this.loadBuiltInModels(overrides, modelOverrides, new Set<string>(["openrouter"]), {
+					openrouter: new Set(NANOPENCIL_OPENROUTER_BUILTIN_MODEL_IDS),
+				})
+			: this.loadBuiltInModels(overrides, modelOverrides);
 		let combined = this.mergeCustomModels(builtInModels, customModels);
 
 		// Let OAuth providers modify their models (e.g., update baseUrl)
@@ -304,9 +319,17 @@ export class ModelRegistry {
 	private loadBuiltInModels(
 		overrides: Map<string, ProviderOverride>,
 		modelOverrides: Map<string, Map<string, ModelOverride>>,
+		restrictToProviders?: Set<string>,
+		restrictModelIdsByProvider?: Record<string, Set<string>>,
 	): Model<Api>[] {
-		return getProviders().flatMap((provider) => {
-			const models = getModels(provider as KnownProvider) as Model<Api>[];
+		const providers = restrictToProviders
+			? getProviders().filter((p) => restrictToProviders.has(p))
+			: getProviders();
+		return providers.flatMap((provider) => {
+			const allowedIds = restrictModelIdsByProvider?.[provider];
+			const models = (getModels(provider as KnownProvider) as Model<Api>[]).filter(
+				(m) => !allowedIds || allowedIds.has(m.id),
+			);
 			const providerOverride = overrides.get(provider);
 			const perModelOverrides = modelOverrides.get(provider);
 

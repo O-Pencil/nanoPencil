@@ -625,6 +625,7 @@ export async function main(args: string[]) {
 						NANOPENCIL_ARK_CODING_PROVIDER,
 						NANOPENCIL_MINIMAX_CODING_PROVIDER,
 						NANOPENCIL_ZHIPU_CODING_PROVIDER,
+						"openrouter",
 						CUSTOM_ANTHROPIC_PROVIDER,
 						CUSTOM_OPENAI_PROVIDER,
 					],

@@ -120,7 +120,7 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `switcher.ts`: Runtime model switching logic, P3: UPSTREAM index.ts; SURFACE ModelSwitcher; LOCUS model transitions
 
-`model-registry.ts`: Manages model definitions, handles API key resolution, P3: SURFACE ModelRegistry; LOCUS model catalog
+`model-registry.ts`: Manages model definitions, handles API key resolution, appendOpenRouterModel writes custom OpenRouter ids to models.json, P3: SURFACE ModelRegistry; LOCUS model catalog
 
 `model-resolver.ts`: Resolves model IDs to provider configurations, P3: SURFACE resolveModel(); LOCUS model resolution
 

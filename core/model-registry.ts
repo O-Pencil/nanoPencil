@@ -21,7 +21,7 @@ import {
 } from "@pencil-agent/ai";
 import { type Static, Type } from "@sinclair/typebox";
 import AjvModule from "ajv";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getAgentDir } from "../config.js";
 import type { AuthStorage } from "./config/auth-storage.js";
@@ -679,6 +679,68 @@ export class ModelRegistry {
 				};
 			});
 		}
+	}
+
+	private static readonly OPENROUTER_JSON_BASE = "https://openrouter.ai/api/v1";
+	private static readonly OPENROUTER_JSON_API = "openai-completions";
+
+	/**
+	 * Append an OpenRouter model to models.json by id (same string as on openrouter.ai, e.g. x-ai/grok-4.20).
+	 * API key is not written; use /login openrouter or OPENROUTER_API_KEY.
+	 */
+	appendOpenRouterModel(modelId: string, options?: { name?: string }): void {
+		const providerKey = "openrouter";
+		const trimmed = modelId.trim();
+		if (!trimmed) {
+			throw new Error("OpenRouter model id cannot be empty");
+		}
+		const modelsPath = this.modelsJsonPath;
+		if (!modelsPath) {
+			throw new Error("models.json path is not configured");
+		}
+
+		type ProviderJson = {
+			baseUrl?: string;
+			api?: string;
+			models?: Array<Record<string, unknown>>;
+			[key: string]: unknown;
+		};
+
+		let data: { providers: Record<string, ProviderJson> };
+		if (existsSync(modelsPath)) {
+			const raw = readFileSync(modelsPath, "utf-8");
+			data = JSON.parse(raw) as { providers: Record<string, ProviderJson> };
+		} else {
+			data = { providers: {} };
+		}
+		if (!data.providers || typeof data.providers !== "object") {
+			data.providers = {};
+		}
+
+		const existing = data.providers[providerKey] ?? {};
+		const prevModels = Array.isArray(existing.models) ? [...existing.models] : [];
+		if (prevModels.some((m) => m && typeof m === "object" && (m as { id?: string }).id === trimmed)) {
+			throw new Error(`OpenRouter model "${trimmed}" already exists in models.json`);
+		}
+
+		const displayName = options?.name?.trim() || trimmed;
+		prevModels.push({
+			id: trimmed,
+			name: displayName,
+			input: ["text"],
+			contextWindow: 256000,
+			maxTokens: 8192,
+		});
+
+		data.providers[providerKey] = {
+			...existing,
+			baseUrl: existing.baseUrl ?? ModelRegistry.OPENROUTER_JSON_BASE,
+			api: (existing.api as string | undefined) ?? ModelRegistry.OPENROUTER_JSON_API,
+			models: prevModels,
+		};
+
+		writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
+		this.refresh();
 	}
 }
 

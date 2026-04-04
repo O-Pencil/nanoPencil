@@ -6519,19 +6519,16 @@ export class InteractiveMode {
       lines.push("");
 
       if (latestVersion !== "unknown" && latestVersion > currentVersion) {
-        lines.push(theme.fg("success", "✨ New version available!"));
+        lines.push(theme.fg("success", `✨ New version ${latestVersion} available!`));
         lines.push("");
-        lines.push(theme.fg("dim", "To update, run:"));
-        lines.push(
-          theme.fg("dim", "  npm install -g @pencil-agent/nano-pencil@latest"),
-        );
-        lines.push("");
-        lines.push(
-          theme.fg(
-            "dim",
-            `Or visit: ${theme.fg("mdLink", "https://www.npmjs.com/package/@pencil-agent/nano-pencil")}`,
-          ),
-        );
+
+        this.chatContainer.addChild(new Spacer(1));
+        this.chatContainer.addChild(new Text(lines.join("\n"), 1, 0));
+        this.ui.requestRender();
+
+        // Show interactive update options
+        await this.showUpdateOptions(latestVersion);
+        return;
       } else if (latestVersion !== "unknown" && latestVersion < currentVersion) {
         lines.push(theme.fg("success", "✨ You're ahead!"));
         lines.push("");
@@ -6576,5 +6573,353 @@ export class InteractiveMode {
     }
 
     this.ui.requestRender();
+  }
+
+  /**
+   * Show interactive update options when a new version is available.
+   */
+  private async showUpdateOptions(latestVersion: string): Promise<void> {
+    const autoUpdate = this.settingsManager.getAutoUpdate();
+    const skippedVersion = this.settingsManager.getSkippedVersion();
+
+    // If user has already skipped this version, offer options to clear it
+    if (skippedVersion === latestVersion) {
+      const title = `${theme.fg("accent", "Update Skipped")}\n\n${theme.fg("dim", `You previously chose to skip version ${latestVersion}.`)}\n${theme.fg("dim", `Current: ${VERSION}`)}\n${theme.fg("success", `Latest:  ${latestVersion}`)}\n\n${theme.fg("dim", "What would you like to do?")}`;
+
+      const skipOptions = [
+        "1. Update now",
+        "2. Clear skip and enable auto-update",
+        "3. Continue without updating",
+      ];
+
+      const skipChoice = await this.showExtensionSelector(title, skipOptions);
+
+      if (!skipChoice) {
+        this.chatContainer.addChild(
+          new Text(theme.fg("dim", "Returning to chat..."), 1, 0),
+        );
+        this.ui.requestRender();
+        return;
+      }
+
+      if (skipChoice.includes("Update now")) {
+        await this.performUpdate(latestVersion);
+        return;
+      } else if (skipChoice.includes("Clear skip")) {
+        this.settingsManager.setSkippedVersion(undefined);
+        this.settingsManager.setAutoUpdate("always");
+        this.chatContainer.addChild(new Spacer(1));
+        this.chatContainer.addChild(
+          new Text(
+            theme.fg("success", "✅ Skip cleared! Auto-update enabled. NanoPencil will check for updates on startup."),
+            1,
+            0,
+          ),
+        );
+        this.ui.requestRender();
+        // Proceed with update
+        await this.performUpdate(latestVersion);
+        return;
+      }
+      // Continue without updating
+      this.chatContainer.addChild(
+        new Text(theme.fg("dim", "Continuing without update..."), 1, 0),
+      );
+      this.ui.requestRender();
+      return;
+    }
+
+    // Build title with version info
+    const title = `${theme.fg("accent", "Update Available")}\n\n${theme.fg("dim", `Current: ${VERSION}`)}\n${theme.fg("success", `Latest:  ${latestVersion}`)}`;
+
+    // Build options list with consistent numbering
+    const options: string[] = [];
+    options.push("1. Update now and restart");
+    options.push("2. Exit and I'll update manually");
+    options.push("3. Skip this version");
+
+    // Add auto-update toggle option
+    if (autoUpdate !== "always") {
+      options.push("4. Enable auto-update");
+    } else {
+      options.push("4. Disable auto-update");
+    }
+
+    // Add status subtitle
+    const subtitle = autoUpdate === "always"
+      ? `\n\n${theme.fg("success", "● Auto-update is enabled")}`
+      : `\n\n${theme.fg("dim", "○ Auto-update is disabled")}`;
+
+    const choice = await this.showExtensionSelector(title + subtitle, options);
+
+    if (!choice) {
+      // User cancelled, return to chat
+      this.chatContainer.addChild(
+        new Text(theme.fg("dim", "Returning to chat..."), 1, 0),
+      );
+      this.ui.requestRender();
+      return;
+    }
+
+    if (choice.includes("Update now")) {
+      await this.performUpdate(latestVersion);
+    } else if (choice.includes("Exit")) {
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("accent", "👋 Exiting. Run this command to update:"),
+          1,
+          0,
+        ),
+      );
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("dim", `  npm install -g ${PACKAGE_NAME}@latest`),
+          1,
+          0,
+        ),
+      );
+      this.ui.requestRender();
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      process.exit(0);
+    } else if (choice.includes("Skip")) {
+      this.settingsManager.setSkippedVersion(latestVersion);
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("dim", `⏭️  Skipped version ${latestVersion}. You won't be prompted for this version again.`),
+          1,
+          0,
+        ),
+      );
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("dim", "   You can clear this skip later from settings."),
+          1,
+          0,
+        ),
+      );
+      this.ui.requestRender();
+    } else if (choice.includes("Enable auto-update")) {
+      this.settingsManager.setAutoUpdate("always");
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("success", "✅ Auto-update enabled! NanoPencil will check for updates on startup."),
+          1,
+          0,
+        ),
+      );
+      this.ui.requestRender();
+      // Proceed with update after enabling auto-update
+      await this.performUpdate(latestVersion);
+    } else if (choice.includes("Disable auto-update")) {
+      this.settingsManager.setAutoUpdate("prompt");
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("dim", "✅ Auto-update disabled. You'll be prompted when updates are available."),
+          1,
+          0,
+        ),
+      );
+      this.ui.requestRender();
+    }
+  }
+
+  /**
+   * Perform the actual npm install update.
+   */
+  private async performUpdate(latestVersion: string, retryCount = 0): Promise<void> {
+    this.chatContainer.addChild(new Spacer(1));
+    this.chatContainer.addChild(
+      new Text(theme.fg("accent", "🔄 Updating NanoPencil..."), 1, 0),
+    );
+    this.ui.requestRender();
+
+    return new Promise((resolve) => {
+      const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+      const child = spawn(npmCmd, ["install", "-g", `${PACKAGE_NAME}@latest`], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let errorOutput = "";
+
+      child.stderr?.on("data", (data: Buffer) => {
+        errorOutput += data.toString();
+      });
+
+      child.on("close", async (code) => {
+        if (code === 0) {
+          this.chatContainer.addChild(
+            new Text(
+              theme.fg("success", `✅ Successfully updated to version ${latestVersion}!`),
+              1,
+              0,
+            ),
+          );
+          this.chatContainer.addChild(new Spacer(1));
+          this.chatContainer.addChild(
+            new Text(
+              theme.fg("accent", "Press 'R' to restart or Ctrl+C to exit manually"),
+              1,
+              0,
+            ),
+          );
+
+          this.ui.requestRender();
+
+          // Wait for user to press R to restart
+          const waitForRestart = async () => {
+            const key = await this.waitForKeyPress(["r", "R", "q", "Q", "\x03"] as const);
+            if (key === "r" || key === "R") {
+              this.chatContainer.addChild(
+                new Text(
+                  theme.fg("dim", "🔄 Restarting NanoPencil..."),
+                  1,
+                  0,
+                ),
+              );
+              this.ui.requestRender();
+              // Restart by spawning new process and exiting current
+              const args = process.argv.slice(1);
+              spawn(process.execPath, args, {
+                detached: true,
+                stdio: "ignore",
+              }).unref();
+              process.exit(0);
+            } else {
+              process.exit(0);
+            }
+          };
+
+          waitForRestart().then(() => resolve());
+        } else {
+          this.chatContainer.addChild(
+            new Text(
+              theme.fg("warning", `⚠️  Update failed (exit code ${code})`),
+              1,
+              0,
+            ),
+          );
+          this.chatContainer.addChild(
+            new Text(
+              theme.fg("dim", "This may be a network issue or permissions problem."),
+              1,
+              0,
+            ),
+          );
+          this.ui.requestRender();
+          resolve();
+
+          // Offer retry option
+          this.showRetryOptions(latestVersion, retryCount);
+        }
+      });
+
+      child.on("error", async (err) => {
+        this.chatContainer.addChild(
+          new Text(
+            theme.fg("warning", `⚠️  Failed to run npm: ${err.message}`),
+            1,
+            0,
+          ),
+        );
+        this.chatContainer.addChild(
+          new Text(
+            theme.fg("dim", "Make sure npm is installed and in your PATH."),
+            1,
+            0,
+          ),
+        );
+        this.ui.requestRender();
+        resolve();
+
+        // Offer retry option
+        this.showRetryOptions(latestVersion, retryCount);
+      });
+    });
+  }
+
+  /**
+   * Show retry options after a failed update attempt.
+   */
+  private async showRetryOptions(latestVersion: string, retryCount: number): Promise<void> {
+    await new Promise((r) => setTimeout(r, 500));
+
+    const options: string[] = ["1. Try again", "2. Exit and update manually"];
+    const choice = await this.showExtensionSelector(
+      `${theme.fg("accent", "Update Failed")}\n\n${theme.fg("dim", "What would you like to do?")}`,
+      options,
+    );
+
+    if (choice?.includes("Try again")) {
+      if (retryCount < 3) {
+        await this.performUpdate(latestVersion, retryCount + 1);
+      } else {
+        this.chatContainer.addChild(
+          new Text(
+            theme.fg("dim", "Multiple retry attempts failed. Please try updating manually."),
+            1,
+            0,
+          ),
+        );
+        this.chatContainer.addChild(
+          new Text(
+            theme.fg("dim", `  npm install -g ${PACKAGE_NAME}@latest`),
+            1,
+            0,
+          ),
+        );
+        this.ui.requestRender();
+      }
+    } else {
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("accent", "👋 Exiting. Run this command to update:"),
+          1,
+          0,
+        ),
+      );
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("dim", `  npm install -g ${PACKAGE_NAME}@latest`),
+          1,
+          0,
+        ),
+      );
+      this.ui.requestRender();
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      process.exit(0);
+    }
+  }
+
+  /**
+   * Wait for a specific key press from user.
+   */
+  private async waitForKeyPress<T extends readonly string[]>(keys: T): Promise<T[number] | "\x03"> {
+    return new Promise((resolve) => {
+      const stdin = process.stdin;
+      const originalRaw = stdin.isRaw;
+
+      const cleanup = () => {
+        stdin.setRawMode(originalRaw);
+        stdin.pause();
+        stdin.removeListener("data", onData);
+      };
+
+      const onData = (data: Buffer) => {
+        const key = data.toString();
+        if (keys.includes(key as T[number]) || key === "\x03" || key === "\x03") { // Ctrl+C
+          cleanup();
+          resolve(key as T[number] | "\x03");
+        }
+      };
+
+      stdin.setRawMode(true);
+      stdin.resume();
+      stdin.on("data", onData);
+    });
   }
 }

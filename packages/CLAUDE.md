@@ -177,12 +177,13 @@ soul-core
 
 ```bash
 # Build individual package
+npm run build --prefix packages/ai
 npm run build --prefix packages/agent-core
 
 # Bundle all local packages
 node scripts/bundle-deps.js
 
-# Root build aggregates all
+# Root build aggregates all (build:deps: ai → agent-core → tui)
 npm run build
 ```
 

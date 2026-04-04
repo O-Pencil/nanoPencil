@@ -30,7 +30,14 @@ if (typeof process !== "undefined" && (process.versions?.node || process.version
 }
 
 // Antigravity OAuth credentials (different from Gemini CLI)
-const decode = (s: string) => atob(s);
+/** Base64-decode when valid; otherwise return raw (e.g. unreplaced build placeholders). */
+const decode = (s: string): string => {
+	try {
+		return atob(s);
+	} catch {
+		return s;
+	}
+};
 const CLIENT_ID = decode(
 	"YOUR_CLIENT_ID_HERE",
 );

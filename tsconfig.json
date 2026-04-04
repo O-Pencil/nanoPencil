@@ -18,7 +18,7 @@
     "types": ["node"],
     "paths": {
       "nanosoul": ["./packages/nanosoul/src"],
-      "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
+      "@pencil-agent/nano-mem": ["./packages/nano-mem/src"]
     }
   },
   "include": [

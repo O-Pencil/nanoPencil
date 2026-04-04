@@ -19,6 +19,7 @@ const BUNDLED_SIMPLIFY_EXTENSION = join(__dirname, "extensions", "optional", "si
 const BUNDLED_LINK_WORLD_EXTENSION = join(__dirname, "extensions", "defaults", "link-world", "index.js");
 const BUNDLED_SECURITY_AUDIT_EXTENSION = join(__dirname, "extensions", "defaults", "security-audit", "index.js");
 const BUNDLED_SOUL_EXTENSION = join(__dirname, "extensions", "defaults", "soul", "index.js");
+const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "presence", "index.js");
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
 const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
@@ -113,6 +114,13 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const soulTs = join(__dirname, "extensions", "defaults", "soul", "index.ts");
 		if (existsSync(soulTs)) paths.push(soulTs);
+	}
+
+	if (existsSync(BUNDLED_PRESENCE_EXTENSION)) {
+		paths.push(BUNDLED_PRESENCE_EXTENSION);
+	} else {
+		const presenceTs = join(__dirname, "extensions", "defaults", "presence", "index.ts");
+		if (existsSync(presenceTs)) paths.push(presenceTs);
 	}
 
 	// === Interview 扩展（需求澄清）===

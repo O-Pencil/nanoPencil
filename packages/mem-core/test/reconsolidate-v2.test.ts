@@ -108,7 +108,12 @@ test("reconsolidate-v2: promotes recalled draft procedures and merges duplicates
 
 	assert.equal(result.episodes[0]?.retention, "key-event");
 	assert.equal(result.facets[0]?.stability, "stable");
-	assert.equal(result.procedural.length, 1);
-	assert.equal(result.procedural[0]?.status, "active");
-	assert.ok((result.procedural[0]?.steps.length ?? 0) >= 2);
+	assert.equal(result.procedural.length, 2);
+	const activeProcedure = result.procedural.find((entry) => entry.status === "active");
+	const supersededProcedure = result.procedural.find((entry) => entry.status === "superseded");
+	assert.ok(activeProcedure);
+	assert.ok(supersededProcedure);
+	assert.ok((activeProcedure.steps.length ?? 0) >= 2);
+	assert.ok(activeProcedure.supersedesIds?.includes(supersededProcedure.id));
+	assert.equal(supersededProcedure.supersededById, activeProcedure.id);
 });

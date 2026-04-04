@@ -219,7 +219,7 @@ async function buildMemoryRecallInjection(
 	if (!isMemoryRecallPrompt(userPrompt)) return undefined;
 
 	const [allEntries, allWork, allEpisodes] = await Promise.all([
-		engine.getAllEntries(),
+		engine.getRuntimeIdentityEntries(),
 		engine.getAllWork(),
 		engine.getAllEpisodes(),
 	]);
@@ -367,7 +367,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		}
 
 		try {
-			const maintenance = await engine.runStartupMaintenance(1);
+			const maintenance = await engine.runStartupMaintenance(3);
 			if (maintenance.ran && ctx.hasUI) {
 				const notes: string[] = [];
 				if (maintenance.backupPath) {

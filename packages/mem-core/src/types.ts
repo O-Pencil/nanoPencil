@@ -70,6 +70,9 @@ export interface MemoryEntry {
 	retention?: MemoryRetention;
 	salience?: number;
 	stability?: MemoryStability;
+	archivedAt?: string;
+	archiveReason?: string;
+	revivedAt?: string;
 	stateData?: StateData;
 	relations?: MemoryRelation[];
 	/** Structured data for pattern/struggle types (Facets) */
@@ -112,6 +115,9 @@ export interface WorkEntry {
 	accessCount: number;
 	relatedIds?: string[];
 	ttl?: number;
+	archivedAt?: string;
+	archiveReason?: string;
+	revivedAt?: string;
 	scope?: MemoryScope;
 }
 

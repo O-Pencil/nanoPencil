@@ -566,6 +566,7 @@ export class InteractiveMode {
     this.subscribeToAgent();
     this.chatContainer.clear();
     this.renderInitialMessages();
+    await this.session.extensionRunner?.emit({ type: "session_ready" });
 
     // Set up theme file watcher
     onThemeChange(() => {

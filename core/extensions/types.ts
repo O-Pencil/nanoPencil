@@ -391,6 +391,11 @@ export interface SessionStartEvent {
 	type: "session_start";
 }
 
+/** Fired when the interactive UI is fully ready to display extension output. */
+export interface SessionReadyEvent {
+	type: "session_ready";
+}
+
 /** Fired before switching to another session (can be cancelled) */
 export interface SessionBeforeSwitchEvent {
 	type: "session_before_switch";
@@ -471,6 +476,7 @@ export interface SessionTreeEvent {
 
 export type SessionEvent =
 	| SessionStartEvent
+	| SessionReadyEvent
 	| SessionBeforeSwitchEvent
 	| SessionSwitchEvent
 	| SessionBeforeForkEvent
@@ -929,6 +935,7 @@ export interface ExtensionAPI {
 
 	on(event: "resources_discover", handler: ExtensionHandler<ResourcesDiscoverEvent, ResourcesDiscoverResult>): void;
 	on(event: "session_start", handler: ExtensionHandler<SessionStartEvent>): void;
+	on(event: "session_ready", handler: ExtensionHandler<SessionReadyEvent>): void;
 	on(
 		event: "session_before_switch",
 		handler: ExtensionHandler<SessionBeforeSwitchEvent, SessionBeforeSwitchResult>,

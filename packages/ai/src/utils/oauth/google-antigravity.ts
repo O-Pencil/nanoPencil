@@ -14,6 +14,7 @@
 
 
 import type { Server } from "node:http";
+import { decodeOAuthCredentialSegment } from "./decode-credential.js";
 import { generatePKCE } from "./pkce.js";
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "./types.js";
 
@@ -30,18 +31,8 @@ if (typeof process !== "undefined" && (process.versions?.node || process.version
 }
 
 // Antigravity OAuth credentials (different from Gemini CLI)
-/** Base64-decode when valid; otherwise return raw (e.g. unreplaced build placeholders). */
-const decode = (s: string): string => {
-	try {
-		return atob(s);
-	} catch {
-		return s;
-	}
-};
-const CLIENT_ID = decode(
-	"YOUR_CLIENT_ID_HERE",
-);
-const CLIENT_SECRET = decode("YOUR_CLIENT_SECRET_HERE");
+const CLIENT_ID = decodeOAuthCredentialSegment("YOUR_CLIENT_ID_HERE");
+const CLIENT_SECRET = decodeOAuthCredentialSegment("YOUR_CLIENT_SECRET_HERE");
 const REDIRECT_URI = "http://localhost:51121/oauth-callback";
 
 // Antigravity requires additional scopes

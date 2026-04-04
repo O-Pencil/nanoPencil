@@ -22,23 +22,31 @@ function bundleDependencies() {
 
     console.log(`Processing ${pkg}...`);
 
-    // Check if dist already exists (skip build if already built)
     const distPath = path.join(srcDir, "dist");
+    const tsBuildInfoPath = path.join(srcDir, "tsconfig.tsbuildinfo");
+
+    // Always rebuild bundled packages from a clean state. Incremental
+    // TypeScript metadata can claim outputs are up to date even when dist
+    // is incomplete, which leads to broken published tarballs.
     if (fs.existsSync(distPath)) {
-      console.log(`  📋 dist already exists, skipping build...`);
-    } else {
-      // Build the package first
-      const pkgJsonPath = path.join(srcDir, "package.json");
-      if (fs.existsSync(pkgJsonPath)) {
-        try {
-          console.log(`  🔨 Building ${pkg}...`);
-          execSync("npm run build", {
-            cwd: srcDir,
-            stdio: "inherit",
-          });
-        } catch (error) {
-          console.warn(`  ⚠️  Build failed or no build script: ${error}`);
-        }
+      console.log(`  🧹 Removing stale dist...`);
+      fs.rmSync(distPath, { recursive: true, force: true });
+    }
+    if (fs.existsSync(tsBuildInfoPath)) {
+      console.log(`  🧹 Removing stale tsbuildinfo...`);
+      fs.rmSync(tsBuildInfoPath, { force: true });
+    }
+
+    const pkgJsonPath = path.join(srcDir, "package.json");
+    if (fs.existsSync(pkgJsonPath)) {
+      try {
+        console.log(`  🔨 Building ${pkg}...`);
+        execSync("npm run build", {
+          cwd: srcDir,
+          stdio: "inherit",
+        });
+      } catch (error) {
+        console.warn(`  ⚠️  Build failed or no build script: ${error}`);
       }
     }
 

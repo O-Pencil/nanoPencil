@@ -6521,10 +6521,7 @@ export class InteractiveMode {
       if (latestVersion !== "unknown" && latestVersion > currentVersion) {
         lines.push(theme.fg("success", "✨ New version available!"));
         lines.push("");
-        lines.push(theme.fg("dim", "To update, run one of these commands:"));
-        lines.push(
-          theme.fg("dim", "  npm update -g @pencil-agent/nano-pencil"),
-        );
+        lines.push(theme.fg("dim", "To update, run:"));
         lines.push(
           theme.fg("dim", "  npm install -g @pencil-agent/nano-pencil@latest"),
         );

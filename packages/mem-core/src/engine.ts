@@ -87,6 +87,23 @@ export class NanoMemEngine {
 	private embeddingFn?: EmbeddingFn;
 	private static readonly AUTO_V2_LINK_PREFIX = "auto:v2:";
 	private static readonly AUTO_REVIVE_MAX_ITEMS = 2;
+	private static readonly CONVERSATION_PREFERENCE_PATTERNS = [
+		/\bcall me\b/i,
+		/\baddress me\b/i,
+		/\bmy name is\b/i,
+		/\bi am called\b/i,
+		/\bspeak (?:to me )?(?:like|in)\b/i,
+		/\btalk (?:to me )?(?:like|in)\b/i,
+		/\buse (?:a |the )?(?:tone|style|voice)\b/i,
+		/\b(?:tone|style|voice|persona)\b/i,
+		/叫我/,
+		/称呼我/,
+		/称呼用户/,
+		/语气/,
+		/口吻/,
+		/风格/,
+		/说话方式/,
+	];
 
 	private knowledgePath: string;
 	private lessonsPath: string;
@@ -495,6 +512,7 @@ export class NanoMemEngine {
 		const tieredEvents = tierEntries(events, project, contextTags, hl, sw, pr);
 		const tieredPrefs = tierEntries(prefs, project, contextTags, hl, sw, pr);
 		const tieredFacets = tierEntries(facets, project, contextTags, hl, sw, pr);
+		const forcedConversationPrefs = this.selectConversationPreferences(prefs);
 
 		// Budget calculation
 		const totalChars = this.cfg.tokenBudget * 4;
@@ -530,7 +548,10 @@ export class NanoMemEngine {
 		const activeKnowledge = pickTop(tieredKnowledge.active, scoreFn, activeLen, activeBudgetPer);
 		const activeLessons = pickTop(tieredLessons.active, scoreFn, activeLen, activeBudgetPer);
 		const activeEvents = pickTop(tieredEvents.active, scoreFn, activeLen, activeBudgetPer);
-		const activePrefs = pickTop(tieredPrefs.active, scoreFn, activeLen, activeBudgetPer);
+		const activePrefs = this.mergeUniqueEntries(
+			forcedConversationPrefs,
+			pickTop(tieredPrefs.active, scoreFn, activeLen, activeBudgetPer),
+		);
 		const activeFacets = pickTop(tieredFacets.active, scoreFn, activeLen, activeBudgetPer);
 		const activeProcedural = pickTop(
 			procedural.filter((item) => semanticProcedureIds.has(item.id) || proceduralScoreFn(item) >= 0.45),
@@ -569,7 +590,13 @@ export class NanoMemEngine {
 		const cueKnowledge = pickTop(tieredKnowledge.cue, scoreFn, cueLen, cueBudgetPer);
 		const cueLessons = pickTop(tieredLessons.cue, scoreFn, cueLen, cueBudgetPer);
 		const cueEvents = pickTop(tieredEvents.cue, scoreFn, cueLen, cueBudgetPer);
-		const cuePrefs = pickTop(tieredPrefs.cue, scoreFn, cueLen, cueBudgetPer);
+		const forcedConversationPrefIds = new Set(forcedConversationPrefs.map((entry) => entry.id));
+		const cuePrefs = pickTop(
+			tieredPrefs.cue.filter((entry) => !forcedConversationPrefIds.has(entry.id)),
+			scoreFn,
+			cueLen,
+			cueBudgetPer,
+		);
 		const cueFacets = pickTop(tieredFacets.cue, scoreFn, cueLen, cueBudgetPer);
 		const graphContextIds = new Set(graphContext.map((neighbor) => neighbor.entry.id));
 		const dedupeCue = (entries: MemoryEntry[]) => entries.filter((entry) => !graphContextIds.has(entry.id));
@@ -3121,6 +3148,7 @@ export class NanoMemEngine {
 
 		// ── Active tier: full detail ──
 		const activeLines: string[] = [];
+		const conversationPreferenceLines: string[] = [];
 		const keyEventLines: string[] = [];
 		const stateLines: string[] = [];
 
@@ -3148,6 +3176,10 @@ export class NanoMemEngine {
 		};
 
 		const pushActiveEntry = (entry: MemoryEntry) => {
+			if (this.isConversationPreference(entry)) {
+				conversationPreferenceLines.push(formatActiveEntry(entry));
+				return;
+			}
 			if (entry.stability === "situational" || entry.stateData) {
 				const mood = entry.stateData?.mood ? ` (${entry.stateData.mood})` : "";
 				stateLines.push(`- [ID: ${entry.id}] **${entry.name || "Unknown"}**${mood}: ${entry.summary || ""}`);
@@ -3180,6 +3212,9 @@ export class NanoMemEngine {
 			return `- [ID: ${entry.id}] **${entry.name}**: ${entry.summary}\n  ${steps}${boundaries}`;
 		});
 
+		if (conversationPreferenceLines.length) {
+			sections.push(`### ${p.sectionConversationPreferences}\n${conversationPreferenceLines.join("\n")}`);
+		}
 		if (activeLines.length) {
 			sections.push(`### ${p.sectionActiveMemories}\n${activeLines.join("\n")}`);
 		}
@@ -3267,5 +3302,34 @@ export class NanoMemEngine {
 			? `${p.memoryBehavior}\n\n${soulStyle}`
 			: p.memoryBehavior;
 		return `## ${p.injectionHeader}\n\n${sections.join("\n\n")}\n\n---\n${behaviorBlock}`;
+	}
+
+	private isConversationPreference(entry: MemoryEntry): boolean {
+		if (entry.type !== "preference") return false;
+		const text = `${entry.name || ""}\n${entry.summary || ""}\n${entry.detail || ""}\n${entry.content || ""}`;
+		return NanoMemEngine.CONVERSATION_PREFERENCE_PATTERNS.some((pattern) => pattern.test(text));
+	}
+
+	private selectConversationPreferences(entries: MemoryEntry[]): MemoryEntry[] {
+		return entries
+			.filter((entry) => this.isConversationPreference(entry))
+			.filter((entry) => entry.stability !== "situational")
+			.sort((a, b) => this.rankConversationPreference(b) - this.rankConversationPreference(a))
+			.slice(0, 3);
+	}
+
+	private rankConversationPreference(entry: MemoryEntry): number {
+		return (entry.salience ?? entry.importance ?? 0) * 10 + (entry.accessCount ?? 0) * 2 - daysSince(entry.created);
+	}
+
+	private mergeUniqueEntries(preferred: MemoryEntry[], fallback: MemoryEntry[]): MemoryEntry[] {
+		const merged: MemoryEntry[] = [];
+		const seen = new Set<string>();
+		for (const entry of [...preferred, ...fallback]) {
+			if (seen.has(entry.id)) continue;
+			seen.add(entry.id);
+			merged.push(entry);
+		}
+		return merged;
 	}
 }

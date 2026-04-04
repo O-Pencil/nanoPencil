@@ -80,6 +80,7 @@ export function reconsolidateV2Memories(
 
 	const sortedProcedural = [...procedural].sort((a, b) => (b.accessCount ?? 0) - (a.accessCount ?? 0));
 	const keptProcedural: ProceduralMemory[] = [];
+	const supersededProcedural: ProceduralMemory[] = [];
 
 	for (const procedure of sortedProcedural) {
 		if (recalledProcedureSet.has(procedure.id) && procedure.status === "draft" && procedure.accessCount >= 2) {
@@ -120,13 +121,20 @@ export function reconsolidateV2Memories(
 		if (keeper.status === "draft" && procedure.status === "active") {
 			keeper.status = "active";
 		}
+
+		supersededProcedural.push({
+			...procedure,
+			status: "superseded",
+			supersededById: keeper.id,
+			updatedAt: now,
+		});
 		mergedProcedures++;
 	}
 
 	return {
 		episodes,
 		facets,
-		procedural: keptProcedural,
+		procedural: [...keptProcedural, ...supersededProcedural],
 		changes: {
 			promotedProcedures,
 			mergedProcedures,

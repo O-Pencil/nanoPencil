@@ -126,6 +126,13 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 			api: "openai-completions",
 			models: [
 				{
+					id: "MiniMax-M2.7",
+					name: "MiniMax M2.7",
+					input: ["text"],
+					contextWindow: 204800,
+					maxTokens: 65536,
+				},
+				{
 					id: "MiniMax-M2.5",
 					name: "MiniMax M2.5",
 					input: ["text"],
@@ -494,6 +501,59 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		}
 		if (arkChanged) {
 			(data.providers[NANOPENCIL_ARK_CODING_PROVIDER] as { models: unknown[] }).models = arkModels;
+			writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
+		}
+	}
+
+	// 合并 minimax-coding：不存在则添加默认配置，存在则补充默认模型
+	const minimaxProvider = data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER];
+	const minimaxConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER];
+	if (!minimaxProvider) {
+		data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER] = {
+			baseUrl: minimaxConfig.baseUrl,
+			api: minimaxConfig.api,
+			models: DEFAULT_MINIMAX_MODELS.map((m) => ({ ...m })),
+		};
+		writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
+	} else {
+		const minimaxModels = (Array.isArray(minimaxProvider.models) ? [...minimaxProvider.models] : []) as Record<
+			string,
+			unknown
+		>[];
+		const minimaxById = new Map<string, Record<string, unknown>>();
+		for (const m of minimaxModels) {
+			const id = m?.id;
+			if (typeof id === "string") minimaxById.set(id, m);
+		}
+		let minimaxChanged = false;
+		for (const def of DEFAULT_MINIMAX_MODELS) {
+			const id = def.id;
+			const existing = minimaxById.get(id);
+			if (!existing) {
+				minimaxModels.push({ ...def });
+				minimaxById.set(id, minimaxModels[minimaxModels.length - 1]);
+				minimaxChanged = true;
+			} else {
+				if (existing.contextWindow !== def.contextWindow) {
+					existing.contextWindow = def.contextWindow;
+					minimaxChanged = true;
+				}
+				if (existing.maxTokens !== def.maxTokens) {
+					existing.maxTokens = def.maxTokens;
+					minimaxChanged = true;
+				}
+				if (JSON.stringify(existing.input) !== JSON.stringify(def.input)) {
+					existing.input = def.input;
+					minimaxChanged = true;
+				}
+				if (existing.name !== def.name) {
+					existing.name = def.name;
+					minimaxChanged = true;
+				}
+			}
+		}
+		if (minimaxChanged) {
+			(data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER] as { models: unknown[] }).models = minimaxModels;
 			writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 		}
 	}

@@ -4645,6 +4645,39 @@ export class InteractiveMode {
         },
         initialSearchInput,
         filterByProvider,
+        () => {
+          void (async () => {
+            done();
+            const modelId = await this.showExtensionInput(
+              "Add OpenRouter model",
+              "Model id (e.g. x-ai/grok-4.20)",
+            );
+            if (!modelId?.trim()) {
+              this.showModelSelector(initialSearchInput, filterByProvider);
+              return;
+            }
+            const nameInput = await this.showExtensionInput(
+              "Display name (optional)",
+              "Leave empty to use model id",
+              { initialValue: modelId.trim() },
+            );
+            if (nameInput === undefined) {
+              this.showModelSelector(initialSearchInput, filterByProvider);
+              return;
+            }
+            try {
+              this.session.modelRegistry.appendOpenRouterModel(modelId.trim(), {
+                name: nameInput.trim() || undefined,
+              });
+              this.showStatus(`Added OpenRouter model ${modelId.trim()}`);
+            } catch (error) {
+              this.showError(
+                error instanceof Error ? error.message : String(error),
+              );
+            }
+            this.showModelSelector(initialSearchInput, filterByProvider);
+          })();
+        },
       );
       return { component: selector, focus: selector };
     });

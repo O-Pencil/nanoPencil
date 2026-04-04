@@ -12,6 +12,7 @@ import {
 	fuzzyFilter,
 	getEditorKeybindings,
 	Input,
+	matchesKey,
 	Spacer,
 	Text,
 	type TUI,
@@ -59,6 +60,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	private scopeText?: Text;
 	private scopeHintText?: Text;
 	private filterByProvider?: string;
+	/** When set, Ctrl+N runs this (parent closes selector and prompts for OpenRouter model id). */
+	private onAddOpenRouterModel?: () => void;
 
 	get focused(): boolean {
 		return this._focused;
@@ -80,6 +83,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		onCancel: () => void,
 		initialSearchInput?: string,
 		filterByProvider?: string,
+		onAddOpenRouterModel?: () => void,
 	) {
 		super();
 
@@ -90,6 +94,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		this.scopedModels = scopedModels;
 		this.ensureProviderConfigured = ensureProviderConfigured;
 		this.filterByProvider = filterByProvider;
+		this.onAddOpenRouterModel = onAddOpenRouterModel;
 		this.scope = scopedModels.length > 0 && !filterByProvider ? "scoped" : "all";
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
@@ -119,6 +124,17 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			}
 		};
 		this.addChild(this.searchInput);
+
+		if (this.onAddOpenRouterModel) {
+			this.addChild(new Spacer(1));
+			this.addChild(
+				new Text(
+					theme.fg("muted", "Ctrl+N: add OpenRouter model by id (same as openrouter.ai)"),
+					0,
+					0,
+				),
+			);
+		}
 
 		this.addChild(new Spacer(1));
 		this.listContainer = new Container();
@@ -349,6 +365,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			}
 		} else if (kb.matches(keyData, "selectCancel")) {
 			this.onCancelCallback();
+		} else if (this.onAddOpenRouterModel && matchesKey(keyData, "ctrl+n")) {
+			this.onAddOpenRouterModel();
 		} else {
 			this.searchInput.handleInput(keyData);
 			this.filterModels(this.searchInput.getValue());

@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: ImageTheme, ImageOptions, Image
  * [LOCUS]: packages/tui/src/components/image.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import {
 	getCapabilities,
 	getImageDimensions,

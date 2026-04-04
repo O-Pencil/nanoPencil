@@ -69,6 +69,7 @@ export type PackageSource =
 	  };
 
 export interface Settings {
+	locale?: "en" | "zh"; // Language setting
 	lastChangelogVersion?: string;
 	defaultProvider?: string;
 	defaultModel?: string;

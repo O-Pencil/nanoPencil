@@ -2,11 +2,12 @@
  * TUI component for managing package resources (enable/disable)
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:path, ../../../config.js, ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [SURFACE]: ConfigSelectorComponent
  * [LOCUS]: modes/interactive/components/config-selector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { basename, dirname, join, relative } from "node:path";
 import {

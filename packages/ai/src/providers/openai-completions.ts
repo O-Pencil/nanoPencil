@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on openai, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/json-parse.js
+ * [SURFACE]: OpenAICompletionsOptions, streamOpenAICompletions, streamSimpleOpenAICompletions, convertMessages
  * [LOCUS]: packages/ai/src/providers/openai-completions.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import OpenAI from "openai";
 import type {
 	ChatCompletionAssistantMessageParam,

@@ -4,11 +4,12 @@
  * Lower score = better match.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: FuzzyMatch, fuzzyMatch, fuzzyFilter
  * [LOCUS]: packages/tui/src/fuzzy.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 export interface FuzzyMatch {
 	matches: boolean;

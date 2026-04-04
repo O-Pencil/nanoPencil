@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
+ * [SURFACE]: BranchSummaryMessageComponent
  * [LOCUS]: modes/interactive/components/branch-summary-message.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
 import type { BranchSummaryMessage } from "../../../core/messages.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";

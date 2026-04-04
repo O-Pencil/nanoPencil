@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../utils.js
+ * [SURFACE]: Text
  * [LOCUS]: packages/tui/src/components/text.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { Component } from "../tui.js";
 import { applyBackgroundToLine, visibleWidth, wrapTextWithAnsi } from "../utils.js";
 

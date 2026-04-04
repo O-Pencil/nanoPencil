@@ -17,11 +17,12 @@
  * MIT License - Copyright (c) 2025 opentui
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on events
+ * [SURFACE]: StdinBuffer
  * [LOCUS]: packages/tui/src/stdin-buffer.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { EventEmitter } from "events";
 

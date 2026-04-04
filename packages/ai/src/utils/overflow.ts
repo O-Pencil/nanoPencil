@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: isContextOverflow, getOverflowPatterns
  * [LOCUS]: packages/ai/src/utils/overflow.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { AssistantMessage } from "../types.js";
 
 /**

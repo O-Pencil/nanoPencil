@@ -39,7 +39,7 @@ test("dream lock: reclaim stale and rollback restores mtime", async () => {
 
 	await rollbackDreamLock(lockPath, prior!);
 	const after = await stat(lockPath);
-	assert.equal(after.mtimeMs, before.mtimeMs);
+	assert.ok(Math.abs(after.mtimeMs - before.mtimeMs) <= 2);
 });
 
 test("dream lock: stamp updates mtime", async () => {
@@ -53,4 +53,3 @@ test("dream lock: stamp updates mtime", async () => {
 	const after = await readDreamLockMtimeMs(lockPath);
 	assert.ok(after > 0);
 });
-

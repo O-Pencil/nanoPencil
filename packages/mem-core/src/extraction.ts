@@ -1,14 +1,10 @@
 /**
- * [INPUT]: conversation text, LlmFn, config
- * [OUTPUT]: extracted memory items (via LLM) or heuristic fallback
- * [POS]: Dual-path extraction — LLM when available, regex heuristics otherwise
+ * [UPSTREAM]: Depends on ./config.js, ./i18n.js, ./store.js, ./types.js
+ * [SURFACE]: extractMemories, extractWork, extractState
+ * [LOCUS]: packages/mem-core/src/extraction.ts - dual-path extraction (LLM when available, regex heuristics fallback)
+ * [COVENANT]: Change extraction patterns → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/extraction.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import type { NanomemConfig } from "./config.js";
 import { PROMPTS } from "./i18n.js";

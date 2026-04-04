@@ -6,11 +6,12 @@
  * [POS]: Engine layer - implements danger detection
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:os, node:path, ../interface.js
+ * [SURFACE]: DangerDetector
  * [LOCUS]: extensions/defaults/security-audit/engine/detector.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { homedir } from "node:os";
 import { resolve } from "node:path";

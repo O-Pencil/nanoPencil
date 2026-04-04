@@ -3,11 +3,12 @@
  * Uses ◆◇◈ symbols for a smooth loading indicator
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @pencil-agent/tui
+ * [SURFACE]: PencilLoader
  * [LOCUS]: modes/interactive/components/pencil-loader.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import type { Theme } from "../theme/theme.js";
@@ -19,7 +20,6 @@ export class PencilLoader extends Container {
 	private interval: NodeJS.Timeout | undefined;
 	private currentFrame = 0;
 	private textComponent: Text;
-	private messageComponent: Text;
 	private isStopped = false;
 
 	// Rotating diamond animation frames
@@ -36,11 +36,9 @@ export class PencilLoader extends Container {
 		this.message = message;
 
 		this.textComponent = new Text("", 0, 0);
-		this.messageComponent = new Text("", 0, 0);
 
 		this.addChild(new Spacer(1));
 		this.addChild(this.textComponent);
-		this.addChild(this.messageComponent);
 		this.addChild(new Spacer(1));
 
 		this.startAnimation();
@@ -70,7 +68,7 @@ export class PencilLoader extends Container {
 		this.message = message;
 		const frameChar = this.frames[this.currentFrame];
 		const diamond = this.theme.fg("accent", frameChar);
-		this.messageComponent.setText(`${diamond} ${this.message}`);
+		this.textComponent.setText(`${diamond} ${this.message}`);
 		this.tui.requestRender();
 	}
 

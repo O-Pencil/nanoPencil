@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ajv, ajv-formats
+ * [SURFACE]: validateToolCall, validateToolArguments
  * [LOCUS]: packages/ai/src/utils/validation.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import AjvModule from "ajv";
 import addFormatsModule from "ajv-formats";
 

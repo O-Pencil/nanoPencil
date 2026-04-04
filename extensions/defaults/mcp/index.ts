@@ -5,11 +5,12 @@
  * Runtime MCP tool loading is handled by the AgentSession SDK.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs, node:path, node:url, ../../../config.js, ../../../core/config/auth-storage.js
+ * [SURFACE]: Extension interface
  * [LOCUS]: extensions/defaults/mcp/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/dream-lock.ts - 
- * [COVENANT]: Change → update this header
+ * [UPSTREAM]: Depends on node:fs, node:fs/promises
+ * [SURFACE]: DreamLock, tryAcquireDreamLock, releaseDreamLock, isDreamLocked, waitForDreamLock
+ * [LOCUS]: packages/mem-core/src/dream-lock.ts - file-based mutex for background consolidation (dream) process
+ * [COVENANT]: Change locking mechanism → update this header and verify against packages/mem-core/CLAUDE.md
  */
+
 import { existsSync } from "node:fs";
 import { readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 

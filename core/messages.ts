@@ -21,6 +21,7 @@ export const BRANCH_SUMMARY_PREFIX = `The following is a summary of a branch tha
 `;
 
 export const BRANCH_SUMMARY_SUFFIX = `</summary>`;
+export const CUSTOM_MESSAGE_TYPES_EXCLUDED_FROM_CONTEXT = new Set(["presence"]);
 
 /**
  * Message type for bash executions via the ! command.
@@ -159,6 +160,9 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 						timestamp: m.timestamp,
 					};
 				case "custom": {
+					if (CUSTOM_MESSAGE_TYPES_EXCLUDED_FROM_CONTEXT.has(m.customType)) {
+						return undefined;
+					}
 					const content = typeof m.content === "string" ? [{ type: "text" as const, text: m.content }] : m.content;
 					return {
 						role: "user",

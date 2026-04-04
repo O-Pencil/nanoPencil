@@ -5,11 +5,12 @@
  * directly (no re-cloning) since they are already detached.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: UndoStack
  * [LOCUS]: packages/tui/src/undo-stack.ts - 
  * [COVENANT]: Change → update this header
  */
+
 export class UndoStack<S> {
 	private stack: S[] = [];
 

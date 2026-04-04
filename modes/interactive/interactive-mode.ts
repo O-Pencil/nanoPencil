@@ -91,7 +91,8 @@ import {
   type SessionContext,
   SessionManager,
 } from "../../core/session/session-manager.js";
-import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
+import { BUILTIN_SLASH_COMMANDS, getLocalizedCommands } from "../../core/slash-commands.js";
+import { t } from "../../core/i18n/index.js";
 import {
   getActivePersonaId,
   getPersonaDir,
@@ -364,8 +365,9 @@ export class InteractiveMode {
   }
 
   private setupAutocomplete(fdPath: string | undefined): void {
-    // Define commands for autocomplete
-    const slashCommands: SlashCommand[] = BUILTIN_SLASH_COMMANDS.map(
+    // Define commands for autocomplete with localized descriptions
+    const localizedCommands = getLocalizedCommands(t);
+    const slashCommands: SlashCommand[] = localizedCommands.map(
       (command) => ({
         name: command.name,
         description: command.description,
@@ -2464,6 +2466,11 @@ export class InteractiveMode {
       if (text === "/reload") {
         this.editor.setText("");
         await this.handleReloadCommand();
+        return;
+      }
+      if (text === "/language" || text.startsWith("/language ")) {
+        await this.handleLanguageCommand(text);
+        this.editor.setText("");
         return;
       }
       if (text === "/soul") {
@@ -5993,6 +6000,71 @@ export class InteractiveMode {
     this.chatContainer.addChild(new Spacer(1));
     this.chatContainer.addChild(
       new Text("Usage: /mcp [list|status|tools|enable <id>|disable <id>]", 1, 0),
+    );
+    this.ui.requestRender();
+  }
+
+  private async handleLanguageCommand(text: string): Promise<void> {
+    const { setLocale, getLocale, AVAILABLE_LOCALES, LOCALE_NAMES } = await import(
+      "../../core/i18n/index.js"
+    );
+    const currentLocale = getLocale();
+
+    // Parse command
+    const parts = text.split(" ");
+    const targetLocale = parts[1]?.toLowerCase();
+
+    if (!targetLocale) {
+      // Show current language and options
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("accent", `Current language: ${LOCALE_NAMES[currentLocale]}`),
+          1,
+          0,
+        ),
+      );
+      this.chatContainer.addChild(new Text("Available languages:", 1, 0));
+      for (const locale of AVAILABLE_LOCALES) {
+        const marker = locale === currentLocale ? " ●" : "";
+        this.chatContainer.addChild(
+          new Text(`  /language ${locale} - ${LOCALE_NAMES[locale]}${marker}`, 1, 0),
+        );
+      }
+      this.ui.requestRender();
+      return;
+    }
+
+    // Validate locale
+    const locale = targetLocale as (typeof AVAILABLE_LOCALES)[number];
+    if (!AVAILABLE_LOCALES.includes(locale)) {
+      this.chatContainer.addChild(new Spacer(1));
+      this.chatContainer.addChild(
+        new Text(
+          theme.fg("error", `Unknown language: ${targetLocale}`),
+          1,
+          0,
+        ),
+      );
+      this.chatContainer.addChild(new Text("Available: " + AVAILABLE_LOCALES.join(", "), 1, 0));
+      this.ui.requestRender();
+      return;
+    }
+
+    // Set locale
+    setLocale(locale);
+
+    // Show confirmation
+    this.chatContainer.addChild(new Spacer(1));
+    this.chatContainer.addChild(
+      new Text(
+        theme.fg("success", `Language changed to: ${LOCALE_NAMES[locale]}`),
+        1,
+        0,
+      ),
+    );
+    this.chatContainer.addChild(
+      new Text("Restart NanoPencil for full effect.", 1, 0),
     );
     this.ui.requestRender();
   }

@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../fuzzy.js, ../keybindings.js, ../utils.js, ./input.js
+ * [SURFACE]: SettingItem, SettingsListTheme, SettingsListOptions, SettingsList
  * [LOCUS]: packages/tui/src/components/settings-list.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import { fuzzyFilter } from "../fuzzy.js";
 import { getEditorKeybindings } from "../keybindings.js";
 import type { Component } from "../tui.js";

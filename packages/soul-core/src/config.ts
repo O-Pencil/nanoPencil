@@ -4,11 +4,12 @@
  * [POS]: Configuration layer - provides defaults and validation
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:path, node:os
+ * [SURFACE]: getDefaultConfig, getSoulConfig, validateSoulConfig
  * [LOCUS]: packages/soul-core/src/config.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { SoulConfig } from "./types.js";
 import { join } from "node:path";

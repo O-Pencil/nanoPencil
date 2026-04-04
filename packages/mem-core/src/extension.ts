@@ -1,17 +1,13 @@
 /**
- * [INPUT]: NanoPencil ExtensionAPI
- * [OUTPUT]: Registers lifecycle hooks that drive NanoMemEngine
- * [POS]: Thin adapter — bridges NanoPencil events to the host-agnostic engine
+ * [UPSTREAM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/nano-pencil
+ * [SURFACE]: default export (Extension), nanomem extension for NanoPencil integration
+ * [LOCUS]: packages/mem-core/src/extension.ts - thin adapter bridging NanoPencil events to host-agnostic NanoMemEngine
+ * [COVENANT]: Change extension hooks → update this header and verify against packages/mem-core/CLAUDE.md
  *
- * This file is the ONLY module that depends on @pencil-agent/nano-pencil types.
- * For non-NanoPencil hosts, import from the package root instead.
+ * NOTE: This is the ONLY module that depends on @pencil-agent/nano-pencil types.
+ * For non-NanoPencil hosts, import from the package root (index.ts) instead.
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/extension.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { existsSync, writeFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -24,7 +20,7 @@ import { readDreamLockMtimeMs, rollbackDreamLock, stampDreamLock, tryAcquireDrea
 import { renderFullInsightsHtml } from "./full-insights-html.js";
 import { renderInsightsHtml } from "./insights-html.js";
 import { extractTags } from "./scoring.js";
-import type { Meta } from "./types.js";
+import type { Episode, Meta, MemoryEntry, WorkEntry } from "./types.js";
 import { loadEntries, loadMeta } from "./store.js";
 
 type LlmCapableContext = ExtensionContext & {
@@ -185,6 +181,89 @@ function parseIntEnv(name: string, defaultValue: number): number {
 	return Number.isFinite(n) ? Math.floor(n) : defaultValue;
 }
 
+const MEMORY_CHECK_PATTERN =
+	/(你还记得我吗|还记得我吗|还记得我|记得我吗|记得我|你认识我吗|你是谁|who am i|do you remember me|remember me|do you know me)/i;
+const PAST_CONTEXT_PATTERN =
+	/(昨天聊了什么|昨天我们聊了什么|上次聊了什么|之前聊了什么|我们聊到哪了|昨天|上次|last time|what did we talk about|what were we discussing|yesterday)/i;
+
+function isMemoryRecallPrompt(prompt?: string): boolean {
+	if (!prompt) return false;
+	const normalized = prompt.trim();
+	return MEMORY_CHECK_PATTERN.test(normalized) || PAST_CONTEXT_PATTERN.test(normalized);
+}
+
+function scoreMemoryForRecall(entry: MemoryEntry): number {
+	return (entry.salience ?? entry.importance ?? 0) * 3 + (entry.accessCount ?? 0);
+}
+
+function formatMemoryLine(entry: MemoryEntry): string {
+	const title = entry.name || entry.summary || entry.id;
+	const summary = entry.summary || entry.detail || entry.content || "";
+	return `- [${entry.type}] ${title}${summary ? `: ${summary.slice(0, 180)}` : ""}`;
+}
+
+function formatWorkLine(entry: WorkEntry): string {
+	return `- ${entry.goal || "Work item"}: ${entry.summary.slice(0, 180)}`;
+}
+
+function formatEpisodeLine(entry: Episode): string {
+	const when = entry.date || entry.endedAt || entry.startedAt || "unknown date";
+	return `- ${when}: ${entry.summary.slice(0, 180)}`;
+}
+
+async function buildMemoryRecallInjection(
+	engine: NanoMemEngine,
+	project: string,
+	userPrompt: string,
+): Promise<string | undefined> {
+	if (!isMemoryRecallPrompt(userPrompt)) return undefined;
+
+	const [allEntries, allWork, allEpisodes] = await Promise.all([
+		engine.getRuntimeIdentityEntries(),
+		engine.getAllWork(),
+		engine.getAllEpisodes(),
+	]);
+
+	const identityEntries = [...allEntries.preferences, ...allEntries.knowledge, ...allEntries.lessons, ...allEntries.facets]
+		.sort((a, b) => scoreMemoryForRecall(b) - scoreMemoryForRecall(a))
+		.slice(0, 5);
+	const recentWork = [...allWork]
+		.filter((entry) => !entry.project || entry.project === project)
+		.sort((a, b) => (b.eventTime || b.created || "").localeCompare(a.eventTime || a.created || ""))
+		.slice(0, 3);
+	const recentEpisodes = [...allEpisodes]
+		.filter((entry) => !entry.project || entry.project === project)
+		.sort((a, b) => (b.endedAt || b.startedAt || b.date || "").localeCompare(a.endedAt || a.startedAt || a.date || ""))
+		.slice(0, 3);
+
+	if (identityEntries.length === 0 && recentWork.length === 0 && recentEpisodes.length === 0) return undefined;
+
+	const lines = [
+		"## Immediate Recall",
+		"The user is explicitly asking about continuity or whether you remember them.",
+		"If the memories below are relevant, answer from them directly and naturally.",
+		"Do not start by claiming you forgot, lost memory, or have no memory unless the recall block is actually empty.",
+		"If you are only partially sure, say so briefly, but still use the recalled facts that are present.",
+	];
+
+	if (identityEntries.length > 0) {
+		lines.push("", "### What You Already Know About This User");
+		lines.push(...identityEntries.map(formatMemoryLine));
+	}
+
+	if (recentWork.length > 0) {
+		lines.push("", "### Recent Work Context");
+		lines.push(...recentWork.map(formatWorkLine));
+	}
+
+	if (recentEpisodes.length > 0) {
+		lines.push("", "### Recent Conversation History");
+		lines.push(...recentEpisodes.map(formatEpisodeLine));
+	}
+
+	return lines.join("\n");
+}
+
 function getDreamConfig(ctx?: ExtensionContext) {
 	const settings = ctx?.getSettings?.();
 	const s = settings?.nanomem;
@@ -287,6 +366,27 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			});
 		}
 
+		try {
+			const maintenance = await engine.runStartupMaintenance(3);
+			if (maintenance.ran && ctx.hasUI) {
+				const notes: string[] = [];
+				if (maintenance.backupPath) {
+					notes.push(`backup saved to ${maintenance.backupPath}`);
+				}
+				if (maintenance.deduplicated.total > 0) {
+					notes.push(`deduped ${maintenance.deduplicated.total} entries`);
+				}
+				if (maintenance.migratedEpisodesToV2 > 0) {
+					notes.push(`refreshed ${maintenance.migratedEpisodesToV2} episodes`);
+				}
+				if (notes.length > 0) {
+					ctx.ui.notify(`NanoMem maintenance completed: ${notes.join(", ")}`, "info");
+				}
+			}
+		} catch (error) {
+			console.error("[nanomem] startup maintenance failed:", error);
+		}
+
 	});
 
 	const maybeRunAutoDream = async (ctx: ExtensionContext) => {
@@ -358,20 +458,26 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 	pi.on("before_agent_start", async (event) => {
 		if (sessionGoal === undefined && event.prompt?.trim()) sessionGoal = event.prompt.trim().slice(0, 300);
 		const cacheFresh = cachedInjection && Date.now() - lastInjectionAt < 30_000;
+		const recallInjection = await withTimeout(
+			buildMemoryRecallInjection(engine, project, event.prompt ?? ""),
+			250,
+		);
 		if (cacheFresh) {
 			void refreshInjection();
-			return { systemPrompt: `${event.systemPrompt}\n\n${cachedInjection}` };
+			const additions = [cachedInjection, recallInjection].filter(Boolean).join("\n\n");
+			return additions ? { systemPrompt: `${event.systemPrompt}\n\n${additions}` } : undefined;
 		}
 
 		const freshInjection = await withTimeout(engine.getMemoryInjection(project, ctxTags), 600);
 		if (freshInjection) {
 			cachedInjection = freshInjection;
 			lastInjectionAt = Date.now();
-			return { systemPrompt: `${event.systemPrompt}\n\n${freshInjection}` };
+			const additions = [freshInjection, recallInjection].filter(Boolean).join("\n\n");
+			return { systemPrompt: `${event.systemPrompt}\n\n${additions}` };
 		}
 
 		void refreshInjection();
-		return undefined;
+		return recallInjection ? { systemPrompt: `${event.systemPrompt}\n\n${recallInjection}` } : undefined;
 	});
 
 	pi.on("tool_execution_start", async (event) => {
@@ -420,27 +526,34 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		// Save episode if there was tool activity OR substantial conversation goal
 		const hasActivity = observations.length > 0 || errors.length > 0;
 		const hasGoal = sessionGoal && sessionGoal.length > 10;
-		if (!hasActivity && !hasGoal) return;
+
+		if (!hasActivity && !hasGoal) {
+			return;
+		}
 
 		const sessionEndedAt = getSystemTimeSnapshot();
 
-		await engine.saveEpisode({
-			sessionId,
-			project,
-			date: sessionEndedAt.date,
-			startedAt: sessionStartedAt.iso,
-			endedAt: sessionEndedAt.iso,
-			timeZone: sessionEndedAt.timeZone,
-			summary: observations.slice(0, 10).join("; ") || sessionGoal?.slice(0, 100) || "Conversation session",
-			userGoal: sessionGoal,
-			filesModified: [...filesModified],
-			toolsUsed: { ...toolsUsed },
-			keyObservations: observations.slice(0, 20),
-			errors: [...errors],
-			tags: [...extractTags(project), ...extractTags([...filesModified].join(" "))],
-			importance: Math.min(10, 3 + errors.length * 2 + Math.min(observations.length, 5)),
-			consolidated: false,
-		});
+		try {
+			await engine.saveEpisode({
+				sessionId,
+				project,
+				date: sessionEndedAt.date,
+				startedAt: sessionStartedAt.iso,
+				endedAt: sessionEndedAt.iso,
+				timeZone: sessionEndedAt.timeZone,
+				summary: observations.slice(0, 10).join("; ") || sessionGoal?.slice(0, 100) || "Conversation session",
+				userGoal: sessionGoal,
+				filesModified: [...filesModified],
+				toolsUsed: { ...toolsUsed },
+				keyObservations: observations.slice(0, 20),
+				errors: [...errors],
+				tags: [...extractTags(project), ...extractTags([...filesModified].join(" "))],
+				importance: Math.min(10, 3 + errors.length * 2 + Math.min(observations.length, 5)),
+				consolidated: false,
+			});
+		} catch (err) {
+			console.error("[nanomem] session_shutdown: failed to save episode:", err);
+		}
 	});
 
 	pi.registerCommand("dream", {

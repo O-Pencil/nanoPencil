@@ -2,11 +2,12 @@
  * Minimal TUI implementation with differential rendering
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs, node:os, node:path, ./keys.js, ./terminal-image.js
+ * [SURFACE]: Component, Focusable, isFocusable, CURSOR_MARKER, visibleWidth
  * [LOCUS]: packages/tui/src/tui.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import * as fs from "node:fs";
 import * as os from "node:os";

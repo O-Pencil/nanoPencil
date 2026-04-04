@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../keybindings.js, ../keys.js, ../kill-ring.js, ../tui.js, ../undo-stack.js
+ * [SURFACE]: TextChunk, wordWrapLine, EditorTheme, EditorOptions, Editor
  * [LOCUS]: packages/tui/src/components/editor.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete.js";
 import { getEditorKeybindings } from "../keybindings.js";
 import { matchesKey } from "../keys.js";

@@ -2,11 +2,12 @@
  * Shared utilities for Google Generative AI and Google Cloud Code Assist providers.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on @google/genai, ../utils/sanitize-unicode.js, ./transform-messages.js
+ * [SURFACE]: isThinkingPart, retainThoughtSignature, requiresToolCallId, convertMessages, convertTools
  * [LOCUS]: packages/ai/src/providers/google-shared.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { type Content, FinishReason, FunctionCallingConfigMode, type Part } from "@google/genai";
 import type { Context, ImageContent, Model, StopReason, TextContent, Tool } from "../types.js";

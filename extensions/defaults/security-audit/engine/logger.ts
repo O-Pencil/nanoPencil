@@ -6,11 +6,12 @@
  * [POS]: Engine layer - implements logging functionality
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:fs, node:path, node:crypto, ../../../../config.js
+ * [SURFACE]: AuditLogger
  * [LOCUS]: extensions/defaults/security-audit/engine/logger.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

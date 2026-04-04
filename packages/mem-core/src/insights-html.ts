@@ -1,14 +1,10 @@
 /**
- * [INPUT]: InsightsReport, locale
- * [OUTPUT]: Standalone HTML report
- * [POS]: Pure renderer, no side effects
+ * [UPSTREAM]: Depends on ./i18n.js, ./types.js
+ * [SURFACE]: renderInsightsHtml
+ * [LOCUS]: packages/mem-core/src/insights-html.ts - pure HTML renderer for insights report, no side effects
+ * [COVENANT]: Change HTML format → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/insights-html.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import { PROMPTS } from "./i18n.js";
 import type { InsightsReport, MemoryEntry, PatternInsight, StruggleInsight } from "./types.js";

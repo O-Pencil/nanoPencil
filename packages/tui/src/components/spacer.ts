@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: Spacer
  * [LOCUS]: packages/tui/src/components/spacer.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { Component } from "../tui.js";
 
 /**

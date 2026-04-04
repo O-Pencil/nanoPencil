@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: buildBaseOptions, clampReasoning, adjustMaxTokensForThinking
  * [LOCUS]: packages/ai/src/providers/simple-options.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { Api, Model, SimpleStreamOptions, StreamOptions, ThinkingBudgets, ThinkingLevel } from "../types.js";
 
 export function buildBaseOptions(model: Model<Api>, options?: SimpleStreamOptions, apiKey?: string): StreamOptions {

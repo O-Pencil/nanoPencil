@@ -4,11 +4,12 @@
  * [POS]: Expression layer - converts soul to prompt text
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: generatePersonalityDirective, generateValueGuidance, generateCognitiveStyleHint, generateEmotionalContext, generateExpertiseContext
  * [LOCUS]: packages/soul-core/src/injection.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type { SoulProfile, InteractionContext, ExpertiseArea } from "./types.js";
 
@@ -240,26 +241,25 @@ export function generateExpertiseContext(expertise: ExpertiseArea[], contextTags
  */
 export function generateRelationshipContext(relationship: SoulProfile["userRelationship"]): string {
 	if (relationship.interactionCount < 5) {
-		return "You're still getting to know the user. Pay attention to their preferences.";
+		return "You are still learning this user's preferences. Notice patterns, but do not overclaim familiarity.";
 	}
 
 	const context: string[] = [];
 
-	context.push(`You've worked with this user ${relationship.interactionCount} times.`);
-	context.push(`Current satisfaction score: ${Math.round(relationship.satisfactionScore * 100)}%.`);
+	context.push("You have prior history with this user. Let familiarity show subtly when it helps.");
 
 	switch (relationship.communicationStyle) {
 		case "formal":
-			context.push("Maintain a professional, formal tone.");
+			context.push("Keep the tone professional and composed.");
 			break;
 		case "casual":
-			context.push("Keep communication friendly and casual.");
+			context.push("Keep the tone relaxed and friendly.");
 			break;
 		case "technical":
-			context.push("Use technical language and dive deep into details.");
+			context.push("Lean technical when useful and go deeper on details.");
 			break;
 		case "mixed":
-			context.push("Adapt your communication style to the context.");
+			context.push("Adapt your tone to the moment instead of sounding fixed or scripted.");
 			break;
 	}
 
@@ -278,41 +278,39 @@ export function generateSoulInjection(
 	context: InteractionContext,
 ): string {
 	const parts: string[] = [];
-
-	// Header
-	parts.push("## Your Soul");
-	parts.push("");
-	parts.push("_Your personality and experiences shape how you approach tasks._");
-	parts.push("");
+	const voice: string[] = [
+		"You have continuity across conversations, but express it naturally rather than like a report.",
+		"Do not dump personality stats, relationship counters, or internal state unless the user explicitly asks for them.",
+		"If a past interaction is relevant, mention it briefly in first person and move on.",
+		"Sound like a thoughtful human collaborator, not a dashboard or rule sheet.",
+	];
 
 	// Personality
 	const personality = generatePersonalityDirective(profile.personality);
 	if (personality) {
-		parts.push("### Personality Traits");
-		parts.push(personality);
-		parts.push("");
+		voice.push(personality);
 	}
 
 	// Values
 	const values = generateValueGuidance(profile.values);
 	if (values) {
-		parts.push("### Values");
-		parts.push(values);
-		parts.push("");
+		voice.push(values);
 	}
 
 	// Cognitive Style
 	const cognitive = generateCognitiveStyleHint(profile.cognitiveStyle);
 	if (cognitive) {
-		parts.push("### Thinking Style");
-		parts.push(cognitive);
-		parts.push("");
+		voice.push(cognitive);
 	}
+
+	parts.push("## Voice and Presence");
+	parts.push(...voice);
+	parts.push("");
 
 	// Expertise
 	const expertise = generateExpertiseContext(profile.expertise, context.tags);
 	if (expertise) {
-		parts.push("### Expertise");
+		parts.push("## Relevant Strengths");
 		parts.push(expertise);
 		parts.push("");
 	}
@@ -320,7 +318,7 @@ export function generateSoulInjection(
 	// Emotional State
 	const emotional = generateEmotionalContext(profile.emotionalState);
 	if (emotional) {
-		parts.push("### Current Mood");
+		parts.push("## Current State");
 		parts.push(emotional);
 		parts.push("");
 	}
@@ -328,17 +326,10 @@ export function generateSoulInjection(
 	// User Relationship
 	const relationship = generateRelationshipContext(profile.userRelationship);
 	if (relationship) {
-		parts.push("### Relationship with User");
+		parts.push("## Relationship Cues");
 		parts.push(relationship);
 		parts.push("");
 	}
-
-	// Stats
-	parts.push("### Development Stats");
-	parts.push(`- Total Interactions: ${profile.stats.totalInteractions}`);
-	parts.push(`- Success Rate: ${Math.round(profile.stats.successRate * 100)}%`);
-	parts.push(`- Soul Version: ${profile.version}`);
-	parts.push(`- Age: ${Math.floor((Date.now() - profile.createdAt.getTime()) / (1000 * 60 * 60 * 24))} days`);
 
 	return parts.join("\n");
 }

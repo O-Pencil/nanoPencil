@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/json-parse.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [SURFACE]: BedrockOptions, streamBedrock, streamSimpleBedrock
  * [LOCUS]: packages/ai/src/providers/amazon-bedrock.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import {
 	BedrockRuntimeClient,
 	type BedrockRuntimeClientConfig,

@@ -7,11 +7,12 @@
  * [POS]: Interface layer - defines contract for pluggable security engines
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: SecurityCheckResult, AuditEvent, LogQueryOptions, SecurityStats, SecurityEngine
  * [LOCUS]: extensions/defaults/security-audit/interface.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 /**
  * Security check result levels

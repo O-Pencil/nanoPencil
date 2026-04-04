@@ -1,14 +1,10 @@
 /**
- * [INPUT]: None (pure type definitions)
- * [OUTPUT]: All core data types for NanoMem
- * [POS]: Foundation layer — every other module imports from here
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: LlmFn, MemoryScope, MemoryRetention, MemoryStability, FacetData, MemoryEntry, MemoryRelation, Episode, WorkEntry, EventData, StateData
+ * [LOCUS]: packages/mem-core/src/types.ts - foundation layer type definitions for all memory data structures
+ * [COVENANT]: Change memory data model → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/types.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 /** Pluggable LLM function: system prompt + user message → raw text response */
 export type LlmFn = (systemPrompt: string, userMessage: string) => Promise<string>;
@@ -74,6 +70,9 @@ export interface MemoryEntry {
 	retention?: MemoryRetention;
 	salience?: number;
 	stability?: MemoryStability;
+	archivedAt?: string;
+	archiveReason?: string;
+	revivedAt?: string;
 	stateData?: StateData;
 	relations?: MemoryRelation[];
 	/** Structured data for pattern/struggle types (Facets) */
@@ -116,6 +115,9 @@ export interface WorkEntry {
 	accessCount: number;
 	relatedIds?: string[];
 	ttl?: number;
+	archivedAt?: string;
+	archiveReason?: string;
+	revivedAt?: string;
 	scope?: MemoryScope;
 }
 
@@ -123,6 +125,10 @@ export interface Meta {
 	totalSessions: number;
 	lastConsolidation?: string;
 	version: number;
+	lastMaintenanceAt?: string;
+	lastMaintenanceVersion?: number;
+	lastBackupAt?: string;
+	lastBackupVersion?: number;
 }
 
 /** Mem0-style update operations */

@@ -4,11 +4,12 @@
  * [POS]: Main entry point - composes all Soul modules
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on ./config.js, ./store.js, ./evolution.js, ./injection.js
+ * [SURFACE]: SoulManager
  * [LOCUS]: packages/soul-core/src/manager.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import type {
   SoulProfile,

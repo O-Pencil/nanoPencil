@@ -4,11 +4,12 @@
  * [POS]: Interactive mode component for /memory command
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: formatMemoryStats
  * [LOCUS]: modes/interactive/components/memory-stats.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 // Use any type for NanoMemEngine since it's a local package
 interface NanoMemEngine {

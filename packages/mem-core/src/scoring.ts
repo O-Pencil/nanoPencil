@@ -1,17 +1,10 @@
 /**
- * [INPUT]: MemoryEntry/Episode/WorkEntry, project, context tags, config weights
- * [OUTPUT]: retrieval score (Stanford: Recency + Importance + Relevance)
- * [POS]: Core ranking algorithm — used by engine for injection budget allocation
- *
- * Key innovation: uses per-entry adaptive strength (not global half-life)
- * for Recency, implementing Ebbinghaus spaced repetition.
+ * [UPSTREAM]: Depends on ./config.js, ./types.js
+ * [SURFACE]: daysSince, decay, extractTags, tagOverlap, scoreEntry, scoreWork, ScoreWeights
+ * [LOCUS]: packages/mem-core/src/scoring.ts - core ranking algorithm (Recency + Importance + Relevance), Ebbinghaus spaced repetition
+ * [COVENANT]: Change scoring formula → update this header and verify against packages/mem-core/CLAUDE.md
  */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: packages/mem-core/src/scoring.ts - 
- * [COVENANT]: Change → update this header
- */
+
 
 import type { Episode, InjectionLevel, MemoryEntry, WorkEntry } from "./types.js";
 import type { ProgressiveRecallConfig } from "./config.js";

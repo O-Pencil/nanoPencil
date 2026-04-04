@@ -1,9 +1,10 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: TeamController
  * [LOCUS]: extensions/defaults/team/team-controller.ts - 
  * [COVENANT]: Change → update this header
  */
+
 import type { TeamCommandMode, TeamRunReport, TeamRunState, TeamRunStatus } from "./team-types.js";
 
 function createId(): string {

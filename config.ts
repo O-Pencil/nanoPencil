@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: ./config.ts - 
- * [COVENANT]: Change → update this header
+ * [UPSTREAM]: Depends on node:fs, node:os, node:path, node:url
+ * [SURFACE]: Config path getters (getAgentDir, getModelsPath, etc.), APP_NAME, VERSION
+ * [LOCUS]: config.ts - configuration path discovery and constants
+ * [COVENANT]: Change config paths → update this header
  */
 import { existsSync, readFileSync } from "fs";
 import { homedir } from "os";

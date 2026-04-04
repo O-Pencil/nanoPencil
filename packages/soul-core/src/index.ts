@@ -4,11 +4,12 @@
  * [POS]: Barrel export - hosts all public exports
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: No external dependencies
+ * [SURFACE]: SoulStore, SoulManager, getSoulConfig
  * [LOCUS]: packages/soul-core/src/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 export type {
   // Core types

@@ -10,11 +10,12 @@
  * This is a DEFAULT extension - automatically loaded with NanoPencil unless disabled.
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
+ * [UPSTREAM]: Depends on node:path, node:os, node:fs, node:url, node:path
+ * [SURFACE]: Extension interface
  * [LOCUS]: extensions/defaults/soul/index.ts - 
  * [COVENANT]: Change → update this header
  */
+
 
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
@@ -335,7 +336,7 @@ export default async function soulExtension(pi: ExtensionAPI) {
 				}
 
 				return {
-					systemPrompt: systemPromptAddition,
+					systemPrompt: `${event.systemPrompt}${systemPromptAddition}`,
 				};
 			}
 		} catch (error) {

@@ -23,9 +23,18 @@ Auto-loaded extensions available to all users.
 #### interview/ — Requirement Clarification
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface; LOCUS interview extension entry
+`index.ts`: UPSTREAM core/extensions/types, core/session/session-manager; SURFACE Extension with /interview command, interview tool, lightweight before_agent_start hook; LOCUS interview extension entry
 
-`interview.ts` (implied): Interview flow logic, question prompting, requirement extraction
+**Design Principle (CRITICAL):**
+- `before_agent_start` hook MUST be synchronous and fast (<10ms)
+- NO LLM calls (runProbe) in before_agent_start - they cause unpredictable delays
+- NO UI interactions (confirm dialogs) in before_agent_start - they cause race conditions
+- If interview might be beneficial, return a lightweight hint and let the Agent decide whether to call the interview tool
+
+**Features:**
+- `/interview` command: Force interactive clarification
+- `interview` tool: Agent-triggered clarification via tool_call
+- `before_agent_start` hook: Lightweight synchronous check only
 
 #### loop/ — Timed Prompt Scheduler
 

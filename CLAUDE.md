@@ -359,6 +359,7 @@ npm install
 node scripts/bundle-deps.js
 
 # Build (TypeScript compile + resource copy)
+# build:deps runs packages/ai before packages/agent-core so @pencil-agent/ai dist exists for tsc
 npm run build
 
 # Development (direct execution)

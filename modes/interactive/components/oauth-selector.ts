@@ -5,47 +5,52 @@
  * [COVENANT]: Change → update this header
  */
 
-import { getOAuthProviders, type OAuthProviderInterface } from "@pencil-agent/ai";
+import type { OAuthProviderInterface } from "@pencil-agent/ai";
 import { Container, getEditorKeybindings, Spacer, TruncatedText } from "@pencil-agent/tui";
-import type { AuthStorage } from "../../../core/config/auth-storage.js";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 
+export interface ProviderSelectorItem {
+	id: string;
+	name: string;
+	authType: "oauth" | "api_key";
+	loggedIn?: boolean;
+}
+
 /**
- * Component that renders an OAuth provider selector
+ * Component that renders a provider selector
  */
 export class OAuthSelectorComponent extends Container {
 	private listContainer: Container;
-	private allProviders: OAuthProviderInterface[] = [];
+	private allProviders: ProviderSelectorItem[] = [];
 	private selectedIndex: number = 0;
 	private mode: "login" | "logout";
-	private authStorage: AuthStorage;
 	private onSelectCallback: (providerId: string) => void;
 	private onCancelCallback: () => void;
+	private title: string;
 
 	constructor(
 		mode: "login" | "logout",
-		authStorage: AuthStorage,
+		providers: ProviderSelectorItem[],
 		onSelect: (providerId: string) => void,
 		onCancel: () => void,
+		options?: { title?: string },
 	) {
 		super();
 
 		this.mode = mode;
-		this.authStorage = authStorage;
+		this.allProviders = providers;
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
-
-		// Load all OAuth providers
-		this.loadProviders();
+		this.title =
+			options?.title ?? (mode === "login" ? "Select provider to login:" : "Select provider to logout:");
 
 		// Add top border
 		this.addChild(new DynamicBorder());
 		this.addChild(new Spacer(1));
 
 		// Add title
-		const title = mode === "login" ? "Select provider to login:" : "Select provider to logout:";
-		this.addChild(new TruncatedText(theme.bold(title)));
+		this.addChild(new TruncatedText(theme.bold(this.title)));
 		this.addChild(new Spacer(1));
 
 		// Create list container
@@ -61,10 +66,6 @@ export class OAuthSelectorComponent extends Container {
 		this.updateList();
 	}
 
-	private loadProviders(): void {
-		this.allProviders = getOAuthProviders();
-	}
-
 	private updateList(): void {
 		this.listContainer.clear();
 
@@ -74,10 +75,7 @@ export class OAuthSelectorComponent extends Container {
 
 			const isSelected = i === this.selectedIndex;
 
-			// Check if user is logged in for this provider
-			const credentials = this.authStorage.get(provider.id);
-			const isLoggedIn = credentials?.type === "oauth";
-			const statusIndicator = isLoggedIn ? theme.fg("success", " ✓ logged in") : "";
+			const statusIndicator = provider.loggedIn ? theme.fg("success", " ✓ configured") : "";
 
 			let line = "";
 			if (isSelected) {
@@ -95,7 +93,7 @@ export class OAuthSelectorComponent extends Container {
 		// Show "no providers" if empty
 		if (this.allProviders.length === 0) {
 			const message =
-				this.mode === "login" ? "No OAuth providers available" : "No OAuth providers logged in. Use /login first.";
+				this.mode === "login" ? "No providers available" : "No providers logged in. Use /login first.";
 			this.listContainer.addChild(new TruncatedText(theme.fg("muted", `  ${message}`), 0, 0));
 		}
 	}

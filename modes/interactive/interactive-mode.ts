@@ -139,7 +139,10 @@ import {
 } from "./components/keybinding-hints.js";
 import { LoginDialogComponent } from "./components/login-dialog.js";
 import { ModelSelectorComponent } from "./components/model-selector.js";
-import { OAuthSelectorComponent } from "./components/oauth-selector.js";
+import {
+  OAuthSelectorComponent,
+  type ProviderSelectorItem,
+} from "./components/oauth-selector.js";
 import { formatSoulStats } from "./components/soul-stats.js";
 import { formatMemoryStats } from "./components/memory-stats.js";
 import { ProviderSelectorComponent } from "./components/provider-selector.js";
@@ -4759,26 +4762,34 @@ export class InteractiveMode {
   }
 
   private async showOAuthSelector(mode: "login" | "logout"): Promise<void> {
-    if (mode === "logout") {
-      const providers = this.session.modelRegistry.authStorage.list();
-      const loggedInProviders = providers.filter(
-        (p) => this.session.modelRegistry.authStorage.get(p)?.type === "oauth",
+    const providers = this.getLoginSelectorProviders(mode);
+    if (providers.length === 0) {
+      this.showStatus(
+        mode === "login"
+          ? "No providers available."
+          : "No providers logged in. Use /login first.",
       );
-      if (loggedInProviders.length === 0) {
-        this.showStatus("No OAuth providers logged in. Use /login first.");
-        return;
-      }
+      return;
     }
 
     this.showSelector((done) => {
       const selector = new OAuthSelectorComponent(
         mode,
-        this.session.modelRegistry.authStorage,
+        providers,
         async (providerId: string) => {
           done();
 
           if (mode === "login") {
-            await this.showLoginDialog(providerId);
+            const oauthProvider = getOAuthProviders().find(
+              (p) => p.id === providerId,
+            );
+            if (oauthProvider) {
+              await this.showLoginDialog(providerId);
+            } else {
+              await this.promptForProviderApiKey(providerId, {
+                title: `Set API key for ${providerId}`,
+              });
+            }
           } else {
             // Logout flow
             const providerInfo = getOAuthProviders().find(
@@ -4802,9 +4813,56 @@ export class InteractiveMode {
           done();
           this.ui.requestRender();
         },
+        {
+          title:
+            mode === "login"
+              ? "Select provider to login or configure:"
+              : "Select provider to logout:",
+        },
       );
       return { component: selector, focus: selector };
     });
+  }
+
+  private getLoginSelectorProviders(
+    mode: "login" | "logout",
+  ): ProviderSelectorItem[] {
+    const oauthProviders: ProviderSelectorItem[] = getOAuthProviders().map(
+      (provider) => ({
+        id: provider.id,
+        name: provider.name,
+        authType: "oauth",
+        loggedIn:
+          this.session.modelRegistry.authStorage.get(provider.id)?.type ===
+          "oauth",
+      }),
+    );
+
+    if (mode === "logout") {
+      return oauthProviders.filter((provider) => provider.loggedIn);
+    }
+
+    const items = [...oauthProviders];
+    const providerIds = new Set(items.map((provider) => provider.id));
+    const apiKeyProviders = [
+      { id: "openrouter", name: "OpenRouter" },
+    ];
+
+    for (const provider of apiKeyProviders) {
+      if (providerIds.has(provider.id)) continue;
+      const hasModels = this.session.modelRegistry
+        .getAll()
+        .some((model) => model.provider === provider.id);
+      if (!hasModels) continue;
+      items.push({
+        id: provider.id,
+        name: provider.name,
+        authType: "api_key",
+        loggedIn: !!this.getStoredApiKey(provider.id),
+      });
+    }
+
+    return items;
   }
 
   private async showLoginDialog(providerId: string): Promise<void> {

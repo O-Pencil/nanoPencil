@@ -12,6 +12,7 @@ const PRESENCE_MESSAGE_TYPE = "presence";
 const OPENING_DELAY_MS = 600;
 const IDLE_POLL_MS = 15000;
 const LONG_IDLE_MS = 4 * 60 * 1000;
+const OPENING_RETURN_THRESHOLD_MS = 10 * 60 * 1000;
 
 const OPENING_LINES = [
 	"I am here.",
@@ -68,6 +69,19 @@ function countConversationEntries(ctx: ExtensionContext): number {
 		.filter((entry) => entry.type === "message" || entry.type === "custom_message").length;
 }
 
+function getLastConversationTimestamp(ctx: ExtensionContext): number | undefined {
+	const entries = ctx.sessionManager.getEntries();
+	for (let i = entries.length - 1; i >= 0; i -= 1) {
+		const entry = entries[i];
+		if (entry.type !== "message" && entry.type !== "custom_message") continue;
+		const timestamp = Date.parse(entry.timestamp);
+		if (Number.isFinite(timestamp)) {
+			return timestamp;
+		}
+	}
+	return undefined;
+}
+
 function hasDraftText(ctx: ExtensionContext): boolean {
 	if (!ctx.hasUI) return false;
 	try {
@@ -97,7 +111,14 @@ function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): voi
 
 function maybeSendOpening(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): void {
 	if (!canSendPresence(ctx)) return;
-	if (countConversationEntries(ctx) !== 0) return;
+	const conversationCount = countConversationEntries(ctx);
+	if (conversationCount === 0) {
+		sendPresence(pi, state, pickLine(OPENING_LINES, Date.now()));
+		return;
+	}
+	const lastConversationAt = getLastConversationTimestamp(ctx);
+	if (lastConversationAt === undefined) return;
+	if (Date.now() - lastConversationAt < OPENING_RETURN_THRESHOLD_MS) return;
 	sendPresence(pi, state, pickLine(OPENING_LINES, Date.now()));
 }
 

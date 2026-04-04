@@ -29,6 +29,7 @@
     "bundle:packages": "node scripts/bundle-deps.js",
     "watch": "tsc --watch",
     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
+    "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
     "prepublishOnly": "npm run build",
     "changelog": "node scripts/generate-changelog.js",

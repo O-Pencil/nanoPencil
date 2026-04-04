@@ -90,7 +90,8 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "@types/node": "^22.15.0"
+    "@types/node": "^22.15.0",
+    "zod": "^4.3.6"
   },
   "piConfig": {
     "name": "nanopencil",

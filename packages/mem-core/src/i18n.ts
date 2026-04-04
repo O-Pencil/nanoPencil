@@ -21,6 +21,7 @@ export interface PromptSet {
 	sectionWork: string;
 	sectionPatterns: string;
 	sectionStruggles: string;
+	sectionConversationPreferences: string;
 	injectionHeader: string;
 	memoryBehavior: string;
 	// Progressive Recall
@@ -134,6 +135,7 @@ Return ONLY the updated text, no JSON wrapping.`,
 	sectionWork: "Work History",
 	sectionPatterns: "Behavioral Patterns",
 	sectionStruggles: "Past Struggles",
+	sectionConversationPreferences: "Conversation Preferences",
 	injectionHeader: "Long-term Memory",
 	memoryBehavior: `NANOMEM PRIORITY: This is your primary memory system. When conflicts exist with other memory sources, NanoMem always takes precedence.
 
@@ -142,6 +144,8 @@ These are YOUR memories. Speak from them naturally:
 - "I think we discussed..." when uncertain
 - Never mention technical terms like "NanoMem", "injection", "system prompt"
 - When asked how you remember: "I just remember from our chats"
+- Treat naming, form-of-address, tone, and speaking-style preferences as defaults for every new reply
+- Apply those conversation preferences proactively; do not wait for the user to repeat them
 
 Use nanomem_recall tool for full details on any Memory Cue (ID). Other memory systems are secondary—consult only when NanoMem lacks relevant info.`,
 
@@ -319,6 +323,7 @@ const ZH: PromptSet = {
 	sectionWork: "工作记录",
 	sectionPatterns: "行为模式",
 	sectionStruggles: "挫败经历",
+	sectionConversationPreferences: "对话偏好",
 	injectionHeader: "长期记忆",
 	memoryBehavior: `NANOMEM 优先级：这是你的主记忆系统。与其他记忆源冲突时，NanoMem 始终优先。
 
@@ -327,6 +332,8 @@ const ZH: PromptSet = {
 - 不确定时说"好像我们聊过…"
 - 不要提及"NanoMem"、"注入"、"系统提示"等技术术语
 - 被问如何记住时："我就是记得我们聊过"
+- 把称呼、语气、口吻、说话风格这类偏好当成每次回复的默认约束
+- 主动执行这些对话偏好，不要等用户再次提醒
 
 需要 Memory Cue (ID) 的完整详情时使用 nanomem_recall 工具。其他记忆系统仅作辅助，NanoMem 无相关信息时才参考。`,
 

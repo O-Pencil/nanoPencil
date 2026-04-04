@@ -1078,7 +1078,6 @@ export class Editor implements Component, Focusable {
 	}
 
 	private submitValue(): void {
-		console.error("##### Editor submitValue called #####");
 		let result = this.state.lines.join("\n").trim();
 		for (const [pasteId, pasteContent] of this.pastes) {
 			const markerRegex = new RegExp(`\\[paste #${pasteId}( (\\+\\d+ lines|\\d+ chars))?\\]`, "g");
@@ -1094,12 +1093,8 @@ export class Editor implements Component, Focusable {
 		this.lastAction = null;
 
 		if (this.onChange) this.onChange("");
-		console.error("##### Editor onSubmit exists: ", typeof this.onSubmit);
 		if (this.onSubmit) {
-			console.error("##### Calling onSubmit with:", result);
 			this.onSubmit(result);
-		} else {
-			console.error("##### onSubmit is null/undefined!");
 		}
 	}
 

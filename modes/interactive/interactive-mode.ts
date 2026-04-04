@@ -271,7 +271,7 @@ export class InteractiveMode {
   // Messages queued while compaction is running
   private compactionQueuedMessages: CompactionQueuedMessage[] = [];
   // User messages rendered optimistically before Agent emits message_start
-  private optimisticUserMessages: string[] = [];
+  private optimisticUserMessages: Array<{ text: string }> = [];
 
   // Shutdown state
   private shutdownRequested = false;
@@ -2605,7 +2605,7 @@ export class InteractiveMode {
         if (images.length > 0) {
           displayContent.push(...images);
         }
-        this.optimisticUserMessages.push(text);
+        this.optimisticUserMessages.push({ text: processedText });
         this.addMessageToChat({
           role: "user",
           content: displayContent,
@@ -2623,7 +2623,7 @@ export class InteractiveMode {
         if (
           !text.startsWith("/") &&
           this.optimisticUserMessages.length > 0 &&
-          this.optimisticUserMessages[0] === text
+          this.optimisticUserMessages[0]?.text === processedText
         ) {
           this.optimisticUserMessages.shift();
         }
@@ -2702,7 +2702,11 @@ export class InteractiveMode {
           this.addMessageToChat(event.message);
           this.ui.requestRender();
         } else if (event.message.role === "user") {
-          if (this.optimisticUserMessages.length > 0) {
+          const textContent = this.getUserMessageText(event.message);
+          if (
+            this.optimisticUserMessages.length > 0 &&
+            this.optimisticUserMessages[0]?.text === textContent
+          ) {
             this.optimisticUserMessages.shift();
             this.updatePendingMessagesDisplay();
             this.ui.requestRender();

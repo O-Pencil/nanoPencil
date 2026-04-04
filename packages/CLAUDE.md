@@ -61,6 +61,7 @@ The `packages/` directory contains bundled npm packages that are compiled and in
   - `json-parse.ts`: Streaming JSON parser
   - `oauth/`: OAuth implementations
     - `anthropic.ts`: Anthropic OAuth
+    - `decode-credential.ts`: Safe base64 decode for embedded client id/secret (placeholder-safe at load)
     - `github-copilot.ts`: GitHub Copilot OAuth
     - `google-antigravity.ts`: Google OAuth
     - `google-gemini-cli.ts`: Gemini CLI OAuth

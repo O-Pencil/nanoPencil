@@ -1,298 +1,47 @@
 /**
- * Simplify Extension - Claude Code /simplify 风格的代码简化工具
+ * Simplify Extension - Claude Code /simplify style code simplification
  *
- * 基于 Claude Code 的 /simplify 指令实现，提供以下能力：
- * 1. 感知层：扫描 Git Diff + 读取项目规范 + 分析代码
- * 2. 决策层：应用重构模式（卫语句、表达式折叠、冗余剥离）
- * 3. 执行层：生成 Diff 并应用到文件
- * 4. 验证层：运行测试验证，失败则回滚
+ * Capabilities:
+ * 1. Perception: Scan Git Diff + Load project rules + Analyze code
+ * 2. Decision: Apply refactoring patterns (guard clauses, expression folding, redundancy removal)
+ * 3. Execution: Generate diff and apply to files
+ * 4. Verification: Run tests to validate, rollback on failure
  *
- * 内置扩展：自动随 nanopencil 加载
+ * Improvements over original:
+ * - XML-tagged structured output for reliable parsing
+ * - Concurrent file processing with configurable limit
+ * - Content hash caching to skip unchanged files
+ * - Uses ctx.completeSimple() for simpler model handling
+ * - Modular architecture with separated concerns
  */
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: extensions/optional/simplify/index.ts - 
- * [COVENANT]: Change → update this header
+ * [UPSTREAM]: simplify-types.ts, simplify-parser.ts, simplify-analyzer.ts, simplify-controller.ts, test-detector.ts, git-utils.ts
+ * [SURFACE]: simplifyExtension (default export)
+ * [LOCUS]: Entry point for simplify extension; wires all modules together
+ * [COVENANT]: Update this header on changes and verify against parent CLAUDE.md
  */
 
-import { complete, getModel } from "@pencil-agent/ai";
 import { Container, Markdown, matchesKey, Text } from "@pencil-agent/tui";
-import { execSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions/types.js";
 import { DynamicBorder } from "../../../modes/interactive/components/dynamic-border.js";
 import { getMarkdownTheme } from "../../../modes/interactive/theme/theme.js";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface SimplifyResult {
-	file: string;
-	original: string;
-	simplified: string;
-	explanation: string;
-}
-
-interface SimplifyOptions {
-	files?: string[];
-	runTests?: boolean;
-	dryRun?: boolean;
-}
-
-// =============================================================================
-// Git Utilities
-// =============================================================================
-
-function getGitDiff(cwd: string): string {
-	try {
-		// Get both staged and unstaged changes
-		const staged = execSync("git diff --cached --name-only", { cwd, encoding: "utf-8" });
-		const unstaged = execSync("git diff --name-only", { cwd, encoding: "utf-8" });
-		const combined = [...new Set([...staged.split("\n"), ...unstaged.split("\n")])];
-		return combined.filter((f) => f.trim()).join("\n");
-	} catch {
-		return "";
-	}
-}
-
-function getFileDiff(cwd: string, file: string): string {
-	try {
-		const diff = execSync(`git diff HEAD -- "${file}"`, { cwd, encoding: "utf-8" });
-		return diff || "";
-	} catch {
-		return "";
-	}
-}
-
-// =============================================================================
-// Project Rules Loader
-// =============================================================================
-
-function loadProjectRules(cwd: string): string {
-	const ruleFiles = ["CLAUDE.md", "AGENTS.md", ".cursor/rules", ".github/copilot-instructions.md"];
-	const rules: string[] = [];
-
-	for (const file of ruleFiles) {
-		const path = join(cwd, file);
-		if (existsSync(path)) {
-			try {
-				const content = readFileSync(path, "utf-8");
-				rules.push(`=== ${file} ===\n${content.slice(0, 2000)}`);
-			} catch {
-				// ignore
-			}
-		}
-	}
-
-	return rules.join("\n\n");
-}
-
-// =============================================================================
-// Test Runner
-// =============================================================================
-
-function detectTestCommand(cwd: string): string | null {
-	const packageJsonPath = join(cwd, "package.json");
-	if (existsSync(packageJsonPath)) {
-		try {
-			const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-			if (pkg.scripts?.test) {
-				return "npm test";
-			}
-		} catch {
-			// ignore
-		}
-	}
-
-	// Check for common test files
-	const testPatterns = [
-		{ pattern: "pytest.ini", cmd: "pytest" },
-		{ pattern: "setup.py", cmd: "python -m pytest" },
-		{ pattern: "Cargo.toml", cmd: "cargo test" },
-		{ pattern: "go.mod", cmd: "go test ./..." },
-	];
-
-	for (const { pattern, cmd } of testPatterns) {
-		if (existsSync(join(cwd, pattern))) {
-			return cmd;
-		}
-	}
-
-	return null;
-}
-
-function runTests(cwd: string): { success: boolean; output: string } {
-	const testCmd = detectTestCommand(cwd);
-	if (!testCmd) {
-		return { success: true, output: "No test command detected, skipping tests" };
-	}
-
-	try {
-		const output = execSync(testCmd, { cwd, encoding: "utf-8", timeout: 120000 });
-		return { success: true, output };
-	} catch (error: unknown) {
-		const err = error as { stdout?: string; stderr?: string };
-		return {
-			success: false,
-			output: `${err.stdout || ""}\n${err.stderr || ""}`.trim(),
-		};
-	}
-}
-
-// =============================================================================
-// Simplify Prompt
-// =============================================================================
-
-const SIMPLIFY_SYSTEM_PROMPT = `You are a code simplification expert. Your task is to refactor code to reduce cognitive load while preserving exact functionality.
-
-CONSTRAINTS:
-1. DO NOT change function signatures or external behavior
-2. DO NOT add or remove functionality
-3. DO NOT change the public API
-4. Preserve all side effects exactly
-
-REFACTORING PATTERNS (apply in order of priority):
-1. Guard Clauses: Convert nested if-else to early returns
-   - Before: if (x) { if (y) { ...long code... } }
-   - After: if (!x) return; if (!y) return; ...long code...
-
-2. Expression Folding: Simplify boolean logic
-   - Before: if (x === true) -> After: if (x)
-   - Before: if (!(a && b)) -> After: if (!a || !b)
-
-3. Redundancy Removal:
-   - Remove unnecessary intermediate variables
-   - Remove unused private methods
-   - Remove outdated comments
-
-4. Loop Simplification:
-   - Convert forEach + push to map/filter
-   - Use array methods over manual iteration
-
-OUTPUT FORMAT:
-Return a JSON object with:
-{
-  "simplified": "the simplified code",
-  "explanation": "brief explanation of changes made",
-  "equivalent": true/false // whether the refactored code is functionally equivalent
-}
-
-If no simplification is needed, return:
-{
-  "simplified": null,
-  "explanation": "Code is already simple and clean",
-  "equivalent": true
-}`;
-
-function buildSimplifyUserPrompt(code: string, rules: string, diff?: string): string {
-	let prompt = `Simplify the following code according to the constraints above.\n\n`;
-
-	if (rules) {
-		prompt += `PROJECT RULES (must follow):\n${rules}\n\n`;
-	}
-
-	if (diff) {
-		prompt += `FOCUS AREA (prioritize changes in this diff):\n\`\`\`diff\n${diff}\n\`\`\`\n\n`;
-	}
-
-	prompt += `CODE TO SIMPLIFY:\n\`\`\`\n${code}\n\`\`\``;
-
-	return prompt;
-}
-
-// =============================================================================
-// LLM Integration
-// =============================================================================
-
-async function simplifyWithLLM(
-	code: string,
-	rules: string,
-	diff: string | undefined,
-	ctx: ExtensionCommandContext,
-): Promise<{ simplified: string | null; explanation: string; equivalent: boolean }> {
-	// Try to use the current model, fallback to a known good model
-	let model = ctx.model;
-	let apiKey = model ? await ctx.modelRegistry.getApiKey(model) : undefined;
-
-	// If no model available, try common fallbacks
-	if (!model || !apiKey) {
-		// Try anthropic
-		const anthropicModel = getModel("anthropic", "claude-sonnet-4-5");
-		if (anthropicModel) {
-			const key = await ctx.modelRegistry.getApiKey(anthropicModel);
-			if (key) {
-				model = anthropicModel;
-				apiKey = key;
-			}
-		}
-		// Try openai
-		if (!model || !apiKey) {
-			const openaiModel = getModel("openai", "gpt-4o");
-			if (openaiModel) {
-				const key = await ctx.modelRegistry.getApiKey(openaiModel);
-				if (key) {
-					model = openaiModel;
-					apiKey = key;
-				}
-			}
-		}
-		// Try google
-		if (!model || !apiKey) {
-			const googleModel = getModel("google", "gemini-2.5-flash");
-			if (googleModel) {
-				const key = await ctx.modelRegistry.getApiKey(googleModel);
-				if (key) {
-					model = googleModel;
-					apiKey = key;
-				}
-			}
-		}
-	}
-
-	if (!model || !apiKey) {
-		throw new Error("No model available for simplification");
-	}
-
-	const response = await complete(
-		model,
-		{
-			systemPrompt: SIMPLIFY_SYSTEM_PROMPT,
-			messages: [
-				{
-					role: "user",
-					content: [{ type: "text", text: buildSimplifyUserPrompt(code, rules, diff) }],
-					timestamp: Date.now(),
-				},
-			],
-		},
-		{ apiKey, maxTokens: 4096, temperature: 0.2 },
-	);
-
-	const text = response.content
-		.filter((c): c is { type: "text"; text: string } => c.type === "text")
-		.map((c) => c.text)
-		.join("");
-
-	// Parse JSON response
-	try {
-		const cleaned = text
-			.replace(/```json?\n?/g, "")
-			.replace(/```/g, "")
-			.trim();
-		return JSON.parse(cleaned);
-	} catch {
-		// If JSON parsing fails, treat as no simplification
-		return { simplified: null, explanation: "Failed to parse LLM response", equivalent: false };
-	}
-}
+import { SimplifyController, processFilesParallel, getContentHash } from "./simplify-controller.js";
+import { parseOptions } from "./simplify-parser.js";
+import { simplifyWithLLM } from "./simplify-analyzer.js";
+import { runTests } from "./test-detector.js";
+import { getChangedFiles, getFileDiff, loadProjectRules } from "./git-utils.js";
+import type { SimplifyResult, SimplifyOptions } from "./simplify-types.js";
 
 // =============================================================================
 // UI Components
 // =============================================================================
 
+/**
+ * Show preview dialog for a simplification result
+ * Returns user action: apply, skip, or cancel
+ */
 async function showSimplifyPreview(
 	result: SimplifyResult,
 	ctx: ExtensionCommandContext,
@@ -307,6 +56,10 @@ async function showSimplifyPreview(
 			const border = new DynamicBorder((s: string) => theme.fg("accent", s));
 			const mdTheme = getMarkdownTheme();
 
+			const originalLines = result.original.split("\n").length;
+			const simplifiedLines = result.simplified.split("\n").length;
+			const linesDiff = originalLines - simplifiedLines;
+
 			const diffContent = `## Simplify: ${result.file}
 
 ### Explanation
@@ -314,8 +67,8 @@ ${result.explanation}
 
 ### Changes
 \`\`\`diff
-- Original (${result.original.split("\n").length} lines)
-+ Simplified (${result.simplified.split("\n").length} lines)
+- Original (${originalLines} lines)
++ Simplified (${simplifiedLines} lines, ${linesDiff > 0 ? `-${linesDiff}` : `+${Math.abs(linesDiff)}`} lines)
 \`\`\`
 
 Press **y** to apply, **n** to skip, **q** to cancel all`;
@@ -346,23 +99,41 @@ Press **y** to apply, **n** to skip, **q** to cancel all`;
 }
 
 // =============================================================================
-// Main Simplify Logic
+// File Simplification
 // =============================================================================
 
+/**
+ * Analyze a single file and return simplification result
+ * Uses caching to skip unchanged files
+ */
 async function simplifyFile(
 	filePath: string,
-	cwd: string,
-	rules: string,
+	options: SimplifyOptions,
+	controller: SimplifyController,
 	ctx: ExtensionCommandContext,
 ): Promise<SimplifyResult | null> {
+	const cwd = ctx.cwd;
 	const fullPath = join(cwd, filePath);
+
 	if (!existsSync(fullPath)) {
 		ctx.ui.notify(`File not found: ${filePath}`, "warning");
 		return null;
 	}
 
 	const original = readFileSync(fullPath, "utf-8");
+	const hash = getContentHash(original);
+
+	// Check cache (unless --force)
+	if (!options.force) {
+		const cached = controller.getCached(filePath, hash);
+		if (cached) {
+			ctx.ui.notify(`Cache hit: ${filePath}`, "info");
+			return cached;
+		}
+	}
+
 	const diff = getFileDiff(cwd, filePath);
+	const rules = loadProjectRules(cwd);
 
 	ctx.ui.notify(`Analyzing: ${filePath}...`, "info");
 
@@ -374,50 +145,67 @@ async function simplifyFile(
 			return null;
 		}
 
-		return {
+		const simplifyResult: SimplifyResult = {
 			file: filePath,
 			original,
 			simplified: result.simplified,
 			explanation: result.explanation,
 		};
+
+		// Cache the result
+		controller.setCached(filePath, hash, simplifyResult);
+
+		return simplifyResult;
 	} catch (error) {
 		ctx.ui.notify(`Error simplifying ${filePath}: ${error}`, "error");
 		return null;
 	}
 }
 
+// =============================================================================
+// Main Execution
+// =============================================================================
+
+/**
+ * Execute simplify operation with the given options
+ */
 async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandContext) {
 	const cwd = ctx.cwd;
-	const rules = loadProjectRules(cwd);
+	const controller = new SimplifyController();
+	const concurrency = options.concurrency ?? 3;
 
 	// Determine files to simplify
-	let files = options.files || [];
+	let files = options.files?.length ? options.files : [];
+
 	if (files.length === 0) {
 		// Get files from git diff
-		const diffFiles = getGitDiff(cwd);
-		files = diffFiles
-			.split("\n")
-			.filter((f) => f.trim())
-			.filter((f) => /\.(ts|tsx|js|jsx|py|go|rs|java|c|cpp|cs)$/.test(f));
+		files = getChangedFiles(cwd).filter((f) =>
+			/\.(ts|tsx|js|jsx|py|go|rs|java|c|cpp|cs)$/.test(f),
+		);
 
 		if (files.length === 0) {
-			ctx.ui.notify("No changed files found. Use /simplify <file> to simplify a specific file.", "info");
+			ctx.ui.notify(
+				"No changed files found. Use /simplify <file> to simplify a specific file.",
+				"info",
+			);
 			return;
 		}
 	}
 
-	ctx.ui.notify(`Found ${files.length} file(s) to analyze`, "info");
+	ctx.ui.notify(
+		`Analyzing ${files.length} file(s) with concurrency=${concurrency}...`,
+		"info",
+	);
 
-	const results: SimplifyResult[] = [];
-	const backups = new Map<string, string>();
-
-	// Analyze and collect simplification suggestions
-	for (const file of files) {
-		const result = await simplifyFile(file, cwd, rules, ctx);
-		if (result) {
-			results.push(result);
-		}
-	}
+	// Process files concurrently with caching
+	const results = await processFilesParallel(
+		files,
+		concurrency,
+		(file) => simplifyFile(file, options, controller, ctx),
+		(completed, total) => {
+			ctx.ui.notify(`Progress: ${completed}/${total} files`, "info");
+		},
+	);
 
 	if (results.length === 0) {
 		ctx.ui.notify("No simplifications needed. Code is already clean!", "info");
@@ -427,8 +215,6 @@ async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandCo
 	ctx.ui.notify(`Found ${results.length} simplification(s)`, "info");
 
 	// Preview and apply each simplification
-	const applied: SimplifyResult[] = [];
-
 	for (const result of results) {
 		if (options.dryRun) {
 			ctx.ui.notify(`[Dry Run] Would simplify: ${result.file}`, "info");
@@ -438,26 +224,23 @@ async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandCo
 		const action = await showSimplifyPreview(result, ctx);
 
 		if (action === "cancel") {
-			ctx.ui.notify("Simplification cancelled", "info");
-			// Rollback any applied changes
-			for (const [file, content] of backups) {
-				writeFileSync(join(cwd, file), content, "utf-8");
-			}
+			ctx.ui.notify("Simplification cancelled. Rolling back applied changes...", "info");
+			controller.rollback(cwd);
 			return;
 		}
 
 		if (action === "apply") {
-			// Backup original
-			backups.set(result.file, result.original);
-
-			// Apply change
+			// Backup and apply
+			controller.backup(result.file, result.original);
 			writeFileSync(join(cwd, result.file), result.simplified, "utf-8");
-			applied.push(result);
+			controller.recordApply(result);
 			ctx.ui.notify(`Applied: ${result.file}`, "info");
 		}
 	}
 
-	if (applied.length === 0) {
+	// Check if any changes were applied
+	const summary = controller.getSummary();
+	if (summary.applied === 0) {
 		ctx.ui.notify("No changes applied", "info");
 		return;
 	}
@@ -469,14 +252,10 @@ async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandCo
 
 		if (!testResult.success) {
 			ctx.ui.notify("Tests failed! Rolling back changes...", "error");
-
-			// Rollback all changes
-			for (const [file, content] of backups) {
-				writeFileSync(join(cwd, file), content, "utf-8");
-			}
+			controller.rollback(cwd);
 
 			ctx.ui.notify(
-				`Rolled back ${backups.size} file(s). Test output:\n${testResult.output.slice(0, 500)}`,
+				`Rolled back ${summary.applied} file(s). Test output:\n${testResult.output.slice(0, 500)}`,
 				"error",
 			);
 			return;
@@ -486,12 +265,8 @@ async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandCo
 	}
 
 	// Summary
-	const totalLinesSaved = applied.reduce((sum, r) => {
-		return sum + (r.original.split("\n").length - r.simplified.split("\n").length);
-	}, 0);
-
 	ctx.ui.notify(
-		`Simplification complete! Applied ${applied.length} change(s), saved ~${totalLinesSaved} lines.`,
+		`Simplification complete! Applied ${summary.applied} change(s), saved ~${summary.linesSaved} lines.`,
 		"info",
 	);
 }
@@ -504,38 +279,20 @@ export default function simplifyExtension(pi: ExtensionAPI) {
 	pi.registerCommand("simplify", {
 		description: "Simplify code to reduce cognitive load (Claude Code style)",
 		getArgumentCompletions: (prefix) => {
-			// Could add file completions here
-			const options = ["--dry-run", "--no-test"];
+			const options = ["--dry-run", "--no-test", "--concurrency=", "--force"];
 			return options.filter((o) => o.startsWith(prefix)).map((o) => ({ value: o, label: o }));
 		},
 		handler: async (args, ctx) => {
-			const parts = args.trim().split(/\s+/).filter(Boolean);
-			const options: SimplifyOptions = {
-				files: [],
-				runTests: true,
-				dryRun: false,
-			};
-
-			for (const part of parts) {
-				if (part === "--dry-run") {
-					options.dryRun = true;
-				} else if (part === "--no-test") {
-					options.runTests = false;
-				} else if (!part.startsWith("--")) {
-					options.files!.push(part);
-				}
-			}
-
-			await executeSimplify(options, ctx);
+			const options = parseOptions(args);
+			await executeSimplify(options, ctx as ExtensionCommandContext);
 		},
 	});
 
-	// Also register a shortcut for quick access
+	// Keyboard shortcut for quick access
 	pi.registerShortcut("ctrl+shift+s", {
 		description: "Simplify changed files",
 		handler: async (ctx) => {
-			const cmdCtx = ctx as ExtensionCommandContext;
-			await executeSimplify({ runTests: true }, cmdCtx);
+			await executeSimplify({ runTests: true }, ctx as ExtensionCommandContext);
 		},
 	});
 }

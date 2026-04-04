@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.32] - 2026-04-04
+
+### Fixed
+- fix(ai): avoid InvalidCharacterError when OAuth client placeholders are not base64
+- fix(nanopencil): OpenRouter in /login and slim built-in OpenRouter models
+
+### Documentation
+- docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
+
+### Maintenance
+- chore(release): 1.11.31
+
+
 ## [1.11.31] - 2026-04-04
 
 ### Added

@@ -564,6 +564,8 @@ export class InteractiveMode {
 
     // Subscribe to agent events
     this.subscribeToAgent();
+    this.chatContainer.clear();
+    this.renderInitialMessages();
 
     // Set up theme file watcher
     onThemeChange(() => {

@@ -621,12 +621,18 @@ export class InteractiveMode {
   async run(): Promise<void> {
     await this.init();
 
-    // Start version check asynchronously
-    this.checkForNewVersion().then((newVersion) => {
-      if (newVersion) {
-        this.showNewVersionNotification(newVersion);
-      }
-    });
+    // Check for auto-update on startup (if enabled)
+    await this.checkAutoUpdateOnStartup();
+
+    // Start version check asynchronously (for notification only, if auto-update is not enabled)
+    const autoUpdate = this.settingsManager.getAutoUpdate();
+    if (autoUpdate !== "always") {
+      this.checkForNewVersion().then((newVersion) => {
+        if (newVersion) {
+          this.showNewVersionNotification(newVersion);
+        }
+      });
+    }
 
     // Show startup warnings
     const {
@@ -711,7 +717,7 @@ export class InteractiveMode {
       const latestVersion = data["dist-tags"]?.latest ?? data.version;
 
       // Only return latestVersion if it's actually newer than current version
-      if (latestVersion && latestVersion > this.version) {
+      if (latestVersion && this.compareVersion(latestVersion, this.version) > 0) {
         return latestVersion;
       }
 
@@ -6505,6 +6511,7 @@ export class InteractiveMode {
 
       const latestVersion = data["dist-tags"]?.latest ?? "unknown";
       const currentVersion = VERSION;
+      const versionComparison = latestVersion !== "unknown" ? this.compareVersion(latestVersion, currentVersion) : 0;
 
       const lines: string[] = [];
       lines.push(theme.fg("accent", "📦 NanoPencil Update Checker"));
@@ -6512,13 +6519,13 @@ export class InteractiveMode {
       lines.push(`Current version: ${theme.fg("dim", currentVersion)}`);
       lines.push(
         `Latest version:  ${theme.fg(
-          latestVersion > currentVersion ? "success" : "dim",
+          versionComparison > 0 ? "success" : "dim",
           latestVersion,
         )}`,
       );
       lines.push("");
 
-      if (latestVersion !== "unknown" && latestVersion > currentVersion) {
+      if (latestVersion !== "unknown" && versionComparison > 0) {
         lines.push(theme.fg("success", `✨ New version ${latestVersion} available!`));
         lines.push("");
 
@@ -6529,7 +6536,7 @@ export class InteractiveMode {
         // Show interactive update options
         await this.showUpdateOptions(latestVersion);
         return;
-      } else if (latestVersion !== "unknown" && latestVersion < currentVersion) {
+      } else if (latestVersion !== "unknown" && versionComparison < 0) {
         lines.push(theme.fg("success", "✨ You're ahead!"));
         lines.push("");
         lines.push(
@@ -6781,13 +6788,8 @@ export class InteractiveMode {
                 ),
               );
               this.ui.requestRender();
-              // Restart by spawning new process and exiting current
-              const args = process.argv.slice(1);
-              spawn(process.execPath, args, {
-                detached: true,
-                stdio: "ignore",
-              }).unref();
-              process.exit(0);
+              // Use the improved restart method
+              this.restartNanoPencil();
             } else {
               process.exit(0);
             }
@@ -6897,29 +6899,169 @@ export class InteractiveMode {
 
   /**
    * Wait for a specific key press from user.
+   * Falls back to selector UI if TTY is not available.
    */
-  private async waitForKeyPress<T extends readonly string[]>(keys: T): Promise<T[number] | "\x03"> {
+  private async waitForKeyPress<T extends readonly string[]>(keys: T): Promise<T[number] | "\x03" | null> {
+    // Check if we're in a TTY environment
+    if (!process.stdin.isTTY) {
+      // Fall back to selector UI
+      const options = keys
+        .filter((k) => k !== "\x03")
+        .map((k) => `Press '${k}'`);
+      options.push("Cancel");
+
+      const choice = await this.showExtensionSelector(
+        theme.fg("accent", "Restart Options"),
+        options,
+      );
+
+      if (!choice || choice.includes("Cancel")) {
+        return "\x03";
+      }
+
+      const selectedKey = keys.find((k) => choice.includes(k));
+      return (selectedKey as T[number]) ?? "\x03";
+    }
+
     return new Promise((resolve) => {
       const stdin = process.stdin;
-      const originalRaw = stdin.isRaw;
+      const originalRawMode = stdin.isRaw;
 
       const cleanup = () => {
-        stdin.setRawMode(originalRaw);
+        try {
+          if (stdin.isTTY) {
+            stdin.setRawMode(originalRawMode);
+          }
+        } catch {
+          // Ignore errors when restoring raw mode
+        }
         stdin.pause();
         stdin.removeListener("data", onData);
       };
 
       const onData = (data: Buffer) => {
         const key = data.toString();
-        if (keys.includes(key as T[number]) || key === "\x03" || key === "\x03") { // Ctrl+C
+        // Check for Ctrl+C or matching keys
+        if (key === "\x03" || keys.includes(key as T[number])) {
           cleanup();
-          resolve(key as T[number] | "\x03");
+          resolve(key === "\x03" ? "\x03" : (key as T[number]));
         }
       };
 
-      stdin.setRawMode(true);
-      stdin.resume();
-      stdin.on("data", onData);
+      try {
+        stdin.setRawMode(true);
+        stdin.resume();
+        stdin.on("data", onData);
+      } catch (err) {
+        cleanup();
+        resolve(null);
+      }
     });
+  }
+
+  /**
+   * Restart NanoPencil by spawning a new process.
+   * Tries to detect the correct command to restart.
+   */
+  private restartNanoPencil(): void {
+    // Try to detect how NanoPencil was launched
+    const execArgv = process.argv;
+    const cmd = execArgv[0]; // e.g., /usr/local/bin/nanopencil or node
+    const args = execArgv.slice(1);
+
+    // Check if running as global CLI (nanopencil) or via node (node dist/cli.js)
+    const isGlobalCli = cmd.includes("nanopencil") || cmd.includes("pi");
+
+    if (isGlobalCli) {
+      // Running as global CLI command
+      spawn(cmd, args, {
+        detached: true,
+        stdio: "ignore",
+      }).unref();
+    } else {
+      // Running via node (development or bundled)
+      spawn(process.execPath, execArgv.slice(1), {
+        detached: true,
+        stdio: "ignore",
+      }).unref();
+    }
+
+    process.exit(0);
+  }
+
+  /**
+   * Compare two version strings (semver style).
+   * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
+   */
+  private compareVersion(v1: string, v2: string): number {
+    const parts1 = v1.split(".").map(Number);
+    const parts2 = v2.split(".").map(Number);
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const p1 = parts1[i] ?? 0;
+      const p2 = parts2[i] ?? 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  }
+
+  /**
+   * Check for updates on startup if auto-update is enabled.
+   */
+  private async checkAutoUpdateOnStartup(): Promise<void> {
+    const autoUpdate = this.settingsManager.getAutoUpdate();
+    if (autoUpdate !== "always") {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "https://registry.npmjs.org/@pencil-agent/nano-pencil",
+        {
+          signal: AbortSignal.timeout(5000), // Shorter timeout for startup
+        },
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as {
+        "dist-tags": { latest?: string };
+      };
+
+      const latestVersion = data["dist-tags"]?.latest;
+      if (!latestVersion) {
+        return;
+      }
+
+      const currentVersion = VERSION;
+      const skippedVersion = this.settingsManager.getSkippedVersion();
+
+      // Skip if already skipped this version
+      if (skippedVersion === latestVersion) {
+        return;
+      }
+
+      // Compare versions properly
+      if (this.compareVersion(latestVersion, currentVersion) > 0) {
+        // Show notification and auto-update
+        this.chatContainer.addChild(new Spacer(1));
+        this.chatContainer.addChild(
+          new Text(
+            theme.fg("accent", `📦 Auto-updating to version ${latestVersion}...`),
+            1,
+            0,
+          ),
+        );
+        this.ui.requestRender();
+
+        // Perform update
+        await this.performUpdate(latestVersion);
+      }
+    } catch {
+      // Silently fail on startup check - don't block user
+    }
   }
 }

@@ -367,6 +367,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 				"dashscope-coding": "DashScope API key (sk-sp-...)",
 				"qianfan-coding": "Qianfan API key",
 				"ark-coding": "Ark API key",
+				openrouter: "OpenRouter API key",
 			};
 			const prompt = providerHints[model.provider] ?? `${model.provider} API key`;
 			const key = await promptForApiKey({ prompt: `Enter ${prompt}` });

@@ -2438,8 +2438,8 @@ export class InteractiveMode {
         this.editor.setText("");
         return;
       }
-      if (text === "/login") {
-        this.showOAuthSelector("login");
+      if (text === "/login" || text.startsWith("/login ")) {
+        await this.handleLoginCommand(text);
         this.editor.setText("");
         return;
       }
@@ -4013,6 +4013,79 @@ export class InteractiveMode {
     await this.handleProviderCredentialsCommand();
   }
 
+  private getStoredApiKey(provider: string): string | undefined {
+    const credential = this.session.modelRegistry.authStorage.get(provider);
+    return credential?.type === "api_key" ? credential.key : undefined;
+  }
+
+  private resolveProviderId(input: string): string | undefined {
+    const normalized = input.trim().toLowerCase();
+    if (!normalized) return undefined;
+
+    const providerMap = new Map<string, string>();
+    for (const model of this.session.modelRegistry.getAll()) {
+      providerMap.set(model.provider.toLowerCase(), model.provider);
+    }
+    for (const provider of getOAuthProviders()) {
+      providerMap.set(provider.id.toLowerCase(), provider.id);
+    }
+
+    return providerMap.get(normalized);
+  }
+
+  private async promptForProviderApiKey(
+    provider: string,
+    options: { title?: string } = {},
+  ): Promise<boolean> {
+    const currentApiKey = this.getStoredApiKey(provider);
+    const title = options.title ?? `Update API key for ${provider}`;
+    const apiKey = await this.showExtensionInput(title, "API key", {
+      initialValue: currentApiKey,
+    });
+    if (apiKey === undefined) {
+      this.showStatus("Configuration cancelled");
+      return false;
+    }
+
+    const trimmedApiKey = apiKey.trim();
+    if (!trimmedApiKey) {
+      this.showStatus("Configuration cancelled");
+      return false;
+    }
+
+    this.session.modelRegistry.authStorage.set(provider, {
+      type: "api_key",
+      key: trimmedApiKey,
+    });
+    this.session.modelRegistry.refresh();
+    this.showStatus(`Updated API key for ${provider}`);
+    return true;
+  }
+
+  private async handleLoginCommand(text: string): Promise<void> {
+    const rawProvider = text.startsWith("/login ") ? text.slice(7).trim() : "";
+    if (!rawProvider) {
+      this.showOAuthSelector("login");
+      return;
+    }
+
+    const providerId = this.resolveProviderId(rawProvider);
+    if (!providerId) {
+      this.showError(`Unknown provider: ${rawProvider}`);
+      return;
+    }
+
+    const oauthProvider = getOAuthProviders().find((provider) => provider.id === providerId);
+    if (oauthProvider) {
+      await this.showLoginDialog(oauthProvider.id);
+      return;
+    }
+
+    await this.promptForProviderApiKey(providerId, {
+      title: `Set API key for ${providerId}`,
+    });
+  }
+
   private async handleProviderCredentialsCommand(): Promise<void> {
     const currentModel = this.session.model;
     if (!currentModel) {
@@ -4035,27 +4108,7 @@ export class InteractiveMode {
         return;
       }
 
-      const apiKey = await this.showExtensionInput(
-        `Update API key for ${provider}`,
-        "API key",
-      );
-      if (apiKey === undefined) {
-        this.showStatus("Configuration cancelled");
-        return;
-      }
-
-      const trimmedApiKey = apiKey.trim();
-      if (!trimmedApiKey) {
-        this.showStatus("Configuration cancelled");
-        return;
-      }
-
-      this.session.modelRegistry.authStorage.set(provider, {
-        type: "api_key",
-        key: trimmedApiKey,
-      });
-      this.session.modelRegistry.refresh();
-      this.showStatus(`Updated API key for ${provider}`);
+      await this.promptForProviderApiKey(provider);
     } catch (error) {
       this.showError(error instanceof Error ? error.message : String(error));
     }
@@ -4084,6 +4137,7 @@ export class InteractiveMode {
     const currentModelName =
       getCustomProtocolProviderModelName(modelsPath, provider) ??
       "custom-model";
+    const currentApiKey = this.getStoredApiKey(provider) ?? "";
     const hasExistingApiKey = authStorage.has(provider);
 
     if (
@@ -4115,6 +4169,7 @@ export class InteractiveMode {
       hasExistingApiKey && options.force
         ? "Leave empty to keep the current API key"
         : "API key",
+      { initialValue: currentApiKey },
     );
     if (apiKeyInput === undefined) {
       return false;

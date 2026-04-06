@@ -379,7 +379,12 @@ export default async function loopExtension(pi: ExtensionAPI) {
 	const bus = pi.events;
 	const controller = getController(bus);
 	getScheduler(bus);
-	ensureSchedulerTicker(pi, bus);
+	// Defer scheduler ticker until session starts (runtime must be initialized)
+	// ensureSchedulerTicker is called on session_start below
+
+	pi.on("session_start", () => {
+		ensureSchedulerTicker(pi, bus);
+	});
 
 	pi.on("session_shutdown", () => {
 		controller.stop("Session shutdown stopped the grub task.", "stopped");

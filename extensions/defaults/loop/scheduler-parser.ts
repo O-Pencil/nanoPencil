@@ -59,17 +59,14 @@ export function parseDurationSpec(raw: string): { intervalMs: number; intervalLa
 	if (consumed.replace(/\s+/g, "") !== normalized.replace(/\s+/g, "")) {
 		return undefined;
 	}
-	if (totalMs < 60 * 1000) {
+	if (totalMs > 0) {
 		return {
-			intervalMs: 60 * 1000,
-			intervalLabel: "1m",
+			intervalMs: totalMs,
+			intervalLabel: normalizeDurationLabel(parts),
 		};
 	}
 
-	return {
-		intervalMs: totalMs,
-		intervalLabel: normalizeDurationLabel(parts),
-	};
+	return undefined;
 }
 
 export function parseSchedulerCommand(input: string): ParsedSchedulerCommand {
@@ -132,7 +129,7 @@ export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "ca
 	const lines: string[] = [];
 
 	if (reason === "empty") lines.push("[Loop] Missing loop arguments.");
-		if (reason === "interval") lines.push("[Loop] Invalid interval. Claude-style loop uses minute granularity; sub-minute values round up to 1m.");
+		if (reason === "interval") lines.push("[Loop] Invalid interval. Use seconds (10s), minutes (10m), hours (1h), or days (1d).");
 	if (reason === "input") lines.push("[Loop] Missing scheduled prompt or slash command.");
 	if (reason === "cancel") lines.push("[Loop] Missing task id to cancel.");
 
@@ -141,6 +138,7 @@ export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "ca
 			"  /loop check the build",
 			"  /loop every 10m Review test failures",
 			"  /loop 30m Run /grub status",
+			"  /loop every 10s Drink water reminder",
 			"  /loop Check npm updates every 1d",
 		"  /loop list",
 		"  /loop cancel <id>",
@@ -150,7 +148,7 @@ export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "ca
 			"  - If no interval is provided, /loop defaults to every 10 minutes.",
 			"  - Schedules are session-scoped and run only while this NanoPencil session stays open.",
 			"  - Due tasks wait until the agent is idle; missed intervals collapse to one pending run.",
-			"  - Seconds are rounded up to the nearest minute.",
+			"  - Supports seconds (10s), minutes (10m), hours (1h), and days (1d).",
 			"  - Scheduled slash commands run through the same slash-command dispatcher as interactive input.",
 		);
 

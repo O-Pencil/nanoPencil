@@ -2309,9 +2309,16 @@ export class InteractiveMode {
       this.clipboardImageFiles.push(filePath);
       this.attachments.push({ path: filePath, mimeType: image.mimeType });
       this.updateAttachmentsBar();
+
+      // Show success feedback to user
+      const sizeKB = Math.round(image.bytes.length / 1024);
+      this.showStatus(`Image pasted (${sizeKB} KB). Press Enter to send, ↑↓ Del to manage.`);
       this.ui.requestRender();
-    } catch {
-      // Silently ignore clipboard errors (may not have permission, etc.)
+    } catch (error: unknown) {
+      // Show user feedback for clipboard errors
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.showStatus(`Clipboard paste failed: ${errorMessage}`);
+      this.ui.requestRender();
     }
   }
 
@@ -2438,8 +2445,10 @@ export class InteractiveMode {
           mimeType: resized.mimeType,
           data: resized.data,
         });
-      } catch {
-        // Skip unreadable attachment files
+      } catch (error: unknown) {
+        // Skip unreadable attachment files but log the error for debugging
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.warn(`[Attachments] Skipped unreadable file ${attachment.path}: ${errorMessage}`);
       }
     }
     return result;
@@ -2743,6 +2752,8 @@ export class InteractiveMode {
         ) {
           steerImages.length = 0;
           steerAttachmentPaths = [];
+          this.showStatus(`Images dropped: ${steerModel.id} does not support images`);
+          this.ui.requestRender();
         }
         let steerPromptText = steerResult.text;
         if (steerAttachmentPaths.length > 0) {
@@ -3618,6 +3629,9 @@ export class InteractiveMode {
         type: "session_shutdown",
       });
     }
+
+    // Clean up any clipboard image files before exit
+    this.cleanupClipboardImages();
 
     // Wait for any pending renders to complete
     // requestRender() uses process.nextTick(), so we wait one tick

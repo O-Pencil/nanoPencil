@@ -1,766 +1,413 @@
-# nanoPencil Agent Team 重构方案
+# nanoPencil SubAgent & AgentTeam 重构方案
+
+> 本文取代旧版《AgentTeam 重构方案》。
+> 旧方案把 SubAgent 与 AgentTeam 混为一谈，导致 P0–P7 的优先级与 core/extension 边界都失真。
+> 本版按"先 SubAgent 后 AgentTeam"两个独立阶段重写，并重新设计命令命名。
 
 ---
 
-## 一、目标与背景
+## 〇、概念对齐
 
-当前 nanoPencil 已经在最新 `main` 中提供 `/agent team` 能力，入口位于：
+| 维度 | SubAgent | AgentTeam |
+|---|---|---|
+| 归属 | 主会话内部的能力 | 跨会话的运行时 |
+| 上下文 | 临时独立窗口，结束即销毁 | 每个 worker 独立窗口，长期存在 |
+| 触发 | 主 agent 委派 / 工具调用 / 编排器一次性调度 | 编排器显式管理，可持续接任务 |
+| 生命周期 | 一次任务一条命 | 长期 teammate，可恢复 |
+| 状态 | 不持久 | 必须 durable、可恢复 |
+| 隔离 | 仅上下文隔离 | 上下文 + 工作区 + 权限 |
+| 典型场景 | "并行查三处实现"、"评审一段代码" | "三个 teammate 长期负责三个模块" |
 
-- `extensions/defaults/team/index.ts`
-- `extensions/defaults/team/team-parser.ts`
-- `extensions/defaults/team/team-controller.ts`
+### 当前 `/agent team` 的真实定位
 
-从产品目标看，`.PENCIL.md` 已经明确要求 Agent Team 应具备以下特征：
+当前 `extensions/defaults/team/index.ts` 通过 `createAgentSession()` 起一组临时 worker，用 `Promise.all` 跑 research，run 完即销毁，没有 teammate identity，也没有跨主会话生命周期。
 
-- isolated workers
-- clear delegation boundaries
-- concise summaries in the main thread
-- durable run artifacts
-- safe stopping and recovery behavior
-- low context pollution in the main session
+**因此当前实现本质上是"主会话内的多 SubAgent 编排器"，不是 AgentTeam。**
 
-当前实现已经做到：
+承认这一点是本次重构的前提。
 
-- 显式用户触发
-- planner → research → implementation/review 的基础编排
-- 报告产物输出
-- UI 中显示 team 状态
+### 路线选择
 
-但当前实现本质上仍是**一个扩展内部的批处理编排器**，还不是一个完整的 Team Runtime。
+- **阶段 A**：把 SubAgent 做成 core 一等公民，把现有 `/agent team` 收敛为一个安全、可停、隔离的 SubAgent 编排器。**完成阶段 A，nanoPencil 拥有可靠的多 SubAgent，但仍然没有 AgentTeam。**
+- **阶段 B**：在 SubAgent 之上构建真正的 AgentTeam（持久 teammate、worktree 隔离、permission model、跨主会话生命周期）。
 
-本方案的目标是把 `/agent team` 从“可用扩展”升级为“可靠的多智能体运行时”。
-
----
-
-## 二、当前实现评估
-
-### 2.1 已有优点
-
-当前实现具备以下优点：
-
-1. **触发边界清晰**
-   - 只允许用户显式要求 Agent Team 时运行。
-   - 代码位置：`extensions/defaults/team/index.ts`
-
-2. **主线程污染较低**
-   - team worker 的大部分原始输出不会直接塞回主会话。
-   - 主线程主要接收 summary、status、report。
-
-3. **有产物**
-   - 会写入 `.nanopencil/team-runs/<run-id>.md`
-
-4. **支持并行 research**
-   - `researchWorkers` 通过 `Promise.all` 并行运行。
-
-### 2.2 当前主要问题
-
-#### 问题 A：不是真正隔离的 worker
-
-当前 worker 都共享同一个 `cwd`，implementation worker 直接改当前工作区。
-
-这意味着：
-
-- worker 之间没有工作区隔离
-- review worker 看到的是 implementation 已修改后的共享目录
-- 多 implementation worker 无法安全扩展
-
-#### 问题 B：只读 worker 不是硬只读
-
-当前 research/review worker 仍持有 `bash` 工具。
-
-这意味着：
-
-- “只读”只是约定，不是硬约束
-- worker 仍可通过 shell 修改文件、调用 git、写入临时文件
-
-#### 问题 C：stop 语义不完整
-
-当前 `TeamController.stop()` 主要中断 CLI worker 路径的 `AbortController`。
-
-但 native worker 通过 `createAgentSession()` 直接在当前进程内运行，没有统一的细粒度中断控制，因此：
-
-- `/agent team stop` 不一定能及时停止 native worker
-- 停止后编排器可能继续推进后续阶段
-
-#### 问题 D：worker 生命周期过短，缺少 teammate 概念
-
-当前 worker 是“一次任务一条执行链”的临时对象：
-
-- planner 跑完即销毁
-- research worker 跑完即销毁
-- implementation/review 也没有持续身份
-
-这意味着当前更接近：
-
-- multi-worker batch orchestration
-
-而不是：
-
-- persistent teammate runtime
-
-#### 问题 E：状态模型不够强
-
-当前状态主要依赖：
-
-- `TeamController` 内存状态
-- session 中的 `team_state` / `team_report`
-
-这对于“单次运行”够用，但对于以下场景不足：
-
-- teammate 持续驻留
-- 中途中断后恢复
-- 权限回传
-- runtime 调试
-- leader 与 worker 双向消息
-
-#### 问题 F：权限模型缺失
-
-当前 implementation worker 是否能写文件主要由传入工具集控制，没有 team 级权限协商机制。
-
-缺少：
-
-- leader 审批
-- 动态路径授权
-- mode 切换
-- 统一的 permission request / response 通道
+阶段 A 与阶段 B 各自可独立交付、独立验收、独立决定是否做。
 
 ---
 
-## 三、参考实现：`/root/workspace/free-code`
+## 一、命令重新设计
 
-本地参考实现不是简单的“并行 worker”，而是更完整的 swarm / teammate runtime。
+旧命令 `/agent team ...` 中间带空格、且把 SubAgent 顶着 team 的名字，长期会让产品叙事和实现脱节。新命令规则：
 
-### 3.1 值得借鉴的设计
+1. **顶层命令是单 token，无空格**
+2. **子命令用冒号分隔**（`/cmd:sub`），不允许中间空格
+3. **SubAgent 与 AgentTeam 各自占独立命名空间**
+4. **`/team` 名字保留给阶段 B 真正的 AgentTeam，阶段 A 不得占用**
 
-#### 1）teammate 是长期对象
+### 阶段 A 命令（SubAgent 编排器）
 
-参考实现中，teammate 有自己的任务状态、身份、消息历史、待处理消息队列：
+| 命令 | 作用 |
+|---|---|
+| `/subagent` | 显示帮助与最近一次 run 状态 |
+| `/subagent:run <task>` | 启动一次 SubAgent 编排（planner → research → impl → review） |
+| `/subagent:stop` | 中断当前 run（所有 worker） |
+| `/subagent:status` | 显示当前 run 的阶段、各 worker 状态 |
+| `/subagent:report` | 输出最近一次 run 的报告路径 |
 
-- `src/tasks/InProcessTeammateTask/types.ts`
+旧的 `/agent team ...` 在阶段 A 落地时**直接下线**，不保留别名，避免长期歧义。
 
-核心字段包括：
+### 阶段 B 命令（真正的 AgentTeam）
 
-- `identity`
-- `abortController`
-- `currentWorkAbortController`
-- `messages`
-- `pendingUserMessages`
-- `awaitingPlanApproval`
-- `permissionMode`
-
-这使得 teammate 不再是“一次性子进程”，而是“长期存在的团队成员”。
-
-#### 2）双层 abort 语义
-
-参考实现明确区分：
-
-- `abortController`：终止整个 teammate
-- `currentWorkAbortController`：只停止当前 turn
-
-这对 UX 和 runtime 稳定性非常重要。
-
-#### 3）team file 是权威团队状态源
-
-参考实现在 team file 中记录：
-
-- members
-- worktreePath
-- teamAllowedPaths
-- leadAgentId
-- mode / subscriptions
-
-这让团队成为一个可恢复、可审计、可同步的实体，而不是一堆松散内存对象。
-
-#### 4）mailbox 做 leader / teammate 通信
-
-参考实现把这些操作统一成 mailbox 消息：
-
-- permission_request
-- permission_response
-- shutdown
-- mode change
-- plan approval
-
-这让系统天然支持：
-
-- 恢复
-- 调试
-- 多 backend
-- 异步 teammate
-
-#### 5）可选 worktree 隔离
-
-参考实现的 member 结构里已有 `worktreePath`，并有对应清理逻辑。
-
-这是实现真正 `isolated workers` 的关键。
+| 命令 | 作用 |
+|---|---|
+| `/team` | 列出当前 team 的全部 teammate 与状态 |
+| `/team:spawn <role> [--name <id>]` | 创建一个持久 teammate |
+| `/team:send <name> <message>` | 向已有 teammate 发消息 |
+| `/team:status [<name>]` | 查看 team 或单个 teammate 状态 |
+| `/team:stop <name>` | 终止某个 teammate 当前 turn |
+| `/team:terminate <name>` | 彻底销毁某个 teammate |
+| `/team:approve <request-id>` | 回复 permission_request |
+| `/team:mode <name> <plan\|execute\|review>` | 切换 teammate 模式 |
 
 ---
 
-## 四、重构原则
+## 二、阶段 A：SubAgent 一等公民化
 
-### 原则 1：从“扩展逻辑”升级为“运行时能力”
+### A.0 目标
 
-`/agent team` 不应长期停留在 `extensions/defaults/team/index.ts` 这个单点文件中。
+让 SubAgent 成为 core 的一等概念：
 
-正确方向是：
+- 任何扩展都能 spawn 一个隔离的 SubAgent
+- spawn 出来的 SubAgent **可停、可超时、可硬只读、可观察**
+- 把当前 `/agent team` 的实现下沉到这套 SubAgent runtime 上，并改名为 `/subagent`
 
-- 扩展负责命令入口与 UI 适配
-- Runtime 负责 team lifecycle、worker backend、状态管理、权限协商
+### A.1 当前实现的硬伤（必须先修）
 
-### 原则 2：先修安全边界，再做能力扩展
+引用旧方案中的诊断，在阶段 A 范围内仍然有效：
 
-优先级必须是：
+1. **Read-only worker 不是硬只读**：`extensions/defaults/team/index.ts:756` 写明，read-only worker 仍带 `bash`。
+2. **Stop 不可靠**：`createAgentSession()` 起的 native worker 没有统一 abort 通道。
+3. **Implementation worker 直接写主工作区**：旧方案 P0 没有覆盖这一点，本方案在 A.3 中补齐"最小隔离"。
+4. **`auto` 模式可能自决定是否进入写阶段**：在没有 permission system 之前不安全。
 
-1. 只读边界
-2. stop / recovery
-3. runtime state
-4. teammate 持久化
-5. worktree 隔离
+### A.2 SDK 必要修复（阶段 A 的真正 P0）
 
-而不是先加更多命令和更多角色。
+这一部分必须先于一切 SubAgent 工作落地，否则后续都建立在不能停的运行时上。
 
-### 原则 3：统一 worker 抽象
+- `core/runtime/sdk.ts` 的 `createAgentSession()` 接受外部 `AbortSignal`
+- Agent turn loop 在 LLM 调用、tool 调用前后检查 signal
+- 退出时保证：
+  - 当前 turn ≤ 15 秒内结束
+  - 后续 turn 不再启动
+  - 工具进程被 kill（`bash` 调用要透传 signal）
 
-planner / research / implementation / review 都应该走统一 backend 接口。
+**验收**：单元测试，给 `createAgentSession()` 传入一个 signal，1 秒后 abort，断言 15 秒内 promise resolve/reject 且没有继续打印 token。
 
-不应存在：
+### A.3 core 新增：SubAgent 运行时
 
-- planner 永远 CLI
-- worker 先 native 再 fallback CLI
-
-这种行为不一致的路径。
-
-### 原则 4：状态必须可恢复、可观察、可审计
-
-最少要有：
-
-- durable state store
-- durable artifacts
-- teammate identity
-- phase transitions
-- per-worker logs / transcript
-
----
-
-## 五、按优先级排序的重构计划
-
----
-
-### P0：修复当前实现的安全与中断问题
-
-**目标**
-
-让当前 `/agent team` 至少满足“不会误写、可以停、状态不乱”。
-
-**改动**
-
-1. research / review worker 不再持有通用 `bash`
-   - 改为使用真正只读工具集合
-   - 优先复用 `createReadOnlyTools()`
-
-2. native worker 加入统一 abort 管理
-   - `TeamController` 需要持有 native session 的 stop handle
-   - `/agent team stop` 时统一中断
-
-3. `orchestrateTeamRun()` 增加阶段边界检查
-   - 每个阶段开始前和结束后检查 run 是否已被 stop / abort
-
-4. `auto` 模式收紧
-   - 默认倾向 `research_only`
-   - 只有需求明确要求“修改/修复/实现”时才进入 implementation
-
-**预期收益**
-
-- 消除“研究 worker 实际可写”的风险
-- 修复 stop 无法可靠生效的问题
-- 避免 auto 模式意外写代码
-
-**涉及模块**
-
-- `extensions/defaults/team/index.ts`
-- `extensions/defaults/team/team-controller.ts`
-- `core/tools/index.ts`
-
----
-
-### P1：把 Team Runtime 从扩展中拆出来
-
-**目标**
-
-把 Team 的生命周期与编排逻辑抽离为 core runtime。
-
-**建议新增目录**
+新增目录（注意：**不叫 team**）：
 
 ```text
-core/team/
-  team-runtime.ts
-  team-runner.ts
-  team-state-store.ts
-  team-events.ts
-  team-types.ts
-  worker-factory.ts
+core/sub-agent/
+  sub-agent-runtime.ts     # spawn / abort / lifecycle
+  sub-agent-backend.ts     # in-process / subprocess 抽象
+  sub-agent-types.ts
+core/workspace/
+  worktree-manager.ts      # 通用 git worktree / 临时目录管理
 ```
 
-**职责划分**
-
-- `team-runtime.ts`
-  - 对外暴露 team run / status / stop / restore
-
-- `team-runner.ts`
-  - 推进 planner / research / implementation / review 状态机
-
-- `team-state-store.ts`
-  - 负责持久化和恢复
-
-- `worker-factory.ts`
-  - 根据 role + backend 配置创建 worker
-
-- 扩展层 `extensions/defaults/team/`
-  - 只负责命令入口、帮助信息、message renderer、UI 绑定
-
-**预期收益**
-
-- 降低 `extensions/defaults/team/index.ts` 的复杂度
-- 为后续 mailbox / multi-backend / permission mode 做准备
-
----
-
-### P2：引入持久 teammate 模型
-
-**目标**
-
-让 worker 变成长期 teammate，而不是一次性批处理任务。
-
-**建议新增概念**
-
-- `TeammateIdentity`
-- `TeammateState`
-- `TeammateRuntimeHandle`
-
-**建议状态字段**
-
-- `agentId`
-- `agentName`
-- `teamName`
-- `role`
-- `mode`
-- `status`
-- `abortController`
-- `currentWorkAbortController`
-- `messages`
-- `pendingUserMessages`
-- `lastActiveAt`
-
-**能力**
-
-- leader 能查看 teammate 当前状态
-- leader 能对 teammate 发送 follow-up
-- status 命令能展示 team members，而不是只显示某次 run
-
-**参考来源**
-
-- `/root/workspace/free-code/src/tasks/InProcessTeammateTask/types.ts`
-
-**预期收益**
-
-- 系统从“pipeline”升级为“team runtime”
-- 为后续视图切换、消息注入、可持续协作打基础
-
----
-
-### P3：引入 mailbox / team event bus
-
-**目标**
-
-建立 leader 与 teammate 的标准通信通道。
-
-**建议新增模块**
-
-```text
-core/team/mailbox/
-  team-mailbox.ts
-  mailbox-types.ts
-  mailbox-store.ts
-```
-
-**建议消息类型**
-
-- `task_request`
-- `task_progress`
-- `task_result`
-- `permission_request`
-- `permission_response`
-- `shutdown_request`
-- `shutdown_ack`
-- `mode_change`
-- `plan_approval_request`
-- `plan_approval_response`
-
-**用途**
-
-- 替代现在大量的直接函数耦合
-- 支持恢复、审计、多 backend
-
-**参考来源**
-
-- `/root/workspace/free-code/src/utils/swarm/permissionSync.ts`
-- `/root/workspace/free-code/src/utils/teammateMailbox.ts`
-
-**预期收益**
-
-- team 行为更像系统协议，而不是内部回调堆叠
-
----
-
-### P4：补上 Team 权限模型
-
-**目标**
-
-从“工具集约束”升级为“可审计的 team permission system”。
-
-**建议能力**
-
-1. teammate mode
-   - `research`
-   - `plan`
-   - `execute`
-   - `review`
-
-2. implementation teammate 默认 plan mode
-   - 先提出计划
-   - leader 批准后再进入 execute
-
-3. 动态路径授权
-   - leader 可授予某个 teammate 对某些路径的 edit/write 权限
-
-4. 高风险工具审批
-   - 写文件
-   - 危险 bash
-   - git 变更操作
-
-**建议新增模块**
-
-```text
-core/team/permissions/
-  permission-model.ts
-  permission-sync.ts
-  allowed-paths.ts
-```
-
-**参考来源**
-
-- `/root/workspace/free-code/src/utils/swarm/teamHelpers.ts`
-- `/root/workspace/free-code/src/utils/swarm/permissionSync.ts`
-
-**预期收益**
-
-- 提升安全性
-- 让多 implementation worker 变得可控
-
----
-
-### P5：实现真正的 workspace / worktree 隔离
-
-**目标**
-
-满足产品目标中的 `isolated workers`。
-
-**建议实现**
-
-对于 implementation teammate：
-
-- 默认创建独立 worktree 或临时工作目录
-- teammate 在自己的工作区完成改动
-- leader 最终只接收：
-  - changed files
-  - diff summary
-  - artifact
-
-review teammate 可选：
-
-- 读取 implementation worktree
-- 或读取合并后的 staged diff
-
-**建议新增模块**
-
-```text
-core/team/workspace/
-  worktree-manager.ts
-  workspace-policy.ts
-```
-
-**参考来源**
-
-- `/root/workspace/free-code/src/utils/swarm/teamHelpers.ts`
-
-**预期收益**
-
-- 多 implementation worker 可扩展
-- review 语义更可信
-- 主工作区更安全
-
----
-
-### P6：统一 worker backend 抽象
-
-**目标**
-
-让 planner / teammate 不再依赖杂乱的 `native + CLI fallback` 逻辑。
-
-**建议定义接口**
+最小接口：
 
 ```ts
-interface TeamWorkerBackend {
-  spawn(spec: TeamWorkerSpec): Promise<TeamWorkerHandle>
-  send(handle: TeamWorkerHandle, prompt: string): Promise<void>
-  abortCurrent(handle: TeamWorkerHandle): Promise<void>
-  terminate(handle: TeamWorkerHandle): Promise<void>
+interface SubAgentSpec {
+  prompt: string
+  tools: ToolSet              // 调用方决定，core 不猜
+  cwd: string                 // 调用方决定，可以是 worktree
+  signal: AbortSignal         // 必须
+  contextPolicy?: ContextPolicy
+  timeoutMs?: number
+}
+
+interface SubAgentHandle {
+  readonly id: string
+  readonly status: "running" | "done" | "aborted" | "error"
+  result(): Promise<SubAgentResult>
+  abort(): Promise<void>     // 停当前 turn
+  terminate(): Promise<void> // 彻底销毁
+}
+
+interface SubAgentBackend {
+  spawn(spec: SubAgentSpec): Promise<SubAgentHandle>
 }
 ```
 
-**建议 backend**
+后端：
 
-- `in-process`
-- `subprocess`
-- 未来可加 `acp`
+- `in-process`（默认）：包装 `createAgentSession()`
+- `subprocess`：阶段 A 不强制实现，但接口位置预留
 
-**预期收益**
+**核心约束**：core 的 SubAgent runtime **不知道 planner / research / impl / review** 这些角色，它只负责 spawn 一个隔离的 agent。所有角色编排留在扩展层。
 
-- 行为一致
-- 容易测试
-- 未来可支持远端 worker / IDE worker
+### A.4 工具权限硬约束
+
+- `core/tools/index.ts` 已有 `createReadOnlyTools()`，作为唯一 read-only 入口
+- 阶段 A 落地时，read-only SubAgent 调用方**禁止**在外面再 `bash` / `edit` / `write` 注入
+- 增加 lint：检查所有 `spawnSubAgent` 调用点，read-only mode 不允许传入写工具
+- `bash` 工具本身需要支持"沙箱模式"（禁止 `>`, `>>`, `mv`, `rm`, `git commit`, `git add` 等写操作）作为兜底
+
+### A.5 最小隔离（implementation 不再直接动主工作区）
+
+在阶段 A 就要把"会写"的 SubAgent 至少拉出主工作区：
+
+- `core/workspace/worktree-manager.ts` 提供：
+  - `createTempWorkspace(seedFiles[]): WorkspacePath`
+  - `createGitWorktree(branch?: string): WorkspacePath`
+  - `dispose(path)`
+- 阶段 A 默认走 `createTempWorkspace`（拷贝相关文件即可，不强制 git worktree）
+- implementation SubAgent 的 `cwd` 指向临时工作区
+- run 结束时，把 diff 回写到主工作区前**先在主会话给用户看 diff，由用户确认**
+- 不确认 → 工作区直接 dispose
+
+**这一项是阶段 A 与旧方案 P0 的关键差异**，旧方案把它推到了 P5，会导致 M1 安全叙事不闭环。
+
+### A.6 把 `/agent team` 重写为 `/subagent`
+
+- 删除 `extensions/defaults/team/`
+- 新建 `extensions/defaults/subagent/`：
+  - `index.ts`：注册 `/subagent` 系列命令、UI 渲染
+  - `subagent-parser.ts`：子命令解析
+  - `subagent-runner.ts`：planner → research → impl → review 状态机（**这是 SubAgent 编排器的产品决策，留扩展**）
+  - `subagent-renderer.ts`：interactive 模式下的状态展示
+- 全部 worker 通过 `core/sub-agent/sub-agent-runtime.ts` 的 `spawn()` 启动
+- read-only worker 用 `createReadOnlyTools()`
+- impl worker 用临时工作区
+- `auto` 模式中"自动决定写代码"的分支砍掉，必须用户显式 `--write` 或 prompt 中明示
+
+### A.7 阶段 A 验收（M-A）
+
+- ✅ `createAgentSession()` 支持 `AbortSignal`，单测覆盖
+- ✅ `core/sub-agent/` 与 `core/workspace/` 已建立，被扩展层使用
+- ✅ `/subagent:run` 工作正常，研究与评审 worker **没有任何**写入能力（包括不能通过 bash 间接写）
+- ✅ `/subagent:stop` 在 15 秒内停止所有 worker
+- ✅ implementation worker 默认在临时工作区运行，diff 回写需用户确认
+- ✅ `/agent team` 已下线
+- ❌ 阶段 A 不交付：teammate 持久化、跨会话恢复、permission request/response、worktree 长期管理
+
+**完成阶段 A 后，nanoPencil 拥有"安全的多 SubAgent 编排器"，但仍然没有 AgentTeam。**
 
 ---
 
-### P7：补齐观察、调试、测试能力
+## 三、阶段 B：真正的 AgentTeam
 
-**目标**
+### B.0 目标
 
-让 Agent Team 可维护、可调试、可回归验证。
+在 SubAgent 之上构建持久、可恢复、可协商的 AgentTeam runtime，对应 `.PENCIL.md` 中 team 的六项产品目标：isolated workers、clear delegation boundaries、concise summaries、durable artifacts、safe stopping & recovery、low context pollution。
 
-**建议补充**
+阶段 B 是独立产品决策，可以延迟启动。
 
-1. 每个 teammate 独立 transcript / log
-2. UI 支持切换查看 teammate 状态
-3. 报告结构标准化
-4. Team Runtime 测试覆盖：
-   - stop
-   - recovery
-   - mailbox
-   - permission approval
-   - worktree cleanup
+### B.1 持久 teammate 模型
 
-**建议测试层级**
-
-- 单元测试：parser / state machine / permission model
-- 集成测试：planner + worker + mailbox
-- 恢复测试：进程中断后 session 恢复
-
----
-
-## 六、目标架构草图
+新增（**留在扩展层**，不污染 core）：
 
 ```text
 extensions/defaults/team/
-  index.ts                # 只保留 /agent 命令入口 + UI 渲染
+  index.ts                 # /team 系列命令
   team-parser.ts
-  team-message-renderer.ts
-
-core/team/
-  team-runtime.ts         # 对外总入口
-  team-runner.ts          # 阶段推进与状态机
-  team-state-store.ts     # 持久化/恢复
-  team-types.ts
-
-  mailbox/
-    team-mailbox.ts
-    mailbox-types.ts
-    mailbox-store.ts
-
-  permissions/
-    permission-model.ts
-    permission-sync.ts
-    allowed-paths.ts
-
-  workspace/
-    worktree-manager.ts
-    workspace-policy.ts
-
-  backends/
-    in-process.ts
-    subprocess.ts
-    acp.ts                # 后续可选
+  team-renderer.ts
+  team-runtime.ts          # teammate 注册表与生命周期
+  team-state-store.ts      # durable state，与主 SessionManager 解耦
+  team-mailbox.ts          # leader ↔ teammate 消息协议
+  team-permissions.ts      # plan/execute/review mode、路径授权
 ```
 
----
+`TeammateState` 最小字段：
 
-## 七、与当前代码的映射关系
+- `agentId` / `agentName` / `teamName`
+- `role`
+- `mode`（plan / execute / review / research）
+- `status`
+- `abortController`（整个 teammate）
+- `currentWorkAbortController`（当前 turn）
+- `messages`
+- `pendingUserMessages`
+- `worktreePath`
+- `lastActiveAt`
 
-为了避免重构方案停留在抽象层，下面给出当前实现到目标架构的直接映射。
+### B.2 状态持久化的归属
 
-### 7.1 当前入口层
+阶段 A 没解决的一个问题：teammate 的对话历史是不是复用 SessionManager？
 
-- `extensions/defaults/team/index.ts`
-  - 当前同时承担：
-    - `/agent` 命令注册
-    - planner / worker prompt 组装
-    - run orchestration
-    - UI 同步
-    - 报告写入
-    - session 自定义状态持久化
-  - 这是当前最需要拆分的文件
+**阶段 B 决策**：
 
-- `extensions/defaults/team/team-parser.ts`
-  - 继续保留在扩展层
-  - 负责 `/agent team ...` 子命令解析
+- **不复用** SessionManager 的 session 文件
+- team-state-store 自己负责 teammate 历史与 mailbox
+- SessionManager 只负责主会话
+- 跨进程恢复时，team-state-store 是 teammate 状态的 source of truth；主会话恢复后通过 team-runtime.attach() 重新挂载已有 teammate
 
-- `extensions/defaults/team/team-controller.ts`
-  - 当前只适合做轻量状态容器
-  - 后续应拆成：
-    - `core/team/team-runtime.ts`
-    - `core/team/team-state-store.ts`
-    - `core/team/team-events.ts`
+这一条必须在 B.1 之前先冻结，否则 mailbox / permission 都会反复返工。
 
-### 7.2 当前 runtime 相关依赖
+### B.3 Mailbox 协议
 
-- `core/runtime/agent-session.ts`
-  - 负责扩展命令分发
-  - 不应承载 Team 业务逻辑
-  - 只需继续作为 Team runtime 的宿主能力提供者
+消息类型：
 
-- `core/runtime/sdk.ts`
-  - 后续 native teammate 创建可继续复用这里的 `createAgentSession()`
-  - 但 Team runtime 需要把 teammate 创建逻辑统一封装到 `worker-factory.ts`
+- `task_request` / `task_progress` / `task_result`
+- `permission_request` / `permission_response`
+- `plan_approval_request` / `plan_approval_response`
+- `mode_change`
+- `shutdown_request` / `shutdown_ack`
 
-- `core/session/session-manager.ts`
-  - 当前适合继续承载主 session 的持久化
-  - 不适合直接承担 teammate mailbox 或 durable team state
-  - Team 需要自己的 state store
+mailbox 是 teammate 与 leader 的**唯一**通信通道，不允许直接函数回调耦合。
 
-- `core/tools/index.ts`
-  - 当前已有只读工具工厂，可直接作为 P0 改造的切入点
-  - Team runtime 后续仍应复用工具注册能力，但权限裁剪应前移到 Team 层
+### B.4 Permission Model
 
-### 7.3 建议的拆分边界
+- 默认 implementation teammate 进入 `plan` mode，输出计划等待 leader `/team:approve`
+- leader 可对 teammate 授予路径白名单 `--allow-path src/foo`
+- 高风险工具（写文件、危险 bash、git 变更）走 `permission_request`
+- 顺序：先冻结 permission model → 再实现 mailbox 上的 permission_request/response → 最后接 UI
 
-#### 扩展层保留
+阶段 B 中 **permission 必须早于 mailbox 完整化**，否则 mailbox 协议会被反复改。
 
-- 命令入口
-- help 文案
-- interactive mode 下的 widget / renderer / status 展示
+### B.5 完整 worktree 隔离
 
-#### runtime 层新增
+- 每个 implementation teammate 默认绑定一个 git worktree
+- review teammate 默认只读 implementation 的 worktree，或读取已 staged diff
+- teammate terminate 时 worktree 自动 dispose
+- worktree manager 复用阶段 A 在 `core/workspace/` 建立的基础设施
 
-- 运行状态机
-- teammate 注册表
-- mailbox
-- permission system
-- workspace / worktree 管理
-- backend 统一抽象
+### B.6 多 backend
 
-### 7.4 推荐迁移顺序
+阶段 A 已经有 `SubAgentBackend` 接口，阶段 B 在此基础上：
 
-1. 先把 `index.ts` 中的 worker 启动逻辑提取到 `core/team/worker-factory.ts`
-2. 再把 `orchestrateTeamRun()` 提取到 `core/team/team-runner.ts`
-3. 再把 `TeamController` 状态拆到 `team-state-store.ts`
-4. 最后逐步把 mailbox / permissions / workspace 接进来
+- 增加 `subprocess` backend（teammate 跑在独立进程，崩溃不影响主会话）
+- 预留 `acp` backend
+- backend 选择由 `/team:spawn --backend ...` 控制
 
-这样做的原因是：
+### B.7 观察 / 调试 / 测试
 
-- 对现有命令入口侵入最小
-- 可以先保持 `/agent team` 对外行为稳定
-- 允许按阶段回归，而不是一次性大爆炸迁移
+- 每个 teammate 独立 transcript 文件
+- `/team:status` 显示成员级状态
+- 单元测试：state machine、permission model、mailbox
+- 集成测试：spawn → send → permission_request → approve → terminate
+- 恢复测试：进程中断 + 重启后 teammate 仍可被 `/team` 列出并继续接任务
 
----
+### B.8 阶段 B 验收（M-B）
 
-## 八、实施建议顺序
-
-### 第一阶段（必须先做）
-
-- P0：安全边界与 stop 修复
-- P1：拆 Team Runtime
-
-### 第二阶段（做成真正 runtime）
-
-- P2：持久 teammate
-- P3：mailbox / event bus
-
-### 第三阶段（可控执行）
-
-- P4：permission model
-- P5：workspace / worktree isolation
-
-### 第四阶段（工程化完善）
-
-- P6：multi-backend
-- P7：调试与测试
+- ✅ teammate 拥有稳定 identity，跨主会话可恢复
+- ✅ `/team:send` 能向已有 teammate 投递消息，teammate 异步处理后回投 `task_result`
+- ✅ `/team:approve` 能闭环 permission_request
+- ✅ implementation teammate 默认在 git worktree 中工作，主工作区始终干净
+- ✅ teammate 崩溃 / 主会话崩溃后，`/team` 仍能列出并恢复 teammate
+- ✅ `.PENCIL.md` 六项 team 产品目标全部可验证
 
 ---
 
-## 九、里程碑与验收标准
+## 四、Core / Extension 边界
 
-### 里程碑 M1：安全可用
+判定线（与 nanoPencil 现有 `core/` 与 `extensions/defaults/` 的分层一致）：
 
-验收标准：
+> "如果禁用它，nanoPencil 还是不是一个完整的 coding agent？"
 
-- research / review worker 不再具备通用写能力
-- `/agent team stop` 能稳定停止 native / subprocess worker
-- stop 后不会继续进入 implementation / review
+| 能力 | 服务对象 | 归属 | 阶段 |
+|---|---|---|---|
+| `createAgentSession` 接受 `AbortSignal` | 所有 | `core/runtime/sdk.ts` | A |
+| SubAgent runtime（spawn/abort/lifecycle） | 所有扩展 | `core/sub-agent/` | A |
+| Worktree manager / 临时工作区 | 所有扩展 | `core/workspace/` | A（最小）/ B（完整） |
+| Read-only 工具集硬约束 | 所有 | `core/tools/` | A |
+| SubAgent 编排（planner→research→impl→review） | `/subagent` 这个产品 | `extensions/defaults/subagent/` | A |
+| Teammate identity / 注册表 | `/team` 这个产品 | `extensions/defaults/team/` | B |
+| Mailbox 协议 | `/team` 这个产品 | `extensions/defaults/team/` | B |
+| Permission model | `/team` 这个产品 | `extensions/defaults/team/` | B |
+| Multi-backend（subprocess / acp） | 所有扩展可受益 | core 接口 + 各扩展实现 | A 接口 / B 实现 |
 
-### 里程碑 M2：runtime 解耦
-
-验收标准：
-
-- `extensions/defaults/team/index.ts` 只保留入口和 UI
-- 编排逻辑迁移到 `core/team/`
-- Team 状态具备独立持久化接口
-
-### 里程碑 M3：持久 teammate
-
-验收标准：
-
-- teammate 有稳定 identity
-- status 可展示成员级别状态
-- leader 可以向已有 teammate 下发 follow-up
-
-### 里程碑 M4：可控执行
-
-验收标准：
-
-- 存在 permission request / response 通道
-- implementation teammate 可以按路径授权
-- plan / execute / review 模式切换可观测
-
-### 里程碑 M5：真正隔离
-
-验收标准：
-
-- implementation teammate 默认不直接改主工作区
-- worktree / workspace 清理可回收
-- review 基于明确输入源工作，而不是共享脏工作区
+**核心规则**：core 只提供"如何安全地起一个隔离 sub-agent"和"如何管理工作区"这两件事；任何"角色"、"状态机"、"团队产品形态"都属于扩展层的产品决策。
 
 ---
 
-## 十、最终判断
+## 五、目录草图
 
-当前 nanoPencil 的 `/agent team` 已经证明了这个方向是对的：
+### 阶段 A 完成后
 
-- 用户愿意显式触发 Team
-- planner + 并行 research + 报告 的体验已经成立
+```text
+core/
+  runtime/
+    sdk.ts                       # +AbortSignal 透传
+    agent-session.ts
+  sub-agent/                     # 新
+    sub-agent-runtime.ts
+    sub-agent-backend.ts
+    sub-agent-types.ts
+  workspace/                     # 新
+    worktree-manager.ts
+  tools/
+    index.ts                     # 强化 createReadOnlyTools
 
-但它还停留在：
+extensions/defaults/subagent/    # 替换原 team/
+  index.ts
+  subagent-parser.ts
+  subagent-runner.ts
+  subagent-renderer.ts
+```
 
-- “扩展层 orchestration”
+### 阶段 B 完成后
 
-而不是：
+```text
+core/
+  sub-agent/                     # 同上，可能新增 subprocess backend
+  workspace/
+    worktree-manager.ts          # 增强 git worktree 支持
 
-- “原生 Team Runtime”
+extensions/defaults/subagent/    # 维持
+extensions/defaults/team/        # 新（与阶段 A 的 subagent 并存）
+  index.ts
+  team-parser.ts
+  team-renderer.ts
+  team-runtime.ts
+  team-state-store.ts
+  team-mailbox.ts
+  team-permissions.ts
+```
 
-与 `/root/workspace/free-code` 的参考实现相比，nanoPencil 下一步最关键的不是继续给 `/agent team` 添加更多 role，而是先补上下面四个基础能力：
+阶段 B 落地后，`/subagent` 与 `/team` 是两个独立产品：前者适合一次性多 worker 任务，后者适合长期协作。它们共享 `core/sub-agent/` 与 `core/workspace/` 的基础设施。
 
-1. teammate state
-2. stop / recovery
-3. mailbox / permission sync
-4. worktree isolation
+---
 
-只有完成这四项，Agent Team 才能真正承担稳定的多智能体执行任务。
+## 六、与旧方案的差异
+
+| 维度 | 旧方案 | 本方案 |
+|---|---|---|
+| 概念 | 把 SubAgent 与 AgentTeam 混叫 team | 明确区分，分两阶段交付 |
+| 命令 | `/agent team ...`（带空格） | `/subagent` / `/team`，冒号分隔子命令 |
+| core 边界 | 把 team 编排逻辑下沉到 `core/team/` | core 只下沉 SubAgent runtime + workspace；team 编排留扩展 |
+| 隔离时机 | P5（最后阶段才做） | 阶段 A 就交付最小隔离（临时工作区） |
+| stop 修复 | P0 提到，但未明确 SDK 改动 | 阶段 A 第一项就是 SDK 的 `AbortSignal` 透传 |
+| Permission vs Mailbox 顺序 | mailbox 先 | permission 先冻结，再做 mailbox |
+| Teammate 持久化 vs SessionManager | 未明确 | 明确 team-state-store 自管，不复用 SessionManager |
+
+---
+
+## 七、实施顺序速查
+
+### 阶段 A（必做）
+
+1. `core/runtime/sdk.ts` 加 `AbortSignal` 透传 + 单测
+2. `core/sub-agent/` 接口与 in-process backend
+3. `core/workspace/` 临时工作区
+4. `core/tools/` 强化 read-only 边界 + bash 沙箱
+5. 删除 `extensions/defaults/team/`，新建 `extensions/defaults/subagent/`
+6. 砍掉 `auto` 模式自决定写代码的分支
+7. 验收 M-A
+
+### 阶段 B（可独立决策）
+
+1. 冻结 teammate 持久化归属（team-state-store 自管）
+2. teammate identity / runtime / state-store
+3. permission model（先于 mailbox 完整化）
+4. mailbox 协议
+5. 完整 worktree 集成
+6. subprocess backend
+7. 观察 / 调试 / 测试
+8. 验收 M-B
+
+---
+
+**Covenant**: 阶段 A 完成 ≠ 拥有 AgentTeam。任何宣传"team"能力的文档、UI、命令必须等到阶段 B 验收通过后才能上线。

@@ -2895,6 +2895,11 @@ export class InteractiveMode {
       clear();
       return true;
     }
+    if (text === "/reinstall") {
+      this.handleReinstallCommand();
+      clear();
+      return true;
+    }
     if (text === "/compact" || text.startsWith("/compact ")) {
       const customInstructions = text.startsWith("/compact ")
         ? text.slice(9).trim()
@@ -6833,6 +6838,111 @@ export class InteractiveMode {
   }
 
   /**
+   * Handle /reinstall command - force clean reinstall.
+   */
+  private handleReinstallCommand(): void {
+    this.chatContainer.addChild(new Spacer(1));
+    this.chatContainer.addChild(
+      new Text(theme.fg("accent", "🔄 Force Reinstalling NanoPencil..."), 1, 0),
+    );
+    this.chatContainer.addChild(
+      new Text(
+        theme.fg("dim", "This will uninstall and reinstall with cache cleared."),
+        1,
+        0,
+      ),
+    );
+    this.ui.requestRender();
+
+    const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+
+    // Step 1: Uninstall
+    const uninstall = spawn(npmCmd, ["uninstall", "-g", PACKAGE_NAME], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    uninstall.on("close", (code) => {
+      if (code !== 0) {
+        this.chatContainer.addChild(
+          new Text(theme.fg("warning", `⚠️  Uninstall failed (exit code ${code}), continuing anyway...`), 1, 0),
+        );
+        this.ui.requestRender();
+      }
+
+      // Step 2: Clear cache
+      this.chatContainer.addChild(
+        new Text(theme.fg("dim", "🧹 Clearing npm cache..."), 1, 0),
+      );
+      this.ui.requestRender();
+
+      const cacheClean = spawn(npmCmd, ["cache", "clean", "--force"], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      cacheClean.on("close", () => {
+        // Step 3: Reinstall
+        this.chatContainer.addChild(
+          new Text(theme.fg("dim", "📦 Installing latest version..."), 1, 0),
+        );
+        this.ui.requestRender();
+
+        const install = spawn(npmCmd, ["install", "-g", "--force", `${PACKAGE_NAME}@latest`], {
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+
+        install.on("close", (installCode) => {
+          if (installCode === 0) {
+            this.chatContainer.addChild(
+              new Text(theme.fg("success", "✅ NanoPencil reinstalled successfully!"), 1, 0),
+            );
+            this.chatContainer.addChild(
+              new Text(theme.fg("accent", "Press 'R' to restart NanoPencil"), 1, 0),
+            );
+            this.ui.requestRender();
+
+            // Wait for R to restart
+            const waitForRestart = async () => {
+              const key = await this.waitForKeyPress(["r", "R", "q", "Q", "\x03"] as const);
+              if (key === "r" || key === "R") {
+                this.restartNanoPencil();
+              } else {
+                process.exit(0);
+              }
+            };
+            waitForRestart();
+          } else {
+            this.chatContainer.addChild(
+              new Text(theme.fg("warning", `⚠️  Reinstall failed (exit code ${installCode})`), 1, 0),
+            );
+            this.chatContainer.addChild(
+              new Text(
+                theme.fg("dim", "Try running manually: npm uninstall -g @pencil-agent/nano-pencil && npm install -g @pencil-agent/nano-pencil"),
+                1,
+                0,
+              ),
+            );
+            this.ui.requestRender();
+          }
+        });
+
+        install.on("error", (err) => {
+          this.chatContainer.addChild(
+            new Text(theme.fg("warning", `⚠️  Install failed: ${err.message}`), 1, 0),
+          );
+          this.ui.requestRender();
+        });
+      });
+    });
+
+    uninstall.on("error", (err) => {
+      this.chatContainer.addChild(
+        new Text(theme.fg("warning", `⚠️  Uninstall failed: ${err.message}`), 1, 0),
+      );
+      this.ui.requestRender();
+    });
+  }
+
+  /**
    * Perform the actual npm install update.
    */
   private async performUpdate(latestVersion: string, retryCount = 0): Promise<void> {
@@ -6844,7 +6954,7 @@ export class InteractiveMode {
 
     return new Promise((resolve) => {
       const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-      const child = spawn(npmCmd, ["install", "-g", `${PACKAGE_NAME}@latest`], {
+      const child = spawn(npmCmd, ["install", "-g", "--force", `${PACKAGE_NAME}@latest`], {
         stdio: ["ignore", "pipe", "pipe"],
       });
 

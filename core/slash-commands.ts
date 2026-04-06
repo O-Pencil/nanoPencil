@@ -45,6 +45,7 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
 	{ name: "logout", descriptionKey: "slash.logout" },
 	{ name: "new", descriptionKey: "slash.new" },
 	{ name: "update", descriptionKey: "slash.update" },
+		{ name: "reinstall", descriptionKey: "slash.reinstall" },
 	{ name: "compact", descriptionKey: "slash.compact" },
 	{ name: "resume", descriptionKey: "slash.resume" },
 	{ name: "reload", descriptionKey: "slash.reload" },

@@ -113,6 +113,10 @@ export interface Settings {
 			lockStaleMinutes?: number;
 		};
 	};
+	/** Auto-update setting: 'always' = auto-update on startup, 'prompt' = ask user (default), 'never' = never check */
+	autoUpdate?: "always" | "prompt" | "never";
+	/** Last skipped version for update prompts */
+	skippedVersion?: string;
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -960,5 +964,25 @@ export class SettingsManager {
 
 	getCodeBlockIndent(): string {
 		return this.settings.markdown?.codeBlockIndent ?? "  ";
+	}
+
+	getAutoUpdate(): "always" | "prompt" | "never" {
+		return this.settings.autoUpdate ?? "prompt";
+	}
+
+	setAutoUpdate(mode: "always" | "prompt" | "never"): void {
+		this.globalSettings.autoUpdate = mode;
+		this.markModified("autoUpdate");
+		this.save();
+	}
+
+	getSkippedVersion(): string | undefined {
+		return this.settings.skippedVersion;
+	}
+
+	setSkippedVersion(version: string | undefined): void {
+		this.globalSettings.skippedVersion = version;
+		this.markModified("skippedVersion");
+		this.save();
 	}
 }

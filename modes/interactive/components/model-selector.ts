@@ -374,36 +374,60 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	}
 
 	private async handleSelect(model: Model<any>): Promise<void> {
-		if (this.ensureProviderConfigured) {
-			const ready = await this.ensureProviderConfigured(model);
-			if (!ready) return;
-			this.modelRegistry.refresh();
-		}
+		try {
+			if (this.ensureProviderConfigured) {
+				const ready = await this.ensureProviderConfigured(model);
+				if (!ready) {
+					this.onCancelCallback();
+					return;
+				}
+				this.modelRegistry.refresh();
+			}
 
-		if (!this.modelRegistry.authStorage.hasAuth(model.provider)) {
-			const providerHints: Record<string, string> = {
-				"dashscope-coding": "DashScope API key (sk-sp-...)",
-				"qianfan-coding": "Qianfan API key",
-				"ark-coding": "Ark API key",
-				openrouter: "OpenRouter API key",
-			};
-			const prompt = providerHints[model.provider] ?? `${model.provider} API key`;
-			const key = await promptForApiKey({ prompt: `Enter ${prompt}` });
-			if (!key) return;
-			this.modelRegistry.authStorage.set(model.provider, {
-				type: "api_key",
-				key,
-			});
-			this.modelRegistry.refresh();
-		}
+			// Use async getApiKey to validate OAuth tokens (hasAuth is sync and doesn't refresh)
+			const apiKey = await this.modelRegistry.authStorage.getApiKey(model.provider);
+			if (!apiKey) {
+				// Check if this is an OAuth provider with expired/invalid token
+				const cred = this.modelRegistry.authStorage.get(model.provider);
+				if (cred?.type === "oauth") {
+					// OAuth token expired or refresh failed - prompt user to re-login
+					// Note: onSelectCallback will handle showing error and suggesting /login
+					this.onSelectCallback(model);
+					return;
+				}
 
-		const refreshedModel =
-			this.modelRegistry.find(model.provider, model.id) ?? model;
-		this.settingsManager.setDefaultModelAndProvider(
-			refreshedModel.provider,
-			refreshedModel.id,
-		);
-		this.onSelectCallback(refreshedModel);
+				// Non-OAuth provider without key - prompt for API key input
+				const providerHints: Record<string, string> = {
+					"dashscope-coding": "DashScope API key (sk-sp-...)",
+					"qianfan-coding": "Qianfan API key",
+					"ark-coding": "Ark API key",
+					openrouter: "OpenRouter API key",
+				};
+				const prompt = providerHints[model.provider] ?? `${model.provider} API key`;
+				const key = await promptForApiKey({ prompt: `Enter ${prompt}` });
+				if (!key) {
+					this.onCancelCallback();
+					return;
+				}
+				this.modelRegistry.authStorage.set(model.provider, {
+					type: "api_key",
+					key,
+				});
+				this.modelRegistry.refresh();
+			}
+
+			const refreshedModel =
+				this.modelRegistry.find(model.provider, model.id) ?? model;
+			this.settingsManager.setDefaultModelAndProvider(
+				refreshedModel.provider,
+				refreshedModel.id,
+			);
+			this.onSelectCallback(refreshedModel);
+		} catch (error) {
+			// Ensure selector is closed on any error
+			this.onCancelCallback();
+			throw error;
+		}
 	}
 
 	getSearchInput(): Input {

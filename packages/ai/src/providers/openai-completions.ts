@@ -39,6 +39,7 @@ import { sanitizeSurrogates } from "../utils/sanitize-unicode.js";
 import { buildCopilotDynamicHeaders, hasCopilotVisionInput } from "./github-copilot-headers.js";
 import { buildBaseOptions, clampReasoning } from "./simple-options.js";
 import { transformMessages } from "./transform-messages.js";
+import { getDebugLogger } from "../debug-logger.js";
 
 /**
  * Normalize tool call ID for Mistral.
@@ -113,6 +114,11 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 			const client = createClient(model, context, apiKey, options?.headers);
 			const params = buildParams(model, context, options);
 			options?.onPayload?.(params);
+
+			// Log the request for debugging
+			const debugLogger = getDebugLogger();
+			debugLogger.logProviderRequest(model.provider || "unknown", model.id || "unknown", params);
+
 			const openaiStream = await client.chat.completions.create(params, { signal: options?.signal });
 			stream.push({ type: "start", partial: output });
 
@@ -148,7 +154,18 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 				}
 			};
 
+			// For handling MiniMax-style <thinking> tags in content stream
+			let contentBuffer = "";
+			let inThinkingTag = false;
+
+			// Provider info for debug logging
+			const providerName = model.provider || "unknown";
+			const modelName = model.id || "unknown";
+
 			for await (const chunk of openaiStream) {
+				// Log each chunk for debugging
+				debugLogger.logProviderChunk(providerName, modelName, chunk);
+
 				if (chunk.usage) {
 					const cachedTokens = chunk.usage.prompt_tokens_details?.cached_tokens || 0;
 					const reasoningTokens = chunk.usage.completion_tokens_details?.reasoning_tokens || 0;
@@ -182,26 +199,151 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 				}
 
 				if (choice.delta) {
+					// Log delta content for debugging
+					if (choice.delta.content !== undefined || choice.delta.tool_calls !== undefined) {
+						debugLogger.logContentParse("choice.delta", {
+							content: choice.delta.content,
+							tool_calls: choice.delta.tool_calls,
+							reasoning_content: (choice.delta as any).reasoning_content,
+							reasoning: (choice.delta as any).reasoning,
+						});
+					}
+
 					if (
 						choice.delta.content !== null &&
 						choice.delta.content !== undefined &&
 						choice.delta.content.length > 0
 					) {
-						if (!currentBlock || currentBlock.type !== "text") {
-							finishCurrentBlock(currentBlock);
-							currentBlock = { type: "text", text: "" };
-							output.content.push(currentBlock);
-							stream.push({ type: "text_start", contentIndex: blockIndex(), partial: output });
-						}
+						// Add new content to buffer and process for <thinking> tags
+						contentBuffer += choice.delta.content;
 
-						if (currentBlock.type === "text") {
-							currentBlock.text += choice.delta.content;
-							stream.push({
-								type: "text_delta",
-								contentIndex: blockIndex(),
-								delta: choice.delta.content,
-								partial: output,
-							});
+						// Process content buffer, handling <thinking>...</thinking> tags
+						while (contentBuffer.length > 0) {
+							if (inThinkingTag) {
+								// Check for closing tags: </thinking>, </think>
+								const closingTags = ["</thinking>", "</think>"];
+								let endIndex = -1;
+								let matchedClosingTagLength = 0;
+								for (const tag of closingTags) {
+									const idx = contentBuffer.indexOf(tag);
+									if (idx !== -1 && (endIndex === -1 || idx < endIndex)) {
+										endIndex = idx;
+										matchedClosingTagLength = tag.length;
+									}
+								}
+								if (endIndex !== -1) {
+									const thinkingContent = contentBuffer.slice(0, endIndex);
+									if (thinkingContent) {
+										if (!currentBlock || currentBlock.type !== "thinking") {
+											finishCurrentBlock(currentBlock);
+											currentBlock = {
+												type: "thinking",
+												thinking: "",
+												thinkingSignature: "minimax-thinking-tag",
+											};
+											output.content.push(currentBlock);
+											stream.push({ type: "thinking_start", contentIndex: blockIndex(), partial: output });
+										}
+										if (currentBlock.type === "thinking") {
+											currentBlock.thinking += thinkingContent;
+											stream.push({
+												type: "thinking_delta",
+												contentIndex: blockIndex(),
+												delta: thinkingContent,
+												partial: output,
+											});
+										}
+									}
+									contentBuffer = contentBuffer.slice(endIndex + matchedClosingTagLength);
+									inThinkingTag = false;
+									// Finish thinking block
+									if (currentBlock && currentBlock.type === "thinking") {
+										finishCurrentBlock(currentBlock);
+										currentBlock = null;
+									}
+								} else {
+									// Still in thinking, consume all buffer content
+									const thinkingContent = contentBuffer;
+									contentBuffer = "";
+									if (!currentBlock || currentBlock.type !== "thinking") {
+										finishCurrentBlock(currentBlock);
+										currentBlock = {
+											type: "thinking",
+											thinking: "",
+											thinkingSignature: "minimax-thinking-tag",
+										};
+										output.content.push(currentBlock);
+										stream.push({ type: "thinking_start", contentIndex: blockIndex(), partial: output });
+									}
+									if (currentBlock.type === "thinking") {
+										currentBlock.thinking += thinkingContent;
+										stream.push({
+											type: "thinking_delta",
+											contentIndex: blockIndex(),
+											delta: thinkingContent,
+											partial: output,
+										});
+									}
+								}
+							} else {
+								// Not in thinking tag, check for opening tag
+								// Support: <thinking>, <think>
+								const openingTags = ["<thinking>", "<think>"];
+								let startIndex = -1;
+								let matchedOpeningTagLength = 0;
+								for (const tag of openingTags) {
+									const idx = contentBuffer.indexOf(tag);
+									if (idx !== -1 && (startIndex === -1 || idx < startIndex)) {
+										startIndex = idx;
+										matchedOpeningTagLength = tag.length;
+									}
+								}
+								if (startIndex !== -1) {
+									// Found thinking tag
+									// Process any text before the tag
+									const textBefore = contentBuffer.slice(0, startIndex);
+									contentBuffer = contentBuffer.slice(startIndex + matchedOpeningTagLength);
+									inThinkingTag = true;
+
+									if (textBefore) {
+										if (!currentBlock || currentBlock.type !== "text") {
+											finishCurrentBlock(currentBlock);
+											currentBlock = { type: "text", text: "" };
+											output.content.push(currentBlock);
+											stream.push({ type: "text_start", contentIndex: blockIndex(), partial: output });
+										}
+										if (currentBlock.type === "text") {
+											currentBlock.text += textBefore;
+											stream.push({
+												type: "text_delta",
+												contentIndex: blockIndex(),
+												delta: textBefore,
+												partial: output,
+											});
+										}
+									}
+									// Continue to process the content after <thinking> in next iteration
+								} else {
+									// No <thinking> tag found, treat as regular text
+									const textContent = contentBuffer;
+									contentBuffer = "";
+									if (!currentBlock || currentBlock.type !== "text") {
+										finishCurrentBlock(currentBlock);
+										currentBlock = { type: "text", text: "" };
+										output.content.push(currentBlock);
+										stream.push({ type: "text_start", contentIndex: blockIndex(), partial: output });
+									}
+									if (currentBlock.type === "text") {
+										currentBlock.text += textContent;
+										stream.push({
+											type: "text_delta",
+											contentIndex: blockIndex(),
+											delta: textContent,
+											partial: output,
+										});
+									}
+								}
+							}
 						}
 					}
 

@@ -1,6 +1,6 @@
 {
   "name": "@pencil-agent/nano-pencil",
-  "version": "1.11.33",
+  "version": "1.11.34",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Based on pi; supports DashScope Coding Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
@@ -31,7 +31,7 @@
     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
     "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run changelog && npm run build",
     "changelog": "node scripts/generate-changelog.js",
     "release": "npm run changelog && npm version patch && npm publish"
   },
@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.16.1",
+    "@mariozechner/clipboard": "^0.3.2",
     "@mariozechner/jiti": "^2.6.2",
     "@silvia-odwyer/photon-node": "^0.3.4",
     "chalk": "^5.5.0",
@@ -90,7 +91,8 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "@types/node": "^22.15.0"
+    "@types/node": "^22.15.0",
+    "zod": "^4.3.6"
   },
   "piConfig": {
     "name": "nanopencil",

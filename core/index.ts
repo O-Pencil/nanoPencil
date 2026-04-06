@@ -74,6 +74,14 @@ export {
 
 // MCP (Model Context Protocol) support
 export { MCPManager } from "./mcp-manager.js";
+
+// Debug logging (re-exported from ai package)
+export {
+	getDebugLogger,
+	createDebugLogger,
+	debug,
+	type DebugLogLevel,
+} from "../packages/ai/dist/debug-logger.js";
 export type {
   MCPServerConfig,
   MCPTool,

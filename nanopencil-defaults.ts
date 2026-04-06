@@ -31,6 +31,10 @@ const MINIMAX_CODING_BASE_URL = "https://api.minimaxi.com/v1";
 export const NANOPENCIL_ZHIPU_CODING_PROVIDER = "zhipu-coding";
 const ZHIPU_CODING_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
 
+/** Custom Anthropic-compatible provider; users may set baseUrl and apiKey for third-party Anthropic-compatible services. */
+export const NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER = "anthropic-custom";
+const ANTHROPIC_CUSTOM_DEFAULT_BASE_URL = "https://api.anthropic.com";
+
 /** Ollama local model provider, consistent with pi docs: baseUrl with /v1, apiKey can be any value. */
 export const NANOPENCIL_OLLAMA_PROVIDER = "ollama";
 const OLLAMA_BASE_URL = "http://localhost:11434/v1";
@@ -285,6 +289,40 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
+		[NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER]: {
+			baseUrl: ANTHROPIC_CUSTOM_DEFAULT_BASE_URL,
+			api: "anthropic-messages",
+			models: [
+				{
+					id: "claude-sonnet-4-20250514",
+					name: "Claude Sonnet 4",
+					input: ["text", "image"],
+					contextWindow: 200000,
+					maxTokens: 16384,
+				},
+				{
+					id: "claude-opus-4-20250514",
+					name: "Claude Opus 4",
+					input: ["text", "image"],
+					contextWindow: 200000,
+					maxTokens: 32000,
+				},
+				{
+					id: "claude-3-5-sonnet-20241022",
+					name: "Claude 3.5 Sonnet",
+					input: ["text", "image"],
+					contextWindow: 200000,
+					maxTokens: 8192,
+				},
+				{
+					id: "claude-3-5-haiku-20241022",
+					name: "Claude 3.5 Haiku",
+					input: ["text", "image"],
+					contextWindow: 200000,
+					maxTokens: 8192,
+				},
+			],
+		},
 		[NANOPENCIL_OLLAMA_PROVIDER]: {
 			baseUrl: OLLAMA_BASE_URL,
 			api: "openai-completions",
@@ -321,6 +359,12 @@ const DEFAULT_MINIMAX_MODELS: MinimaxModelDef[] = [
 
 const DEFAULT_ZHIPU_MODELS: ZhipuModelDef[] = [
 	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ZHIPU_CODING_PROVIDER].models,
+];
+
+type AnthropicCustomModelDef =
+	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER]["models"][number];
+const DEFAULT_ANTHROPIC_CUSTOM_MODELS: AnthropicCustomModelDef[] = [
+	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER].models,
 ];
 
 type OllamaModelDef =

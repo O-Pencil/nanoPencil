@@ -21,7 +21,8 @@
     "dist/**/*.css",
     "docs",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "node_modules/zod"
   ],
   "scripts": {
     "dev": "tsx cli.ts",
@@ -84,7 +85,8 @@
   "bundledDependencies": [
     "@pencil-agent/agent-core",
     "@pencil-agent/ai",
-    "@pencil-agent/tui"
+    "@pencil-agent/tui",
+    "zod"
   ],
   "devDependencies": {
     "@types/hosted-git-info": "^3.0.5",
@@ -110,6 +112,7 @@
   "bundleDependencies": [
     "@pencil-agent/agent-core",
     "@pencil-agent/ai",
-    "@pencil-agent/tui"
+    "@pencil-agent/tui",
+    "zod"
   ]
 }

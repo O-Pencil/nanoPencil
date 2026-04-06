@@ -4,7 +4,10 @@
 tsconfig.json
 
 # Build and development
-node_modules/
+# Allow packing bundled peer deps (zod for @agentclientprotocol/sdk); see package.json bundledDependencies + files
+node_modules/*
+!node_modules/zod/
+!node_modules/zod/**
 dist/
 .git/
 .gitignore

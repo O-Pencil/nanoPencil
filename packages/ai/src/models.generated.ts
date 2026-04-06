@@ -3480,8 +3480,8 @@ export const MODELS = {
 			contextWindow: 131072,
 			maxTokens: 8192,
 		} satisfies Model<"google-generative-ai">,
-		"gemma-4-26b-it": {
-			id: "gemma-4-26b-it",
+		"gemma-4-26b": {
+			id: "gemma-4-26b",
 			name: "Gemma 4 26B",
 			api: "google-generative-ai",
 			provider: "google",
@@ -3497,8 +3497,8 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 8192,
 		} satisfies Model<"google-generative-ai">,
-		"gemma-4-31b-it": {
-			id: "gemma-4-31b-it",
+		"gemma-4-31b": {
+			id: "gemma-4-31b",
 			name: "Gemma 4 31B",
 			api: "google-generative-ai",
 			provider: "google",
@@ -7793,6 +7793,23 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 80000,
 		} satisfies Model<"openai-completions">,
+		"kwaipilot/kat-coder-pro-v2": {
+			id: "kwaipilot/kat-coder-pro-v2",
+			name: "Kwaipilot: KAT-Coder-Pro V2",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: false,
+			input: ["text"],
+			cost: {
+				input: 0.3,
+				output: 1.2,
+				cacheRead: 0.06,
+				cacheWrite: 0,
+			},
+			contextWindow: 256000,
+			maxTokens: 80000,
+		} satisfies Model<"openai-completions">,
 		"meituan/longcat-flash-chat": {
 			id: "meituan/longcat-flash-chat",
 			name: "Meituan: LongCat Flash Chat",
@@ -10411,8 +10428,8 @@ export const MODELS = {
 			contextWindow: 131072,
 			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
-		"rekaai/reka-edge": {
-			id: "rekaai/reka-edge",
+		"reka/reka-edge": {
+			id: "reka/reka-edge",
 			name: "Reka Edge",
 			api: "openai-completions",
 			provider: "openrouter",
@@ -11779,7 +11796,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: false,
+			reasoning: true,
 			input: ["text", "image"],
 			cost: {
 				input: 0.13,
@@ -11796,7 +11813,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: false,
+			reasoning: true,
 			input: ["text", "image"],
 			cost: {
 				input: 0.14,

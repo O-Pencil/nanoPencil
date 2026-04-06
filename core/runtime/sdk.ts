@@ -96,6 +96,9 @@ export interface CreateAgentSessionOptions {
 
   /** Settings manager. Default: SettingsManager.create(cwd, agentDir) */
   settingsManager?: SettingsManager;
+
+  /** External abort signal for stopping the session (e.g., from SubAgent runtime) */
+  signal?: AbortSignal;
 }
 
 /** Result from createAgentSession */
@@ -511,6 +514,7 @@ export async function createAgentSession(
     extensionRunnerRef,
     soulManager,
     soulManagerFactory,
+    signal: options.signal,
   });
 
   const extensionsResult = resourceLoader.getExtensions();

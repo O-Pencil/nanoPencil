@@ -7,6 +7,7 @@
 
 export {
 	type BashOperations,
+	type BashSandboxOptions,
 	type BashSpawnContext,
 	type BashSpawnHook,
 	type BashToolDetails,
@@ -14,6 +15,7 @@ export {
 	type BashToolOptions,
 	bashTool,
 	createBashTool,
+	createSandboxHook,
 } from "./bash.js";
 export {
 	createEditTool,

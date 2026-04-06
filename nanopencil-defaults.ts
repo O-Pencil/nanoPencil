@@ -23,9 +23,9 @@ const QIANFAN_CODING_BASE_URL = "https://qianfan.baidubce.com/v2/coding";
 export const NANOPENCIL_ARK_CODING_PROVIDER = "ark-coding";
 const ARK_CODING_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3";
 
-/** MiniMax Coding Plan provider，兼容 Anthropic 接口：https://api.minimaxi.com/anthropic */
+/** MiniMax Coding Plan provider，兼容 OpenAI 接口：https://api.minimaxi.com/v1 */
 export const NANOPENCIL_MINIMAX_CODING_PROVIDER = "minimax-coding";
-const MINIMAX_CODING_BASE_URL = "https://api.minimaxi.com/anthropic";
+const MINIMAX_CODING_BASE_URL = "https://api.minimaxi.com/v1";
 
 /** 智谱 Coding Plan provider，兼容 OpenAI 接口：https://open.bigmodel.cn/api/paas/v4 */
 export const NANOPENCIL_ZHIPU_CODING_PROVIDER = "zhipu-coding";

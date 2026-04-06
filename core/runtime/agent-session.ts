@@ -40,6 +40,20 @@ import { getDocsPath } from "../../config.js";
 import { theme } from "../../modes/interactive/theme/theme.js";
 import { stripFrontmatter } from "../../utils/frontmatter.js";
 import { sleep } from "../utils/sleep.js";
+
+/**
+ * Custom error for model cycling with additional context.
+ */
+export class CycleModelError extends Error {
+  constructor(
+    message: string,
+    public readonly provider?: string,
+    public readonly code?: "oauth_expired" | "no_valid_key" | "api_error",
+  ) {
+    super(message);
+    this.name = "CycleModelError";
+  }
+}
 import {
   type BashResult,
   executeBash as executeBashCommand,
@@ -1631,7 +1645,8 @@ export class AgentSession {
   private async _cycleAvailableModel(
     direction: "forward" | "backward",
   ): Promise<ModelCycleResult | undefined> {
-    const availableModels = await this._modelRegistry.getAvailable();
+    // Use getAvailableAsync to pre-filter models with invalid OAuth tokens
+    const availableModels = await this._modelRegistry.getAvailableAsync();
     if (availableModels.length <= 1) return undefined;
 
     const currentModel = this.model;
@@ -1641,15 +1656,50 @@ export class AgentSession {
 
     if (currentIndex === -1) currentIndex = 0;
     const len = availableModels.length;
-    const nextIndex =
-      direction === "forward"
-        ? (currentIndex + 1) % len
-        : (currentIndex - 1 + len) % len;
-    const nextModel = availableModels[nextIndex];
 
-    const apiKey = await this._modelRegistry.getApiKey(nextModel);
-    if (!apiKey) {
-      throw new Error(`No API key for ${nextModel.provider}/${nextModel.id}`);
+    // Find next model with valid API key, skipping expired OAuth tokens
+    // Start from nextIndex and loop through all models
+    const startIndex = currentIndex;
+    let nextIndex = currentIndex;
+    let attempts = 0;
+    let nextModel: Model<any> | undefined;
+    let apiKey: string | undefined;
+
+    while (attempts < len - 1) {
+      attempts++;
+      nextIndex =
+        direction === "forward"
+          ? (nextIndex + 1) % len
+          : (nextIndex - 1 + len) % len;
+
+      const candidate = availableModels[nextIndex];
+      if (!candidate) continue;
+
+      // Use async getApiKey to validate OAuth tokens
+      apiKey = await this._modelRegistry.getApiKey(candidate);
+      if (apiKey) {
+        nextModel = candidate;
+        break;
+      }
+      // No valid key - skip this model and continue cycling
+    }
+
+    if (!nextModel || !apiKey) {
+      // No models have valid API keys (all OAuth tokens expired or no keys)
+      const provider = currentModel?.provider;
+      const cred = provider ? this._modelRegistry.authStorage.get(provider) : undefined;
+      if (cred?.type === "oauth") {
+        throw new CycleModelError(
+          `All available models have expired OAuth tokens. Use /login ${provider} to re-authenticate.`,
+          provider,
+          "oauth_expired",
+        );
+      }
+      throw new CycleModelError(
+        `No models with valid API keys available`,
+        provider,
+        "no_valid_key",
+      );
     }
 
     this.agent.setModel(nextModel);

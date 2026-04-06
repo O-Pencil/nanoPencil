@@ -34,12 +34,18 @@ const DEFAULT_OPTIONS: Required<ImageResizeOptions> = {
 	jpegQuality: 80,
 };
 
-/** Helper to pick the smaller of two buffers */
+/** Helper to pick the smaller of two buffers, copying to JS heap memory.
+ * This prevents use-after-free when WASM memory is freed after resized.free().
+ */
 function pickSmaller(
 	a: { buffer: Uint8Array; mimeType: string },
 	b: { buffer: Uint8Array; mimeType: string },
 ): { buffer: Uint8Array; mimeType: string } {
-	return a.buffer.length <= b.buffer.length ? a : b;
+	if (a.buffer.length <= b.buffer.length) {
+		// Copy to new Uint8Array to detach from WASM memory
+		return { buffer: new Uint8Array(a.buffer), mimeType: a.mimeType };
+	}
+	return { buffer: new Uint8Array(b.buffer), mimeType: b.mimeType };
 }
 
 /**

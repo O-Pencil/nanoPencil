@@ -59,6 +59,9 @@ export class SoulStore {
 				return null;
 			}
 			const raw = await readFile(this.profilePath, "utf-8");
+			if (!raw.trim()) {
+				return null;
+			}
 			const data = JSON.parse(raw);
 			// Convert date strings back to Date objects
 			data.createdAt = new Date(data.createdAt);
@@ -73,7 +76,10 @@ export class SoulStore {
 			data.stats.lastUpdate = new Date(data.stats.lastUpdate);
 			return data as SoulProfile;
 		} catch (error) {
-			console.warn("Failed to load Soul profile:", error);
+			const msg = error instanceof Error ? error.message : String(error);
+			console.warn(
+				`Failed to load Soul profile (${this.profilePath}): ${msg}. Using a fresh profile.`,
+			);
 			return null;
 		}
 	}
@@ -100,6 +106,14 @@ export class SoulStore {
 				};
 			}
 			const raw = await readFile(this.memoryPath, "utf-8");
+			if (!raw.trim()) {
+				return {
+					successes: [],
+					failures: [],
+					patterns: [],
+					decisions: [],
+				};
+			}
 			const data = JSON.parse(raw);
 			// Convert date strings back to Date objects
 			return {
@@ -155,6 +169,9 @@ export class SoulStore {
 				return [];
 			}
 			const raw = await readFile(this.evolutionsPath, "utf-8");
+			if (!raw.trim()) {
+				return [];
+			}
 			const data = JSON.parse(raw);
 			return data.map((e: any) => ({ ...e, timestamp: new Date(e.timestamp) }));
 		} catch (error) {

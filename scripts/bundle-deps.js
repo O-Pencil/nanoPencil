@@ -5,16 +5,16 @@ import { execSync } from "node:child_process";
 // Packages to bundle to dist/packages/
 const PACKAGES_TO_BUNDLE = ["mem-core", "soul-core"];
 
-// Critical dependencies that must be in top-level node_modules for peerDependency resolution
-// These are dependencies of bundled packages that other packages (like @agentclientprotocol/sdk)
-// declare as peerDependencies
-const CRITICAL_DEPS = [
-  "zod",
-];
-
 function bundleDependencies() {
   const distDir = path.join(process.cwd(), "dist");
   const packagesDir = path.join(process.cwd(), "packages");
+
+  // Legacy copy target; zod is now shipped via package.json bundledDependencies (root node_modules/zod).
+  const staleDistNm = path.join(distDir, "node_modules");
+  if (fs.existsSync(staleDistNm)) {
+    console.log("🧹 Removing stale dist/node_modules (zod is bundled at package root)...\n");
+    fs.rmSync(staleDistNm, { recursive: true, force: true });
+  }
 
   console.log("📦 Bundling packages...\n");
 
@@ -89,105 +89,6 @@ function bundleDependencies() {
   }
 
   console.log("✅ All packages bundled!");
-
-  // Ensure critical dependencies are in dist/node_modules for peerDependency resolution
-  bundleCriticalDependencies(distDir);
-}
-
-/**
- * Bundle critical dependencies that must be resolvable by peerDependency consumers.
- * This ensures packages like @agentclientprotocol/sdk (which declares zod as peerDependency)
- * can find these dependencies at runtime.
- */
-function bundleCriticalDependencies(distDir) {
-  const rootModulesDir = path.join(process.cwd(), "node_modules");
-  const distModulesDir = path.join(distDir, "node_modules");
-
-  console.log("\n📦 Bundling critical dependencies for peerDependency resolution...\n");
-
-  for (const dep of CRITICAL_DEPS) {
-    const srcDepDir = path.join(rootModulesDir, dep);
-    const destDepDir = path.join(distModulesDir, dep);
-
-    if (!fs.existsSync(srcDepDir)) {
-      console.warn(`  ⚠️  Dependency ${dep} not found in node_modules, skipping...`);
-      continue;
-    }
-
-    console.log(`  📋 Copying ${dep} to dist/node_modules/...`);
-
-    // Create destination
-    if (!fs.existsSync(destDepDir)) {
-      fs.mkdirSync(destDepDir, { recursive: true });
-    }
-
-    // Copy package.json
-    const pkgJsonPath = path.join(srcDepDir, "package.json");
-    if (fs.existsSync(pkgJsonPath)) {
-      fs.copyFileSync(pkgJsonPath, path.join(destDepDir, "package.json"));
-    }
-
-    // Copy README and LICENSE if they exist
-    for (const file of ["README.md", "LICENSE"]) {
-      const srcFile = path.join(srcDepDir, file);
-      if (fs.existsSync(srcFile)) {
-        fs.copyFileSync(srcFile, path.join(destDepDir, file));
-      }
-    }
-
-    // Copy main entry point and type definitions
-    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
-    const mainFiles = [];
-
-    // Add main entry
-    if (pkgJson.main) {
-      mainFiles.push(pkgJson.main);
-    }
-    // Add types
-    if (pkgJson.types || pkgJson.typings) {
-      mainFiles.push(pkgJson.types || pkgJson.typings);
-    }
-    // Add exports
-    if (pkgJson.exports) {
-      if (typeof pkgJson.exports === "string") {
-        mainFiles.push(pkgJson.exports);
-      } else if (pkgJson.exports["."]) {
-        const exp = pkgJson.exports["."];
-        if (typeof exp === "string") {
-          mainFiles.push(exp);
-        } else if (exp.import) {
-          mainFiles.push(exp.import);
-        }
-      }
-    }
-
-    // Copy the main directory structure (src, lib, v4, etc.)
-    for (const entry of fs.readdirSync(srcDepDir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        const srcDir = path.join(srcDepDir, entry.name);
-        const destDir = path.join(destDepDir, entry.name);
-
-        // Skip test directories
-        if (entry.name === "test" || entry.name === "tests") {
-          continue;
-        }
-
-        copyDirectory(srcDir, destDir);
-      } else if (entry.isFile()) {
-        const ext = path.extname(entry.name);
-        // Copy JS, TS definition, and JSON files
-        if (ext === ".js" || ext === ".mjs" || ext === ".cjs" ||
-            ext === ".d.ts" || ext === ".d.mts" || ext === ".d.cts" ||
-            ext === ".json") {
-          fs.copyFileSync(path.join(srcDepDir, entry.name), path.join(destDepDir, entry.name));
-        }
-      }
-    }
-
-    console.log(`  ✅ Bundled ${dep}\n`);
-  }
-
-  console.log("✅ All critical dependencies bundled!");
 }
 
 function copyDirectory(src, dest) {

@@ -13,7 +13,7 @@ type PersonaState = {
 };
 
 const PERSONAS_DIR = join(getAgentDir(), "personas");
-// active persona 状态：~/.nanopencil/agent/persona.json
+// active persona state: ~/.nanopencil/agent/persona.json
 const ACTIVE_PERSONA_STATE_PATH = join(getAgentDir(), "persona.json");
 
 function ensurePersonasDir(): void {
@@ -21,7 +21,7 @@ function ensurePersonasDir(): void {
 }
 
 function normalizePersonaId(personaId: string): string {
-	// 允许字母数字下划线短横，但禁止路径穿越
+	// Allow alphanumeric, underscore, and hyphen; prevent path traversal
 	const trimmed = personaId.trim();
 	if (!trimmed) return "general";
 	return trimmed.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -46,7 +46,7 @@ export function getActivePersonaId(): string | undefined {
 export function setActivePersonaId(personaId: string | undefined): void {
 	ensurePersonasDir();
 	if (!personaId) {
-		// 删除状态文件表示回到 general（不启用 persona 覆盖）
+		// Deleting state file means returning to general (disable persona override)
 		try {
 			writeFileSync(ACTIVE_PERSONA_STATE_PATH, JSON.stringify({}, null, 2), "utf-8");
 		} catch {
@@ -58,7 +58,7 @@ export function setActivePersonaId(personaId: string | undefined): void {
 	const normalized = normalizePersonaId(personaId);
 	const personaDir = getPersonaDir(normalized);
 	if (!existsSync(personaDir)) {
-		// 只保证路径存在，避免用户误写导致后续 reload 失败
+		// Ensure path exists to avoid reload failures from user typos
 		mkdirSync(personaDir, { recursive: true });
 	}
 	const state: PersonaState = { activePersonaId: normalized };
@@ -110,7 +110,7 @@ export function getPersonaMcpConfigPath(personaId: string): string {
 }
 
 /**
- * 用于后续环境变量覆盖：把路径解析为绝对路径，避免相对路径在 reload 阶段找不到。
+ * For later environment variable override: resolve path to absolute to avoid relative path issues during reload.
  */
 export function toAbsolutePath(p: string): string {
 	const trimmed = p.trim();

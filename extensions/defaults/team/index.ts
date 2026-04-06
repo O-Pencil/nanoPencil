@@ -47,12 +47,12 @@ const AGENT_TEAM_TRIGGER_PATTERNS = [
 	/\bsub[\s-]?agent(s)?\b/i,
 	/\buse\s+agent\s*team(s)?\b/i,
 	/\buse\s+multi[\s-]?agent\b/i,
-	/多\s*agent/i,
-	/多智能体/i,
-	/多个智能体/i,
-	/使用\s*agent\s*team/i,
-	/使用多智能体/i,
-	/你要用\s*agent\s*team/i,
+	/multi\s*agent/i,
+	/multi-agent/i,
+	/multiple agents/i,
+	/use\s*agent\s*team/i,
+	/use multi-agent/i,
+	/agent team/i,
 ];
 
 const TEAM_TOOL_PARAMS = Type.Object({

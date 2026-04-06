@@ -79,12 +79,12 @@ function formatFullSoul(profile: any, stats: any): string {
 
   const personality = profile.personality;
   const traits = [
-    { key: "openness", label: "开放性", emoji: "🎨" },
-    { key: "conscientiousness", label: "尽责性", emoji: "📋" },
-    { key: "codeVerbosity", label: "代码冗长", emoji: "📝" },
-    { key: "abstractionLevel", label: "抽象层级", emoji: "🏗️" },
-    { key: "safetyMargin", label: "安全边际", emoji: "🛡️" },
-    { key: "explorationDrive", label: "探索欲望", emoji: "🔍" },
+    { key: "openness", label: "Openness", emoji: "🎨" },
+    { key: "conscientiousness", label: "Conscientious", emoji: "📋" },
+    { key: "codeVerbosity", label: "Code Verbosity", emoji: "📝" },
+    { key: "abstractionLevel", label: "Abstraction", emoji: "🏗️" },
+    { key: "safetyMargin", label: "Safety Margin", emoji: "🛡️" },
+    { key: "explorationDrive", label: "Exploration", emoji: "🔍" },
   ];
 
   for (const trait of traits) {
@@ -99,16 +99,16 @@ function formatFullSoul(profile: any, stats: any): string {
 
   const expertise = stats.expertise.slice(0, 5);
   if (expertise.length === 0) {
-    lines.push("║   (暂无专长数据，继续使用以积累)");
+    lines.push("║   (No expertise data yet. Keep using to accumulate.)");
   } else {
     for (const exp of expertise) {
       const confidence = (exp.confidence * 100).toFixed(0).padStart(3);
       const examples = exp.examples.toString().padStart(3);
       const domainStr = typeof exp.domain === "object" && exp.domain !== null
         ? (exp.domain.name || JSON.stringify(exp.domain))
-        : String(exp.domain ?? "未知");
+        : String(exp.domain ?? "Unknown");
       lines.push(
-        `║   • ${domainStr.padEnd(20)} 信心: ${confidence}%  成功: ${examples} 次`,
+        `║   • ${domainStr.padEnd(20)} Confidence: ${confidence}%  Successes: ${examples}`,
       );
     }
   }
@@ -118,10 +118,10 @@ function formatFullSoul(profile: any, stats: any): string {
 
   const emotional = profile.emotionalState;
   const mood = [
-    { label: "信心", value: emotional.confidence, emoji: "😊" },
-    { label: "好奇心", value: emotional.curiosity, emoji: "🤔" },
-    { label: "挫败感", value: emotional.frustration, emoji: "😤" },
-    { label: "心流", value: emotional.flow, emoji: "✨" },
+    { label: "Confidence", value: emotional.confidence, emoji: "😊" },
+    { label: "Curiosity", value: emotional.curiosity, emoji: "🤔" },
+    { label: "Frustration", value: emotional.frustration, emoji: "😤" },
+    { label: "Flow", value: emotional.flow, emoji: "✨" },
   ];
 
   for (const m of mood) {
@@ -133,24 +133,24 @@ function formatFullSoul(profile: any, stats: any): string {
   lines.push("║");
   lines.push("║ 📈 Development Stats");
   lines.push("║ ────────────────────────────────────────────────");
-  lines.push(`║   总交互次数: ${stats.stats.totalInteractions}`);
-  lines.push(`║   成功率: ${(stats.stats.successRate * 100).toFixed(1)}%`);
-  lines.push(`║   Soul 版本: ${profile.version}`);
+  lines.push(`║   Total Interactions: ${stats.stats.totalInteractions}`);
+  lines.push(`║   Success Rate: ${(stats.stats.successRate * 100).toFixed(1)}%`);
+  lines.push(`║   Soul Version: ${profile.version}`);
   lines.push(
-    `║   Soul 年龄: ${Math.floor((Date.now() - profile.createdAt.getTime()) / (1000 * 60 * 60 * 24))} 天`,
+    `║   Soul Age: ${Math.floor((Date.now() - profile.createdAt.getTime()) / (1000 * 60 * 60 * 24))} days`,
   );
-  lines.push(`║   最后进化: ${formatTimeAgo(profile.lastEvolved)}`);
+  lines.push(`║   Last Evolution: ${formatTimeAgo(profile.lastEvolved)}`);
 
   lines.push("║");
   lines.push("║ 🧘 User Relationship");
   lines.push("║ ────────────────────────────────────────────────");
   const rel = profile.userRelationship;
-  lines.push(`║   交互次数: ${rel.interactionCount}`);
-  lines.push(`║   满意度: ${(rel.satisfactionScore * 100).toFixed(0)}%`);
-  lines.push(`   沟通风格: ${rel.communicationStyle}`);
+  lines.push(`║   Interactions: ${rel.interactionCount}`);
+  lines.push(`║   Satisfaction: ${(rel.satisfactionScore * 100).toFixed(0)}%`);
+  lines.push(`   Communication Style: ${rel.communicationStyle}`);
 
   if (rel.knownPreferences.length > 0) {
-    lines.push(`║   已知偏好: ${rel.knownPreferences.slice(0, 3).join(", ")}`);
+    lines.push(`║   Known Preferences: ${rel.knownPreferences.slice(0, 3).join(", ")}`);
   }
 
   lines.push("║");
@@ -169,25 +169,25 @@ function createBar(value: number, width: number): string {
 }
 
 /**
- * Get trait label in Chinese
+ * Get trait label in English
  */
 function getTraitLabel(key: string): string {
   const labels: Record<string, string> = {
-    openness: "开放性",
-    conscientiousness: "尽责性",
-    extraversion: "外向性",
-    agreeableness: "宜人性",
-    neuroticism: "神经质",
-    codeVerbosity: "代码冗长",
-    abstractionLevel: "抽象层级",
-    safetyMargin: "安全边际",
-    explorationDrive: "探索",
+    openness: "Openness",
+    conscientiousness: "Conscientious",
+    extraversion: "Extraversion",
+    agreeableness: "Agreeableness",
+    neuroticism: "Neuroticism",
+    codeVerbosity: "Code Verbosity",
+    abstractionLevel: "Abstraction",
+    safetyMargin: "Safety Margin",
+    explorationDrive: "Exploration",
   };
   return labels[key] || key;
 }
 
 /**
- * Format time ago in Chinese
+ * Format time ago in English
  */
 function formatTimeAgo(date: Date): string {
   const now = Date.now();
@@ -197,8 +197,8 @@ function formatTimeAgo(date: Date): string {
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (hours < 24) return `${hours} 小时前`;
-  return `${days} 天前`;
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
+  if (hours < 24) return `${hours} hours ago`;
+  return `${days} days ago`;
 }

@@ -2525,10 +2525,10 @@ export class InteractiveMode {
         return;
       }
       // Check for /persona command - support both standalone and mixed with other text
-      // e.g., "你好 /persona use coder" should still trigger persona switch
+      // e.g., "Hello /persona use coder" should still trigger persona switch
       const personaMatch = text.match(/\s+\/persona\b/);
       if (personaMatch) {
-        // Persona command is embedded in the message (e.g., "你好 /persona use coder")
+        // Persona command is embedded in the message (e.g., "Hello /persona use coder")
         // Extract the persona command part and also process the rest as user message
         const personaCmd = text.slice(personaMatch.index! + 1);
         const remainingText = text.slice(0, personaMatch.index!).trim();
@@ -4671,7 +4671,7 @@ export class InteractiveMode {
 
     this.session.modelRegistry.refresh();
     try {
-      // Use getAll() so all providers (including 千帆、方舟) appear in /model selector;
+      // Use getAll() so all providers (including Qianfan, Fangzhou) appear in /model selector;
       // user can configure key when selecting a model without auth
       return this.session.modelRegistry.getAll();
     } catch {
@@ -4764,7 +4764,7 @@ export class InteractiveMode {
   }
 
   private async showProviderThenModelSelector(): Promise<void> {
-    // Use getAll() so all providers (千帆、方舟等) appear; user can configure key when selecting
+    // Use getAll() so all providers (Qianfan, Fangzhou, etc.) appear; user can configure key when selecting
     this.session.modelRegistry.refresh();
     const allModels = this.session.modelRegistry.getAll();
     const providers = [...new Set(allModels.map((m) => m.provider))].sort();
@@ -6281,13 +6281,13 @@ export class InteractiveMode {
     if (!soulManager) {
       this.chatContainer.addChild(new Spacer(1));
       this.chatContainer.addChild(
-        new Text(theme.fg("warning", "⚠️  Soul 未启用"), 1, 0),
+        new Text(theme.fg("warning", "⚠️  Soul Not Enabled"), 1, 0),
       );
       this.chatContainer.addChild(
         new Text(
           theme.fg(
             "dim",
-            "Soul (AI 性格系统) 未启用。请确保使用 NanoPencil 1.3.0 或更高版本。",
+            "Soul (AI personality system) is not enabled. Please use NanoPencil 1.3.0 or later.",
           ),
           1,
           0,
@@ -6403,19 +6403,19 @@ export class InteractiveMode {
     const lines: string[] = [];
     lines.push(theme.fg("accent", "📚 Project Memory - NanoMem"));
     lines.push("");
-    lines.push(theme.fg("dim", "存储位置: ~/.nanopencil/agent/memory/"));
-    lines.push(theme.fg("dim", "  - knowledge.json  (项目知识)"));
-    lines.push(theme.fg("dim", "  - lessons.json    (经验教训)"));
-    lines.push(theme.fg("dim", "  - preferences.json (用户偏好)"));
-    lines.push(theme.fg("dim", "  - patterns.json    (行为模式)"));
-    lines.push(theme.fg("dim", "  - facets.json     (模式/困境)"));
+    lines.push(theme.fg("dim", "Storage: ~/.nanopencil/agent/memory/"));
+    lines.push(theme.fg("dim", "  - knowledge.json  (project knowledge)"));
+    lines.push(theme.fg("dim", "  - lessons.json    (lessons learned)"));
+    lines.push(theme.fg("dim", "  - preferences.json (user preferences)"));
+    lines.push(theme.fg("dim", "  - patterns.json    (behavior patterns)"));
+    lines.push(theme.fg("dim", "  - facets.json     (patterns/struggles)"));
     lines.push("");
     lines.push(
-      theme.fg("dim", "💡 提示: NanoMem 自动从对话中提取和记忆项目知识"),
+      theme.fg("dim", "💡 Tip: NanoMem automatically extracts and remembers project knowledge from conversations"),
     );
-    lines.push(theme.fg("dim", "   - 记住 API 端点、配置选项"));
-    lines.push(theme.fg("dim", "   - 学习错误模式和解决方案"));
-    lines.push(theme.fg("dim", "   - 识别用户偏好和编码风格"));
+    lines.push(theme.fg("dim", "   - Remembers API endpoints, configuration options"));
+    lines.push(theme.fg("dim", "   - Learns error patterns and solutions"));
+    lines.push(theme.fg("dim", "   - Recognizes user preferences and coding style"));
 
     this.chatContainer.addChild(new Spacer(1));
     this.chatContainer.addChild(new Text(lines.join("\n"), 1, 0));

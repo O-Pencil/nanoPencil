@@ -1,6 +1,6 @@
 /**
- * link-world 扩展：执行 /link-world 时让 AI 读取同目录下的安装文档并按要求安装。
- * 安装后自动提供 internet-search Skill。
+ * link-world extension: Execute /link-world to let AI read the installation docs in the same directory and install accordingly.
+ * After installation, automatically provides internet-search Skill.
  */
 /**
  * [WHO]: Extension interface
@@ -37,11 +37,11 @@ function getInstallDoc(): string {
 }
 
 /**
- * 检查 agent-reach 是否已安装
+ * Check if agent-reach is installed
  */
 function isAgentReachInstalled(): boolean {
 	try {
-		// 检查 agent-reach CLI 是否可用
+		// Check if agent-reach CLI is available
 		execSync("agent-reach --version", { encoding: "utf-8", stdio: "pipe" });
 		return true;
 	} catch {
@@ -50,11 +50,11 @@ function isAgentReachInstalled(): boolean {
 }
 
 export default function linkWorldExtension(pi: ExtensionAPI) {
-	/** TUI 仅显示简短提示，不展示完整安装文档内容 */
+	/** TUI shows brief prompt only, not full installation doc content */
 	pi.registerMessageRenderer(LINK_WORLD_CUSTOM_TYPE, (message, _options, theme) => {
 		const box = new Box(1, 1, (t) => theme.bg("customMessageBg", t));
 		const label = theme.fg("customMessageLabel", `\x1b[1m[link-world]\x1b[22m `);
-		const text = theme.fg("customMessageText", "开始执行 Link-world...");
+		const text = theme.fg("customMessageText", "Starting Link-world execution...");
 		box.addChild(new Text(label + text, 0, 0));
 		box.addChild(new Spacer(1));
 		const container = new Container();
@@ -63,7 +63,7 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 		return container;
 	});
 
-	// 注册 resources_discover 事件：当 agent-reach 已安装时，提供 internet-search skill
+	// Register resources_discover event: when agent-reach is installed, provide internet-search skill
 	pi.on("resources_discover", async (_event: ResourcesDiscoverEvent): Promise<ResourcesDiscoverResult> => {
 		// Always expose the skill so the model knows how to install or use link-world.
 		// The skill itself checks whether agent-reach is already available.
@@ -71,14 +71,14 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 			return {};
 		}
 
-		// 返回 skill 路径
+		// Return skill path
 		return {
 			skillPaths: [SKILL_PATH],
 		};
 	});
 
 	pi.registerCommand("link-world", {
-		description: "安装 link-world，为 AI 提供互联网访问（Twitter、YouTube、Bilibili、小红书、抖音等）",
+		description: "Install link-world to provide internet access for AI (Twitter, YouTube, Bilibili, Xiaohongshu, Douyin, etc.)",
 		handler: async (_args: string, _ctx: ExtensionCommandContext) => {
 			if (isAgentReachInstalled()) {
 				pi.sendMessage(
@@ -95,8 +95,8 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 
 			const doc = getInstallDoc();
 			const content = doc
-				? `请严格按照以下安装指南操作，帮我安装 link-world。不要修改工作区内的文件，所有安装按文档中的目录规则进行。\n\n---\n\n${doc}`
-				: "请帮我安装 link-world，按官方文档进行：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md";
+				? `Please follow the installation guide below strictly to help me install link-world. Do not modify files in the workspace, all installation follows the directory rules in the doc.\n\n---\n\n${doc}`
+				: "Please help me install link-world according to official docs: https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md";
 			pi.sendMessage(
 				{
 					customType: LINK_WORLD_CUSTOM_TYPE,

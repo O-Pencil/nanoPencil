@@ -179,9 +179,9 @@ function parseIntEnv(name: string, defaultValue: number): number {
 }
 
 const MEMORY_CHECK_PATTERN =
-	/(你还记得我吗|还记得我吗|还记得我|记得我吗|记得我|你认识我吗|你是谁|who am i|do you remember me|remember me|do you know me)/i;
+	/(do you remember me|remember me|do you know me|who am i|do you remember)/i;
 const PAST_CONTEXT_PATTERN =
-	/(昨天聊了什么|昨天我们聊了什么|上次聊了什么|之前聊了什么|我们聊到哪了|昨天|上次|last time|what did we talk about|what were we discussing|yesterday)/i;
+	/(what did we talk about yesterday|what did we discuss yesterday|what did we talk about last time|what were we discussing|yesterday|last time|previous conversation)/i;
 
 function isMemoryRecallPrompt(prompt?: string): boolean {
 	if (!prompt) return false;

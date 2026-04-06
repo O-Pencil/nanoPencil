@@ -194,26 +194,26 @@ export class Interceptor {
 	 * Format warning message for command
 	 */
 	private formatWarningMessage(command: string, result: SecurityCheckResult): string {
-		return `⚠️  危险操作检测
+		return `⚠️  Dangerous operation detected
 
-命令: ${command}
+Command: ${command}
 
-风险: ${result.reason || "匹配危险模式"}
+Risk: ${result.reason || "Matches dangerous pattern"}
 
-操作将被记录到审计日志中。`;
+Operation will be logged to audit trail.`;
 	}
 
 	/**
 	 * Format blocked message for command
 	 */
 	private formatBlockedMessage(command: string, result: SecurityCheckResult): string {
-		return `🔴 操作被阻止
+		return `🔴 Operation blocked
 
-命令: ${command}
+Command: ${command}
 
-原因: ${result.reason || "安全策略阻止"}
+Reason: ${result.reason || "Security policy blocked"}
 
-此操作需要管理员权限或从白名单中移除。`;
+This operation requires admin privileges or removal from whitelist.`;
 	}
 
 	/**
@@ -224,14 +224,14 @@ export class Interceptor {
 		path: string,
 		result: SecurityCheckResult,
 	): string {
-		return `⚠️  敏感文件操作
+		return `⚠️  Sensitive file operation
 
-操作: ${operation}
-路径: ${path}
+Operation: ${operation}
+Path: ${path}
 
-风险: ${result.reason || "文件包含敏感信息"}
+Risk: ${result.reason || "File contains sensitive information"}
 
-操作将被记录到审计日志中。`;
+Operation will be logged to audit trail.`;
 	}
 
 	/**
@@ -242,14 +242,14 @@ export class Interceptor {
 		path: string,
 		result: SecurityCheckResult,
 	): string {
-		return `🔴 访问被拒绝
+		return `🔴 Access denied
 
-操作: ${operation}
-路径: ${path}
+Operation: ${operation}
+Path: ${path}
 
-原因: ${result.reason || "安全策略阻止对此文件的访问"}
+Reason: ${result.reason || "Security policy blocks access to this file"}
 
-此文件被安全策略保护。`;
+This file is protected by security policy.`;
 	}
 
 	/**

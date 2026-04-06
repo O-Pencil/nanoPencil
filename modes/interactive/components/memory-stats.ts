@@ -55,7 +55,7 @@ function formatCompactMemory(memory: NanoMemEngine): string {
     stats.facets +
     stats.episodes;
 
-  return `📚 Memory: ${totalMemories} 项 | Knowledge: ${stats.knowledge} | Lessons: ${stats.lessons} | Episodes: ${stats.episodes}`;
+  return `📚 Memory: ${totalMemories} items | Knowledge: ${stats.knowledge} | Lessons: ${stats.lessons} | Episodes: ${stats.episodes}`;
 }
 
 /**
@@ -73,17 +73,17 @@ function formatFullMemory(memory: NanoMemEngine): string {
 
   // Memory Types
   const memoryTypes = [
-    { type: "knowledge", name: "知识", emoji: "📖", count: stats.knowledge },
-    { type: "lessons", name: "经验教训", emoji: "💡", count: stats.lessons },
+    { type: "knowledge", name: "Knowledge", emoji: "📖", count: stats.knowledge },
+    { type: "lessons", name: "Lessons", emoji: "💡", count: stats.lessons },
     {
       type: "preferences",
-      name: "用户偏好",
+      name: "Preferences",
       emoji: "❤️",
       count: stats.preferences,
     },
-    { type: "facets", name: "模式/困境", emoji: "🧩", count: stats.facets },
-    { type: "work", name: "工作摘要", emoji: "📋", count: stats.work },
-    { type: "episodes", name: "会话记录", emoji: "📝", count: stats.episodes },
+    { type: "facets", name: "Patterns", emoji: "🧩", count: stats.facets },
+    { type: "work", name: "Work Summary", emoji: "📋", count: stats.work },
+    { type: "episodes", name: "Sessions", emoji: "📝", count: stats.episodes },
   ];
 
   lines.push("║ 📊 Memory Types");
@@ -92,7 +92,7 @@ function formatFullMemory(memory: NanoMemEngine): string {
   for (const mem of memoryTypes) {
     const bar = createBar(Math.min(mem.count / 100, 1), 15);
     lines.push(
-      `║ ${mem.emoji} ${mem.name.padEnd(12)} ${bar} ${mem.count.toString().padStart(5)} 项`,
+      `║ ${mem.emoji} ${mem.name.padEnd(12)} ${bar} ${mem.count.toString().padStart(5)} items`,
     );
   }
 
@@ -102,26 +102,26 @@ function formatFullMemory(memory: NanoMemEngine): string {
 
   // Note: This would require loading actual entries
   // For now, show stats only
-  lines.push(`║   (共 ${stats.knowledge} 条项目知识)`);
-  lines.push(`║   最近更新: ${stats.totalSessions > 0 ? "本次会话" : "无"}`);
+  lines.push(`║   (Total: ${stats.knowledge} project knowledge entries)`);
+  lines.push(`║   Last Updated: ${stats.totalSessions > 0 ? "This session" : "None"}`);
 
   lines.push("║");
   lines.push("║ 💡 Lessons Learned");
   lines.push("║ ────────────────────────────────────────────────");
-  lines.push(`║   (共 ${stats.lessons} 条经验教训)`);
-  lines.push(`   ⚠️  从错误中学习，避免重复犯错`);
+  lines.push(`║   (Total: ${stats.lessons} lessons learned)`);
+  lines.push(`   ⚠️  Learn from mistakes, avoid repeating errors`);
 
   lines.push("║");
   lines.push("║ 🧩 Patterns & Struggles");
   lines.push("║ ────────────────────────────────────────────────");
-  lines.push(`║   模式: ${stats.facets}  条`);
-  lines.push(`   困境: 已识别的行为模式`);
+  lines.push(`║   Patterns: ${stats.facets} entries`);
+  lines.push(`   Struggles: Identified behavior patterns`);
 
   lines.push("║");
   lines.push("║ 📝 Session History");
   lines.push("║ ────────────────────────────────────────────────");
-  lines.push(`║   会话记录: ${stats.episodes} 条`);
-  lines.push(`   总会话数: ${stats.totalSessions}`);
+  lines.push(`║   Session Records: ${stats.episodes} entries`);
+  lines.push(`║   Total Sessions: ${stats.totalSessions}`);
 
   lines.push("║");
   lines.push("╚═════════════════════════════════════════════════╝");

@@ -34,5 +34,5 @@ export const slashCommands = {
 	reload: "Reload extensions, skills, prompts, and themes",
 	"link-world": "Install link-world for internet access (Twitter, YouTube, etc.)",
 	quit: "Quit NanoPencil",
-	language: "Switch language (English/中文)",
+	language: "Switch language (English/Chinese)",
 };

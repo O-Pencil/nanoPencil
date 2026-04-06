@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: LlmFn, MemoryScope, MemoryRetention, MemoryStability, FacetData, MemoryEntry, MemoryRelation, Episode, WorkEntry, EventData, StateData
- * [LOCUS]: packages/mem-core/src/types.ts - foundation layer type definitions for all memory data structures
- * [COVENANT]: Change memory data model → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: LlmFn, MemoryScope, MemoryRetention, MemoryStability, FacetData, MemoryEntry, MemoryRelation, Episode, WorkEntry, EventData, StateData
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/types.ts - foundation layer type definitions for all memory data structures
  */
 
 

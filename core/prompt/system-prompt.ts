@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on config, skills, tools
- * [SURFACE]: BuildSystemPromptOptions, buildSystemPrompt()
- * [LOCUS]: core/prompt/system-prompt.ts - system prompt building and context loading
- * [COVENANT]: Change system prompt → update this header
+ * [WHO]: BuildSystemPromptOptions, buildSystemPrompt()
+ * [FROM]: Depends on config, skills, tools
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/prompt/system-prompt.ts - system prompt building and context loading
  */
 import { getDocsPath, getExamplesPath, getReadmePath } from "../../config.js";
 import { formatSkillsForPrompt, type Skill } from "../skills.js";
@@ -196,6 +196,93 @@ ${toolsList}${extensionToolsList ? `\n${extensionToolsList}` : ""}
 
 规范：
 ${guidelines}
+
+## P3 头文件头与渐进式披露 (Progressive Disclosure)
+
+每个代码文件头部都有 P3 格式的 Dip 头，用于快速判断文件是否相关：
+
+[P3 头格式示例]
+/**
+ * [WHO]: Provides {exported functions/components/types/constants}
+ * [FROM]: Depends on {module/package/file} for {specific capability}
+ * [TO]: Consumed by {adjacent modules or downstream consumers}
+ * [HERE]: {file path} within {module}; relationship with neighbors}
+ */
+
+**四问含义**：
+- **WHO**：这个文件提供了什么（导出、公共 API）
+- **FROM**：这个文件依赖什么（上游依赖）
+- **TO**：谁会用到这个文件（下游消费者）
+- **HERE**：这个文件在哪，它和邻居是什么关系
+
+**头部阅读协议**：
+
+1. **先读头部**：遇到代码文件时，先读 P3 头（通常前 5-8 行）
+2. **判断相关性**：
+   - 如果当前任务涉及头部声明的 WHO（提供什么）、FROM（依赖什么）、TO（谁用）、HERE（在哪）→ 继续读
+   - 如果不相关 → **立即停止阅读**，节省上下文
+3. **判断标准**：
+   - 你的任务是否需要这个文件的 WHO？
+   - 你的任务是否在这个文件的 HERE 范围？
+   - 你的任务是否依赖这个文件的 FROM？
+
+**渐进式披露的上下文节省**：
+- 大项目可能有数百个文件
+- 头部只有 4 行，而文件可能有数百行
+- 读头部 = O(1)，读全文 = O(n)
+- 学会"头部不对就跳过"是高效工作的关键
+
+**生成文件时的 Dip 头要求**：
+- 创建任何代码文件必须包含完整 P3 头
+- WHO 要准确描述导出的公共 API（具体函数名/类型名）
+- FROM 要列出关键依赖
+- TO 要说明下游消费者
+- HERE 要明确模块坐标和上下游关系
+
+## pencil.md 项目初始化协议
+
+当用户首次在这个项目操作文件时，检查根目录是否存在 \`pencil.md\`（或 \`CLAUDE.md\`）：
+
+**如果不存在**：
+1. 建议用户创建 \`pencil.md\`
+2. 生成模板内容，包含：
+   - 项目概述（名称、技术栈、核心功能）
+   - 目录结构（P2 模块清单占位）
+   - DIP 协议说明（P3 头规范、渐进式披露思维）
+   - 规范（代码风格、提交约定等）
+3. 用户确认后再写入文件
+
+**pencil.md 模板结构**：
+
+[pencil.md 模板内容]
+# \${项目名称}
+
+> P1 | 项目根文档与导航地图
+
+## 项目概述
+\${一句话描述项目是什么}
+
+**技术栈**：\${列出主要技术}
+**核心功能**：\${2-3 句话描述核心能力}
+
+## 目录结构
+\${P2 模块清单占位，待 AI 逐步填充}
+
+## DIP 协议
+
+本项目采用 **Dual-phase Isomorphic Documentation**（双阶段同构文档）：
+
+- P1：根文档（本文档），全局拓扑
+- P2：模块级文档，成员清单
+- P3：文件头注释，快速相关性判断
+
+详见：https://nanopencil.github.io/dip
+
+## 规范
+\${P0 代码规范占位}
+
+---
+*此文件由 nanoPencil 自动生成，可根据项目需求修改*
 
 以下文档仅在用户询问 nano-pencil、SDK、扩展、主题、技能或 TUI 时阅读：
 - 主文档：${readmePath}

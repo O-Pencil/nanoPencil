@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, core/extensions/types.js
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/defaults/presence/index.ts - gentle opening and long-idle presence cues
- * [COVENANT]: Change proactive chat behavior → update product guidance and tests
+ * [WHO]: Extension interface
+ * [FROM]: Depends on @pencil-agent/tui, core/extensions/types.js
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/presence/index.ts - gentle opening and long-idle presence cues
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";

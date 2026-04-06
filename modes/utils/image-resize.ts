@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, utils/photon
- * [SURFACE]: ImageResizeOptions, ResizedImage, resizeImage(), formatDimensionNote()
- * [LOCUS]: modes/utils/image-resize.ts - image resizing for terminal display
- * [COVENANT]: Change image resize → update this header
+ * [WHO]: ImageResizeOptions, ResizedImage, resizeImage(), formatDimensionNote()
+ * [FROM]: Depends on ai, utils/photon
+ * [TO]: Consumed by core/tools/read.ts, cli/file-processor.ts, modes/interactive/interactive-mode.ts
+ * [HERE]: modes/utils/image-resize.ts - image resizing for terminal display
  */
 import type { ImageContent } from "@pencil-agent/ai";
 import { loadPhoton } from "../../utils/photon.js";

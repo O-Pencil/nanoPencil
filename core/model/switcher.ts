@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, agent-core
- * [SURFACE]: ModelCycleResult, ModelSwitcher class
- * [LOCUS]: core/model/switcher.ts - model selection and cycling logic
- * [COVENANT]: Change model switcher → update this header
+ * [WHO]: ModelCycleResult, ModelSwitcher class
+ * [FROM]: Depends on ai, agent-core
+ * [TO]: Consumed by core/model/index.ts
+ * [HERE]: core/model/switcher.ts - model selection and cycling logic
  */
 import type { Model } from "@pencil-agent/ai";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";

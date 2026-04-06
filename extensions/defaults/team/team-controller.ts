@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: TeamController
- * [LOCUS]: extensions/defaults/team/team-controller.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: TeamController
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by extension entry point (./index.ts)
+ * [HERE]: extensions/defaults/team/team-controller.ts -
  */
 
 import type { TeamCommandMode, TeamRunReport, TeamRunState, TeamRunStatus } from "./team-types.js";

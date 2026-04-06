@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool
- * [LOCUS]: packages/agent-core/src/types.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/types.ts -
  */
 
 import type {

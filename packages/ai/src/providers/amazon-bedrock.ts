@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/json-parse.js, ../utils/sanitize-unicode.js, ./simple-options.js
- * [SURFACE]: BedrockOptions, streamBedrock, streamSimpleBedrock
- * [LOCUS]: packages/ai/src/providers/amazon-bedrock.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: BedrockOptions, streamBedrock, streamSimpleBedrock
+ * [FROM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/json-parse.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/amazon-bedrock.ts -
  */
 
 import {

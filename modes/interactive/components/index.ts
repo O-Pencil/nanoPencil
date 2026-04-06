@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on all component files
- * [SURFACE]: UI component barrel exports
- * [LOCUS]: modes/interactive/components/index.ts - component barrel
- * [COVENANT]: Change components → update this header
+ * [WHO]: UI component barrel exports
+ * [FROM]: Depends on all component files
+ * [TO]: Consumed by modes/interactive/interactive-mode.ts, cli/session-picker.ts, cli/config-selector.ts
+ * [HERE]: modes/interactive/components/index.ts - component barrel
  */
 // UI Components for extensions
 export { ArminComponent } from "./armin.js";

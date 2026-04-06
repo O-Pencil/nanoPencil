@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on child_process, readline, agent-core, ai, core/runtime, core/bash-executor, core/session/compaction
- * [SURFACE]: RpcClient class, RpcClientOptions
- * [LOCUS]: modes/rpc/rpc-client.ts - programmatic RPC client
- * [COVENANT]: Change RPC client → update this header
+ * [WHO]: RpcClient class, RpcClientOptions
+ * [FROM]: Depends on child_process, readline, agent-core, ai, core/runtime, core/bash-executor, core/session/compaction
+ * [TO]: Consumed by modes/index.ts
+ * [HERE]: modes/rpc/rpc-client.ts - programmatic RPC client
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import * as readline from "node:readline";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: ModelsConfig, ModelsCallbacks, ScopedModelsSelectorComponent
- * [LOCUS]: modes/interactive/components/scoped-models-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ModelsConfig, ModelsCallbacks, ScopedModelsSelectorComponent
+ * [FROM]: Depends on ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/scoped-models-selector.ts -
  */
 
 import type { Model } from "@pencil-agent/ai";

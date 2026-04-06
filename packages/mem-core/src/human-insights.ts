@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./types.js, ./i18n.js
- * [SURFACE]: DeveloperPersona, HumanInsightsReport, generateHumanInsights
- * [LOCUS]: packages/mem-core/src/human-insights.ts - LLM-powered usage review generation with developer persona analysis
- * [COVENANT]: Change insights format → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: DeveloperPersona, HumanInsightsReport, generateHumanInsights
+ * [FROM]: Depends on ./types.js, ./i18n.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/human-insights.ts - LLM-powered usage review generation with developer persona analysis
  */
 
 

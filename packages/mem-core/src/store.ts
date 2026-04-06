@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:fs/promises, node:path, ./types.js
- * [SURFACE]: readJson, writeJson, deriveNameFromContent, deriveSummaryFromContent, ensureDir
- * [LOCUS]: packages/mem-core/src/store.ts - persistence layer for JSON storage, all other modules go through here
- * [COVENANT]: Change storage format → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: readJson, writeJson, deriveNameFromContent, deriveSummaryFromContent, ensureDir
+ * [FROM]: Depends on node:fs, node:fs/promises, node:path, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/store.ts - persistence layer for JSON storage, all other modules go through here
  */
 
 

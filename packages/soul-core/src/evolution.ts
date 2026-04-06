@@ -4,10 +4,10 @@
  * [POS]: Evolution engine - implements learning algorithms
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: SoulEvolutionEngine, PatternInsight
- * [LOCUS]: packages/soul-core/src/evolution.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SoulEvolutionEngine, PatternInsight
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/soul-core/src/index.ts
+ * [HERE]: packages/soul-core/src/evolution.ts -
  */
 
 

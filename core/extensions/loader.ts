@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:module, node:os, node:path, @mariozechner/jiti, bundled packages
- * [SURFACE]: ExtensionLoader, discoverAndLoadExtensions, loadExtensions, loadExtensionFromFactory
- * [LOCUS]: core/extensions/loader.ts - extension discovery and loading via jiti
- * [COVENANT]: Change loading mechanism → update P2 core/CLAUDE.md and extensions/CLAUDE.md
+ * [WHO]: ExtensionLoader, discoverAndLoadExtensions, loadExtensions, loadExtensionFromFactory
+ * [FROM]: Depends on node:fs, node:module, node:os, node:path, @mariozechner/jiti, bundled packages
+ * [TO]: Consumed by core/extensions/index.ts, core/config/resource-loader.ts
+ * [HERE]: core/extensions/loader.ts - extension discovery and loading via jiti
  */
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
@@ -112,6 +112,7 @@ export function createExtensionRuntime(): ExtensionRuntime {
 	return {
 		sendMessage: notInitialized,
 		sendUserMessage: notInitialized,
+		executeCommand: () => Promise.reject(new Error("Extension runtime not initialized")),
 		isIdle: notInitialized,
 		appendEntry: notInitialized,
 		setSessionName: notInitialized,
@@ -198,6 +199,10 @@ function createExtensionAPI(
 
 		sendUserMessage(content, options): void {
 			runtime.sendUserMessage(content, options);
+		},
+
+		executeCommand(text) {
+			return runtime.executeCommand(text);
 		},
 
 		isIdle(): boolean {

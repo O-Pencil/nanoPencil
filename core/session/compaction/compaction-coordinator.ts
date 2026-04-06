@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, compaction/index
- * [SURFACE]: CompactionCoordinatorOptions, CompactionCoordinator class
- * [LOCUS]: core/session/compaction/compaction-coordinator.ts - compaction coordination
- * [COVENANT]: Change coordinator → update this header
+ * [WHO]: CompactionCoordinatorOptions, CompactionCoordinator class
+ * [FROM]: Depends on agent-core, compaction/index
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/session/compaction/compaction-coordinator.ts - compaction coordination
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { CompactionPreparation, CompactionResult } from "./index.js";

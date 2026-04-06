@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: PromptSet, getPrompts, PROMPTS (default English prompts), LOCALES
- * [LOCUS]: packages/mem-core/src/i18n.ts - internationalization layer for all LLM prompts and user-facing strings
- * [COVENANT]: Change prompt templates → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: PromptSet, getPrompts, PROMPTS (default English prompts), LOCALES
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/i18n.ts - internationalization layer for all LLM prompts and user-facing strings
  */
 
 

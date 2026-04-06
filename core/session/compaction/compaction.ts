@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, messages.ts, session-manager.ts, utils.ts
- * [SURFACE]: CompactionController, compactSession, CompactionResult
- * [LOCUS]: core/session/compaction/compaction.ts - context window management via summarization
- * [COVENANT]: Change compaction logic → update P2 core/CLAUDE.md
+ * [WHO]: CompactionController, compactSession, CompactionResult
+ * [FROM]: Depends on agent-core, ai, messages.ts, session-manager.ts, utils.ts
+ * [TO]: Consumed by core/session/compaction/index.ts
+ * [HERE]: core/session/compaction/compaction.ts - context window management via summarization
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { AssistantMessage, Model, Usage } from "@pencil-agent/ai";

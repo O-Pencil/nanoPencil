@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, node:fs, proper-lockfile, config.ts
- * [SURFACE]: SettingsManager class, two-tier settings (global + project-local)
- * [LOCUS]: core/config/settings-manager.ts - user preferences aggregation
- * [COVENANT]: Change settings structure → update P2 core/CLAUDE.md
+ * [WHO]: SettingsManager class, two-tier settings (global + project-local)
+ * [FROM]: Depends on ai, node:fs, proper-lockfile, config.ts
+ * [TO]: Consumed by index.ts, main.ts, core/runtime/sdk.ts, cli/config-selector.ts, extensions/defaults/team/index.ts, modes/interactive/components/model-selector.ts, modes/interactive/components/config-selector.ts, and test files
+ * [HERE]: core/config/settings-manager.ts - user preferences aggregation
  */
 import type { Transport } from "@pencil-agent/ai";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";

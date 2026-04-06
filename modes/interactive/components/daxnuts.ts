@@ -4,10 +4,10 @@
  * A heartfelt tribute to dax (@thdxr) for providing free Kimi K2.5 access via OpenCode.
  */
 /**
- * [UPSTREAM]: Depends on ../theme/theme.js
- * [SURFACE]: DaxnutsComponent
- * [LOCUS]: modes/interactive/components/daxnuts.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: DaxnutsComponent
+ * [FROM]: Depends on ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/daxnuts.ts - easter egg animation
  */
 
 

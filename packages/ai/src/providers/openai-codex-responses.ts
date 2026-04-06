@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:os (lazy), openai, env-api-keys, models, types
- * [SURFACE]: OpenAI Codex Responses API provider
- * [LOCUS]: packages/ai/src/providers/openai-codex-responses.ts - Codex provider
- * [COVENANT]: Change provider → update this header
+ * [WHO]: OpenAI Codex Responses API provider
+ * [FROM]: Depends on node:os (lazy), openai, env-api-keys, models, types
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/openai-codex-responses.ts - Codex provider
  */
 // NEVER convert to top-level import - breaks browser/Vite builds (web-ui)
 let _os: typeof import("node:os") | null = null;

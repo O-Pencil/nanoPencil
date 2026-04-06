@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs
- * [SURFACE]: ChangelogEntry, parseChangelog()
- * [LOCUS]: utils/changelog.ts - changelog parsing
- * [COVENANT]: Change changelog → update this header
+ * [WHO]: ChangelogEntry, parseChangelog()
+ * [FROM]: Depends on node:fs
+ * [TO]: Consumed by modes/interactive/interactive-mode.ts
+ * [HERE]: utils/changelog.ts - changelog parsing
  */
 import { existsSync, readFileSync } from "fs";
 

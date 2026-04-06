@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:child_process, node:fs, node:fs/promises, node:os, ../../../core/keybindings.js
- * [SURFACE]: SessionSelectorComponent
- * [LOCUS]: modes/interactive/components/session-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SessionSelectorComponent
+ * [FROM]: Depends on node:child_process, node:fs, node:fs/promises, node:os, ../../../core/keybindings.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/session-selector.ts -
  */
 
 import { spawnSync } from "node:child_process";

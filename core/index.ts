@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on runtime/, tools/, extensions/, session/, model/, config/
- * [SURFACE]: Barrel exports for core API surface
- * [LOCUS]: Public entry point for core functionality; consumed by modes and SDK
- * [COVENANT]: Export changes → update P1/P2 documentation
+ * [WHO]: Barrel exports for core API surface
+ * [FROM]: Depends on runtime/, tools/, extensions/, session/, model/, config/
+ * [TO]: Consumed by index.ts (package root barrel)
+ * [HERE]: Public entry point for core functionality; consumed by modes and SDK
  */
 
 export {

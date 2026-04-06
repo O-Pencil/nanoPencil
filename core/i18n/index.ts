@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: i18n, t(), setLocale(), getLocale(), AVAILABLE_LOCALES, type Locale
- * [LOCUS]: core/i18n/index.ts - internationalization core
- * [COVENANT]: Change translations → update this module
+ * [WHO]: i18n, t(), setLocale(), getLocale(), AVAILABLE_LOCALES, type Locale
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by modes/interactive/interactive-mode.ts, core/runtime/agent-session.ts, core/slash-commands.ts
+ * [HERE]: core/i18n/index.ts - internationalization core
  */
 
 export type Locale = "en" | "zh";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, node:child_process, node:fs, glob
- * [SURFACE]: FindTool, findTool, createFindTool, FindToolInput
- * [LOCUS]: core/tools/find.ts - file pattern matching via glob; consumed by orchestrator
- * [COVENANT]: Change find behavior → update core/CLAUDE.md member list
+ * [WHO]: FindTool, findTool, createFindTool, FindToolInput
+ * [FROM]: Depends on agent-core, node:child_process, node:fs, glob
+ * [TO]: Consumed by core/tools/index.ts
+ * [HERE]: core/tools/find.ts - file pattern matching via glob; consumed by orchestrator
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import { type Static, Type } from "@sinclair/typebox";

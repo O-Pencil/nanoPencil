@@ -6,10 +6,10 @@
  * [POS]: Engine layer - implements interception mechanism
  */
 /**
- * [UPSTREAM]: Depends on ./detector.js, ./logger.js
- * [SURFACE]: InterceptorResult, Interceptor
- * [LOCUS]: extensions/defaults/security-audit/engine/interceptor.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: InterceptorResult, Interceptor
+ * [FROM]: Depends on ./detector.js, ./logger.js
+ * [TO]: Consumed by extension entry point (./index.ts)
+ * [HERE]: extensions/defaults/security-audit/engine/interceptor.ts -
  */
 
 

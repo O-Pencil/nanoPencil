@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js
- * [SURFACE]: FooterComponent
- * [LOCUS]: modes/interactive/components/footer.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: FooterComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/footer.ts - status bar footer
  */
 
 import { type Component, truncateToWidth, visibleWidth } from "@pencil-agent/tui";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:module, node:path, node:url, photon-node
- * [SURFACE]: resizeImageWithPhoton(), PhotonImageType
- * [LOCUS]: utils/photon.ts - Photon image processing wrapper
- * [COVENANT]: Change photon → update this header
+ * [WHO]: resizeImageWithPhoton(), PhotonImageType
+ * [FROM]: Depends on node:fs, node:module, node:path, node:url, photon-node
+ * [TO]: Consumed by modes/utils/image-resize.ts, modes/utils/image-convert.ts, modes/utils/clipboard-image.ts
+ * [HERE]: utils/photon.ts - Photon image processing wrapper
  */
 import type { PathOrFileDescriptor } from "fs";
 import { createRequire } from "module";

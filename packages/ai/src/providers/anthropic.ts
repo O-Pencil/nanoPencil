@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @anthropic-ai/sdk, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/json-parse.js
- * [SURFACE]: AnthropicOptions, streamAnthropic, streamSimpleAnthropic
- * [LOCUS]: packages/ai/src/providers/anthropic.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: AnthropicOptions, streamAnthropic, streamSimpleAnthropic
+ * [FROM]: Depends on @anthropic-ai/sdk, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/json-parse.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/anthropic.ts -
  */
 
 import Anthropic from "@anthropic-ai/sdk";

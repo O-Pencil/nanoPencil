@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on partial-json
- * [SURFACE]: parseStreamingJson
- * [LOCUS]: packages/ai/src/utils/json-parse.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: parseStreamingJson
+ * [FROM]: Depends on partial-json
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/json-parse.ts -
  */
 
 import { parse as partialParse } from "partial-json";

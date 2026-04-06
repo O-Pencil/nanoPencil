@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, tui, modes/theme, session-manager, types.ts
- * [SURFACE]: ExtensionRunner class, lifecycle management, event emission
- * [LOCUS]: core/extensions/runner.ts - extension execution and lifecycle management
- * [COVENANT]: Change runner behavior → update P2 core/CLAUDE.md and extensions/CLAUDE.md
+ * [WHO]: ExtensionRunner class, lifecycle management, event emission
+ * [FROM]: Depends on agent-core, ai, tui, modes/theme, session-manager, types.ts
+ * [TO]: Consumed by core/extensions/index.ts, core/extensions/wrapper.ts
+ * [HERE]: core/extensions/runner.ts - extension execution and lifecycle management
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ImageContent, Model } from "@pencil-agent/ai";
@@ -276,6 +276,7 @@ export class ExtensionRunner {
 		// Copy actions into the shared runtime (all extension APIs reference this)
 		this.runtime.sendMessage = actions.sendMessage;
 		this.runtime.sendUserMessage = actions.sendUserMessage;
+		this.runtime.executeCommand = actions.executeCommand;
 		this.runtime.appendEntry = actions.appendEntry;
 		this.runtime.setSessionName = actions.setSessionName;
 		this.runtime.getSessionName = actions.getSessionName;

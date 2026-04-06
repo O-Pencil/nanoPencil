@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, extensions
- * [SURFACE]: ToolInfo, ToolOrchestrator class
- * [LOCUS]: core/tools/orchestrator.ts - tool registration, lookup, and management
- * [COVENANT]: Change orchestrator → update this header
+ * [WHO]: ToolInfo, ToolOrchestrator class
+ * [FROM]: Depends on agent-core, extensions
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/tools/orchestrator.ts - tool registration, lookup, and management
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import type { ToolDefinition } from "../extensions/index.js";

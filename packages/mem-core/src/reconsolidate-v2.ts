@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./scoring.js, ./types-v2.js
- * [SURFACE]: reconsolidateV2Memories
- * [LOCUS]: packages/mem-core/src/reconsolidate-v2.ts - lightweight reconsolidation rules for NanoMem v2 memories
- * [COVENANT]: Change reconsolidation heuristics → update this header and keep behavior monotonic and explainable
+ * [WHO]: reconsolidateV2Memories
+ * [FROM]: Depends on ./scoring.js, ./types-v2.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/reconsolidate-v2.ts - lightweight reconsolidation rules for NanoMem v2 memories
  */
 
 import { extractTags, tagOverlap } from "./scoring.js";

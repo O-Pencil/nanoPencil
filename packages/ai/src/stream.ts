@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./api-registry.js
- * [SURFACE]: getEnvApiKey, stream, streamSimple
- * [LOCUS]: packages/ai/src/stream.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: getEnvApiKey, stream, streamSimple
+ * [FROM]: Depends on ./api-registry.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/stream.ts -
  */
 
 import "./providers/register-builtins.js";

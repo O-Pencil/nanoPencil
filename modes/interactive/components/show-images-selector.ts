@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: ShowImagesSelectorComponent
- * [LOCUS]: modes/interactive/components/show-images-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ShowImagesSelectorComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/show-images-selector.ts -
  */
 
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";

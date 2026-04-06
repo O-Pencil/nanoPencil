@@ -5,10 +5,10 @@
  * This extension registers the /export command.
  */
 /**
- * [UPSTREAM]: Depends on node:path, node:url, ../../../core/session/session-manager.js, ../../../config.js, ../../../modes/interactive/theme/theme.js
- * [SURFACE]: exportSessionToHtml, exportFromFile, type ToolHtmlRenderer, type ExportOptions, ExtExportOptions
- * [LOCUS]: extensions/optional/export-html/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: exportSessionToHtml, exportFromFile, type ToolHtmlRenderer, type ExportOptions, ExtExportOptions
+ * [FROM]: Depends on node:path, node:url, ../../../core/session/session-manager.js, ../../../config.js, ../../../modes/interactive/theme/theme.js
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/optional/export-html/index.ts -
  */
 
 

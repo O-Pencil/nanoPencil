@@ -2,10 +2,10 @@
  * Simple text input component for extensions.
  */
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
- * [SURFACE]: ExtensionInputOptions, ExtensionInputComponent
- * [LOCUS]: modes/interactive/components/extension-input.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ExtensionInputOptions, ExtensionInputComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/extension-input.ts -
  */
 
 

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: messages - Chinese translations for user-facing messages
- * [LOCUS]: core/i18n/messages.zh.ts - Chinese message translations
- * [COVENANT]: Change Chinese translations here
+ * [WHO]: messages - Chinese translations for user-facing messages
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/i18n/index.ts
+ * [HERE]: core/i18n/messages.zh.ts - Chinese message translations
  */
 
 export const messages = {

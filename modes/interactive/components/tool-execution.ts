@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:os, strip-ansi, ../../../core/tools/edit-diff.js, ../../../core/tools/index.js, ../../../core/tools/truncate.js
- * [SURFACE]: ToolExecutionOptions, ToolExecutionComponent
- * [LOCUS]: modes/interactive/components/tool-execution.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ToolExecutionOptions, ToolExecutionComponent
+ * [FROM]: Depends on node:os, strip-ansi, ../../../core/tools/edit-diff.js, ../../../core/tools/index.js, ../../../core/tools/truncate.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/tool-execution.ts -
  */
 
 import * as os from "node:os";

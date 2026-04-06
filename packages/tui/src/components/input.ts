@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../keybindings.js, ../kill-ring.js, ../tui.js, ../undo-stack.js, ../utils.js
- * [SURFACE]: Input
- * [LOCUS]: packages/tui/src/components/input.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Input
+ * [FROM]: Depends on ../keybindings.js, ../kill-ring.js, ../tui.js, ../undo-stack.js, ../utils.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/input.ts -
  */
 
 import { getEditorKeybindings } from "../keybindings.js";

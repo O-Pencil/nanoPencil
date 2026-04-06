@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: ApiProvider, registerApiProvider, getApiProvider, getApiProviders, unregisterApiProviders
- * [LOCUS]: packages/ai/src/api-registry.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ApiProvider, registerApiProvider, getApiProvider, getApiProviders, unregisterApiProviders
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/api-registry.ts -
  */
 
 import type {

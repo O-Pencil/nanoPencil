@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./text.js
- * [SURFACE]: Loader
- * [LOCUS]: packages/tui/src/components/loader.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Loader
+ * [FROM]: Depends on ./text.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/loader.ts -
  */
 
 import type { TUI } from "../tui.js";

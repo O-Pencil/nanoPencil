@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../utils.js
- * [SURFACE]: Box
- * [LOCUS]: packages/tui/src/components/box.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Box
+ * [FROM]: Depends on ../utils.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/box.ts -
  */
 
 import type { Component } from "../tui.js";

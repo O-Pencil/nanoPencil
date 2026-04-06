@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: isContextOverflow, getOverflowPatterns
- * [LOCUS]: packages/ai/src/utils/overflow.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: isContextOverflow, getOverflowPatterns
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/overflow.ts -
  */
 
 import type { AssistantMessage } from "../types.js";

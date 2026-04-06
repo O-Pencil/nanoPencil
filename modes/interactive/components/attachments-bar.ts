@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:path, @pencil-agent/tui
- * [SURFACE]: Attachment, AttachmentsBarComponent
- * [LOCUS]: modes/interactive/components/attachments-bar.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Attachment, AttachmentsBarComponent
+ * [FROM]: Depends on node:path, @pencil-agent/tui
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/attachments-bar.ts -
  */
 
 import * as path from "node:path";

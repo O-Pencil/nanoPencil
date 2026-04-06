@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @sinclair/typebox
- * [SURFACE]: StringEnum
- * [LOCUS]: packages/ai/src/utils/typebox-helpers.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: StringEnum
+ * [FROM]: Depends on @sinclair/typebox
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/typebox-helpers.ts -
  */
 
 import { type TUnsafe, Type } from "@sinclair/typebox";

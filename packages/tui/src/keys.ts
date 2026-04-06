@@ -18,10 +18,10 @@
  * - isKittyProtocolActive() - Query global Kitty protocol state
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: setKittyProtocolActive, isKittyProtocolActive, Key, isKeyRelease, isKeyRepeat
- * [LOCUS]: packages/tui/src/keys.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: setKittyProtocolActive, isKittyProtocolActive, Key, isKeyRelease, isKeyRepeat
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/keys.ts -
  */
 
 

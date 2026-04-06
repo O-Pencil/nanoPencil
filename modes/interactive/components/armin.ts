@@ -2,10 +2,10 @@
  * Armin says hi! A fun easter egg with animated XBM art.
  */
 /**
- * [UPSTREAM]: Depends on ../theme/theme.js
- * [SURFACE]: ArminComponent
- * [LOCUS]: modes/interactive/components/armin.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ArminComponent
+ * [FROM]: Depends on ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/armin.ts -
  */
 
 

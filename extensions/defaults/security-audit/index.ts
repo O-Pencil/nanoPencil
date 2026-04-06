@@ -9,10 +9,10 @@
  * [POS]: Entry point - composes all components and registers with extension system
  */
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, node:crypto, node:os, ./interface.js
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/defaults/security-audit/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on node:fs, node:path, node:crypto, node:os, ./interface.js
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/security-audit/index.ts -
  */
 
 

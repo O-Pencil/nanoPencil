@@ -1,0 +1,12 @@
+# core/runtime/
+
+> P2 | Parent: ../CLAUDE.md
+
+Member List
+event-bus.ts: EventBus interface, EventBusController, createEventBus(), typed event emission system for extension hooks, key methods: emit(), on() returns unsubscribe function
+sdk.ts: createAgentSession(options) factory, creates all services with dependency injection, wires up extensions, consumed by all run modes (interactive/print/rpc)
+agent-session.ts: AgentSession class, central session lifecycle manager, wraps Agent from agent-core, coordinates compaction, emits events, handles model switching, all modes delegate to this class
+
+Rule: Members complete, one item per line, parent links valid, precise terms first
+
+[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md

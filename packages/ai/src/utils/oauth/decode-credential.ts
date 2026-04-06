@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No dependencies
- * [SURFACE]: decodeOAuthCredentialSegment
- * [LOCUS]: packages/ai/src/utils/oauth/decode-credential.ts — build-time OAuth id/secret embedding
- * [COVENANT]: Change → update this header
+ * [WHO]: decodeOAuthCredentialSegment
+ * [FROM]: No dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/decode-credential.ts — build-time OAuth id/secret embedding
  */
 
 /**

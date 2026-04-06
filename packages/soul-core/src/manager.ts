@@ -4,10 +4,10 @@
  * [POS]: Main entry point - composes all Soul modules
  */
 /**
- * [UPSTREAM]: Depends on ./config.js, ./store.js, ./evolution.js, ./injection.js
- * [SURFACE]: SoulManager
- * [LOCUS]: packages/soul-core/src/manager.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SoulManager
+ * [FROM]: Depends on ./config.js, ./store.js, ./evolution.js, ./injection.js
+ * [TO]: Consumed by packages/soul-core/src/index.ts
+ * [HERE]: packages/soul-core/src/manager.ts -
  */
 
 

@@ -4,10 +4,10 @@
  * [POS]: Foundation layer - every other module imports from here
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: PersonalityVector, CognitiveStyle, ValueSystem, EmotionalState, ExpertiseArea
- * [LOCUS]: packages/soul-core/src/types.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: PersonalityVector, CognitiveStyle, ValueSystem, EmotionalState, ExpertiseArea
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/soul-core/src/index.ts
+ * [HERE]: packages/soul-core/src/types.ts -
  */
 
 

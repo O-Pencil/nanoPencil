@@ -6,10 +6,10 @@
  * [POS]: Engine layer - implements logging functionality
  */
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, node:crypto, ../../../../config.js
- * [SURFACE]: AuditLogger
- * [LOCUS]: extensions/defaults/security-audit/engine/logger.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: AuditLogger
+ * [FROM]: Depends on node:fs, node:path, node:crypto, ../../../../config.js
+ * [TO]: Consumed by extension entry point (./index.ts)
+ * [HERE]: extensions/defaults/security-audit/engine/logger.ts -
  */
 
 

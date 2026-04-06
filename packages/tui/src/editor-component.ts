@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: EditorComponent
- * [LOCUS]: packages/tui/src/editor-component.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: EditorComponent
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/editor-component.ts -
  */
 
 import type { AutocompleteProvider } from "./autocomplete.js";

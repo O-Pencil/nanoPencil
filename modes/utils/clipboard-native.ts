@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on module, clipboard package
- * [SURFACE]: ClipboardModule, hasClipboardImage(), getClipboardBinary()
- * [LOCUS]: modes/utils/clipboard-native.ts - native clipboard for images
- * [COVENANT]: Change native clipboard → update this header
+ * [WHO]: ClipboardModule, hasClipboardImage(), getClipboardBinary()
+ * [FROM]: Depends on module, clipboard package
+ * [TO]: Consumed by modes/utils/clipboard-image.ts
+ * [HERE]: modes/utils/clipboard-native.ts - native clipboard for images
  */
 import { createRequire } from "module";
 

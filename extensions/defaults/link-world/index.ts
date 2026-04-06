@@ -3,10 +3,10 @@
  * 安装后自动提供 internet-search Skill。
  */
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, node:url, child_process, @pencil-agent/tui
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/defaults/link-world/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on node:fs, node:path, node:url, child_process, @pencil-agent/tui
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/link-world/index.ts -
  */
 
 

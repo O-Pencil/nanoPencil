@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on chalk, child_process, extract-zip, node:fs, node:os, node:path
- * [SURFACE]: ensureTool(), ToolManager class
- * [LOCUS]: core/utils/tools-manager.ts - external tool installation and management
- * [COVENANT]: Change tool management → update this header
+ * [WHO]: ensureTool(), ToolManager class
+ * [FROM]: Depends on chalk, child_process, extract-zip, node:fs, node:os, node:path
+ * [TO]: Consumed by core/tools/grep.ts, core/tools/find.ts, modes/interactive/interactive-mode.ts
+ * [HERE]: core/utils/tools-manager.ts - external tool installation and management
  */
 import chalk from "chalk";
 import { spawnSync } from "child_process";

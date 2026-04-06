@@ -5,10 +5,10 @@
  * It is only intended for CLI use, not browser environments.
  */
 /**
- * [UPSTREAM]: Depends on ./pkce.js
- * [SURFACE]: openaiCodexOAuthProvider
- * [LOCUS]: packages/ai/src/utils/oauth/openai-codex.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: openaiCodexOAuthProvider
+ * [FROM]: Depends on ./pkce.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/openai-codex.ts -
  */
 
 

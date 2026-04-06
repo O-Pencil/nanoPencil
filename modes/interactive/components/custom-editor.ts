@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: modes/interactive/components/custom-editor.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: 
+ * [FROM]: 
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/custom-editor.ts -
  */
 import { Editor, getEditorKeybindings, matchesKey, type EditorOptions, type EditorTheme, type TUI } from "@pencil-agent/tui";
 import type { AppAction, KeybindingsManager } from "../../../core/keybindings.js";

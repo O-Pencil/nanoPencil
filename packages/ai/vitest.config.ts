@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on vitest/config
- * [SURFACE]: Extension interface
- * [LOCUS]: ./packages/ai/vitest.config.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on vitest/config
+ * [TO]: Not imported - vitest configuration file, consumed by vitest CLI 
+ * [HERE]: ./packages/ai/vitest.config.ts -
  */
 
 import { defineConfig } from 'vitest/config';

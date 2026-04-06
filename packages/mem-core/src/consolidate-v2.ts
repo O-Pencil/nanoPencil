@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./config.js, ./scoring.js, ./store.js, ./types.js, ./types-v2.js
- * [SURFACE]: consolidateV2Memories
- * [LOCUS]: packages/mem-core/src/consolidate-v2.ts - v2 episodic/procedural to semantic consolidation
- * [COVENANT]: Change v2 semantic promotion rules → update this header and keep compatibility with MemoryEntry
+ * [WHO]: consolidateV2Memories
+ * [FROM]: Depends on ./config.js, ./scoring.js, ./store.js, ./types.js, ./types-v2.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/consolidate-v2.ts - v2 episodic/procedural to semantic consolidation
  */
 
 import type { NanomemConfig } from "./config.js";

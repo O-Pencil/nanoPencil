@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on diff, node:fs, path-utils
- * [SURFACE]: detectLineEnding(), fuzzyFindText(), generateDiffString(), normalize functions
- * [LOCUS]: core/tools/edit-diff.ts - shared diff computation for edit tool
- * [COVENANT]: Change diff utilities → update this header
+ * [WHO]: detectLineEnding(), fuzzyFindText(), generateDiffString(), normalize functions
+ * [FROM]: Depends on diff, node:fs, path-utils
+ * [TO]: Consumed by modes/interactive/components/tool-execution.ts
+ * [HERE]: core/tools/edit-diff.ts - shared diff computation for edit tool
  */
 import * as Diff from "diff";
 import { constants } from "fs";

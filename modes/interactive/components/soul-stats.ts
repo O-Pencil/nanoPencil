@@ -4,10 +4,10 @@
  * [POS]: Interactive mode component for /soul command
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: formatSoulStats
- * [LOCUS]: modes/interactive/components/soul-stats.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: formatSoulStats
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/soul-stats.ts -
  */
 
 

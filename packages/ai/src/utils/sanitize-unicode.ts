@@ -19,10 +19,10 @@
  * sanitizeSurrogates(`Text ${unpaired} here`) // => "Text  here"
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: sanitizeSurrogates
- * [LOCUS]: packages/ai/src/utils/sanitize-unicode.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: sanitizeSurrogates
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/sanitize-unicode.ts -
  */
 
 export function sanitizeSurrogates(text: string): string {

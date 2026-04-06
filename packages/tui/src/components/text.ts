@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../utils.js
- * [SURFACE]: Text
- * [LOCUS]: packages/tui/src/components/text.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Text
+ * [FROM]: Depends on ../utils.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/text.ts -
  */
 
 import type { Component } from "../tui.js";

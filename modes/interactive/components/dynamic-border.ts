@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../theme/theme.js
- * [SURFACE]: DynamicBorder
- * [LOCUS]: modes/interactive/components/dynamic-border.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: DynamicBorder
+ * [FROM]: Depends on ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/dynamic-border.ts -
  */
 
 import type { Component } from "@pencil-agent/tui";

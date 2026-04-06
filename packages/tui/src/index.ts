@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on all tui components
- * [SURFACE]: TUI barrel exports
- * [LOCUS]: packages/tui/src/index.ts - TUI package entry point
- * [COVENANT]: Change exports → update package.json exports
+ * [WHO]: TUI barrel exports
+ * [FROM]: Depends on all tui components
+ * [TO]: Consumed by @pencil-agent/tui package consumers (modes, core/extensions, cli)
+ * [HERE]: packages/tui/src/index.ts - TUI package entry point
  */
 // Core TUI interfaces and classes
 

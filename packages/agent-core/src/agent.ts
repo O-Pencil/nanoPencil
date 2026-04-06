@@ -3,10 +3,10 @@
  * No transport abstraction - calls streamSimple via the loop.
  */
 /**
- * [UPSTREAM]: Depends on ./agent-loop.js
- * [SURFACE]: AgentOptions, Agent
- * [LOCUS]: packages/agent-core/src/agent.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: AgentOptions, Agent
+ * [FROM]: Depends on ./agent-loop.js
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/agent.ts -
  */
 
 

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on child_process, node:crypto, node:fs, node:os, node:path, ignore, minimatch, config, utils/git, settings-manager
- * [SURFACE]: DefaultPackageManager class, package installation and management
- * [LOCUS]: core/package-manager.ts - npm package manager integration
- * [COVENANT]: Change package manager → update this header
+ * [WHO]: DefaultPackageManager class, package installation and management
+ * [FROM]: Depends on child_process, node:crypto, node:fs, node:os, node:path, ignore, minimatch, config, utils/git, settings-manager
+ * [TO]: Consumed by modes/interactive/components/config-selector.ts, cli/config-selector.ts
+ * [HERE]: core/package-manager.ts - npm package manager integration
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

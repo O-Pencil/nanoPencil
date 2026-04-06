@@ -1,11 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/nano-pencil
- * [SURFACE]: default export (Extension), nanomem extension for NanoPencil integration
- * [LOCUS]: packages/mem-core/src/extension.ts - thin adapter bridging NanoPencil events to host-agnostic NanoMemEngine
- * [COVENANT]: Change extension hooks → update this header and verify against packages/mem-core/CLAUDE.md
- *
- * NOTE: This is the ONLY module that depends on @pencil-agent/nano-pencil types.
- * For non-NanoPencil hosts, import from the package root (index.ts) instead.
+ * [WHO]: default export (Extension), nanomem extension for NanoPencil integration
+ * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/nano-pencil
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/extension.ts - thin adapter bridging NanoPencil events to host-agnostic NanoMemEngine
  */
 
 

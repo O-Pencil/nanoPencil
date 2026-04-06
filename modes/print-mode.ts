@@ -1,14 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, core/runtime/agent-session
- * [SURFACE]: PrintModeOptions, runPrintMode()
- * [LOCUS]: modes/print-mode.ts - non-interactive batch processing mode
- * [COVENANT]: Change print mode → update P2 modes/CLAUDE.md
- */
-/**
- * [UPSTREAM]: 
- * [SURFACE]: 
- * [LOCUS]: ./modes/print-mode.ts - 
- * [COVENANT]: Change print mode → update P2 modes/CLAUDE.md
+ * [WHO]: PrintModeOptions, runPrintMode()
+ * [FROM]: Depends on ai, core/runtime/agent-session
+ * [TO]: Consumed by modes/index.ts
+ * [HERE]: modes/print-mode.ts - non-interactive batch processing mode
  */
 import type { AssistantMessage, ImageContent } from "@pencil-agent/ai";
 import type { AgentSession } from "../core/runtime/agent-session.js";

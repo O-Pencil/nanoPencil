@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @agentclientprotocol/sdk, agent-core, ai
- * [SURFACE]: runAcpMode(), AcpMode class
- * [LOCUS]: modes/acp/acp-mode.ts - ACP protocol integration
- * [COVENANT]: Change ACP mode → update this header
+ * [WHO]: runAcpMode(), AcpMode class
+ * [FROM]: Depends on @agentclientprotocol/sdk, agent-core, ai
+ * [TO]: Consumed by modes/index.ts
+ * [HERE]: modes/acp/acp-mode.ts - ACP protocol integration
  */
 import * as acp from "@agentclientprotocol/sdk";
 import type { AgentMessage, AgentTool } from "@pencil-agent/agent-core";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../models.js, ../utils/json-parse.js, ../utils/sanitize-unicode.js, ./transform-messages.js
- * [SURFACE]: OpenAIResponsesStreamOptions, ConvertResponsesMessagesOptions, ConvertResponsesToolsOptions, convertResponsesMessages, convertResponsesTools
- * [LOCUS]: packages/ai/src/providers/openai-responses-shared.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: OpenAIResponsesStreamOptions, ConvertResponsesMessagesOptions, ConvertResponsesToolsOptions, convertResponsesMessages, convertResponsesTools
+ * [FROM]: Depends on ../models.js, ../utils/json-parse.js, ../utils/sanitize-unicode.js, ./transform-messages.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/openai-responses-shared.ts -
  */
 
 import type OpenAI from "openai";

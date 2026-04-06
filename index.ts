@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on config, core/*, modes/*
- * [SURFACE]: Package barrel exports - NanoPencil public API
- * [LOCUS]: index.ts - main package entry point
- * [COVENANT]: Change exports → update package.json exports
+ * [WHO]: Package barrel exports - NanoPencil public API
+ * [FROM]: Depends on config, core/*, modes/*
+ * [TO]: Consumed by external packages and internal extension loader
+ * [HERE]: index.ts - main package entry point
  */
 // Core session management
 

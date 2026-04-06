@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on get-east-asian-width
- * [SURFACE]: getSegmenter, visibleWidth, wrapTextWithAnsi, isWhitespaceChar, isPunctuationChar
- * [LOCUS]: packages/tui/src/utils.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: getSegmenter, visibleWidth, wrapTextWithAnsi, isWhitespaceChar, isPunctuationChar
+ * [FROM]: Depends on get-east-asian-width
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/utils.ts -
  */
 
 import { eastAsianWidth } from "get-east-asian-width";

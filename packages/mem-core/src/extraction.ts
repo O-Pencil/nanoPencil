@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./config.js, ./i18n.js, ./store.js, ./types.js
- * [SURFACE]: extractMemories, extractWork, extractState
- * [LOCUS]: packages/mem-core/src/extraction.ts - dual-path extraction (LLM when available, regex heuristics fallback)
- * [COVENANT]: Change extraction patterns → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: extractMemories, extractWork, extractState
+ * [FROM]: Depends on ./config.js, ./i18n.js, ./store.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/extraction.ts - dual-path extraction (LLM when available, regex heuristics fallback)
  */
 
 

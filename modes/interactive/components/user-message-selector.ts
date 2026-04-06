@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: UserMessageSelectorComponent
- * [LOCUS]: modes/interactive/components/user-message-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: UserMessageSelectorComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/user-message-selector.ts - user message list selector
  */
 
 import { type Component, Container, getEditorKeybindings, Spacer, Text, truncateToWidth } from "@pencil-agent/tui";

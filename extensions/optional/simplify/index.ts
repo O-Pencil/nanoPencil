@@ -10,10 +10,10 @@
  * 内置扩展：自动随 nanopencil 加载
  */
 /**
- * [UPSTREAM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, fs, path
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/optional/simplify/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, fs, path
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/optional/simplify/index.ts -
  */
 
 

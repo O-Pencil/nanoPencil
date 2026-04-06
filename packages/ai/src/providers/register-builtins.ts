@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../api-registry.js, ./amazon-bedrock.js, ./anthropic.js, ./azure-openai-responses.js, ./google.js
- * [SURFACE]: registerBuiltInApiProviders, resetApiProviders
- * [LOCUS]: packages/ai/src/providers/register-builtins.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: registerBuiltInApiProviders, resetApiProviders
+ * [FROM]: Depends on ../api-registry.js, ./amazon-bedrock.js, ./anthropic.js, ./azure-openai-responses.js, ./google.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/register-builtins.ts -
  */
 
 import { clearApiProviders, registerApiProvider } from "../api-registry.js";

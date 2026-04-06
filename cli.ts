@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * [UPSTREAM]: Depends on main.ts
- * [SURFACE]: CLI entry point, sets process.title, calls main()
- * [LOCUS]: Entry point; orchestrates argument parsing and mode selection
- * [COVENANT]: Change CLI behavior → update AGENTS.md build commands
+ * [WHO]: CLI entry point, sets process.title, calls main()
+ * [FROM]: Depends on main.ts
+ * [TO]: Consumed by bin/nanopencil (npm binary)
+ * [HERE]: Entry point; orchestrates argument parsing and mode selection
  */
 process.title = "nanopencil";
 

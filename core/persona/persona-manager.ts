@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, config
- * [SURFACE]: PersonaManager class, persona state and path management
- * [LOCUS]: core/persona/persona-manager.ts - persona management layer
- * [COVENANT]: Change persona → update this header
+ * [WHO]: PersonaManager class, persona state and path management
+ * [FROM]: Depends on node:fs, node:path, config
+ * [TO]: Consumed by core/config/resource-loader.ts
+ * [HERE]: core/persona/persona-manager.ts - persona management layer
  */
 import { existsSync, readdirSync, readFileSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";

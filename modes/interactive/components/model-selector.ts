@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/ai, ../theme/theme.js, ./apikey-input.js, ./dynamic-border.js, ./keybinding-hints.js
- * [SURFACE]: ModelSelectorComponent
- * [LOCUS]: modes/interactive/components/model-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ModelSelectorComponent
+ * [FROM]: Depends on @pencil-agent/ai, ../theme/theme.js, ./apikey-input.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/model-selector.ts -
  */
 
 import { type Model, modelsAreEqual } from "@pencil-agent/ai";

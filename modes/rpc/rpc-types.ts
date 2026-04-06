@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, core/runtime, core/bash-executor, core/session/compaction
- * [SURFACE]: RpcCommand, RpcResponse, RpcSessionState, RpcSlashCommand types
- * [LOCUS]: modes/rpc/rpc-types.ts - RPC protocol type definitions
- * [COVENANT]: Change RPC types → update this header
+ * [WHO]: RpcCommand, RpcResponse, RpcSessionState, RpcSlashCommand types
+ * [FROM]: Depends on agent-core, ai, core/runtime, core/bash-executor, core/session/compaction
+ * [TO]: Consumed by modes/index.ts, modes/rpc/rpc-client.ts, modes/rpc/rpc-mode.ts
+ * [HERE]: modes/rpc/rpc-types.ts - RPC protocol type definitions
  */
 import type { AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
 import type { ImageContent, Model } from "@pencil-agent/ai";

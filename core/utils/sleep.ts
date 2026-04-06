@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: sleep()
- * [LOCUS]: core/utils/sleep.ts - sleep helper that respects abort signal
- * [COVENANT]: Change sleep → update this header
+ * [WHO]: sleep()
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/utils/sleep.ts - sleep helper that respects abort signal
  */
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 	return new Promise((resolve, reject) => {

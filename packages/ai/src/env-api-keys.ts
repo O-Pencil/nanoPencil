@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:os, node:path (lazy loaded)
- * [SURFACE]: Environment-based API key utilities
- * [LOCUS]: packages/ai/src/env-api-keys.ts - environment variable key access
- * [COVENANT]: Change key access → update this header
+ * [WHO]: Environment-based API key utilities
+ * [FROM]: Depends on node:fs, node:os, node:path (lazy loaded)
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/env-api-keys.ts - environment variable key access
  */
 // NEVER convert to top-level imports - breaks browser/Vite builds (web-ui)
 let _existsSync: typeof import("node:fs").existsSync | null = null;

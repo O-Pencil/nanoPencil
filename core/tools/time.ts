@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, typebox
- * [SURFACE]: TimeTool, timeTool, createTimeTool
- * [LOCUS]: core/tools/time.ts - current time tool
- * [COVENANT]: Change time tool → update this header
+ * [WHO]: TimeTool, timeTool, createTimeTool
+ * [FROM]: Depends on agent-core, typebox
+ * [TO]: Consumed by core/tools/index.ts
+ * [HERE]: core/tools/time.ts - current time tool
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import { type Static, Type } from "@sinclair/typebox";

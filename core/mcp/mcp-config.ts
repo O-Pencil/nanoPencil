@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, node:os, config, mcp-client
- * [SURFACE]: MCPConfig, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers()
- * [LOCUS]: core/mcp/mcp-config.ts - MCP server configuration management
- * [COVENANT]: Change MCP config → update this header
+ * [WHO]: MCPConfig, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers()
+ * [FROM]: Depends on node:fs, node:path, node:os, config, mcp-client
+ * [TO]: Consumed by core/index.ts, core/mcp-manager.ts, modes/interactive/interactive-mode.ts, extensions/defaults/mcp/index.ts
+ * [HERE]: core/mcp/mcp-config.ts - MCP server configuration management
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";

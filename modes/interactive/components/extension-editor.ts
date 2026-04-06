@@ -3,10 +3,10 @@
  * Supports Ctrl+G for external editor.
  */
 /**
- * [UPSTREAM]: Depends on node:child_process, node:fs, node:os, node:path, ../theme/theme.js
- * [SURFACE]: ExtensionEditorComponent
- * [LOCUS]: modes/interactive/components/extension-editor.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ExtensionEditorComponent
+ * [FROM]: Depends on node:child_process, node:fs, node:os, node:path, ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/extension-editor.ts -
  */
 
 

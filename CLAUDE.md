@@ -96,6 +96,28 @@ Single responses must complete the "evidence → conclusion → actionable next 
 
 **Map and terrain must be isomorphic**: Code changes must be traceable and verifiable in docs; vice versa. Either phase evolving alone = incomplete.
 
+### Progressive Disclosure Benefit
+
+P3 headers serve as **context budget gatekeepers**:
+
+| Without P3 | With P3 |
+|------------|---------|
+| Read entire file to understand relevance | Read 4 lines, decide instantly |
+| O(n) per file | O(1) per file |
+| Context explosion in large projects | Exponential context savings |
+| Hard to skip irrelevant files | Easy to filter with WHO/FROM/HERE |
+
+**The Rule**: After reading a P3 header, if the file is not relevant to your current task, **stop reading immediately**. This is not skipping — it's precision.
+
+**The Four Questions**:
+
+| Field | Question | Example |
+|-------|----------|---------|
+| **WHO** | 这个文件提供了什么？ | `Provides buildSystemPrompt(), BuildSystemPromptOptions` |
+| **FROM** | 这个文件依赖什么？ | `Depends on config, skills, tools` |
+| **TO** | 谁会用到这个文件？ | `Consumed by agent runtime, SDK` |
+| **HERE** | 这个文件在哪？ | `core/prompt/system-prompt.ts - prompt building` |
+
 ### Doctrine
 
 You are the executor of DIP, bound by verifiable isomorphism constraints.
@@ -137,10 +159,10 @@ Global topology, stack overview, global patterns
 **Format**:
 ```typescript
 /**
- * [UPSTREAM]: Dependencies on {module/package/file} {specific capability or symbol}
- * [SURFACE]: Provides {exported functions/components/types/constants}
- * [LOCUS]: {responsibility coordinates} within {module}; consumer/producer relationship with adjacent files
- * [COVENANT]: Update this header on changes and verify against parent CLAUDE.md
+ * [WHO]: Provides {exported functions/components/types/constants}
+ * [FROM]: Depends on {module/package/file} for {specific capability}
+ * [TO]: Consumed by {adjacent modules or downstream consumers}
+ * [HERE]: {file path} within {module}; relationship with neighbors
  */
 ```
 
@@ -167,12 +189,24 @@ Rule: Members complete, one item per line, parent links valid, precise terms fir
 
 ```typescript
 /**
- * [UPSTREAM]: Depends on {module/package/file} for {specific capability or symbol}
- * [SURFACE]: Provides {exported functions/components/types/constants}
- * [LOCUS]: {responsibility coordinates} within {module}; consumer/producer relationship with adjacent files
- * [COVENANT]: Update this header on changes and verify against parent CLAUDE.md
+ * [WHO]: Provides {exported functions/components/types/constants}
+ * [FROM]: Depends on {module/package/file} for {specific capability}
+ * [TO]: Consumed by {adjacent modules or downstream consumers}
+ * [HERE]: {file path} within {module}; relationship with neighbors
  */
 ```
+
+### Writing Effective P3 Headers (Progressive Disclosure Optimized)
+
+**WHO** should enable instant relevance judgment:
+- ❌ Bad: `Provides utility functions` (too vague)
+- ✅ Good: `Provides buildSystemPrompt(), BuildSystemPromptOptions interface`
+- ✅ Good: `Provides AgentSession, SessionManager, EventBus`
+
+**HERE** should enable module boundary filtering:
+- ❌ Bad: `in core/runtime` (just restates path)
+- ✅ Good: `core/runtime/agent-session.ts - wraps Agent core; consumed by tools, extensions`
+- Pattern: `{file} - {what it does}; {FROM deps}; {TO consumers}`
 
 ---
 
@@ -470,16 +504,16 @@ Types: `feat`, `fix`, `docs`, `refactor`, `perf`, `chore`, `style`
 
 ### P3 — File Contracts
 
-**Status**: ✅ All 257 TypeScript source files have P3 headers
+**Status**: 🔄 In Progress — 275 TypeScript files have P3 headers; [TO] fields pending; P2 subdirectory docs in creation
 
 Add P3 headers following this pattern:
 
 ```typescript
 /**
- * [UPSTREAM]: Dependencies on {module/package/file}
- * [SURFACE]: Provides {exported functions/components/types}
- * [LOCUS]: {responsibility coordinates} within {module}
- * [COVENANT]: Update this header on changes
+ * [WHO]: Provides {exported functions/components/types/constants}
+ * [FROM]: Depends on {module/package/file} for {specific capability}
+ * [TO]: Consumed by {adjacent modules or downstream consumers}
+ * [HERE]: {file path} within {module}; relationship with neighbors
  */
 ```
 

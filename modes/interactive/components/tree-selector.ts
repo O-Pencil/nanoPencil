@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
- * [SURFACE]: TreeSelectorComponent
- * [LOCUS]: modes/interactive/components/tree-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: TreeSelectorComponent
+ * [FROM]: Depends on ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/tree-selector.ts -
  */
 
 import {

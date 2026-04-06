@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./scoring.js, ./types.js
- * [SURFACE]: filterPII, filterByScope, evictExpiredEntries, evictExpiredWork
- * [LOCUS]: packages/mem-core/src/privacy.ts - scope isolation, TTL enforcement, PII filtering
- * [COVENANT]: Change privacy logic → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: filterPII, filterByScope, evictExpiredEntries, evictExpiredWork
+ * [FROM]: Depends on ./scoring.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/privacy.ts - scope isolation, TTL enforcement, PII filtering
  */
 
 

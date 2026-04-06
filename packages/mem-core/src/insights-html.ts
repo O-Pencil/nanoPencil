@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./i18n.js, ./types.js
- * [SURFACE]: renderInsightsHtml
- * [LOCUS]: packages/mem-core/src/insights-html.ts - pure HTML renderer for insights report, no side effects
- * [COVENANT]: Change HTML format → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: renderInsightsHtml
+ * [FROM]: Depends on ./i18n.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/insights-html.ts - pure HTML renderer for insights report, no side effects
  */
 
 

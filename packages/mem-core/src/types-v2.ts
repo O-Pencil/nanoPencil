@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./types.js (MemoryScope)
- * [SURFACE]: EpisodeMemory, EpisodeFacet, ProceduralMemory, ProceduralStep, SemanticCluster, StateMemory, MemoryLink, MemoryScopeV2
- * [LOCUS]: packages/mem-core/src/types-v2.ts - foundation layer for NanoMem v2 layered-memory data model (episodic/semantic/procedural/state)
- * [COVENANT]: Change v2 data model → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: EpisodeMemory, EpisodeFacet, ProceduralMemory, ProceduralStep, SemanticCluster, StateMemory, MemoryLink, MemoryScopeV2
+ * [FROM]: Depends on ./types.js (MemoryScope)
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/types-v2.ts - foundation layer for NanoMem v2 layered-memory data model (episodic/semantic/procedural/state)
  */
 
 import type { MemoryScope } from "./types.js";

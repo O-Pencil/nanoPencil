@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * [UPSTREAM]: Depends on node:fs, engine, insights
- * [SURFACE]: NanoMem CLI - stats, search, forget, export, insights commands
- * [LOCUS]: packages/mem-core/src/cli.ts - NanoMem standalone CLI
- * [COVENANT]: Change CLI → update this header
+ * [WHO]: NanoMem CLI - stats, search, forget, export, insights commands
+ * [FROM]: Depends on node:fs, engine, insights
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/cli.ts - NanoMem standalone CLI
  */
 
 import { writeFileSync } from "node:fs";

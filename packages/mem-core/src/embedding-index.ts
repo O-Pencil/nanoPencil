@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:path, node:crypto, ./store.js, ./types-v2.js
- * [SURFACE]: loadEmbeddingIndex, saveEmbeddingIndex, syncEmbeddingIndex, queryEmbeddingIndex, cosineSimilarity
- * [LOCUS]: packages/mem-core/src/embedding-index.ts - lightweight JSON embedding index for NanoMem v2 semantic recall
- * [COVENANT]: Change vector index schema → update this header and verify engine integration
+ * [WHO]: loadEmbeddingIndex, saveEmbeddingIndex, syncEmbeddingIndex, queryEmbeddingIndex, cosineSimilarity
+ * [FROM]: Depends on node:path, node:crypto, ./store.js, ./types-v2.js
+ * [TO]: Consumed by packages/mem-core/src/extension.ts
+ * [HERE]: packages/mem-core/src/embedding-index.ts - lightweight JSON embedding index for NanoMem v2 semantic recall
  */
 
 import { createHash } from "node:crypto";

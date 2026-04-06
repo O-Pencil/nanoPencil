@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, tui - all extension-related types
- * [SURFACE]: All extension types: Extension, ExtensionContext, HookEvent types, ToolDefinition, etc.
- * [LOCUS]: core/extensions/types.ts - type definitions for extension system API
- * [COVENANT]: This is the API contract; change types → notify extension authors
+ * [WHO]: All extension types: Extension, ExtensionContext, HookEvent types, ToolDefinition, etc.
+ * [FROM]: Depends on agent-core, ai, tui - all extension-related types
+ * [TO]: Consumed by core/extensions/index.ts, core/extensions/runner.ts, core/extensions/wrapper.ts, all extension entry points (defaults/loop, defaults/team, defaults/mcp, defaults/soul, defaults/presence, defaults/security-audit, defaults/link-world, defaults/interview, optional/simplify, optional/export-html), modes/interactive/components/tool-execution.ts, modes/interactive/components/custom-message.ts, modes/acp/acp-mode.ts
+ * [HERE]: core/extensions/types.ts - type definitions for extension system API
  */
 import type {
 	AgentMessage,
@@ -1031,6 +1031,9 @@ export interface ExtensionAPI {
 		options?: { deliverAs?: "steer" | "followUp" },
 	): void;
 
+	/** Execute a slash command through the active session command dispatcher. */
+	executeCommand(text: string): Promise<boolean>;
+
 	/** Whether the agent is idle (not streaming). For queueing loop tasks use with sendUserMessage. */
 	isIdle(): boolean;
 
@@ -1275,6 +1278,7 @@ export interface ExtensionRuntimeState {
 export interface ExtensionActions {
 	sendMessage: SendMessageHandler;
 	sendUserMessage: SendUserMessageHandler;
+	executeCommand: (text: string) => Promise<boolean>;
 	appendEntry: AppendEntryHandler;
 	setSessionName: SetSessionNameHandler;
 	getSessionName: GetSessionNameHandler;

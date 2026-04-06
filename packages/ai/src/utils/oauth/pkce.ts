@@ -3,10 +3,10 @@
  * Works in both Node.js 20+ and browsers.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: Extension interface
- * [LOCUS]: packages/ai/src/utils/oauth/pkce.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/pkce.ts -
  */
 
 

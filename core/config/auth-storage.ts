@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, node:fs, proper-lockfile, config
- * [SURFACE]: AuthStorage class, credential management
- * [LOCUS]: core/config/auth-storage.ts - credential storage for API keys and OAuth
- * [COVENANT]: Change auth storage → update this header
+ * [WHO]: AuthStorage class, credential management
+ * [FROM]: Depends on ai, node:fs, proper-lockfile, config
+ * [TO]: Consumed by index.ts, main.ts, nanopencil-defaults.ts, core/runtime/sdk.ts, core/model-registry.ts, core/mcp/mcp-client.ts, extensions/defaults/mcp/index.ts, and test files
+ * [HERE]: core/config/auth-storage.ts - credential storage for API keys and OAuth
  */
 import {
 	getEnvApiKey,

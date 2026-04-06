@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on child_process, fs, os, path, ./fuzzy.js
- * [SURFACE]: AutocompleteItem, SlashCommand, AutocompleteProvider, CombinedAutocompleteProvider
- * [LOCUS]: packages/tui/src/autocomplete.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: AutocompleteItem, SlashCommand, AutocompleteProvider, CombinedAutocompleteProvider
+ * [FROM]: Depends on child_process, fs, os, path, ./fuzzy.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/autocomplete.ts -
  */
 
 import { spawnSync } from "child_process";

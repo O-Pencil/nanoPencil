@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: ProviderSelectorComponent
- * [LOCUS]: modes/interactive/components/provider-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ProviderSelectorComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/provider-selector.ts -
  */
 
 import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";

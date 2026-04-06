@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: OAuthLoginCallbacks, OAuthProviderInterface, OAuthProviderInfo
- * [LOCUS]: packages/ai/src/utils/oauth/types.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: OAuthLoginCallbacks, OAuthProviderInterface, OAuthProviderInfo
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/types.ts -
  */
 
 import type { Api, Model } from "../../types.js";

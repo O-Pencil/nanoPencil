@@ -29,6 +29,7 @@ export const slashCommands = {
 	logout: "从 OAuth 提供商登出",
 	new: "开始新会话",
 	update: "检查 NanoPencil 更新",
+	reinstall: "强制重新安装 NanoPencil（干净安装）",
 	compact: "手动压缩会话上下文",
 	resume: "恢复其他会话",
 	reload: "重新加载扩展、技能、提示和主题",

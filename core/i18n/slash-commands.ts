@@ -29,6 +29,7 @@ export const slashCommands = {
 	logout: "Logout from OAuth provider",
 	new: "Start a new session",
 	update: "Check for NanoPencil updates",
+	reinstall: "Force reinstall NanoPencil (clean install)",
 	compact: "Manually compact the session context",
 	resume: "Resume a different session",
 	reload: "Reload extensions, skills, prompts, and themes",

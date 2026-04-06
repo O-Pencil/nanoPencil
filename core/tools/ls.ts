@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, node:fs, path-utils.ts, truncate.ts
- * [SURFACE]: LsTool, lsTool, createLsTool, LsToolInput
- * [LOCUS]: core/tools/ls.ts - directory listing with metadata; consumed by orchestrator
- * [COVENANT]: Change ls behavior → update core/CLAUDE.md member list
+ * [WHO]: LsTool, lsTool, createLsTool, LsToolInput
+ * [FROM]: Depends on agent-core, node:fs, path-utils.ts, truncate.ts
+ * [TO]: Consumed by core/tools/index.ts
+ * [HERE]: core/tools/ls.ts - directory listing with metadata; consumed by orchestrator
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import { type Static, Type } from "@sinclair/typebox";

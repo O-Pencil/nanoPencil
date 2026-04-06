@@ -9,10 +9,10 @@
  * - Antigravity (Gemini 3, Claude, GPT-OSS via Google Cloud)
  */
 /**
- * [UPSTREAM]: Depends on ./anthropic.js, ./github-copilot.js, ./google-antigravity.js, ./google-gemini-cli.js, ./openai-codex.js
- * [SURFACE]: anthropicOAuthProvider, loginAnthropic, refreshAnthropicToken, antigravityOAuthProvider, loginAntigravity
- * [LOCUS]: packages/ai/src/utils/oauth/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: anthropicOAuthProvider, loginAnthropic, refreshAnthropicToken, antigravityOAuthProvider, loginAntigravity
+ * [FROM]: Depends on ./anthropic.js, ./github-copilot.js, ./google-antigravity.js, ./google-gemini-cli.js, ./openai-codex.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/index.ts -
  */
 
 

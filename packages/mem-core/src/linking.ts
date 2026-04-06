@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./scoring.js, ./types.js
- * [SURFACE]: GraphNeighbor, linkNewEntry, getRelatedSummaries, getGraphNeighborhood, getGraphContextSummaries, reinforceRelations
- * [LOCUS]: packages/mem-core/src/linking.ts - A-MEM style Zettelkasten linking, atomic storage + dynamic associations
- * [COVENANT]: Change linking algorithm → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: GraphNeighbor, linkNewEntry, getRelatedSummaries, getGraphNeighborhood, getGraphContextSummaries, reinforceRelations
+ * [FROM]: Depends on ./scoring.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/linking.ts - A-MEM style Zettelkasten linking, atomic storage + dynamic associations
  */
 
 

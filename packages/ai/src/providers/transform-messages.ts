@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: transformMessages
- * [LOCUS]: packages/ai/src/providers/transform-messages.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: transformMessages
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/transform-messages.ts -
  */
 
 import type { Api, AssistantMessage, Message, Model, ToolCall, ToolResultMessage } from "../types.js";

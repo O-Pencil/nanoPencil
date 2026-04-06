@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, messages, utils, compaction types
- * [SURFACE]: summarizeBranch()
- * [LOCUS]: core/session/compaction/branch-summarization.ts - branch summarization
- * [COVENANT]: Change branch summarization → update this header
+ * [WHO]: summarizeBranch()
+ * [FROM]: Depends on agent-core, ai, messages, utils, compaction types
+ * [TO]: Consumed by core/session/compaction/index.ts
+ * [HERE]: core/session/compaction/branch-summarization.ts - branch summarization
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { Model } from "@pencil-agent/ai";

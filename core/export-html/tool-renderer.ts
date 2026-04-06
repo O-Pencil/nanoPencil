@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, modes/theme, extensions, export-html/ansi-to-html
- * [SURFACE]: ToolHtmlRendererDeps, renderToolToHtml()
- * [LOCUS]: core/export-html/tool-renderer.ts - renders tools to HTML
- * [COVENANT]: Change tool renderer → update this header
+ * [WHO]: ToolHtmlRendererDeps, renderToolToHtml()
+ * [FROM]: Depends on ai, modes/theme, extensions, export-html/ansi-to-html
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/export-html/tool-renderer.ts - renders tools to HTML
  */
 import type { ImageContent, TextContent } from "@pencil-agent/ai";
 import type { Theme } from "../../modes/interactive/theme/theme.js";

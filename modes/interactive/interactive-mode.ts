@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, tui, core/* (session, model, config, tools)
- * [SURFACE]: InteractiveMode class, runInteractiveMode()
- * [LOCUS]: modes/interactive/interactive-mode.ts - TUI orchestration hub
- * [COVENANT]: Change TUI behavior → update P2 modes/CLAUDE.md
+ * [WHO]: InteractiveMode class, runInteractiveMode()
+ * [FROM]: Depends on agent-core, ai, tui, core/* (session, model, config, tools)
+ * [TO]: Consumed by modes/index.ts
+ * [HERE]: modes/interactive/interactive-mode.ts - TUI orchestration hub
  */
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
@@ -377,6 +377,9 @@ export class InteractiveMode {
     // Register themes from resource loader and initialize
     setRegisteredThemes(this.session.resourceLoader.getThemes().themes);
     initTheme(this.settingsManager.getTheme(), true);
+    this.session.setSlashCommandExecutor((text) =>
+      this.executeBuiltinSlashCommand(text, { clearEditor: false }),
+    );
   }
 
   private setupAutocomplete(fdPath: string | undefined): void {
@@ -2518,131 +2521,7 @@ export class InteractiveMode {
       text = text.trim();
       if (!text) return;
 
-      // Handle commands
-      if (text === "/settings") {
-        this.showSettingsSelector();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/apikey") {
-        await this.handleApiKeyCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/scoped-models") {
-        this.editor.setText("");
-        await this.showModelsSelector();
-        return;
-      }
-      if (text === "/model" || text.startsWith("/model ")) {
-        const searchTerm = text.startsWith("/model ")
-          ? text.slice(7).trim()
-          : undefined;
-        this.editor.setText("");
-        await this.handleModelCommand(searchTerm);
-        return;
-      }
-      if (text === "/mcp" || text.startsWith("/mcp ")) {
-        await this.handleMcpCommand(text);
-        this.editor.setText("");
-        return;
-      }
-      if (text.startsWith("/export")) {
-        await this.handleExportCommand(text);
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/share") {
-        await this.handleShareCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/copy") {
-        this.handleCopyCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/usage") {
-        await this.handleUsageCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/name" || text.startsWith("/name ")) {
-        this.handleNameCommand(text);
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/session") {
-        this.handleSessionCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/changelog") {
-        this.handleChangelogCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/hotkeys") {
-        this.handleHotkeysCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/resources") {
-        this.handleShowResourcesCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/fork") {
-        this.showUserMessageSelector();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/tree") {
-        this.showTreeSelector();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/login" || text.startsWith("/login ")) {
-        await this.handleLoginCommand(text);
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/logout") {
-        this.showOAuthSelector("logout");
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/new") {
-        this.editor.setText("");
-        await this.handleClearCommand();
-        return;
-      }
-      if (text === "/update") {
-        this.handleUpdateCommand();
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/compact" || text.startsWith("/compact ")) {
-        const customInstructions = text.startsWith("/compact ")
-          ? text.slice(9).trim()
-          : undefined;
-        this.editor.setText("");
-        await this.handleCompactCommand(customInstructions);
-        return;
-      }
-      if (text === "/reload") {
-        this.editor.setText("");
-        await this.handleReloadCommand();
-        return;
-      }
-      if (text === "/language" || text.startsWith("/language ")) {
-        await this.handleLanguageCommand(text);
-        this.editor.setText("");
-        return;
-      }
-      if (text === "/soul") {
-        this.handleSoulCommand();
-        this.editor.setText("");
+      if (await this.executeBuiltinSlashCommand(text)) {
         return;
       }
       // Check for /persona command - support both standalone and mixed with other text
@@ -2867,6 +2746,179 @@ export class InteractiveMode {
       // Clean up temporary clipboard image files from project root
       this.cleanupClipboardImages();
     };
+  }
+
+  private async executeBuiltinSlashCommand(
+    text: string,
+    options?: { clearEditor?: boolean },
+  ): Promise<boolean> {
+    if (!text.startsWith("/")) return false;
+
+    const clearEditor = options?.clearEditor ?? true;
+    const clear = () => {
+      if (clearEditor) {
+        this.editor.setText("");
+      }
+    };
+
+    if (text === "/settings") {
+      this.showSettingsSelector();
+      clear();
+      return true;
+    }
+    if (text === "/apikey") {
+      await this.handleApiKeyCommand();
+      clear();
+      return true;
+    }
+    if (text === "/scoped-models") {
+      clear();
+      await this.showModelsSelector();
+      return true;
+    }
+    if (text === "/model" || text.startsWith("/model ")) {
+      const searchTerm = text.startsWith("/model ")
+        ? text.slice(7).trim()
+        : undefined;
+      clear();
+      await this.handleModelCommand(searchTerm);
+      return true;
+    }
+    if (text === "/mcp" || text.startsWith("/mcp ")) {
+      await this.handleMcpCommand(text);
+      clear();
+      return true;
+    }
+    if (text.startsWith("/export")) {
+      await this.handleExportCommand(text);
+      clear();
+      return true;
+    }
+    if (text === "/share") {
+      await this.handleShareCommand();
+      clear();
+      return true;
+    }
+    if (text === "/copy") {
+      this.handleCopyCommand();
+      clear();
+      return true;
+    }
+    if (text === "/usage") {
+      await this.handleUsageCommand();
+      clear();
+      return true;
+    }
+    if (text === "/name" || text.startsWith("/name ")) {
+      this.handleNameCommand(text);
+      clear();
+      return true;
+    }
+    if (text === "/session") {
+      this.handleSessionCommand();
+      clear();
+      return true;
+    }
+    if (text === "/changelog") {
+      this.handleChangelogCommand();
+      clear();
+      return true;
+    }
+    if (text === "/hotkeys") {
+      this.handleHotkeysCommand();
+      clear();
+      return true;
+    }
+    if (text === "/resources") {
+      this.handleShowResourcesCommand();
+      clear();
+      return true;
+    }
+    if (text === "/fork") {
+      this.showUserMessageSelector();
+      clear();
+      return true;
+    }
+    if (text === "/tree") {
+      this.showTreeSelector();
+      clear();
+      return true;
+    }
+    if (text === "/login" || text.startsWith("/login ")) {
+      await this.handleLoginCommand(text);
+      clear();
+      return true;
+    }
+    if (text === "/logout") {
+      this.showOAuthSelector("logout");
+      clear();
+      return true;
+    }
+    if (text === "/new") {
+      clear();
+      await this.handleClearCommand();
+      return true;
+    }
+    if (text === "/update") {
+      this.handleUpdateCommand();
+      clear();
+      return true;
+    }
+    if (text === "/compact" || text.startsWith("/compact ")) {
+      const customInstructions = text.startsWith("/compact ")
+        ? text.slice(9).trim()
+        : undefined;
+      clear();
+      await this.handleCompactCommand(customInstructions);
+      return true;
+    }
+    if (text === "/reload") {
+      clear();
+      await this.handleReloadCommand();
+      return true;
+    }
+    if (text === "/language" || text.startsWith("/language ")) {
+      await this.handleLanguageCommand(text);
+      clear();
+      return true;
+    }
+    if (text === "/soul") {
+      this.handleSoulCommand();
+      clear();
+      return true;
+    }
+    if (text === "/persona" || text.startsWith("/persona ")) {
+      clear();
+      await this.handlePersonaCommand(text);
+      return true;
+    }
+    if (text === "/memory") {
+      this.handleMemoryCommand();
+      clear();
+      return true;
+    }
+    if (text === "/debug") {
+      this.handleDebugCommand();
+      clear();
+      return true;
+    }
+    if (text === "/arminsayshi") {
+      this.handleArminSaysHi();
+      clear();
+      return true;
+    }
+    if (text === "/resume") {
+      this.showSessionSelector();
+      clear();
+      return true;
+    }
+    if (text === "/quit") {
+      clear();
+      await this.shutdown();
+      return true;
+    }
+
+    return false;
   }
 
   private cleanupStaleClipboardFiles(): void {

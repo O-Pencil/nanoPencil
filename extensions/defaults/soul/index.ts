@@ -10,10 +10,10 @@
  * This is a DEFAULT extension - automatically loaded with NanoPencil unless disabled.
  */
 /**
- * [UPSTREAM]: Depends on node:path, node:os, node:fs, node:url, node:path
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/defaults/soul/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on node:path, node:os, node:fs, node:url, node:path
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/soul/index.ts -
  */
 
 

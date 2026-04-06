@@ -2,10 +2,10 @@
  * Shared utilities for Google Generative AI and Google Cloud Code Assist providers.
  */
 /**
- * [UPSTREAM]: Depends on @google/genai, ../utils/sanitize-unicode.js, ./transform-messages.js
- * [SURFACE]: isThinkingPart, retainThoughtSignature, requiresToolCallId, convertMessages, convertTools
- * [LOCUS]: packages/ai/src/providers/google-shared.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: isThinkingPart, retainThoughtSignature, requiresToolCallId, convertMessages, convertTools
+ * [FROM]: Depends on @google/genai, ../utils/sanitize-unicode.js, ./transform-messages.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/google-shared.ts -
  */
 
 

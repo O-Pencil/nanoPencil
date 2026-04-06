@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on openai, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/json-parse.js
- * [SURFACE]: OpenAICompletionsOptions, streamOpenAICompletions, streamSimpleOpenAICompletions, convertMessages
- * [LOCUS]: packages/ai/src/providers/openai-completions.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: OpenAICompletionsOptions, streamOpenAICompletions, streamSimpleOpenAICompletions, convertMessages
+ * [FROM]: Depends on openai, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/json-parse.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/openai-completions.ts -
  */
 
 import OpenAI from "openai";

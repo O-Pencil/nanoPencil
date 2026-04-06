@@ -4,10 +4,10 @@
  * [POS]: Configuration layer - provides defaults and validation
  */
 /**
- * [UPSTREAM]: Depends on node:path, node:os
- * [SURFACE]: getDefaultConfig, getSoulConfig, validateSoulConfig
- * [LOCUS]: packages/soul-core/src/config.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: getDefaultConfig, getSoulConfig, validateSoulConfig
+ * [FROM]: Depends on node:path, node:os
+ * [TO]: Consumed by packages/soul-core/src/index.ts
+ * [HERE]: packages/soul-core/src/config.ts -
  */
 
 

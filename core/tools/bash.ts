@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, node:fs, node:path, node:os, node:child_process
- * [SURFACE]: BashTool, bashTool, createBashTool, BashToolInput, BashToolDetails
- * [LOCUS]: core/tools/bash.ts - shell command execution boundary; consumed by orchestrator
- * [COVENANT]: Change shell execution → update core/CLAUDE.md member list
+ * [WHO]: BashTool, bashTool, createBashTool, BashToolInput, BashToolDetails
+ * [FROM]: Depends on agent-core, node:fs, node:path, node:os, node:child_process
+ * [TO]: Consumed by core/tools/index.ts
+ * [HERE]: core/tools/bash.ts - shell command execution boundary; consumed by orchestrator
  */
 import { randomBytes } from "node:crypto";
 import { createWriteStream, existsSync } from "node:fs";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on tui, core/keybindings, core/session, modes/interactive/components
- * [SURFACE]: selectSession()
- * [LOCUS]: cli/session-picker.ts - TUI session selector for --resume flag
- * [COVENANT]: Change session picker → update this header
+ * [WHO]: selectSession()
+ * [FROM]: Depends on tui, core/keybindings, core/session, modes/interactive/components
+ * [TO]: Consumed by main.ts
+ * [HERE]: cli/session-picker.ts - TUI session selector for --resume flag
  */
 import { ProcessTerminal, TUI } from "@pencil-agent/tui";
 import { KeybindingsManager } from "../core/keybindings.js";

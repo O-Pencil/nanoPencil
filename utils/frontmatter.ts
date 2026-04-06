@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on yaml
- * [SURFACE]: parseFrontmatter(), stripFrontmatter()
- * [LOCUS]: utils/frontmatter.ts - YAML frontmatter parsing
- * [COVENANT]: Change frontmatter → update this header
+ * [WHO]: parseFrontmatter(), stripFrontmatter()
+ * [FROM]: Depends on yaml
+ * [TO]: Consumed by core/skills.ts, core/prompt/prompt-templates.ts, core/runtime/agent-session.ts
+ * [HERE]: utils/frontmatter.ts - YAML frontmatter parsing
  */
 import yaml from "yaml";
 

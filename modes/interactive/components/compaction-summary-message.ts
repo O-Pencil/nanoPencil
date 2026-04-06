@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
- * [SURFACE]: CompactionSummaryMessageComponent
- * [LOCUS]: modes/interactive/components/compaction-summary-message.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: CompactionSummaryMessageComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/compaction-summary-message.ts -
  */
 
 import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";

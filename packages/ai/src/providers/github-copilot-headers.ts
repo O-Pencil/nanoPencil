@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: inferCopilotInitiator, hasCopilotVisionInput, buildCopilotDynamicHeaders
- * [LOCUS]: packages/ai/src/providers/github-copilot-headers.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: inferCopilotInitiator, hasCopilotVisionInput, buildCopilotDynamicHeaders
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/github-copilot-headers.ts -
  */
 
 import type { Message } from "../types.js";

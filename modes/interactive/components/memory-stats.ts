@@ -4,10 +4,10 @@
  * [POS]: Interactive mode component for /memory command
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: formatMemoryStats
- * [LOCUS]: modes/interactive/components/memory-stats.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: formatMemoryStats
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/memory-stats.ts -
  */
 
 

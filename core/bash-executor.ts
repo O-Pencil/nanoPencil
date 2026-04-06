@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:crypto, node:fs, node:os, node:path, child_process, strip-ansi, utils/shell
- * [SURFACE]: executeBash(), executeBashWithOperations(), BashResult
- * [LOCUS]: core/bash-executor.ts - unified bash execution with streaming
- * [COVENANT]: Change bash execution → update this header
+ * [WHO]: executeBash(), executeBashWithOperations(), BashResult
+ * [FROM]: Depends on node:crypto, node:fs, node:os, node:path, child_process, strip-ansi, utils/shell
+ * [TO]: Consumed by core/index.ts, modes/rpc/rpc-types.ts, modes/rpc/rpc-client.ts
+ * [HERE]: core/bash-executor.ts - unified bash execution with streaming
  */
 import { randomBytes } from "node:crypto";
 import { createWriteStream, type WriteStream } from "node:fs";

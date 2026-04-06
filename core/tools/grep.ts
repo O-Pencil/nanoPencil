@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, node:readline, node:child_process, node:fs
- * [SURFACE]: GrepTool, grepTool, createGrepTool, GrepToolInput
- * [LOCUS]: core/tools/grep.ts - content search via ripgrep; consumed by orchestrator
- * [COVENANT]: Change grep behavior → update core/CLAUDE.md member list
+ * [WHO]: GrepTool, grepTool, createGrepTool, GrepToolInput
+ * [FROM]: Depends on agent-core, node:readline, node:child_process, node:fs
+ * [TO]: Consumed by core/tools/index.ts
+ * [HERE]: core/tools/grep.ts - content search via ripgrep; consumed by orchestrator
  */
 import { createInterface } from "node:readline";
 import type { AgentTool } from "@pencil-agent/agent-core";

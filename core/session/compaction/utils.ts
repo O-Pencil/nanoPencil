@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai
- * [SURFACE]: FileOperations, tokenEstimate(), tokenizeText(), computeFileLists()
- * [LOCUS]: core/session/compaction/utils.ts - shared compaction utilities
- * [COVENANT]: Change compaction utils → update this header
+ * [WHO]: FileOperations, tokenEstimate(), tokenizeText(), computeFileLists()
+ * [FROM]: Depends on agent-core, ai
+ * [TO]: Consumed by core/session/compaction/index.ts
+ * [HERE]: core/session/compaction/utils.ts - shared compaction utilities
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { Message } from "@pencil-agent/ai";

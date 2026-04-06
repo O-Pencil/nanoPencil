@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on openai, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ./github-copilot-headers.js
- * [SURFACE]: OpenAIResponsesOptions, streamOpenAIResponses, streamSimpleOpenAIResponses
- * [LOCUS]: packages/ai/src/providers/openai-responses.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: OpenAIResponsesOptions, streamOpenAIResponses, streamSimpleOpenAIResponses
+ * [FROM]: Depends on openai, ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ./github-copilot-headers.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/openai-responses.ts -
  */
 
 import OpenAI from "openai";

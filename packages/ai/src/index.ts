@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on typebox, all providers
- * [SURFACE]: AI package barrel exports
- * [LOCUS]: packages/ai/src/index.ts - AI package entry point
- * [COVENANT]: Change exports → update package.json exports
+ * [WHO]: AI package barrel exports
+ * [FROM]: Depends on typebox, all providers
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/index.ts - AI package entry point
  */
 export type { Static, TSchema } from "@sinclair/typebox";
 export { Type } from "@sinclair/typebox";

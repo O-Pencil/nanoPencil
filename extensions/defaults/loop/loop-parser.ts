@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: parseLoopCommand, buildHelp
- * [LOCUS]: extensions/defaults/loop/loop-parser.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: parseLoopCommand, buildHelp
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by extension entry point (./index.ts)
+ * [HERE]: extensions/defaults/loop/loop-parser.ts -
  */
 
 import type { ParsedLoopCommand } from "./loop-types.js";
@@ -30,15 +30,15 @@ export function parseLoopCommand(input: string): ParsedLoopCommand {
 export function buildHelp(reason?: string): string {
 	const lines: string[] = [];
 	if (reason) {
-		lines.push(`[Loop] ${reason}`);
+		lines.push(`[Grub] ${reason}`);
 	}
 	lines.push(
-		"[Loop] Usage:",
-		"  /loop <goal>      Start an autonomous task loop",
-		"  /loop status      Show the active or last finished loop",
-		"  /loop stop        Stop the active loop",
+		"[Grub] Usage:",
+		"  /grub <goal>      Start an autonomous digging task",
+		"  /grub status      Show the active or last finished task",
+		"  /grub stop        Stop the active task",
 		"",
-		"[Loop] The agent will keep iterating until it reports complete, reports blocked,",
+		"[Grub] The agent will keep iterating until it reports complete, reports blocked,",
 		"or hits a safety limit such as the iteration or failure cap.",
 	);
 	return lines.join("\n");

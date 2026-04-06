@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: TruncationResult, truncateHead(), truncateTail(), formatSize()
- * [LOCUS]: core/tools/truncate.ts - shared truncation utilities for tool outputs
- * [COVENANT]: Change truncation → update this header
+ * [WHO]: TruncationResult, truncateHead(), truncateTail(), formatSize()
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/tools/index.ts, core/tools/bash.ts, core/tools/read.ts, core/tools/grep.ts, core/tools/find.ts, core/tools/ls.ts, core/bash-executor.ts, modes/interactive/components/tool-execution.ts, modes/interactive/components/bash-execution.ts
+ * [HERE]: core/tools/truncate.ts - shared truncation utilities for tool outputs
  */
 export const DEFAULT_MAX_LINES = 2000;
 export const DEFAULT_MAX_BYTES = 50 * 1024; // 50KB

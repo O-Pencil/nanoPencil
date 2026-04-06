@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:os, node:path, ./types.js
- * [SURFACE]: ProgressiveRecallConfig, NanomemConfig, getConfig, BudgetConfig, ScoreWeights
- * [LOCUS]: packages/mem-core/src/config.ts - configuration management for memory system
- * [COVENANT]: Change config structure → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: ProgressiveRecallConfig, NanomemConfig, getConfig, BudgetConfig, ScoreWeights
+ * [FROM]: Depends on node:os, node:path, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/config.ts - configuration management for memory system
  */
 
 

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on extensions/types
- * [SURFACE]: ToolSourceType, ToolSource, SourceTool
- * [LOCUS]: core/tools/source.ts - tool source abstraction (builtin, MCP, extension)
- * [COVENANT]: Change tool sources → update this header
+ * [WHO]: ToolSourceType, ToolSource, SourceTool
+ * [FROM]: Depends on extensions/types
+ * [TO]: Consumed by core/tools/index.ts (not directly imported)
+ * [HERE]: core/tools/source.ts - tool source abstraction (builtin, MCP, extension)
  */
 import type { ToolDefinition } from "../extensions/types.js";
 

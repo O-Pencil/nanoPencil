@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on loader.ts, runner.ts, types.ts, wrapper.ts
- * [SURFACE]: Extension loading, lifecycle management, event types
- * [LOCUS]: Extension system public API; consumed by SDK and extensions themselves
- * [COVENANT]: Export changes → update P2 core/CLAUDE.md
+ * [WHO]: Extension loading, lifecycle management, event types
+ * [FROM]: Depends on loader.ts, runner.ts, types.ts, wrapper.ts
+ * [TO]: Consumed by index.ts, main.ts, modes/interactive/interactive-mode.ts, modes/rpc/rpc-mode.ts
+ * [HERE]: Extension system public API; consumed by SDK and extensions themselves
  */
 
 export type { SlashCommandInfo, SlashCommandLocation, SlashCommandSource } from "../slash-commands.js";

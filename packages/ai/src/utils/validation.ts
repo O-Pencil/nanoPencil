@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ajv, ajv-formats
- * [SURFACE]: validateToolCall, validateToolArguments
- * [LOCUS]: packages/ai/src/utils/validation.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: validateToolCall, validateToolArguments
+ * [FROM]: Depends on ajv, ajv-formats
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/validation.ts -
  */
 
 import AjvModule from "ajv";

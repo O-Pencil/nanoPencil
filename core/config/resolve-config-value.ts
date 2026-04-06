@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on child_process
- * [SURFACE]: resolveConfigValue()
- * [LOCUS]: core/config/resolve-config-value.ts - resolve config values (shell, env, literal)
- * [COVENANT]: Change value resolution → update this header
+ * [WHO]: resolveConfigValue()
+ * [FROM]: Depends on child_process
+ * [TO]: Consumed by core/model-registry.ts, core/config/auth-storage.ts
+ * [HERE]: core/config/resolve-config-value.ts - resolve config values (shell, env, literal)
  */
 import { execSync } from "child_process";
 

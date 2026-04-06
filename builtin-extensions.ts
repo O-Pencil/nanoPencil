@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, config
- * [SURFACE]: BuiltinExtension, getBuiltinExtensionPaths(), builtInExtensions
- * [LOCUS]: builtin-extensions.ts - built-in extension registry for NanoPencil
- * [COVENANT]: Change built-in extensions → update this header
+ * [WHO]: BuiltinExtension, getBuiltinExtensionPaths(), builtInExtensions
+ * [FROM]: Depends on node:fs, node:path, config
+ * [TO]: Consumed by main.ts, test files
+ * [HERE]: builtin-extensions.ts - built-in extension registry for NanoPencil
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -132,7 +132,7 @@ export function getBuiltinExtensionPaths(): string[] {
 		if (existsSync(interviewTs)) paths.push(interviewTs);
 	}
 
-	// === Loop 扩展（/loop 定时任务）===
+	// === Loop 扩展（/grub autonomous task, /loop scheduler）===
 	if (existsSync(BUNDLED_LOOP_EXTENSION)) {
 		paths.push(BUNDLED_LOOP_EXTENSION);
 	} else {

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ./dynamic-border.js, ./keybinding-hints.js
- * [SURFACE]: BorderedLoader
- * [LOCUS]: modes/interactive/components/bordered-loader.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: BorderedLoader
+ * [FROM]: Depends on @pencil-agent/tui, ./dynamic-border.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/bordered-loader.ts - loader with borders
  */
 
 import { CancellableLoader, Container, Loader, Spacer, Text, type TUI } from "@pencil-agent/tui";

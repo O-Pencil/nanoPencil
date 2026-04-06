@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
- * [SURFACE]: SkillInvocationMessageComponent
- * [LOCUS]: modes/interactive/components/skill-invocation-message.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SkillInvocationMessageComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/skill-invocation-message.ts -
  */
 
 import { Box, Markdown, type MarkdownTheme, Text } from "@pencil-agent/tui";

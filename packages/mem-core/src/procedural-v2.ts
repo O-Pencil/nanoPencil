@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./scoring.js, ./types-v2.js
- * [SURFACE]: compileProceduralFromEpisode, extractProceduresFromEpisodes
- * [LOCUS]: packages/mem-core/src/procedural-v2.ts - procedural bridge, turns lived episodes into reusable how-to memory
- * [COVENANT]: Change procedural extraction → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: compileProceduralFromEpisode, extractProceduresFromEpisodes
+ * [FROM]: Depends on ./scoring.js, ./types-v2.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/procedural-v2.ts - procedural bridge, turns lived episodes into reusable how-to memory
  */
 
 import { extractTags } from "./scoring.js";

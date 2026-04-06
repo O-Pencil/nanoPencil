@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../keybindings.js, ../utils.js
- * [SURFACE]: SelectItem, SelectListTheme, SelectList
- * [LOCUS]: packages/tui/src/components/select-list.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SelectItem, SelectListTheme, SelectList
+ * [FROM]: Depends on ../keybindings.js, ../utils.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/select-list.ts -
  */
 
 import { getEditorKeybindings } from "../keybindings.js";

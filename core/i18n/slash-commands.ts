@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: slashCommands - English translations for slash command descriptions
- * [LOCUS]: core/i18n/slash-commands.ts - English slash command translations
- * [COVENANT]: Change English translations here
+ * [WHO]: slashCommands - English translations for slash command descriptions
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/i18n/index.ts
+ * [HERE]: core/i18n/slash-commands.ts - English slash command translations
  */
 
 export const slashCommands = {

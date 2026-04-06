@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, child_process, config, settings-manager
- * [SURFACE]: getShellConfig(), getShellEnv(), killProcessTree(), shell utilities
- * [LOCUS]: core/utils/shell.ts - shell detection and utilities
- * [COVENANT]: Change shell utilities → update this header
+ * [WHO]: getShellConfig(), getShellEnv(), killProcessTree(), shell utilities
+ * [FROM]: Depends on node:fs, node:path, child_process, config, settings-manager
+ * [TO]: Consumed by core/tools/bash.ts, core/bash-executor.ts, modes/interactive/components/tool-execution.ts
+ * [HERE]: core/utils/shell.ts - shell detection and utilities
  */
 import { existsSync } from "node:fs";
 import { delimiter } from "node:path";

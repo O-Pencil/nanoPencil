@@ -4,10 +4,10 @@
  * [POS]: Barrel export - hosts all public exports
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: SoulStore, SoulManager, getSoulConfig
- * [LOCUS]: packages/soul-core/src/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SoulStore, SoulManager, getSoulConfig
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/soul-integration.ts
+ * [HERE]: packages/soul-core/src/index.ts -
  */
 
 

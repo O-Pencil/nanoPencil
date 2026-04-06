@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on tui, node:fs, node:path, config
- * [SURFACE]: AppKeybinding, KeybindingsManager, KeybindingsConfig
- * [LOCUS]: core/keybindings.ts - application-level keybindings management
- * [COVENANT]: Change keybindings → update this header
+ * [WHO]: AppKeybinding, KeybindingsManager, KeybindingsConfig
+ * [FROM]: Depends on tui, node:fs, node:path, config
+ * [TO]: Consumed by main.ts, cli/session-picker.ts, modes/interactive/interactive-mode.ts, modes/interactive/components/session-selector.ts, modes/interactive/components/custom-editor.ts, modes/interactive/components/extension-editor.ts, modes/interactive/components/keybinding-hints.ts
+ * [HERE]: core/keybindings.ts - application-level keybindings management
  */
 import {
 	DEFAULT_EDITOR_KEYBINDINGS,

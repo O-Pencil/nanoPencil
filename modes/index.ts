@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on interactive/, print/, rpc/, acp/ modes
- * [SURFACE]: Barrel exports for all run modes
- * [LOCUS]: Mode selection entry point; consumed by main.ts
- * [COVENANT]: Add new mode → update P2 modes/CLAUDE.md
+ * [WHO]: Barrel exports for all run modes
+ * [FROM]: Depends on interactive/, print/, rpc/, acp/ modes
+ * [TO]: Consumed by main.ts
+ * [HERE]: Mode selection entry point; consumed by main.ts
  */
 
 export { InteractiveMode, type InteractiveModeOptions } from "./interactive/interactive-mode.js";

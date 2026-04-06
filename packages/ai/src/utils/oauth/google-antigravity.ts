@@ -6,10 +6,10 @@
  * It is only intended for CLI use, not browser environments.
  */
 /**
- * [UPSTREAM]: Depends on ./pkce.js
- * [SURFACE]: antigravityOAuthProvider
- * [LOCUS]: packages/ai/src/utils/oauth/google-antigravity.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: antigravityOAuthProvider
+ * [FROM]: Depends on ./pkce.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/google-antigravity.ts -
  */
 
 

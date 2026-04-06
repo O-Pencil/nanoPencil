@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: ResourceCollision, ResourceDiagnostic
- * [LOCUS]: core/diagnostics.ts - resource collision and diagnostic types
- * [COVENANT]: Change diagnostics → update this header
+ * [WHO]: ResourceCollision, ResourceDiagnostic
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/config/resource-loader.ts, core/skills.ts
+ * [HERE]: core/diagnostics.ts - resource collision and diagnostic types
  */
 export interface ResourceCollision {
 	resourceType: "extension" | "skill" | "prompt" | "theme";

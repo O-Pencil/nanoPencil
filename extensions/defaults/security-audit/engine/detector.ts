@@ -6,10 +6,10 @@
  * [POS]: Engine layer - implements danger detection
  */
 /**
- * [UPSTREAM]: Depends on node:os, node:path, ../interface.js
- * [SURFACE]: DangerDetector
- * [LOCUS]: extensions/defaults/security-audit/engine/detector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: DangerDetector
+ * [FROM]: Depends on node:os, node:path, ../interface.js
+ * [TO]: Consumed by extension entry point (./index.ts)
+ * [HERE]: extensions/defaults/security-audit/engine/detector.ts -
  */
 
 

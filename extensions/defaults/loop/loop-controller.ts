@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:crypto
- * [SURFACE]: LoopController
- * [LOCUS]: extensions/defaults/loop/loop-controller.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: LoopController
+ * [FROM]: Depends on node:crypto
+ * [TO]: Consumed by extension entry point (./index.ts)
+ * [HERE]: extensions/defaults/loop/loop-controller.ts -
  */
 
 import { randomBytes } from "node:crypto";

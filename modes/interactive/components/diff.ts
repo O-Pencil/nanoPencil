@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on diff, ../theme/theme.js
- * [SURFACE]: RenderDiffOptions
- * [LOCUS]: modes/interactive/components/diff.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: RenderDiffOptions
+ * [FROM]: Depends on diff, ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/diff.ts - diff visualization component
  */
 
 import * as Diff from "diff";

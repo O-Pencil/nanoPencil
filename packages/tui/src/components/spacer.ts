@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: Spacer
- * [LOCUS]: packages/tui/src/components/spacer.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Spacer
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/spacer.ts -
  */
 
 import type { Component } from "../tui.js";

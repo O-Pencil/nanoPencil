@@ -4,10 +4,10 @@
  * [POS]: Storage layer - bridges Soul and NanoMem
  */
 /**
- * [UPSTREAM]: Depends on node:fs/promises, node:fs, node:path
- * [SURFACE]: SoulStore
- * [LOCUS]: packages/soul-core/src/store.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SoulStore
+ * [FROM]: Depends on node:fs/promises, node:fs, node:path
+ * [TO]: Consumed by packages/soul-core/src/index.ts
+ * [HERE]: packages/soul-core/src/store.ts -
  */
 
 

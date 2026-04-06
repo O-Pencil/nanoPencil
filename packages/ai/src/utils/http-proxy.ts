@@ -6,10 +6,10 @@
  * ES modules are cached, so importing multiple times is safe - setup only runs once.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: Extension interface
- * [LOCUS]: packages/ai/src/utils/http-proxy.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/http-proxy.ts -
  */
 
 if (typeof process !== "undefined" && process.versions?.node) {

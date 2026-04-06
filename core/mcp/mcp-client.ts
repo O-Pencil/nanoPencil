@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on child_process, node:fs, config, auth-storage, mcp-config
- * [SURFACE]: MCPClient class, MCPServerConfig, MCPTool, MCPToolResult
- * [LOCUS]: core/mcp/mcp-client.ts - MCP client for JSON-RPC over stdio
- * [COVENANT]: Change MCP client → update this header
+ * [WHO]: MCPClient class, MCPServerConfig, MCPTool, MCPToolResult
+ * [FROM]: Depends on child_process, node:fs, config, auth-storage, mcp-config
+ * [TO]: Consumed by core/mcp/index.ts, core/mcp-manager.ts, core/mcp/mcp-adapter.ts, core/mcp/mcp-config.ts
+ * [HERE]: core/mcp/mcp-client.ts - MCP client for JSON-RPC over stdio
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import { existsSync, readFileSync } from "fs";

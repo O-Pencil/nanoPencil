@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: SettingsConfig, SettingsCallbacks, SettingsSelectorComponent
- * [LOCUS]: modes/interactive/components/settings-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SettingsConfig, SettingsCallbacks, SettingsSelectorComponent
+ * [FROM]: Depends on ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/settings-selector.ts -
  */
 
 import type { ThinkingLevel } from "@pencil-agent/agent-core";

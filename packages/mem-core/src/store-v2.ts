@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:path, ./store.js, ./types.js, ./types-v2.js
- * [SURFACE]: V2_PATHS, loadV2*, saveV2*, appendV2Episode, appendV2Facet
- * [LOCUS]: packages/mem-core/src/store-v2.ts - persistence layer for NanoMem v2 layered memory (episode/facet/semantic/procedural/state/link stores)
- * [COVENANT]: Change v2 storage format → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: V2_PATHS, loadV2*, saveV2*, appendV2Episode, appendV2Facet
+ * [FROM]: Depends on node:path, ./store.js, ./types.js, ./types-v2.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/store-v2.ts - persistence layer for NanoMem v2 layered memory (episode/facet/semantic/procedural/state/link stores)
  */
 
 import { join } from "node:path";

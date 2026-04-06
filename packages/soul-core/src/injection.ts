@@ -4,10 +4,10 @@
  * [POS]: Expression layer - converts soul to prompt text
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: generatePersonalityDirective, generateValueGuidance, generateCognitiveStyleHint, generateEmotionalContext, generateExpertiseContext
- * [LOCUS]: packages/soul-core/src/injection.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: generatePersonalityDirective, generateValueGuidance, generateCognitiveStyleHint, generateEmotionalContext, generateExpertiseContext
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/soul-core/src/index.ts
+ * [HERE]: packages/soul-core/src/injection.ts -
  */
 
 

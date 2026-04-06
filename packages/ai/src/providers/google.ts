@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
- * [SURFACE]: GoogleOptions, streamGoogle, streamSimpleGoogle
- * [LOCUS]: packages/ai/src/providers/google.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: GoogleOptions, streamGoogle, streamSimpleGoogle
+ * [FROM]: Depends on ../env-api-keys.js, ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/google.ts -
  */
 
 import {

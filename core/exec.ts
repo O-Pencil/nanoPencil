@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on child_process
- * [SURFACE]: ExecOptions, exec()
- * [LOCUS]: core/exec.ts - shared command execution utilities
- * [COVENANT]: Change exec utilities → update this header
+ * [WHO]: ExecOptions, exec()
+ * [FROM]: Depends on child_process
+ * [TO]: Consumed by core/extensions/types.ts, core/extensions/loader.ts
+ * [HERE]: core/exec.ts - shared command execution utilities
  */
 import { spawn } from "node:child_process";
 

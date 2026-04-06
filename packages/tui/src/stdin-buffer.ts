@@ -17,10 +17,10 @@
  * MIT License - Copyright (c) 2025 opentui
  */
 /**
- * [UPSTREAM]: Depends on events
- * [SURFACE]: StdinBuffer
- * [LOCUS]: packages/tui/src/stdin-buffer.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: StdinBuffer
+ * [FROM]: Depends on events
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/stdin-buffer.ts -
  */
 
 

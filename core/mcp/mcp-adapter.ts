@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on extensions, mcp-client, mcp-guidance
- * [SURFACE]: createMCPTool(), loadMCPTools(), getMCPToolDisplayName()
- * [LOCUS]: core/mcp/mcp-adapter.ts - adapts MCP tools to NanoPencil tool system
- * [COVENANT]: Change MCP adapter → update this header
+ * [WHO]: createMCPTool(), loadMCPTools(), getMCPToolDisplayName()
+ * [FROM]: Depends on extensions, mcp-client, mcp-guidance
+ * [TO]: Consumed by core/mcp/index.ts, core/mcp-manager.ts
+ * [HERE]: core/mcp/mcp-adapter.ts - adapts MCP tools to NanoPencil tool system
  */
 import type { ToolDefinition } from "../extensions/index.js";
 import type { MCPClient, MCPTool } from "./mcp-client.js";

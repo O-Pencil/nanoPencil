@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent.js, agent-loop.js, proxy.js, types.js
- * [SURFACE]: agent-core barrel exports
- * [LOCUS]: packages/agent-core/src/index.ts - agent-core entry point
- * [COVENANT]: Change exports → update package.json exports
+ * [WHO]: agent-core barrel exports
+ * [FROM]: Depends on agent.js, agent-loop.js, proxy.js, types.js
+ * [TO]: Consumed by @pencil-agent/agent-core package consumers
+ * [HERE]: packages/agent-core/src/index.ts - agent-core entry point
  */
 // Core Agent
 export * from "./agent.js";

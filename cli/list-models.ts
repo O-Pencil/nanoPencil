@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ai, tui, core/model-registry
- * [SURFACE]: listModels()
- * [LOCUS]: cli/list-models.ts - list available models with fuzzy search
- * [COVENANT]: Change model listing → update this header
+ * [WHO]: listModels()
+ * [FROM]: Depends on ai, tui, core/model-registry
+ * [TO]: Consumed by main.ts
+ * [HERE]: cli/list-models.ts - list available models with fuzzy search
  */
 import type { Api, Model } from "@pencil-agent/ai";
 import { fuzzyFilter } from "@pencil-agent/tui";

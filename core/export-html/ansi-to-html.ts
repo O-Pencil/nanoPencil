@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: ansiToHtml(), ansiLinesToHtml(), AnsiToHtmlOptions
- * [LOCUS]: core/export-html/ansi-to-html.ts - ANSI to HTML conversion
- * [COVENANT]: Change ANSI conversion → update this header
+ * [WHO]: ansiToHtml(), ansiLinesToHtml(), AnsiToHtmlOptions
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/export-html/tool-renderer.ts, core/export-html/index.ts
+ * [HERE]: core/export-html/ansi-to-html.ts - ANSI to HTML conversion
  */
 // Standard ANSI color palette (0-15)
 const ANSI_COLORS = [

@@ -6,10 +6,10 @@
  * (cycle through older entries).
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: KillRing
- * [LOCUS]: packages/tui/src/kill-ring.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: KillRing
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/kill-ring.ts -
  */
 
 export class KillRing {

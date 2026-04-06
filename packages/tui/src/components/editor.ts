@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../keybindings.js, ../keys.js, ../kill-ring.js, ../tui.js, ../undo-stack.js
- * [SURFACE]: TextChunk, wordWrapLine, EditorTheme, EditorOptions, Editor
- * [LOCUS]: packages/tui/src/components/editor.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: TextChunk, wordWrapLine, EditorTheme, EditorOptions, Editor
+ * [FROM]: Depends on ../keybindings.js, ../keys.js, ../kill-ring.js, ../tui.js, ../undo-stack.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/editor.ts -
  */
 
 import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete.js";

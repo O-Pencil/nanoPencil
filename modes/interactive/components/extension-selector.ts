@@ -3,10 +3,10 @@
  * Displays a list of string options with keyboard navigation.
  */
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
- * [SURFACE]: ExtensionSelectorOptions, ExtensionSelectorComponent
- * [LOCUS]: modes/interactive/components/extension-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ExtensionSelectorOptions, ExtensionSelectorComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/extension-selector.ts - extension selector component
  */
 
 

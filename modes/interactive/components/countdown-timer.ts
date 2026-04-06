@@ -2,10 +2,10 @@
  * Reusable countdown timer for dialog components.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: CountdownTimer
- * [LOCUS]: modes/interactive/components/countdown-timer.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: CountdownTimer
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/countdown-timer.ts -
  */
 
 

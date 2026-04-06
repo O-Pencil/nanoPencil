@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./scoring.js, ./types.js
- * [SURFACE]: EvictionWeights, utilityEntry, utilityWork
- * [LOCUS]: packages/mem-core/src/eviction.ts - utility-weighted memory eviction (Ebbinghaus-aligned decay)
- * [COVENANT]: Change eviction formula → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: EvictionWeights, utilityEntry, utilityWork
+ * [FROM]: Depends on ./scoring.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/eviction.ts - utility-weighted memory eviction (Ebbinghaus-aligned decay)
  */
 
 

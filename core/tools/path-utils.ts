@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:os, node:path
- * [SURFACE]: resolveReadPath(), resolveToCwd(), path utilities
- * [LOCUS]: core/tools/path-utils.ts - path manipulation utilities for tools
- * [COVENANT]: Change path utilities → update this header
+ * [WHO]: resolveReadPath(), resolveToCwd(), path utilities
+ * [FROM]: Depends on node:fs, node:os, node:path
+ * [TO]: Consumed by core/tools/read.ts, core/tools/edit.ts, core/tools/write.ts, core/tools/grep.ts, core/tools/find.ts, core/tools/ls.ts, core/tools/edit-diff.ts, cli/file-processor.ts
+ * [HERE]: core/tools/path-utils.ts - path manipulation utilities for tools
  */
 import { accessSync, constants } from "node:fs";
 import * as os from "node:os";

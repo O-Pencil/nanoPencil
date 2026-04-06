@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: LoginDialogComponent
- * [LOCUS]: modes/interactive/components/login-dialog.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: LoginDialogComponent
+ * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/login-dialog.ts - OAuth login dialog
  */
 
 import { getOAuthProviders } from "@pencil-agent/ai";

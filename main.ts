@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on cli/*, core/*, modes/*, packages/*, config.ts
- * [SURFACE]: Main CLI handler, orchestrates SDK initialization and mode dispatch
- * [LOCUS]: CLI layer; parses args → CreateAgentSessionOptions → mode selection
- * [COVENANT]: Change CLI options → update this file and AGENTS.md
+ * [WHO]: Main CLI handler, orchestrates SDK initialization and mode dispatch
+ * [FROM]: Depends on cli/*, core/*, modes/*, packages/*, config.ts
+ * [TO]: Consumed by cli.ts
+ * [HERE]: CLI layer; parses args → CreateAgentSessionOptions → mode selection
  */
 
 import { type ImageContent, modelsAreEqual, supportsXhigh } from "@pencil-agent/ai";

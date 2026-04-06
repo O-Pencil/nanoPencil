@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, ignore, node:os, node:path, config, utils/frontmatter, diagnostics
- * [SURFACE]: Skill, loadSkills(), formatSkillsForPrompt()
- * [LOCUS]: core/skills.ts - skill loading and management
- * [COVENANT]: Change skills → update this header
+ * [WHO]: Skill, loadSkills(), formatSkillsForPrompt()
+ * [FROM]: Depends on node:fs, ignore, node:os, node:path, config, utils/frontmatter, diagnostics
+ * [TO]: Consumed by index.ts, core/prompt/system-prompt.ts
+ * [HERE]: core/skills.ts - skill loading and management
  */
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "fs";
 import ignore from "ignore";

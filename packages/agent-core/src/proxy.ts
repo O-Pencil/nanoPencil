@@ -3,10 +3,10 @@
  * The server manages auth and proxies requests to LLM providers.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: ProxyStreamOptions, streamProxy
- * [LOCUS]: packages/agent-core/src/proxy.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ProxyStreamOptions, streamProxy
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/proxy.ts -
  */
 
 

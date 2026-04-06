@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./config.js, ./types.js
- * [SURFACE]: daysSince, decay, extractTags, tagOverlap, scoreEntry, scoreWork, ScoreWeights
- * [LOCUS]: packages/mem-core/src/scoring.ts - core ranking algorithm (Recency + Importance + Relevance), Ebbinghaus spaced repetition
- * [COVENANT]: Change scoring formula → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: daysSince, decay, extractTags, tagOverlap, scoreEntry, scoreWork, ScoreWeights
+ * [FROM]: Depends on ./config.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/scoring.ts - core ranking algorithm (Recency + Importance + Relevance), Ebbinghaus spaced repetition
  */
 
 

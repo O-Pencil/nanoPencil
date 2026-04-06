@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js
- * [SURFACE]: AssistantMessageComponent
- * [LOCUS]: modes/interactive/components/assistant-message.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: AssistantMessageComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/assistant-message.ts - assistant message display
  */
 
 import type { AssistantMessage } from "@pencil-agent/ai";

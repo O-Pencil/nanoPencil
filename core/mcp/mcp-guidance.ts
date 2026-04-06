@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: APIKeyGuidance, getAPIKeyGuidance(), formatGuidanceMessage()
- * [LOCUS]: core/mcp/mcp-guidance.ts - API key guidance for MCP servers
- * [COVENANT]: Change guidance → update this header
+ * [WHO]: APIKeyGuidance, getAPIKeyGuidance(), formatGuidanceMessage()
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/mcp/index.ts, core/mcp/mcp-adapter.ts
+ * [HERE]: core/mcp/mcp-guidance.ts - API key guidance for MCP servers
  */
 export interface APIKeyGuidance {
 	/** Server ID */

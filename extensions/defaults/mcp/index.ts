@@ -5,10 +5,10 @@
  * Runtime MCP tool loading is handled by the AgentSession SDK.
  */
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, node:url, ../../../config.js, ../../../core/config/auth-storage.js
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/defaults/mcp/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on node:fs, node:path, node:url, ../../../config.js, ../../../core/config/auth-storage.js
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/mcp/index.ts -
  */
 
 

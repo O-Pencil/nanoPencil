@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/ai, @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: OAuthSelectorComponent
- * [LOCUS]: modes/interactive/components/oauth-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: OAuthSelectorComponent
+ * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/oauth-selector.ts - OAuth provider selector
  */
 
 import type { OAuthProviderInterface } from "@pencil-agent/ai";

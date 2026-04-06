@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, chalk, config.ts, core/tools
- * [SURFACE]: Args, Mode, parseArgs(), printHelp()
- * [LOCUS]: cli/args.ts - CLI argument parsing and help display
- * [COVENANT]: Change CLI options → update this header
+ * [WHO]: Args, Mode, parseArgs(), printHelp()
+ * [FROM]: Depends on agent-core, chalk, config.ts, core/tools
+ * [TO]: Consumed by main.ts, core/model-resolver.ts
+ * [HERE]: cli/args.ts - CLI argument parsing and help display
  */
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import chalk from "chalk";

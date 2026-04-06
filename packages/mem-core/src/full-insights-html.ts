@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./i18n.js, ./types.js
- * [SURFACE]: renderFullInsightsHtml
- * [LOCUS]: packages/mem-core/src/full-insights-html.ts - pure HTML renderer for full insights report, includes Remix Icon and charts
- * [COVENANT]: Change HTML format → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: renderFullInsightsHtml
+ * [FROM]: Depends on ./i18n.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/full-insights-html.ts - pure HTML renderer for full insights report, includes Remix Icon and charts
  */
 
 

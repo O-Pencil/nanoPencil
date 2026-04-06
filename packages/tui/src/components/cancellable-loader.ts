@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../keybindings.js, ./loader.js
- * [SURFACE]: CancellableLoader
- * [LOCUS]: packages/tui/src/components/cancellable-loader.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: CancellableLoader
+ * [FROM]: Depends on ../keybindings.js, ./loader.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/cancellable-loader.ts -
  */
 
 import { getEditorKeybindings } from "../keybindings.js";

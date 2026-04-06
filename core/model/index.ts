@@ -1,7 +1,7 @@
 /**
- * [UPSTREAM]: Depends on model/switcher
- * [SURFACE]: Model management exports
- * [LOCUS]: core/model/index.ts - model management barrel exports
- * [COVENANT]: Change model module → update this header
+ * [WHO]: Model management exports
+ * [FROM]: Depends on model/switcher
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/model/index.ts - model management barrel exports
  */
 export { ModelSwitcher, type ModelCycleResult } from "./switcher.js";

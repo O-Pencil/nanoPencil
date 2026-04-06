@@ -1,16 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, core/tools/*, core/session/*, core/config/*
- * [SURFACE]: AgentSession class, session lifecycle, event emission
- * [LOCUS]: Central runtime hub; all modes delegate to this class
- * [COVENANT]: This is the most critical file; any change requires doc verification
- * 
- * Handles:
- * - Agent state and message loop
- * - Session persistence
- * - Model/thinking level switching
- * - Compaction coordination
- * - Bash execution
- * - Session branching
+ * [WHO]: AgentSession class, session lifecycle, event emission
+ * [FROM]: Depends on agent-core, ai, core/tools/*, core/session/*, core/config/*
+ * [TO]: Consumed by core/index.ts, core/runtime/sdk.ts, modes/interactive/interactive-mode.ts, modes/print-mode.ts, modes/rpc/rpc-mode.ts, modes/acp/acp-mode.ts, modes/rpc/rpc-types.ts, modes/rpc/rpc-client.ts, modes/interactive/components/footer.ts, modes/interactive/components/skill-invocation-message.ts
+ * [HERE]: Central runtime hub; all modes delegate to this class
  */
 import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -275,6 +267,8 @@ export interface SessionSlashCommandDescriptor {
   source: "builtin" | SlashCommandInfo["source"];
 }
 
+export type SlashCommandExecutor = (text: string) => Promise<boolean>;
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -344,6 +338,7 @@ export class AgentSession {
 
   // Extension system
   private _extensionRunner: ExtensionRunner | undefined = undefined;
+  private _slashCommandExecutor: SlashCommandExecutor | undefined = undefined;
   private _turnIndex = 0;
 
   private _resourceLoader: ResourceLoader;
@@ -539,6 +534,23 @@ export class AgentSession {
    */
   async tryExecuteExtensionCommand(text: string): Promise<boolean> {
     return this._tryExecuteExtensionCommand(text);
+  }
+
+  async executeSlashCommand(text: string): Promise<boolean> {
+    if (!text.startsWith("/")) return false;
+
+    if (this._slashCommandExecutor) {
+      const handled = await this._slashCommandExecutor(text);
+      if (handled) {
+        return true;
+      }
+    }
+
+    return this._tryExecuteExtensionCommand(text);
+  }
+
+  setSlashCommandExecutor(executor: SlashCommandExecutor | undefined): void {
+    this._slashCommandExecutor = executor;
   }
 
   // =========================================================================
@@ -1012,10 +1024,10 @@ export class AgentSession {
   async prompt(text: string, options?: PromptOptions): Promise<void> {
     const expandPromptTemplates = options?.expandPromptTemplates ?? true;
 
-    // Handle extension commands first (execute immediately, even during streaming)
-    // Extension commands manage their own LLM interaction via pi.sendMessage()
+    // Handle slash commands first (execute immediately, even during streaming)
+    // Built-in and extension commands manage their own interaction paths.
     if (expandPromptTemplates && text.startsWith("/")) {
-      const handled = await this._tryExecuteExtensionCommand(text);
+      const handled = await this.executeSlashCommand(text);
       if (handled) {
         // Extension command executed, no prompt to send
         return;
@@ -2409,6 +2421,18 @@ export class AgentSession {
               error: err instanceof Error ? err.message : String(err),
             });
           });
+        },
+        executeCommand: async (text) => {
+          try {
+            return await this.executeSlashCommand(text);
+          } catch (err) {
+            runner.emitError({
+              extensionPath: "<runtime>",
+              event: "execute_command",
+              error: err instanceof Error ? err.message : String(err),
+            });
+            return false;
+          }
         },
         appendEntry: (customType, data) => {
           this.sessionManager.appendCustomEntry(customType, data);

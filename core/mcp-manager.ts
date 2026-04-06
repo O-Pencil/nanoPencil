@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on mcp/mcp-client, mcp/mcp-adapter, mcp/mcp-config, extensions
- * [SURFACE]: MCPManager class
- * [LOCUS]: core/mcp-manager.ts - MCP client lifecycle and tool integration
- * [COVENANT]: Change MCP manager → update this header
+ * [WHO]: MCPManager class
+ * [FROM]: Depends on mcp/mcp-client, mcp/mcp-adapter, mcp/mcp-config, extensions
+ * [TO]: Consumed by core/index.ts, core/runtime/sdk.ts
+ * [HERE]: core/mcp-manager.ts - MCP client lifecycle and tool integration
  */
 import { MCPClient, type MCPServerConfig } from "./mcp/mcp-client.js";
 import { loadMCPTools } from "./mcp/mcp-adapter.js";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:path
- * [SURFACE]: FooterDataProvider class
- * [LOCUS]: core/footer-data-provider.ts - footer information provider
- * [COVENANT]: Change footer data → update this header
+ * [WHO]: FooterDataProvider class
+ * [FROM]: Depends on node:fs, node:path
+ * [TO]: Consumed by modes/interactive/components/footer.ts, core/extensions/types.ts
+ * [HERE]: core/footer-data-provider.ts - footer information provider
  */
 import { existsSync, type FSWatcher, readFileSync, statSync, watch } from "fs";
 import { dirname, join, resolve } from "path";

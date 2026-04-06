@@ -2,10 +2,10 @@
  * Utilities for formatting keybinding hints in the UI.
  */
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js
- * [SURFACE]: editorKey, appKey, keyHint, appKeyHint, rawKeyHint
- * [LOCUS]: modes/interactive/components/keybinding-hints.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: editorKey, appKey, keyHint, appKeyHint, rawKeyHint
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/keybinding-hints.ts -
  */
 
 

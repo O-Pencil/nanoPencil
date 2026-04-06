@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on marked, ../terminal-image.js, ../utils.js
- * [SURFACE]: DefaultTextStyle, MarkdownTheme, Markdown
- * [LOCUS]: packages/tui/src/components/markdown.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: DefaultTextStyle, MarkdownTheme, Markdown
+ * [FROM]: Depends on marked, ../terminal-image.js, ../utils.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/markdown.ts -
  */
 
 import { marked, type Token } from "marked";

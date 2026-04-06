@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../fuzzy.js, ../keybindings.js, ../utils.js, ./input.js
- * [SURFACE]: SettingItem, SettingsListTheme, SettingsListOptions, SettingsList
- * [LOCUS]: packages/tui/src/components/settings-list.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: SettingItem, SettingsListTheme, SettingsListOptions, SettingsList
+ * [FROM]: Depends on ../fuzzy.js, ../keybindings.js, ../utils.js, ./input.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/settings-list.ts -
  */
 
 import { fuzzyFilter } from "../fuzzy.js";

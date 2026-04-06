@@ -3,10 +3,10 @@
  * Transforms to Message[] only at the LLM call boundary.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: agentLoop, agentLoopContinue
- * [LOCUS]: packages/agent-core/src/agent-loop.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: agentLoop, agentLoopContinue
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/agent-loop.ts -
  */
 
 

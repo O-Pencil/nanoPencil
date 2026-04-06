@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: ImageTheme, ImageOptions, Image
- * [LOCUS]: packages/tui/src/components/image.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ImageTheme, ImageOptions, Image
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/components/image.ts -
  */
 
 import {

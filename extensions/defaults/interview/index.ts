@@ -1,21 +1,8 @@
 /**
- * [UPSTREAM]: Depends on core/extensions/types.ts, core/session/session-manager.ts
- * [SURFACE]: Extension with /interview command, interview tool, and lightweight before_agent_start hook
- * [LOCUS]: extensions/defaults/interview - requirement clarification extension
- * [COVENANT]: Update this header on changes and verify against extensions/CLAUDE.md
- *
- * Interview Extension - Clarify ambiguous user requests.
- *
- * Provides:
- * - /interview command: force an interactive clarification and inject refined intent.
- * - interview tool: allow the model to auto-trigger clarification via tool_call.
- * - before_agent_start hook: lightweight synchronous check (NO blocking LLM calls or UI interactions).
- *
- * Design principle:
- * - The before_agent_start hook MUST be synchronous and fast (<10ms).
- * - NO LLM calls (runProbe) in before_agent_start - they cause unpredictable delays.
- * - NO UI interactions (confirm dialogs) in before_agent_start - they block the agent loop.
- * - If interview is needed, return a lightweight hint and let the Agent decide whether to call the interview tool.
+ * [WHO]: Extension with /interview command, interview tool, and lightweight before_agent_start hook
+ * [FROM]: Depends on core/extensions/types.ts, core/session/session-manager.ts
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/interview - requirement clarification extension
  */
 
 import { type Static, Type } from "@sinclair/typebox";

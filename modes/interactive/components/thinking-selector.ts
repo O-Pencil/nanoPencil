@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
- * [SURFACE]: ThinkingSelectorComponent
- * [LOCUS]: modes/interactive/components/thinking-selector.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ThinkingSelectorComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/thinking-selector.ts - thinking level selector
  */
 
 import type { ThinkingLevel } from "@pencil-agent/agent-core";

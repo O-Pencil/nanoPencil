@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:module, node:path, node:url, @pencil-agent/tui
- * [SURFACE]: Extension interface
- * [LOCUS]: extensions/defaults/team/index.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Extension interface
+ * [FROM]: Depends on node:fs, node:module, node:path, node:url, @pencil-agent/tui
+ * [TO]: Loaded by core/extensions/loader.ts as extension entry point
+ * [HERE]: extensions/defaults/team/index.ts -
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

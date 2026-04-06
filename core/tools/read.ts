@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, node:fs, modes/utils/image-resize
- * [SURFACE]: ReadTool, readTool, createReadTool, ReadToolInput
- * [LOCUS]: core/tools/read.ts - filesystem read boundary; consumed by orchestrator
- * [COVENANT]: Change read behavior → update core/CLAUDE.md member list
+ * [WHO]: ReadTool, readTool, createReadTool, ReadToolInput
+ * [FROM]: Depends on agent-core, ai, node:fs, modes/utils/image-resize
+ * [TO]: Consumed by core/tools/index.ts
+ * [HERE]: core/tools/read.ts - filesystem read boundary; consumed by orchestrator
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
 import type { ImageContent, TextContent } from "@pencil-agent/ai";

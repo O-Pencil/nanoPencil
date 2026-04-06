@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./types-v2.js
- * [SURFACE]: createHashedEmbeddingFn
- * [LOCUS]: packages/mem-core/src/hash-embedding.ts - built-in local hashing embedding for zero-dependency semantic recall
- * [COVENANT]: Change hash embedding behavior → update this header and keep deterministic output
+ * [WHO]: createHashedEmbeddingFn
+ * [FROM]: Depends on ./types-v2.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/hash-embedding.ts - built-in local hashing embedding for zero-dependency semantic recall
  */
 
 import type { EmbeddingFn } from "./types-v2.js";

@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./scoring.js, ./types.js, ./update.js
- * [SURFACE]: dedupeMemoryEntries, dedupeWorkEntries, mergeRelatedIds
- * [LOCUS]: packages/mem-core/src/dedup.ts - batch deduplication and cross-entry merge logic
- * [COVENANT]: Change dedup algorithm → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: dedupeMemoryEntries, dedupeWorkEntries, mergeRelatedIds
+ * [FROM]: Depends on ./scoring.js, ./types.js, ./update.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/dedup.ts - batch deduplication and cross-entry merge logic
  */
 
 

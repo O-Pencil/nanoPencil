@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:crypto, core/runtime/agent-session, core/extensions
- * [SURFACE]: runRpcMode(), RpcMode class
- * [LOCUS]: modes/rpc/rpc-mode.ts - IDE integration via JSON-RPC over stdin/stdout
- * [COVENANT]: Change RPC protocol → update P2 modes/CLAUDE.md
+ * [WHO]: runRpcMode(), RpcMode class
+ * [FROM]: Depends on node:crypto, core/runtime/agent-session, core/extensions
+ * [TO]: Consumed by modes/index.ts
+ * [HERE]: modes/rpc/rpc-mode.ts - IDE integration via JSON-RPC over stdin/stdout
  */
 import * as crypto from "node:crypto";
 import * as readline from "readline";

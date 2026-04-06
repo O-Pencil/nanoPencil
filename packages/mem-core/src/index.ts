@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Re-exports from ./config.js, ./engine.js, ./i18n.js, ./insights-html.js, ./full-insights-html.js, ./types.js
- * [SURFACE]: NanoMemEngine, getConfig, PROMPTS, PromptSet, renderInsightsHtml, renderFullInsightsHtml, all types
- * [LOCUS]: packages/mem-core/src/index.ts - barrel export, public API surface for nanomem package
- * [COVENANT]: Change public API → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: NanoMemEngine, getConfig, PROMPTS, PromptSet, renderInsightsHtml, renderFullInsightsHtml, all types
+ * [FROM]: Re-exports from ./config.js, ./engine.js, ./i18n.js, ./insights-html.js, ./full-insights-html.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/extension.ts
+ * [HERE]: packages/mem-core/src/index.ts - barrel export, public API surface for nanomem package
  */
 
 

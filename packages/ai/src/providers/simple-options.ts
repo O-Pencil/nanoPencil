@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: buildBaseOptions, clampReasoning, adjustMaxTokensForThinking
- * [LOCUS]: packages/ai/src/providers/simple-options.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: buildBaseOptions, clampReasoning, adjustMaxTokensForThinking
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/simple-options.ts -
  */
 
 import type { Api, Model, SimpleStreamOptions, StreamOptions, ThinkingBudgets, ThinkingLevel } from "../types.js";

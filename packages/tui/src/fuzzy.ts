@@ -4,10 +4,10 @@
  * Lower score = better match.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: FuzzyMatch, fuzzyMatch, fuzzyFilter
- * [LOCUS]: packages/tui/src/fuzzy.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: FuzzyMatch, fuzzyMatch, fuzzyFilter
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/fuzzy.ts -
  */
 
 

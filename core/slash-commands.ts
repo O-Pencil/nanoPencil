@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: SlashCommandInfo, BuiltinSlashCommand, slashCommand definitions, getLocalizedCommands()
- * [LOCUS]: core/slash-commands.ts - slash command types and registry
- * [COVENANT]: Change slash commands → update this header
+ * [WHO]: SlashCommandInfo, BuiltinSlashCommand, slashCommand definitions, getLocalizedCommands()
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by modes/interactive/interactive-mode.ts, modes/acp/acp-mode.ts
+ * [HERE]: core/slash-commands.ts - slash command types and registry
  */
 export type SlashCommandSource = "extension" | "prompt" | "skill";
 

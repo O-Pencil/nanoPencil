@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
- * [SURFACE]: GoogleVertexOptions, streamGoogleVertex, streamSimpleGoogleVertex
- * [LOCUS]: packages/ai/src/providers/google-vertex.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: GoogleVertexOptions, streamGoogleVertex, streamSimpleGoogleVertex
+ * [FROM]: Depends on ../models.js, ../utils/event-stream.js, ../utils/sanitize-unicode.js, ./simple-options.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/google-vertex.ts -
  */
 
 import {

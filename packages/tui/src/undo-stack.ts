@@ -5,10 +5,10 @@
  * directly (no re-cloning) since they are already detached.
  */
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: UndoStack
- * [LOCUS]: packages/tui/src/undo-stack.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: UndoStack
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/undo-stack.ts -
  */
 
 export class UndoStack<S> {

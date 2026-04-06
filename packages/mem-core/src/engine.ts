@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:path, ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js
- * [SURFACE]: NanoMemEngine class - unified API for memory CRUD, injection, consolidation
- * [LOCUS]: packages/mem-core/src/engine.ts - facade layer composing all memory subsystems
- * [COVENANT]: Change engine API → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: NanoMemEngine class - unified API for memory CRUD, injection, consolidation
+ * [FROM]: Depends on node:path, ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/engine.ts - facade layer composing all memory subsystems
  */
 
 import { cp, mkdir, readdir } from "node:fs/promises";

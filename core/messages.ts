@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai
- * [SURFACE]: AgentMessage extensions, convertToLlm(), message transformers
- * [LOCUS]: core/messages.ts - custom message types and LLM transformers
- * [COVENANT]: Change message types → update this header
+ * [WHO]: AgentMessage extensions, convertToLlm(), message transformers
+ * [FROM]: Depends on agent-core, ai
+ * [TO]: Consumed by index.ts, core/runtime/sdk.ts, core/session/session-manager.ts, modes/interactive/interactive-mode.ts, modes/interactive/components/branch-summary-message.ts, modes/interactive/components/compaction-summary-message.ts, modes/interactive/components/custom-message.ts
+ * [HERE]: core/messages.ts - custom message types and LLM transformers
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ImageContent, Message, TextContent } from "@pencil-agent/ai";

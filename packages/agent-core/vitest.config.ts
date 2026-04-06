@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on vitest/config
- * [SURFACE]: Vitest defaults
- * [LOCUS]: ./packages/agent-core/vitest.config.ts -
- * [COVENANT]: Change → update this header
+ * [WHO]: Vitest defaults
+ * [FROM]: Depends on vitest/config
+ * [TO]: Not imported - vitest configuration file, consumed by vitest CLI 
+ * [HERE]: ./packages/agent-core/vitest.config.ts -
  */
 
 import { defineConfig } from "vitest/config";

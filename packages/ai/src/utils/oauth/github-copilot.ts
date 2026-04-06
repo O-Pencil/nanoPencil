@@ -2,10 +2,10 @@
  * GitHub Copilot OAuth flow
  */
 /**
- * [UPSTREAM]: Depends on ../../models.js
- * [SURFACE]: normalizeDomain, getGitHubCopilotBaseUrl, githubCopilotOAuthProvider
- * [LOCUS]: packages/ai/src/utils/oauth/github-copilot.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: normalizeDomain, getGitHubCopilotBaseUrl, githubCopilotOAuthProvider
+ * [FROM]: Depends on ../../models.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/github-copilot.ts -
  */
 
 

@@ -2,10 +2,10 @@
  * Anthropic OAuth flow (Claude Pro/Max)
  */
 /**
- * [UPSTREAM]: Depends on ./pkce.js
- * [SURFACE]: anthropicOAuthProvider
- * [LOCUS]: packages/ai/src/utils/oauth/anthropic.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: anthropicOAuthProvider
+ * [FROM]: Depends on ./pkce.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/oauth/anthropic.ts -
  */
 
 

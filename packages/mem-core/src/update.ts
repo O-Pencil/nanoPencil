@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./config.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./types.js
- * [SURFACE]: contentSimilarity, applyExtraction, checkConsolidationEntry, checkWorkDuplicate, applyWorkExtraction
- * [LOCUS]: packages/mem-core/src/update.ts - Mem0 four-operation pipeline (ADD/UPDATE/DELETE/NOOP)
- * [COVENANT]: Change update semantics → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: contentSimilarity, applyExtraction, checkConsolidationEntry, checkWorkDuplicate, applyWorkExtraction
+ * [FROM]: Depends on ./config.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/update.ts - Mem0 four-operation pipeline (ADD/UPDATE/DELETE/NOOP)
  */
 
 

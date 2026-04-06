@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: themes - English translations for theme names
- * [LOCUS]: core/i18n/themes.ts - English theme translations
- * [COVENANT]: Change English translations here
+ * [WHO]: themes - English translations for theme names
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/i18n/index.ts
+ * [HERE]: core/i18n/themes.ts - English theme translations
  */
 
 export const themes = {

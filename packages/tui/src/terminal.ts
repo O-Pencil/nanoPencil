@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:module, ./keys.js, ./stdin-buffer.js
- * [SURFACE]: Terminal, ProcessTerminal
- * [LOCUS]: packages/tui/src/terminal.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: Terminal, ProcessTerminal
+ * [FROM]: Depends on node:fs, node:module, ./keys.js, ./stdin-buffer.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/terminal.ts -
  */
 
 import * as fs from "node:fs";

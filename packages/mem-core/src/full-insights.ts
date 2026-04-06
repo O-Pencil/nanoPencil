@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./i18n.js, ./types.js
- * [SURFACE]: FullInsightsReport, generateFullInsights
- * [LOCUS]: packages/mem-core/src/full-insights.ts - aggregation + optional LLM for comprehensive insights report
- * [COVENANT]: Change insights format → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: FullInsightsReport, generateFullInsights
+ * [FROM]: Depends on ./i18n.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/full-insights.ts - aggregation + optional LLM for comprehensive insights report
  */
 
 

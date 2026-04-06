@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui
- * [SURFACE]: ParsedSearchQuery, MatchResult, hasSessionName, parseSearchQuery, matchSession
- * [LOCUS]: modes/interactive/components/session-selector-search.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: ParsedSearchQuery, MatchResult, hasSessionName, parseSearchQuery, matchSession
+ * [FROM]: Depends on @pencil-agent/tui
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/session-selector-search.ts -
  */
 
 import { fuzzyMatch } from "@pencil-agent/tui";

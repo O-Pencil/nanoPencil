@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./config.js, ./i18n.js, ./scoring.js, ./store.js, ./types.js
- * [SURFACE]: consolidateEpisodes, extractFactsFromEpisodes, extractLessonsFromEpisodes
- * [LOCUS]: packages/mem-core/src/consolidation.ts - episodic→semantic consolidation, heart of multi-store memory model
- * [COVENANT]: Change consolidation logic → update this header and verify against packages/mem-core/CLAUDE.md
+ * [WHO]: consolidateEpisodes, extractFactsFromEpisodes, extractLessonsFromEpisodes
+ * [FROM]: Depends on ./config.js, ./i18n.js, ./scoring.js, ./store.js, ./types.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts
+ * [HERE]: packages/mem-core/src/consolidation.ts - episodic→semantic consolidation, heart of multi-store memory model
  */
 
 

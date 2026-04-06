@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./models.generated.js
- * [SURFACE]: getModel, getProviders, getModels, calculateCost, supportsXhigh
- * [LOCUS]: packages/ai/src/models.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: getModel, getProviders, getModels, calculateCost, supportsXhigh
+ * [FROM]: Depends on ./models.generated.js
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/models.ts -
  */
 
 import { MODELS } from "./models.generated.js";

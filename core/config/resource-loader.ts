@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on node:fs, node:path, chalk, extensions/loader, theme, diagnostics
- * [SURFACE]: DefaultResourceLoader, ResourceLoader, ResourceDiagnostic
- * [LOCUS]: core/config/resource-loader.ts - discovers and loads extensions, skills, themes
- * [COVENANT]: Change resource loading → update P2 core/CLAUDE.md
+ * [WHO]: DefaultResourceLoader, ResourceLoader, ResourceDiagnostic
+ * [FROM]: Depends on node:fs, node:path, chalk, extensions/loader, theme, diagnostics
+ * [TO]: Consumed by index.ts, main.ts, modes/interactive/interactive-mode.ts, extensions/defaults/team/index.ts, and test files
+ * [HERE]: core/config/resource-loader.ts - discovers and loads extensions, skills, themes
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";

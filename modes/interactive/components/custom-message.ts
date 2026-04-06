@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on @pencil-agent/tui, ../theme/theme.js
- * [SURFACE]: CustomMessageComponent
- * [LOCUS]: modes/interactive/components/custom-message.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: CustomMessageComponent
+ * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [TO]: Consumed by modes/interactive/components/index.ts
+ * [HERE]: modes/interactive/components/custom-message.ts -
  */
 
 import type { TextContent } from "@pencil-agent/ai";

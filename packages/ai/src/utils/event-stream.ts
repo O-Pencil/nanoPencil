@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: EventStream, AssistantMessageEventStream, createAssistantMessageEventStream
- * [LOCUS]: packages/ai/src/utils/event-stream.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: EventStream, AssistantMessageEventStream, createAssistantMessageEventStream
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/utils/event-stream.ts -
  */
 
 import type { AssistantMessage, AssistantMessageEvent } from "../types.js";

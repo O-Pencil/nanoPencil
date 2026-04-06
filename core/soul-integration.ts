@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on runtime/sdk, node:path, node:fs, node:url, node:os, node:module
- * [SURFACE]: isSoulEnabled(), toSoulContext(), createSoulManager()
- * [LOCUS]: core/soul-integration.ts - bridges Soul and NanoPencil
- * [COVENANT]: Change soul integration → update this header
+ * [WHO]: isSoulEnabled(), toSoulContext(), createSoulManager()
+ * [FROM]: Depends on runtime/sdk, node:path, node:fs, node:url, node:os, node:module
+ * [TO]: Consumed by core/runtime/agent-session.ts
+ * [HERE]: core/soul-integration.ts - bridges Soul and NanoPencil
  */
 import type { CreateAgentSessionOptions } from "./runtime/sdk.js";
 import { join, resolve } from "node:path";

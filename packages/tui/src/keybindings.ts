@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on ./keys.js
- * [SURFACE]: DEFAULT_EDITOR_KEYBINDINGS, EditorKeybindingsManager, getEditorKeybindings, setEditorKeybindings
- * [LOCUS]: packages/tui/src/keybindings.ts - 
- * [COVENANT]: Change → update this header
+ * [WHO]: DEFAULT_EDITOR_KEYBINDINGS, EditorKeybindingsManager, getEditorKeybindings, setEditorKeybindings
+ * [FROM]: Depends on ./keys.js
+ * [TO]: Consumed by packages/tui/src/index.ts
+ * [HERE]: packages/tui/src/keybindings.ts -
  */
 
 import { type KeyId, matchesKey } from "./keys.js";

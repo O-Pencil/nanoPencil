@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on agent-core, ai, chalk, minimatch, cli/args, defaults, model-registry
- * [SURFACE]: resolveCliModel(), resolveModelScope(), ScopedModel, defaultModelPerProvider
- * [LOCUS]: core/model-resolver.ts - model resolution, scoping, and initial selection
- * [COVENANT]: Change model resolution → update this header
+ * [WHO]: resolveCliModel(), resolveModelScope(), ScopedModel, defaultModelPerProvider
+ * [FROM]: Depends on agent-core, ai, chalk, minimatch, cli/args, defaults, model-registry
+ * [TO]: Consumed by main.ts, modes/interactive/interactive-mode.ts, core/runtime/sdk.ts
+ * [HERE]: core/model-resolver.ts - model resolution, scoping, and initial selection
  */
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import { type Api, type KnownProvider, type Model, modelsAreEqual } from "@pencil-agent/ai";

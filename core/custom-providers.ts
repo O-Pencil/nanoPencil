@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: Depends on config/auth-storage, node:fs
- * [SURFACE]: CUSTOM_ANTHROPIC_PROVIDER, CUSTOM_OPENAI_PROVIDER, registerCustomProvider()
- * [LOCUS]: core/custom-providers.ts - custom provider registration
- * [COVENANT]: Change custom providers → update this header
+ * [WHO]: CUSTOM_ANTHROPIC_PROVIDER, CUSTOM_OPENAI_PROVIDER, registerCustomProvider()
+ * [FROM]: Depends on config/auth-storage, node:fs
+ * [TO]: Consumed by core/model-registry.ts
+ * [HERE]: core/custom-providers.ts - custom provider registration
  */
 import type { AuthStorage } from "./config/auth-storage.js";
 import { existsSync, readFileSync, writeFileSync } from "fs";

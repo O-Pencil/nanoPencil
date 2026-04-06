@@ -1,8 +1,8 @@
 /**
- * [UPSTREAM]: No external dependencies
- * [SURFACE]: time(), printTimings()
- * [LOCUS]: core/timings.ts - central timing instrumentation
- * [COVENANT]: Change timings → update this header
+ * [WHO]: time(), printTimings()
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by core/runtime/sdk.ts
+ * [HERE]: core/timings.ts - central timing instrumentation
  */
 const ENABLED = process.env.PI_TIMING === "1";
 const timings: Array<{ label: string; ms: number }> = [];

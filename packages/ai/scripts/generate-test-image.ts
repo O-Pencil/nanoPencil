@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 /**
- * [UPSTREAM]: Depends on canvas, node:fs, node:path, node:url
- * [SURFACE]: Generates test image for unit tests
- * [LOCUS]: packages/ai/scripts/generate-test-image.ts - test data generation
- * [COVENANT]: Script for test data
+ * [WHO]: Generates test image for unit tests
+ * [FROM]: Depends on canvas, node:fs, node:path, node:url
+ * [TO]: Not imported - standalone script, executed directly to generate test/fixtures/test-image.png 
+ * [HERE]: packages/ai/scripts/generate-test-image.ts - test data generation
  */
 import { createCanvas } from "canvas";
 import { writeFileSync } from "fs";

@@ -1,13 +1,13 @@
 /**
- * Simplify Extension - Claude Code /simplify 风格的代码简化工具
+ * Simplify Extension - Claude Code style code simplification tool
  *
- * 基于 Claude Code 的 /simplify 指令实现，提供以下能力：
- * 1. 感知层：扫描 Git Diff + 读取项目规范 + 分析代码
- * 2. 决策层：应用重构模式（卫语句、表达式折叠、冗余剥离）
- * 3. 执行层：生成 Diff 并应用到文件
- * 4. 验证层：运行测试验证，失败则回滚
+ * Based on Claude Code's /simplify instruction, providing:
+ * 1. Perception layer: Scan Git Diff + read project rules + analyze code
+ * 2. Decision layer: Apply refactoring patterns (guard clauses, expression folding, redundancy removal)
+ * 3. Execution layer: Generate Diff and apply to files
+ * 4. Validation layer: Run tests to verify, rollback on failure
  *
- * 内置扩展：自动随 nanopencil 加载
+ * Built-in extension: Auto-loaded with nanopencil
  */
 /**
  * [WHO]: Extension interface

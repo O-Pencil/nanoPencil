@@ -8,29 +8,29 @@ import { getDocsPath, getExamplesPath, getReadmePath } from "../../config.js";
 import { formatSkillsForPrompt, type Skill } from "../skills.js";
 import { getToolGuidance, toolGuidance } from "../tools/index.js";
 
-/** 工具描述（用于系统提示）- 从 tools/index.js 动态获取 */
+/** Tool descriptions (for system prompt) - dynamically obtained from tools/index.js */
 const toolDescriptions: Record<string, string> = toolGuidance;
 
 export interface BuildSystemPromptOptions {
-  /** 自定义系统提示（替换默认）。 */
+  /** Custom system prompt (replaces default). */
   customPrompt?: string;
-  /** 要纳入提示的工具。默认：[read, bash, edit, write] */
+  /** Tools to include in prompt. Default: [read, bash, edit, write] */
   selectedTools?: string[];
-  /** 追加到系统提示的文本。 */
+  /** Text to append to system prompt. */
   appendSystemPrompt?: string;
-  /** 工作目录。默认：process.cwd() */
+  /** Working directory. Default: process.cwd() */
   cwd?: string;
-  /** 预加载的上下文文件。 */
+  /** Preloaded context files. */
   contextFiles?: Array<{ path: string; content: string }>;
-  /** 预加载的技能。 */
+  /** Preloaded skills. */
   skills?: Skill[];
-  /** Soul 注入文本（AI 性格） */
+  /** Soul injection text (AI personality) */
   soulInjection?: string;
-  /** 扩展工具的 guidance（从 ToolDefinition.guidance 收集） */
+  /** Guidance for extension tools (collected from ToolDefinition.guidance) */
   extensionToolsGuidance?: Record<string, string>;
 }
 
-/** 根据工具、规范与上下文构建系统提示 */
+/** Build system prompt from tools, rules, and context */
 export function buildSystemPrompt(
   options: BuildSystemPromptOptions = {},
 ): string {
@@ -68,7 +68,7 @@ export function buildSystemPrompt(
   if (customPrompt) {
     let prompt = "";
 
-    // Soul 注入在 customPrompt 场景下也放最顶部
+    // Soul injection goes at the top in customPrompt scenario as well
     if (soulInjection) {
       prompt += soulInjection;
       prompt += "\n\n---\n\n";
@@ -80,56 +80,56 @@ export function buildSystemPrompt(
       prompt += appendSection;
     }
 
-    // 追加项目上下文文件
+    // Append project context files
     if (contextFiles.length > 0) {
-      prompt += "\n\n# 项目上下文\n\n";
-      prompt += "项目相关说明与规范：\n\n";
+      prompt += "\n\n# Project Context\n\n";
+      prompt += "Project-related rules and specifications:\n\n";
       for (const { path: filePath, content } of contextFiles) {
         prompt += `## ${filePath}\n\n${content}\n\n`;
       }
     }
 
-    // 追加技能段落（仅当具备 read 工具时）
+    // Append skills section (only when read tool is available)
     const customPromptHasRead =
       !selectedTools || selectedTools.includes("read");
     if (customPromptHasRead && skills.length > 0) {
       prompt += formatSkillsForPrompt(skills);
     }
 
-    // 最后追加日期时间与工作目录
-    prompt += `\n当前日期与时间：${dateTime}`;
-    prompt += `\n当前工作目录：${resolvedCwd}`;
+    // Finally append date/time and working directory
+    prompt += `\nCurrent date and time: ${dateTime}`;
+    prompt += `\nCurrent working directory: ${resolvedCwd}`;
 
     prompt += timeReasoningInstruction;
     return prompt;
   }
 
-  // 获取文档与示例的绝对路径
+  // Get absolute paths for docs and examples
   const readmePath = getReadmePath();
   const docsPath = getDocsPath();
   const examplesPath = getExamplesPath();
 
-  // 根据所选工具构建工具列表（仅包含有描述的内置工具）
+  // Build tool list based on selected tools (only include built-in tools with descriptions)
   const tools = (selectedTools || ["read", "bash", "edit", "write", "time"]).filter(
     (t) => t in toolDescriptions,
   );
 
-  // 合并内置工具和扩展工具的 guidance
+  // Merge built-in tool and extension tool guidance
   const allToolDescriptions: Record<string, string> = { ...toolDescriptions, ...extensionToolsGuidance };
 
   const toolsList =
     tools.length > 0
       ? tools.map((t) => `- ${t}: ${allToolDescriptions[t]}`).join("\n")
-      : "（无）";
+      : "(none)";
 
-  // 添加扩展工具列表（没有内置 guidance 的工具）
+  // Add extension tool list (tools without built-in guidance)
   const extensionOnlyTools = selectedTools?.filter((t) => !toolDescriptions[t] && extensionToolsGuidance[t]) || [];
   const extensionToolsList =
     extensionOnlyTools.length > 0
       ? extensionOnlyTools.map((t) => `- ${t}: ${extensionToolsGuidance[t]}`).join("\n")
       : null;
 
-  // 根据实际可用工具构建规范
+  // Build rules based on actually available tools
   const guidelinesList: string[] = [];
 
   const hasBash = tools.includes("bash");
@@ -140,48 +140,48 @@ export function buildSystemPrompt(
   const hasLs = tools.includes("ls");
   const hasRead = tools.includes("read");
 
-  // 文件探索相关规范
+  // File exploration related rules
   if (hasBash && !hasGrep && !hasFind && !hasLs) {
-    guidelinesList.push("使用 bash 进行 ls、rg、find 等文件操作");
+    guidelinesList.push("Use bash for ls, rg, find and other file operations");
   } else if (hasBash && (hasGrep || hasFind || hasLs)) {
     guidelinesList.push(
-      "优先使用 grep/find/ls 工具进行文件探索（更快，且遵守 .gitignore）",
+      "Prefer using grep/find/ls tools for file exploration (faster, respects .gitignore)",
     );
   }
 
-  // 先读后编规范
+  // Read before edit rules
   if (hasRead && hasEdit) {
     guidelinesList.push(
-      "编辑前先用 read 查看文件内容，必须使用该工具，不要用 cat 或 sed。",
+      "Before editing, use read to view file content. Must use this tool, not cat or sed.",
     );
   }
 
-  // 编辑规范
+  // Edit rules
   if (hasEdit) {
-    guidelinesList.push("使用 edit 做精确修改（旧文本必须完全匹配）");
+    guidelinesList.push("Use edit for precise modifications (old text must match exactly)");
   }
 
-  // 写入规范
+  // Write rules
   if (hasWrite) {
-    guidelinesList.push("仅在创建新文件或完整重写时使用 write");
+    guidelinesList.push("Use write only when creating new files or complete rewrite");
   }
 
-  // 输出规范（仅在实际写入或执行时）
+  // Output rules (only when actually writing or executing)
   if (hasEdit || hasWrite) {
     guidelinesList.push(
-      "总结你的操作时，请直接输出纯文本，不要用 cat 或 bash 来展示你做了什么",
+      "When summarizing your actions, output plain text directly, don't use cat or bash to show what you did",
     );
   }
 
-  // 始终包含以下项
-  guidelinesList.push("回复请简洁");
-  guidelinesList.push("操作文件时请清晰标注文件路径");
+  // Always include the following
+  guidelinesList.push("Keep responses concise");
+  guidelinesList.push("Clearly label file paths when operating on files");
 
   const guidelines = guidelinesList.map((g) => `- ${g}`).join("\n");
 
   let prompt = "";
 
-  // Soul 注入放在最顶部 - 作为 AI 的身份框架，优先级最高
+  // Soul injection goes at the very top - as AI identity framework, highest priority
   if (soulInjection) {
     prompt += soulInjection;
     prompt += "\n\n---\n\n";
@@ -189,19 +189,19 @@ export function buildSystemPrompt(
 
   prompt += `You are the writing assistant in nanopencil. You help users by reading files, running commands, editing and writing text.
 
-可用工具：
+Available tools:
 ${toolsList}${extensionToolsList ? `\n${extensionToolsList}` : ""}
 
-除上述工具外，根据项目配置你可能还能使用其他自定义工具。
+Besides the above tools, you may also have access to other custom tools based on project configuration.
 
-规范：
+Rules:
 ${guidelines}
 
-## P3 头文件头与渐进式披露 (Progressive Disclosure)
+## P3 Header and Progressive Disclosure
 
-每个代码文件头部都有 P3 格式的 Dip 头，用于快速判断文件是否相关：
+Each code file has a P3 format DIP header for quick relevance assessment:
 
-[P3 头格式示例]
+[P3 Header Format Example]
 /**
  * [WHO]: Provides {exported functions/components/types/constants}
  * [FROM]: Depends on {module/package/file} for {specific capability}
@@ -209,110 +209,110 @@ ${guidelines}
  * [HERE]: {file path} within {module}; relationship with neighbors}
  */
 
-**四问含义**：
-- **WHO**：这个文件提供了什么（导出、公共 API）
-- **FROM**：这个文件依赖什么（上游依赖）
-- **TO**：谁会用到这个文件（下游消费者）
-- **HERE**：这个文件在哪，它和邻居是什么关系
+**Four Questions Meaning**:
+- **WHO**: What does this file provide (exports, public API)
+- **FROM**: What does this file depend on (upstream dependencies)
+- **TO**: Who uses this file (downstream consumers)
+- **HERE**: Where is this file, and what is its relationship with neighbors
 
-**头部阅读协议**：
+**Header Reading Protocol**:
 
-1. **先读头部**：遇到代码文件时，先读 P3 头（通常前 5-8 行）
-2. **判断相关性**：
-   - 如果当前任务涉及头部声明的 WHO（提供什么）、FROM（依赖什么）、TO（谁用）、HERE（在哪）→ 继续读
-   - 如果不相关 → **立即停止阅读**，节省上下文
-3. **判断标准**：
-   - 你的任务是否需要这个文件的 WHO？
-   - 你的任务是否在这个文件的 HERE 范围？
-   - 你的任务是否依赖这个文件的 FROM？
+1. **Read header first**: When encountering a code file, read the P3 header first (usually first 5-8 lines)
+2. **Assess relevance**:
+   - If current task involves WHO (what provides), FROM (what depends), TO (who uses), HERE (where) declared in header → Continue reading
+   - If not relevant → **Stop reading immediately**, save context
+3. **Judgment criteria**:
+   - Does your task need this file's WHO?
+   - Is your task within this file's HERE scope?
+   - Does your task depend on this file's FROM?
 
-**渐进式披露的上下文节省**：
-- 大项目可能有数百个文件
-- 头部只有 4 行，而文件可能有数百行
-- 读头部 = O(1)，读全文 = O(n)
-- 学会"头部不对就跳过"是高效工作的关键
+**Progressive Disclosure Context Savings**:
+- Large projects may have hundreds of files
+- Header is only 4 lines, while file may be hundreds of lines
+- Read header = O(1), read full = O(n)
+- Learning "header doesn't match then skip" is key to efficiency
 
-**生成文件时的 Dip 头要求**：
-- 创建任何代码文件必须包含完整 P3 头
-- WHO 要准确描述导出的公共 API（具体函数名/类型名）
-- FROM 要列出关键依赖
-- TO 要说明下游消费者
-- HERE 要明确模块坐标和上下游关系
+**DIP Header Requirements When Generating Files**:
+- Any created code file must include complete P3 header
+- WHO must accurately describe exported public API (specific function/type names)
+- FROM must list key dependencies
+- TO must explain downstream consumers
+- HERE must clarify module coordinates and upstream/downstream relationships
 
-## pencil.md 项目初始化协议
+## pencil.md Project Initialization Protocol
 
-当用户首次在这个项目操作文件时，检查根目录是否存在 \`pencil.md\`（或 \`CLAUDE.md\`）：
+When first operating files in a project, check if \`pencil.md\` (or \`CLAUDE.md\`) exists in root:
 
-**如果不存在**：
-1. 建议用户创建 \`pencil.md\`
-2. 生成模板内容，包含：
-   - 项目概述（名称、技术栈、核心功能）
-   - 目录结构（P2 模块清单占位）
-   - DIP 协议说明（P3 头规范、渐进式披露思维）
-   - 规范（代码风格、提交约定等）
-3. 用户确认后再写入文件
+**If not exists**:
+1. Suggest user create \`pencil.md\`
+2. Generate template content including:
+   - Project overview (name, tech stack, core features)
+   - Directory structure (P2 module list placeholder)
+   - DIP protocol explanation (P3 header spec, progressive disclosure mindset)
+   - Rules (code style, commit conventions, etc.)
+3. Write file after user confirmation
 
-**pencil.md 模板结构**：
+**pencil.md Template Structure**:
 
-[pencil.md 模板内容]
-# \${项目名称}
+[pencil.md Template Content]
+# \${Project Name}
 
-> P1 | 项目根文档与导航地图
+> P1 | Project root document and navigation map
 
-## 项目概述
-\${一句话描述项目是什么}
+## Project Overview
+\${One sentence describing what the project is}
 
-**技术栈**：\${列出主要技术}
-**核心功能**：\${2-3 句话描述核心能力}
+**Tech Stack**: \${List main technologies}
+**Core Features**: \${2-3 sentences describing core capabilities}
 
-## 目录结构
-\${P2 模块清单占位，待 AI 逐步填充}
+## Directory Structure
+\${P2 module list placeholder, to be filled by AI}
 
-## DIP 协议
+## DIP Protocol
 
-本项目采用 **Dual-phase Isomorphic Documentation**（双阶段同构文档）：
+This project uses **Dual-phase Isomorphic Documentation**:
 
-- P1：根文档（本文档），全局拓扑
-- P2：模块级文档，成员清单
-- P3：文件头注释，快速相关性判断
+- P1: Root document (this document), global topology
+- P2: Module-level documents, member lists
+- P3: File header comments, quick relevance judgment
 
-详见：https://nanopencil.github.io/dip
+See: https://nanopencil.github.io/dip
 
-## 规范
-\${P0 代码规范占位}
+## Rules
+\${P0 code rules placeholder}
 
 ---
-*此文件由 nanoPencil 自动生成，可根据项目需求修改*
+*This file is auto-generated by nanoPencil, can be modified per project needs*
 
-以下文档仅在用户询问 nano-pencil、SDK、扩展、主题、技能或 TUI 时阅读：
-- 主文档：${readmePath}
-- 更多文档：${docsPath}
-- 示例：${examplesPath}（扩展、自定义工具、SDK）
-- 被问及：扩展（docs/extensions.md, examples/extensions/）、主题（docs/themes.md）、技能（docs/skills.md）、提示模板（docs/prompt-templates.md）、TUI 组件（docs/tui.md）、键绑定（docs/keybindings.md）、SDK 集成（docs/sdk.md）、自定义提供商（docs/custom-provider.md）、添加模型（docs/models.md）、包（docs/packages.md）
-- 处理相关主题时，先阅读文档与示例，并按 .md 中的交叉引用操作后再实现
-- 务必完整阅读 .md 文件并跟随相关链接（例如 TUI API 细节见 tui.md）`;
+Only read the following docs when user asks about nano-pencil, SDK, extensions, themes, skills or TUI:
+- Main doc: ${readmePath}
+- More docs: ${docsPath}
+- Examples: ${examplesPath} (extensions, custom tools, SDK)
+- When asked about: extensions (docs/extensions.md, examples/extensions/), themes (docs/themes.md), skills (docs/skills.md), prompt templates (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings (docs/keybindings.md), SDK integration (docs/sdk.md), custom providers (docs/custom-provider.md), adding models (docs/models.md), packages (docs/packages.md)
+- When handling related topics, first read docs and examples, then implement following cross-references in .md files
+- Must fully read .md files and follow related links (e.g., TUI API details in tui.md)`;
 
   if (appendSection) {
     prompt += appendSection;
   }
 
-  // 追加项目上下文文件
+  // Append project context files
   if (contextFiles.length > 0) {
-    prompt += "\n\n# 项目上下文\n\n";
-    prompt += "项目相关说明与规范：\n\n";
+    prompt += "\n\n# Project Context\n\n";
+    prompt += "Project-related rules and specifications:\n\n";
     for (const { path: filePath, content } of contextFiles) {
       prompt += `## ${filePath}\n\n${content}\n\n`;
     }
   }
 
-  // 追加技能段落（仅当具备 read 工具时）
+  // Append skills section (only when read tool is available)
   if (hasRead && skills.length > 0) {
     prompt += formatSkillsForPrompt(skills);
   }
 
-  // 最后追加日期时间与工作目录
-  prompt += `\n当前日期与时间：${dateTime}`;
-  prompt += `\n当前工作目录：${resolvedCwd}`;
+  // Finally append date/time and working directory
+  prompt += `\nCurrent date and time: ${dateTime}`;
+  prompt += `\nCurrent working directory: ${resolvedCwd}`;
 
   prompt += timeReasoningInstruction;
   return prompt;

@@ -32,27 +32,27 @@ export const API_KEY_GUIDANCE: Record<string, APIKeyGuidance> = {
 		serverName: "GitHub",
 		required: false,
 		envVar: "GITHUB_TOKEN",
-		instructions: `GitHub Token 用于访问 GitHub 仓库、issues 和 PRs。
+		instructions: `GitHub Token is used to access GitHub repositories, issues, and PRs.
 
-**获取步骤:**
-1. 访问 https://github.com/settings/tokens
-2. 点击 "Generate new token" (classic)
-3. 勾选权限:
-   - ✅ repo (Full control of private repositories)
-   - ✅ public_repo (Access public repositories)
-4. 点击 "Generate token"
-5. 复制 token (格式: ghp_xxxxxxxxxxxxxxxxxxxx)
-6. 在 mcp.json 中配置:
+**Steps to obtain:**
+1. Visit https://github.com/settings/tokens
+2. Click "Generate new token" (classic)
+3. Select permissions:
+   - repo (Full control of private repositories)
+   - public_repo (Access public repositories)
+4. Click "Generate token"
+5. Copy the token (format: ghp_xxxxxxxxxxxxxxxxxxxx)
+6. Configure in mcp.json:
    {
      "id": "github",
      "enabled": true,
      "env": {
-       "GITHUB_TOKEN": "你的token"
+       "GITHUB_TOKEN": "your_token"
      }
    }`,
 		getKeyUrl: "https://github.com/settings/tokens",
-		freeTier: "✅ 完全免费",
-		alternative: "不使用 token 仍可访问公开仓库",
+		freeTier: "Free",
+		alternative: "Public repositories can still be accessed without a token",
 	},
 
 	"brave-search": {
@@ -60,24 +60,24 @@ export const API_KEY_GUIDANCE: Record<string, APIKeyGuidance> = {
 		serverName: "Brave Search",
 		required: false,
 		envVar: "BRAVE_API_KEY",
-		instructions: `Brave Search API Key 用于网页搜索功能。
+		instructions: `Brave Search API Key is used for web search functionality.
 
-**获取步骤:**
-1. 访问 https://api.search.brave.com/app/keys
-2. 注册账号（或登录）
-3. 点击 "Create API Key"
-4. 复制 API Key (格式: BSxxxxx)
-5. 在 mcp.json 中配置:
+**Steps to obtain:**
+1. Visit https://api.search.brave.com/app/keys
+2. Sign up (or log in)
+3. Click "Create API Key"
+4. Copy the API Key (format: BSxxxxx)
+5. Configure in mcp.json:
    {
      "id": "brave-search",
      "enabled": true,
      "env": {
-       "BRAVE_API_KEY": "你的API key"
+       "BRAVE_API_KEY": "your_api_key"
      }
    }`,
 		getKeyUrl: "https://api.search.brave.com/app/keys",
-		freeTier: "✅ 免费额度: 每月 2000 次查询",
-		alternative: "不使用搜索功能，仍可使用其他工具",
+		freeTier: "Free tier: 2000 queries per month",
+		alternative: "Without search, other tools remain available",
 	},
 
 	postgres: {
@@ -85,22 +85,22 @@ export const API_KEY_GUIDANCE: Record<string, APIKeyGuidance> = {
 		serverName: "PostgreSQL",
 		required: false,
 		envVar: "POSTGRES_CONNECTION_STRING",
-		instructions: `PostgreSQL 连接字符串用于连接本地数据库。
+		instructions: `PostgreSQL connection string is used to connect to a local database.
 
-**配置步骤:**
-1. 确保已安装 PostgreSQL
-2. 准备连接字符串，格式:
+**Configuration steps:**
+1. Ensure PostgreSQL is installed
+2. Prepare the connection string in format:
    postgresql://user:password@localhost:5432/dbname
-3. 在 mcp.json 中配置:
+3. Configure in mcp.json:
    {
      "id": "postgres",
      "enabled": true,
      "env": {
-       "POSTGRES_CONNECTION_STRING": "你的连接字符串"
+       "POSTGRES_CONNECTION_STRING": "your_connection_string"
      }
    }`,
-		freeTier: "✅ 完全免费 (本地数据库)",
-		alternative: "使用 SQLite (默认启用)",
+		freeTier: "Free (local database)",
+		alternative: "Use SQLite (enabled by default)",
 	},
 };
 
@@ -142,13 +142,13 @@ export function getOptionalAPIKeyServers(): string[] {
  */
 export function formatGuidanceMessage(guidance: APIKeyGuidance, missingKey: boolean = true): string {
 	const prefix = missingKey ? "⚠️  " : "ℹ️  ";
-	const keyStatus = missingKey ? "未配置 API Key" : "API Key 配置";
+	const keyStatus = missingKey ? "API Key not configured" : "API Key configured";
 
 	let message = `${prefix}${guidance.serverName} - ${keyStatus}\n\n`;
 	message += `${guidance.instructions}\n`;
 
 	if (guidance.getKeyUrl) {
-		message += `\n🔗 获取 API Key: ${guidance.getKeyUrl}\n`;
+		message += `\n🔗 Get API Key: ${guidance.getKeyUrl}\n`;
 	}
 
 	if (guidance.freeTier) {

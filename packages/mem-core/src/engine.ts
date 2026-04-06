@@ -96,13 +96,13 @@ export class NanoMemEngine {
 		/\btalk (?:to me )?(?:like|in)\b/i,
 		/\buse (?:a |the )?(?:tone|style|voice)\b/i,
 		/\b(?:tone|style|voice|persona)\b/i,
-		/叫我/,
-		/称呼我/,
-		/称呼用户/,
-		/语气/,
-		/口吻/,
-		/风格/,
-		/说话方式/,
+		/call me/,
+		/address me as/,
+		/address user/,
+		/tone/,
+		/style of speaking/,
+		/speaking style/,
+		/communication style/,
 	];
 
 	private knowledgePath: string;
@@ -1935,7 +1935,7 @@ export class NanoMemEngine {
 	}
 
 	/**
-	 * 生成增强版洞察报告（包含大白话洞察 + 开发者画像 + 根因分析）
+	 * Generate enhanced insights report (includes human-readable insights + developer persona + root cause analysis)
 	 */
 	async generateEnhancedInsights(): Promise<{
 		report: FullInsightsReport;
@@ -1945,7 +1945,7 @@ export class NanoMemEngine {
 	}> {
 		const all = await this.buildRuntimeMemoryView();
 
-		// 并行生成基础报告和大白话洞察
+		// Generate base report and human-readable insights in parallel
 		const [baseReport, humanData] = await Promise.all([
 			buildFullInsightsReport(all, this.llmFn, this.cfg.locale),
 			generateHumanInsights(all, this.llmFn, this.cfg.locale),
@@ -2072,15 +2072,12 @@ export class NanoMemEngine {
 		lessons: MemoryEntry[],
 	): string[] {
 		const recommendations: string[] = [];
-		const isZh = this.cfg.locale === "zh";
 
 		// High-weight patterns → automation suggestion
 		if (patterns.length > 0) {
 			const top = patterns[0]!;
 			recommendations.push(
-				isZh
-					? `你在「${top.trigger}」时稳定执行「${top.behavior}」，考虑将此行为自动化`
-					: `You consistently ${top.behavior} when ${top.trigger}. Consider automating this behavior.`,
+				`You consistently ${top.behavior} when ${top.trigger}. Consider automating this behavior.`,
 			);
 		}
 
@@ -2088,9 +2085,7 @@ export class NanoMemEngine {
 		const unresolved = struggles.filter((s) => !s.resolved);
 		if (unresolved.length >= 2) {
 			recommendations.push(
-				isZh
-					? `有 ${unresolved.length} 个未解决的问题，建议系统性地逐个攻克`
-					: `You have ${unresolved.length} unresolved issues. Consider tackling them systematically.`,
+				`You have ${unresolved.length} unresolved issues. Consider tackling them systematically.`,
 			);
 		}
 
@@ -2106,26 +2101,20 @@ export class NanoMemEngine {
 		const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0];
 		if (topTag && topTag[1] >= 3) {
 			recommendations.push(
-				isZh
-					? `「${topTag[0]}」相关的问题反复出现，建议深入学习该领域`
-					: `Issues related to "${topTag[0]}" appear frequently. Consider deeper learning in this area.`,
+				`Issues related to "${topTag[0]}" appear frequently. Consider deeper learning in this area.`,
 			);
 		}
 
 		// Lessons accumulation → expertise recognition
 		if (lessons.length >= 5) {
 			recommendations.push(
-				isZh
-					? `你已积累 ${lessons.length} 条经验教训，这是宝贵的知识财富`
-					: `You've accumulated ${lessons.length} lessons. This is valuable expertise.`,
+				`You've accumulated ${lessons.length} lessons. This is valuable expertise.`,
 			);
 		}
 
 		// No data → encouragement
 		if (patterns.length === 0 && struggles.length === 0 && lessons.length === 0) {
-			recommendations.push(
-				isZh ? `继续使用系统，让它学习你的工作习惯` : `Keep using the system to let it learn your work habits.`,
-			);
+			recommendations.push(`Keep using the system to let it learn your work habits.`);
 		}
 
 		return recommendations.slice(0, 5);

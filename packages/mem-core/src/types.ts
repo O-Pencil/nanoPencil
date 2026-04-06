@@ -295,74 +295,74 @@ export interface FullInsightsReport {
 	locale: string;
 }
 
-// ─── 开发者画像 (Human-Readable Persona) ──────────────────────────────
+// ─── Developer Persona (Human-Readable) ──────────────────────────────
 
 export interface DeveloperPersona {
-	/** 用大白话描述这个人做什么 */
+	/** Plain language description of what this person does */
 	whatTheyDo: string;
-	/** 经验水平描述 */
+	/** Experience level description */
 	experienceLevel: string;
-	/** 擅长的地方 */
+	/** Areas of strength */
 	superpowers: string[];
-	/** 经常卡住的地方 */
+	/** Frequent blockers */
 	painPoints: string[];
-	/** 工作风格描述 */
+	/** Work style description */
 	workStyle: string;
-	/** 一句话总结 */
+	/** One-sentence summary */
 	summary: string;
 }
 
-// ─── 人话版洞察 (Human-Readable Insights) ──────────────────────────────
+// ─── Human-Readable Insights ──────────────────────────────
 
 export interface HumanInsight {
-	/** 洞察标题 - 吸引注意力 */
+	/** Insight title - grabs attention */
 	title: string;
-	/** 洞察内容 - 像朋友聊天 */
+	/** Insight content - like chatting with a friend */
 	content: string;
-	/** emoji 图标 */
+	/** Emoji icon */
 	icon: string;
-	/** 实用程度 */
+	/** Utility level */
 	utility: "high" | "medium" | "low";
-	/** 分类标签 */
+	/** Category tags */
 	tags: string[];
 }
 
-// ─── 根因分析洞察 (Root Cause Analysis) ──────────────────────────────
+// ─── Root Cause Analysis Insights ──────────────────────────────
 
 export interface RootCauseInsight {
-	/** 表面现象 */
+	/** Surface symptom */
 	symptom: string;
-	/** 根因（用人话） */
+	/** Root cause (in plain language) */
 	rootCause: string;
-	/** 证据 */
+	/** Evidence */
 	evidence: string[];
-	/** 建议 */
+	/** Suggestion */
 	suggestion: string;
 }
 
-// ─── 对比洞察 (Comparative Insights) ──────────────────────────────
+// ─── Comparative Insights ──────────────────────────────
 
 export interface ComparativeInsight {
-	/** 对比维度 */
+	/** Comparison dimension */
 	dimension: string;
-	/** 用户的实际情况 */
+	/** User's actual situation */
 	youAre: string;
-	/** 一般人怎么样 */
+	/** How typical users are */
 	typical: string;
-	/** 结论 */
+	/** Conclusion */
 	verdict: string;
 }
 
-// ─── 增强版 Full Insights Report ──────────────────────────────────────
+// ─── Enhanced Full Insights Report ──────────────────────────────────────
 
 export interface EnhancedInsightsReport extends FullInsightsReport {
-	/** 开发者画像 */
+	/** Developer persona */
 	persona?: DeveloperPersona;
-	/** 人话版洞察 */
+	/** Human-readable insights */
 	humanInsights: HumanInsight[];
-	/** 根因分析 */
+	/** Root cause analysis */
 	rootCauses: RootCauseInsight[];
-	/** 对比洞察 */
+	/** Comparative insights */
 	comparisons: ComparativeInsight[];
 }
 

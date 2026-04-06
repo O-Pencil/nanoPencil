@@ -367,7 +367,7 @@ export class AgentSession {
   // Base system prompt (without extension appends) - used to apply fresh appends each turn
   private _baseSystemPrompt = "";
 
-  // Coordinators (P3 - AgentSession responsibility拆分)
+  // Coordinators (P3 - AgentSession responsibility decomposition)
   private _compactionCoordinator?: CompactionCoordinator;
   private _toolOrchestrator?: ToolOrchestrator;
   private _modelSwitcher?: ModelSwitcher;
@@ -398,12 +398,12 @@ export class AgentSession {
       includeAllExtensionTools: true,
     });
 
-    // Initialize coordinators (P3 - AgentSession responsibility拆分)
+    // Initialize coordinators (P3 - AgentSession responsibility decomposition)
     this._initializeCoordinators();
   }
 
   /**
-   * Initialize coordinators (P3 - AgentSession responsibility拆分)
+   * Initialize coordinators (P3 - AgentSession responsibility decomposition)
    * These coordinators encapsulate specific responsibilities:
    * - CompactionCoordinator: compaction trigger, execution, result handling
    * - ToolOrchestrator: tool registration, lookup, management

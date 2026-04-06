@@ -608,7 +608,7 @@ export async function main(args: string[]) {
 	const authStorage = AuthStorage.create();
 	if (APP_NAME === "nanopencil") {
 		ensureNanopencilDefaultConfig();
-		// 让 nanomem 使用 nanopencil 的配置目录存储记忆
+		// Let nanomem use nanopencil's config directory to store memory
 		if (!process.env.NANOMEM_MEMORY_DIR) {
 			process.env.NANOMEM_MEMORY_DIR = join(getAgentDir(), "memory");
 		}
@@ -748,7 +748,7 @@ export async function main(args: string[]) {
 	const { initialMessage, initialImages } = await prepareInitialMessage(parsed, settingsManager.getImageAutoResize());
 	const isInteractive = !parsed.print && parsed.mode === undefined;
 	const mode = parsed.mode || "text";
-	// nanopencil 默认主题为 warm；未设置时写入 settings 以便持久
+	// NanoPencil default theme is warm; write to settings when unset for persistence
 	if (APP_NAME === "nanopencil" && settingsManager.getTheme() === undefined) {
 		settingsManager.setTheme("warm");
 	}
@@ -792,7 +792,7 @@ export async function main(args: string[]) {
 		modelRegistry,
 		settingsManager,
 	);
-	// NanoPencil 默认启用 MCP；离线模式或 --no-mcp 参数下关闭
+	// NanoPencil enables MCP by default; disabled in offline mode or with --no-mcp flag
 	sessionOptions.enableMCP = APP_NAME === "nanopencil" && !offlineMode && !parsed.noMcp;
 	sessionOptions.cwd = parsedCwd;
 	sessionOptions.authStorage = authStorage;

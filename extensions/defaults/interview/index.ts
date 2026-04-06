@@ -84,16 +84,16 @@ function isTaskLikePrompt(prompt: string): boolean {
 
 	// Clear task intent (verbs / outcomes).
 	const taskVerbPattern =
-		/(做|写|实现|开发|设计|制作|生成|编写|搭建|部署|构建|修复|优化|重构|改进|完善|输出|交付|策划|规划|说明)/;
+		/(do|write|implement|develop|design|create|build|make|generate|setup|deploy|construct|fix|optimize|refactor|improve|enhance|output|deliver|plan|specify|explain)/i;
 	const outputPattern =
-		/(网站|作品集|页面|前端|后端|UI|界面|代码|程序|脚本|文档|README|PRD|测试|单元测试|接口|API|数据库|SQL|功能|需求|方案|计划|系统|平台|应用|模块|服务|组件)/;
+		/(website|portfolio|page|frontend|backend|UI|interface|code|program|script|document|README|PRD|test|unit test|API|database|SQL|feature|requirement|solution|plan|system|platform|app|module|service|component)/i;
 
-	// "review/debug" intent e.g. "帮我看看这段代码/报错"
-	const reviewPattern = /(看看|检查|分析|debug|定位|排查)/i;
-	const reviewTargetPattern = /(代码|报错|错误|bug|异常|日志|log|trace|stack|SQL)/;
+	// "review/debug" intent e.g. "help me review this code/error"
+	const reviewPattern = /(review|check|analyze|debug|diagnose|investigate)/i;
+	const reviewTargetPattern = /(code|error|bug|exception|log|trace|stack|SQL)/i;
 
 	// Request signals are often used with task verbs, but keep them optional.
-	const requestSignalPattern = /(帮我|请你|能不能|可以|希望|需要|麻烦|拜托|给我)/;
+	const requestSignalPattern = /(help me|please|can you|could you|I need|I want|would you)/i;
 
 	const hasTaskVerb = taskVerbPattern.test(p);
 	const hasOutput = outputPattern.test(p);
@@ -113,14 +113,14 @@ function isNonTaskPrompt(prompt: string): boolean {
 	if (!p) return false;
 
 	// Greetings / small talk.
-	const greetingPattern = /^(你好|您好|早上好|下午好|晚上好|嗨|hello|hi|hey)\b/i;
-	const chitchatPattern = /(闲聊|聊聊|唠嗑|无聊|随便讲讲|随便聊聊)/i;
+	const greetingPattern = /^(hello|hi|hey|good morning|good afternoon|good evening)\b/i;
+	const chitchatPattern = /(chat|casual talk|small talk|bored|just chatting|let's talk)/i;
 
 	// Memory / identity checks.
-	const memoryPattern = /(你还记得我吗|还记得我吗|还记得我|记得我|记住我|你记不记得我|忘记我|你是谁)/i;
+	const memoryPattern = /(do you remember me|remember me|you remember|do you know me|forgot me|who are you)/i;
 
 	// Generic "whatever" agreement without a concrete deliverable.
-	const vagueAgreementPattern = /(都行|随便|无所谓|你决定|怎么都行)/i;
+	const vagueAgreementPattern = /(whatever|anything is fine|up to you|you decide|doesn't matter)/i;
 
 	// If it matches a non-task pattern AND it's not task-like, treat it as non-task.
 	if (greetingPattern.test(p)) return !isTaskLikePrompt(p);
@@ -153,9 +153,9 @@ function isDetailedPrompt(prompt: string): boolean {
 	if (codeReferences.test(p)) return true;
 
 	// Debug/review requests - user will provide code/error context
-	// e.g., "帮我看看这段代码", "检查下这个报错", "debug一下"
-	const debugPattern = /(看看|检查|分析|debug|定位|排查|review|审查|诊断)/i;
-	const debugTargetPattern = /(代码|报错|错误|bug|异常|日志|log|问题|脚本|程序|函数|方法)/i;
+	// e.g., "help me review this code", "check this error", "debug this"
+	const debugPattern = /(review|check|analyze|debug|diagnose|investigate)/i;
+	const debugTargetPattern = /(code|error|bug|exception|log|issue|script|program|function|method)/i;
 	if (debugPattern.test(p) && debugTargetPattern.test(p)) return true;
 
 	return false;

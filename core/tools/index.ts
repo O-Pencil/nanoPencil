@@ -159,13 +159,13 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
  * These are usage guidelines shown to the AI to help it use tools correctly.
  */
 export const toolGuidance: Record<string, string> = {
-	read: "读取文件内容。优先使用此工具查看文件，不要用 cat 或其他命令。",
-	bash: "执行 bash 命令（ls、grep、find 等）进行文件操作和系统交互。",
-	edit: "对文件进行精确编辑。使用查找替换方式，旧文本必须完全匹配。编辑前先用 read 查看文件。",
-	write: "创建或覆盖文件。仅在创建新文件或完整重写时使用。",
-	grep: "在文件内容中搜索模式（遵守 .gitignore）。适合查找代码中的特定字符串。",
-	find: "按 glob 模式查找文件（遵守 .gitignore）。适合查找特定名称的文件。",
-	ls: "列出目录内容。",
+	read: "Read file contents. Prefer this tool to view files; do not use cat or other commands.",
+	bash: "Execute bash commands (ls, grep, find, etc.) for file operations and system interaction.",
+	edit: "Perform precise edits on files. Uses find-and-replace; old text must match exactly. Use read to view the file before editing.",
+	write: "Create or overwrite files. Use only when creating new files or doing complete rewrites.",
+	grep: "Search for patterns in file contents (respects .gitignore). Suitable for finding specific strings in code.",
+	find: "Find files by glob pattern (respects .gitignore). Suitable for finding files with specific names.",
+	ls: "List directory contents.",
 };
 
 toolGuidance.time =

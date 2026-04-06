@@ -15,28 +15,28 @@ import type { ModelRegistry } from "./core/model-registry.js";
 export const NANOPENCIL_DEFAULT_PROVIDER = "dashscope-coding";
 const CODING_PLAN_BASE_URL = "https://coding.dashscope.aliyuncs.com/v1";
 
-/** 百度千帆 Coding Plan provider，兼容 OpenAI 接口：https://qianfan.baidubce.com/v2/coding/chat/completions */
+/** Baidu Qianfan Coding Plan provider, OpenAI compatible interface: https://qianfan.baidubce.com/v2/coding/chat/completions */
 export const NANOPENCIL_QIANFAN_CODING_PROVIDER = "qianfan-coding";
 const QIANFAN_CODING_BASE_URL = "https://qianfan.baidubce.com/v2/coding";
 
-/** 火山引擎方舟 Coding Plan provider，兼容 OpenAI 接口：https://ark.cn-beijing.volces.com/api/coding/v3 */
+/** Volcano Ark Coding Plan provider, OpenAI compatible interface: https://ark.cn-beijing.volces.com/api/coding/v3 */
 export const NANOPENCIL_ARK_CODING_PROVIDER = "ark-coding";
 const ARK_CODING_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3";
 
-/** MiniMax Coding Plan provider，兼容 OpenAI 接口：https://api.minimaxi.com/v1 */
+/** MiniMax Coding Plan provider, OpenAI compatible interface: https://api.minimaxi.com/v1 */
 export const NANOPENCIL_MINIMAX_CODING_PROVIDER = "minimax-coding";
 const MINIMAX_CODING_BASE_URL = "https://api.minimaxi.com/v1";
 
-/** 智谱 Coding Plan provider，兼容 OpenAI 接口：https://open.bigmodel.cn/api/paas/v4 */
+/** Zhipu Coding Plan provider, OpenAI compatible interface: https://open.bigmodel.cn/api/paas/v4 */
 export const NANOPENCIL_ZHIPU_CODING_PROVIDER = "zhipu-coding";
 const ZHIPU_CODING_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
 
-/** Ollama 本地模型 provider，与 pi 文档一致：baseUrl 带 /v1，apiKey 任意值即可。 */
+/** Ollama local model provider, consistent with pi docs: baseUrl with /v1, apiKey can be any value. */
 export const NANOPENCIL_OLLAMA_PROVIDER = "ollama";
 const OLLAMA_BASE_URL = "http://localhost:11434/v1";
 
 /**
- * 启动时在 TUI 头部显示的本版本新特性说明（约 50 词）。发版时更新此处。
+ * What's new message displayed in TUI header at startup (about 50 words). Update on release.
  */
 export const NANOPENCIL_WHATS_NEW =
 	"Lightweight CLI writing agent: read, write, edit, bash. DashScope, Qianfan, Ark Coding Plan, local Ollama. Optional nanomem. Type / for commands, ! for bash. Config in ~/.nanopencil/agent/.";
@@ -56,7 +56,7 @@ type MinimaxModelDef =
 type ZhipuModelDef =
 	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ZHIPU_CODING_PROVIDER]["models"][number];
 
-/** 默认 models.json 内容：dashscope-coding（百炼）、qianfan-coding（千帆）、ark-coding（方舟）、minimax-coding（MiniMax）、zhipu-coding（智谱）+ ollama（本地）。各 Coding Plan 无 apiKey，由用户输入存 auth.json；ollama 用占位 "ollama"。 */
+/** Default models.json content: dashscope-coding (Bailian), qianfan-coding (Qianfan), ark-coding (Ark), minimax-coding (MiniMax), zhipu-coding (Zhipu) + ollama (local). Each Coding Plan has no apiKey, user input stored in auth.json; ollama uses placeholder "ollama". */
 export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 	providers: {
 		[NANOPENCIL_DEFAULT_PROVIDER]: {
@@ -181,42 +181,42 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 			models: [
 				{
 					id: "kimi-k2.5",
-					name: "Kimi K2.5 (千帆)",
+					name: "Kimi K2.5 (Qianfan)",
 					input: ["text", "image"],
 					contextWindow: 262144,
 					maxTokens: 32768,
 				},
 				{
 					id: "deepseek-v3.2",
-					name: "DeepSeek V3.2 (千帆)",
+					name: "DeepSeek V3.2 (Qianfan)",
 					input: ["text"],
 					contextWindow: 262144,
 					maxTokens: 65536,
 				},
 				{
 					id: "glm-5",
-					name: "GLM-5 (千帆)",
+					name: "GLM-5 (Qianfan)",
 					input: ["text"],
 					contextWindow: 202752,
 					maxTokens: 16384,
 				},
 				{
 					id: "MiniMax-M2.5",
-					name: "MiniMax-M2.5 (千帆)",
+					name: "MiniMax-M2.5 (Qianfan)",
 					input: ["text"],
 					contextWindow: 1000000,
 					maxTokens: 65536,
 				},
 				{
 					id: "glm-4.7",
-					name: "GLM-4.7 (千帆)",
+					name: "GLM-4.7 (Qianfan)",
 					input: ["text"],
 					contextWindow: 202752,
 					maxTokens: 16384,
 				},
 				{
 					id: "MiniMax-M2.1",
-					name: "MiniMax-M2.1 (千帆)",
+					name: "MiniMax-M2.1 (Qianfan)",
 					input: ["text"],
 					contextWindow: 1000000,
 					maxTokens: 65536,
@@ -229,56 +229,56 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 			models: [
 				{
 					id: "doubao-seed-2.0-code",
-					name: "Doubao Seed 2.0 Code (方舟)",
+					name: "Doubao Seed 2.0 Code (Ark)",
 					input: ["text"],
 					contextWindow: 262144,
 					maxTokens: 65536,
 				},
 				{
 					id: "doubao-seed-2.0-pro",
-					name: "Doubao Seed 2.0 Pro (方舟)",
+					name: "Doubao Seed 2.0 Pro (Ark)",
 					input: ["text"],
 					contextWindow: 262144,
 					maxTokens: 65536,
 				},
 				{
 					id: "doubao-seed-2.0-lite",
-					name: "Doubao Seed 2.0 Lite (方舟)",
+					name: "Doubao Seed 2.0 Lite (Ark)",
 					input: ["text"],
 					contextWindow: 262144,
 					maxTokens: 32768,
 				},
 				{
 					id: "doubao-seed-code",
-					name: "Doubao Seed Code (方舟)",
+					name: "Doubao Seed Code (Ark)",
 					input: ["text"],
 					contextWindow: 262144,
 					maxTokens: 65536,
 				},
 				{
 					id: "minimax-m2.5",
-					name: "MiniMax M2.5 (方舟)",
+					name: "MiniMax M2.5 (Ark)",
 					input: ["text"],
 					contextWindow: 1000000,
 					maxTokens: 65536,
 				},
 				{
 					id: "glm-4.7",
-					name: "GLM-4.7 (方舟)",
+					name: "GLM-4.7 (Ark)",
 					input: ["text"],
 					contextWindow: 202752,
 					maxTokens: 16384,
 				},
 				{
 					id: "deepseek-v3.2",
-					name: "DeepSeek V3.2 (方舟)",
+					name: "DeepSeek V3.2 (Ark)",
 					input: ["text"],
 					contextWindow: 262144,
 					maxTokens: 65536,
 				},
 				{
 					id: "kimi-k2.5",
-					name: "Kimi K2.5 (方舟)",
+					name: "Kimi K2.5 (Ark)",
 					input: ["text", "image"],
 					contextWindow: 262144,
 					maxTokens: 32768,
@@ -330,7 +330,7 @@ const DEFAULT_OLLAMA_MODELS: OllamaModelDef[] = [
 ];
 
 /**
- * 若 models.json 已存在，合并默认模型：补充缺失模型，并将已知模型的 contextWindow/maxTokens/input 更新为官方值。
+ * If models.json exists, merge default models: add missing models, and update contextWindow/maxTokens/input to official values.
  */
 function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 	let raw: string;
@@ -399,7 +399,7 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 	}
 
-	// 合并 qianfan-coding：不存在则添加默认配置，存在则补充默认模型
+	// Merge qianfan-coding: add default config if not present, supplement default models if exists
 	const qianfanProvider = data.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER];
 	const qianfanConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER];
 	if (!qianfanProvider) {
@@ -452,7 +452,7 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		}
 	}
 
-	// 合并 ark-coding：不存在则添加默认配置，存在则补充默认模型
+	// Merge ark-coding: add default config if not present, supplement default models if exists
 	const arkProvider = data.providers[NANOPENCIL_ARK_CODING_PROVIDER];
 	const arkConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ARK_CODING_PROVIDER];
 	if (!arkProvider) {
@@ -505,7 +505,7 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		}
 	}
 
-	// 合并 minimax-coding：不存在则添加默认配置，存在则补充默认模型
+	// Merge minimax-coding: add default config if not present, supplement default models if exists
 	const minimaxProvider = data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER];
 	const minimaxConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER];
 	if (!minimaxProvider) {
@@ -558,7 +558,7 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		}
 	}
 
-	// 合并 ollama：不存在则添加默认配置，存在则补充默认模型
+	// Merge ollama: add default config if not present, supplement default models if exists
 	const ollamaProvider = data.providers[NANOPENCIL_OLLAMA_PROVIDER];
 	const ollamaConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_OLLAMA_PROVIDER];
 	if (!ollamaProvider) {
@@ -611,32 +611,32 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 }
 
 /**
- * 确保 nano-pencil 默认配置存在：创建 agent 目录，若 models.json 不存在则写入默认（仅 Coding Plan）；
- * 若已存在则合并默认模型（补充 qwen3.5-plus 等并更新 contextWindow/maxTokens）。
- * 若 .PENCIL.md 不存在则写入默认全局上下文，用户安装即可自带 nano-pencil 说明。
- * 仅在以 nanopencil 运行时调用。
+ * Ensure nano-pencil default config exists: create agent directory, write defaults if models.json not present (Coding Plan only);
+ * If exists, merge default models (add qwen3.5-plus etc and update contextWindow/maxTokens).
+ * Write default global context if .PENCIL.md not present, users can bring nano-pencil description on install.
+ * Only called when running as nanopencil.
  */
-export const DEFAULT_PENCIL_MD = `# nano-pencil 全局上下文 · 全能类人助理
+export const DEFAULT_PENCIL_MD = `# nano-pencil Global Context · Versatile Human-like Assistant
 
-你是一位**全能类人 AI 助理**，与用户在同一工作流中协作：编程、写作、推理、规划、解释、重构、排错等皆可胜任，且以自然、简洁、直接的方式交流。
+You are a **versatile human-like AI assistant**, collaborating with users in the same workflow: programming, writing, reasoning, planning, explaining, refactoring, debugging - all within your capability, communicating naturally, concisely, and directly.
 
-## 定位
-- **全能**：不限于「只会写代码」或「只会聊天」；根据当前任务自动切换：改代码、写文档、跑命令、解释概念、拆解步骤、给建议等。
-- **类人**：语气自然、信息密度高、少废话；必要时简短确认，不堆砌客套；友好但克制（如 "Thanks @user" 而非 "Thanks so much!!"）。若涉及往日对话，像回忆亲身经历一样自然提及（如「我记得我们…」「上次你提到…」），不显摆技术机制。
-- **助理**：目标是**帮用户把事做成**，而不是展示能力。优先理解意图，再选动作；不确定时先问一句；用户有明确偏好或项目规则（如 CLAUDE.md、AGENTS.md、项目内 \`.PENCIL.md\`）时严格遵循。
+## Positioning
+- **Versatile**: Not limited to "only coding" or "only chatting"; automatically switch based on current task: modify code, write docs, run commands, explain concepts, break down steps, give suggestions, etc.
+- **Human-like**: Natural tone, high information density, minimal fluff; briefly confirm when needed, don't pile on pleasantries; friendly but restrained (e.g., "Thanks @user" not "Thanks so much!!"). When referencing past conversations, mention them naturally like recalling personal experiences (e.g., "I remember we...", "Last time you mentioned..."), without showing off technical mechanisms.
+- **Assistant**: Goal is to **help users get things done**, not show off capabilities. Prioritize understanding intent, then choose action; ask first when uncertain; strictly follow when users have clear preferences or project rules (e.g., CLAUDE.md, AGENTS.md, project \`.PENCIL.md\`).
 
-## 协作原则
-1. **先听懂再动手**：ambiguous 需求先澄清范围或给出最小可行方案再执行。
-2. **小步可验证**：能拆成几步的尽量拆，每步可检查，减少一次性大改。
-3. **尊重现有约定**：项目/仓库内的规范、目录结构、命名习惯优先于个人风格。
-4. **工具用到点子上**：read/write/edit/bash 等按需用，不炫技；禁止用 \`cat\`/\`sed\` 读文件，用 Read 工具；禁止 \`git add -A\`，只 add 自己改动的文件。
+## Collaboration Principles
+1. **Understand before acting**: Clarify scope or provide minimum viable solution for ambiguous requirements before executing.
+2. **Small verifiable steps**: Break into steps when possible, each checkable, reduce one-time big changes.
+3. **Respect existing conventions**: Project/repo rules, directory structure, naming conventions take priority over personal style.
+4. **Use tools purposefully**: Use read/write/edit/bash as needed, don't show off; forbidden to use \`cat\`/\`sed\` to read files, use Read tool; forbidden \`git add -A\`, only add files you modified.
 
-5. **谨慎使用危险命令**：涉及删除、移动、重写等不可逆操作时，先确认目标路径、列出影响范围，必要时询问用户确认；rm -rf、dd、mkfs 等高危命令需特别谨慎，防止永久丢失用户数据。
+5. **Use dangerous commands cautiously**: When involving deletion, move, overwrite and other irreversible operations, first confirm target path, list impact scope, ask user for confirmation when necessary; rm -rf, dd, mkfs and other high-risk commands need extra caution to prevent permanent data loss.
 
-## 与本文件的关系
-- 本文件为**全局**上下文，对所有项目生效；你可在此补充你的通用规则或偏好。
-- 项目根目录下的 \`.PENCIL.md\` 仅对当前项目生效。
-- \`CLAUDE.md\` 与 \`AGENTS.md\` 仍会按原有逻辑从各层目录加载，优先级高于本文件的通用描述。
+## Relationship with This File
+- This file is **global** context, effective for all projects; you can add your general rules or preferences here.
+- \`.PENCIL.md\` in project root is only effective for current project.
+- \`CLAUDE.md\` and \`AGENTS.md\` will still be loaded from each directory level as per original logic, with higher priority than this file's general description.
 `;
 
 export function ensureNanopencilDefaultConfig(): void {

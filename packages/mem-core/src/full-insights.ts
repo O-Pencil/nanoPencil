@@ -160,40 +160,23 @@ function fallbackAtAGlance(
 	lessons: MemoryEntry[],
 	locale: string,
 ): FullInsightsAtAGlance {
-	const isZh = locale === "zh";
 	const resolved = struggles.filter((s) => s.resolved);
 	const unresolved = struggles.filter((s) => !s.resolved);
 	const working =
 		resolved.length > 0
-			? isZh
-				? `${resolved.length} 个问题已解决，可继续复用这些解法。`
-				: `${resolved.length} struggles resolved; keep reusing those fixes.`
+			? `${resolved.length} struggles resolved; keep reusing those fixes.`
 			: lessons.length > 0
-				? isZh
-					? `已积累 ${lessons.length} 条经验，可把最重要的固化成清单。`
-					: `${lessons.length} lessons captured; turn the top ones into checklists.`
-				: isZh
-					? "暂无明显信号。"
-					: "No strong signal yet.";
+				? `${lessons.length} lessons captured; turn the top ones into checklists.`
+				: "No strong signal yet.";
 	const hindering =
 		unresolved.length > 0
-			? isZh
-				? `还有 ${unresolved.length} 个未解决，最常见：「${unresolved[0]?.problem ?? ""}」。`
-				: `${unresolved.length} open struggles remain. Most frequent: "${unresolved[0]?.problem ?? ""}".`
-			: isZh
-				? "当前没有明显未解决问题。"
-				: "No unresolved struggles visible.";
+			? `${unresolved.length} open struggles remain. Most frequent: "${unresolved[0]?.problem ?? ""}".`
+			: "No unresolved struggles visible.";
 	const topPattern = patterns[0];
 	const quickWins = topPattern
-		? isZh
-			? `在「${topPattern.trigger}」时你常「${topPattern.behavior}」，可考虑自动化。`
-			: `When ${topPattern.trigger}, you often ${topPattern.behavior}. Consider automating.`
-		: isZh
-			? "继续使用系统，积累数据后会给出快速改进建议。"
-			: "Keep using the system; quick wins will appear as data grows.";
-	const ambitious = isZh
-		? "可以尝试把重复流程固化成技能或脚本，让 Agent 并行处理多块任务。"
-		: "Consider turning repeat workflows into skills or scripts and using parallel agents.";
+		? `When ${topPattern.trigger}, you often ${topPattern.behavior}. Consider automating.`
+		: "Keep using the system; quick wins will appear as data grows.";
+	const ambitious = "Consider turning repeat workflows into skills or scripts and using parallel agents.";
 	return { working, hindering, quickWins, ambitious };
 }
 
@@ -228,24 +211,19 @@ function fallbackRecommendations(
 	locale: string,
 ): string[] {
 	const recs: string[] = [];
-	const isZh = locale === "zh";
 	if (patterns.length > 0) {
 		const top = patterns[0]!;
-		recs.push(
-			isZh ? `你在「${top.trigger}」时稳定执行「${top.behavior}」，考虑将此行为自动化` : `You consistently ${top.behavior} when ${top.trigger}. Consider automating.`,
-		);
+		recs.push(`You consistently ${top.behavior} when ${top.trigger}. Consider automating.`);
 	}
 	const unresolved = struggles.filter((s) => !s.resolved);
 	if (unresolved.length >= 2) {
-		recs.push(
-			isZh ? `有 ${unresolved.length} 个未解决的问题，建议系统性地逐个攻克` : `You have ${unresolved.length} unresolved issues. Tackle them systematically.`,
-		);
+		recs.push(`You have ${unresolved.length} unresolved issues. Tackle them systematically.`);
 	}
 	if (lessons.length >= 5) {
-		recs.push(isZh ? `你已积累 ${lessons.length} 条经验教训，这是宝贵知识` : `You've accumulated ${lessons.length} lessons. Valuable expertise.`);
+		recs.push(`You've accumulated ${lessons.length} lessons. Valuable expertise.`);
 	}
 	if (recs.length === 0) {
-		recs.push(isZh ? "继续使用系统，让它学习你的工作习惯" : "Keep using the system to let it learn your habits.");
+		recs.push("Keep using the system to let it learn your habits.");
 	}
 	return recs.slice(0, 5);
 }
@@ -255,23 +233,22 @@ function fallbackFeaturesAndPatterns(
 	struggles: StruggleInsight[],
 	locale: string,
 ): { featuresToTry: FullInsightsFeatureToTry[]; usagePatterns: FullInsightsUsagePattern[] } {
-	const isZh = locale === "zh";
 	const featuresToTry: FullInsightsFeatureToTry[] = [];
 	const usagePatterns: FullInsightsUsagePattern[] = [];
 	if (toolRows.length > 0) {
 		const topTool = toolRows[0]!.label;
 		featuresToTry.push({
-			title: isZh ? "自动化常用操作" : "Automate frequent operations",
-			oneLiner: isZh ? "把重复流程固化成技能或脚本" : "Turn repeat workflows into skills or scripts",
-			whyForYou: isZh ? `你经常使用「${topTool}」，可考虑封装成一条命令或技能。` : `You use "${topTool}" often; consider wrapping it in a skill or command.`,
+			title: "Automate frequent operations",
+			oneLiner: "Turn repeat workflows into skills or scripts",
+			whyForYou: `You use "${topTool}" often; consider wrapping it in a skill or command.`,
 		});
 	}
 	if (struggles.filter((s) => !s.resolved).length >= 2) {
 		usagePatterns.push({
-			title: isZh ? "分批处理大任务" : "Batch large tasks",
-			summary: isZh ? "大文件或大批量时拆成小批处理" : "Split large files or batches into smaller chunks",
-			detail: isZh ? "避免单次处理过多导致上下文溢出，每批验证后再继续。" : "Avoid context overflow by validating each batch before continuing.",
-			pastePrompt: isZh ? "请把这件事拆成 3～4 步，每步完成后给我看结果再继续下一步。" : "Break this into 3-4 steps; show me the result after each step before continuing.",
+			title: "Batch large tasks",
+			summary: "Split large files or batches into smaller chunks",
+			detail: "Avoid context overflow by validating each batch before continuing.",
+			pastePrompt: "Break this into 3-4 steps; show me the result after each step before continuing.",
 		});
 	}
 	return { featuresToTry, usagePatterns };

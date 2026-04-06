@@ -16,8 +16,8 @@ export interface MCPConfig {
 
 const DEFAULT_MCP_CONFIG: MCPConfig = {
   mcpServers: [
-    // ===== 核心工具 (默认启用) =====
-    // 注意: filesystem 的目录在运行时由 MCPManager 动态设置
+    // ===== Core Tools (enabled by default) =====
+    // Note: filesystem directory is dynamically set by MCPManager at runtime
     {
       id: "filesystem",
       name: "Filesystem",
@@ -39,7 +39,7 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
     {
       id: "puppeteer",
       name: "Puppeteer (Browser Automation)",
-      // 注意：此包已废弃 (DEPRECATED)，但仍可正常工作
+      // Note: This package is DEPRECATED but still works
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-puppeteer"],
       enabled: true,
@@ -85,7 +85,7 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
       toolTimeout: 60000,
       initTimeout: 20000,
     },
-    // ===== 数据库工具 =====
+    // ===== Database Tools =====
     {
       id: "sqlite",
       name: "SQLite (Database)",
@@ -95,14 +95,14 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
       transport: "stdio",
       toolTimeout: 30000,
     },
-    // ===== 需要 API Key 的工具 =====
+    // ===== Tools requiring API Key =====
     {
       id: "github",
       name: "GitHub",
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-github"],
       env: {
-        GITHUB_TOKEN: "", // 用户设置后启用
+        GITHUB_TOKEN: "", // Enable after user sets it
       },
       enabled: false,
       transport: "stdio",
@@ -114,13 +114,13 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-brave-search"],
       env: {
-        BRAVE_API_KEY: "", // 免费额度: 每月 2000 次查询
+        BRAVE_API_KEY: "", // Free tier: 2000 queries per month
       },
       enabled: false,
       transport: "stdio",
       toolTimeout: 60000,
     },
-    // ===== 开发工具 =====
+    // ===== Development Tools =====
     {
       id: "git",
       name: "Git",
@@ -136,7 +136,7 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-postgres"],
       env: {
-        POSTGRES_CONNECTION_STRING: "", // 用户本地数据库
+        POSTGRES_CONNECTION_STRING: "", // User's local database
       },
       enabled: false,
       transport: "stdio",

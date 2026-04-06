@@ -185,7 +185,7 @@ export const APP_NAME: string = pkg.piConfig?.name || "pi";
 export const CONFIG_DIR_NAME: string =
 	pkg.piConfig?.configDir ?? (pkg.name === "@pencil-agent/nano-pencil" ? ".nanopencil" : ".pi");
 export const VERSION: string = pkg.version;
-/** npm 包名，用于版本检查与更新提示（如 @pencil-agent/nano-pencil） */
+/** npm package name, used for version checking and update prompts (e.g., @pencil-agent/nano-pencil) */
 export const PACKAGE_NAME: string = pkg.name || "@pencil-agent/nano-pencil";
 
 // e.g., PI_CODING_AGENT_DIR or TAU_CODING_AGENT_DIR

@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.36] - 2026-04-06
+
+### Added
+- feat(ai): add MiniMax thinking tag support
+- feat(model): improve OAuth token handling in model switching
+- feat(debug): export debug logger from core module
+- feat(debug): add comprehensive debug logging system for AI providers
+- feat(interactive-mode): enhance update workflow with interactive options
+- feat(model-selector): add Ctrl+N to append OpenRouter model by id
+- feat(interactive): enhance custom editor and mode orchestration
+
+### Fixed
+- fix(loop): defer scheduler ticker until session_start
+- fix(build): bundle zod for global install; workspace tsc; soul empty JSON
+- fix(utils): improve clipboard timeout and image resize safety
+- fix(interactive): improve clipboard and attachment error handling
+- fix(clipboard): add missing @mariozechner/clipboard dependency
+- fix(team): resolve theme color error and abort listener leak
+- fix(debug-logger): enable late environment variable detection
+- fix(model-cycling): improve OAuth error handling with typed errors
+- fix(interactive-mode): improve update system reliability
+- fix(nanopencil): correct MiniMax API endpoint from /anthropic to /v1
+- fix(build): bundle zod to dist/node_modules for peerDependency resolution
+- fix(interactive-mode): replace npm update with npm install in version check prompt
+- fix(tui): show NanoMem command notifications
+- fix(ai): avoid InvalidCharacterError when OAuth client placeholders are not base64
+- fix(nanopencil): OpenRouter in /login and slim built-in OpenRouter models
+
+### Changed
+- refactor(i18n): translate all Chinese comments and strings to English
+
+### Documentation
+- docs: update CHANGELOG for 1.11.35
+- docs(dip): complete DIP protocol compliance for all source files
+- docs(team): restructure SubAgent and AgentTeam as two-phase plan
+- docs(team): add agent team refactor plan
+- docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
+
+### Maintenance
+- chore(release): 1.11.35
+- chore(ai): regenerate models.generated.ts after build
+- chore: merge origin/main into main
+- chore: merge origin/main into main
+- chore: release v1.11.34
+- chore: run changelog before build in prepublishOnly
+- chore(release): 1.11.33
+- chore(release): 1.11.32
+- chore(release): 1.11.31
+
+
 ## [1.11.35] - 2026-04-06
 
 ### Added

@@ -212,6 +212,8 @@ export interface InteractiveModeOptions {
 export class InteractiveMode {
   private static clipboardImageSeq = 0;
   private clipboardImageFiles: string[] = [];
+  /** Ensures Enter cannot submit before an async clipboard read finishes populating attachments. */
+  private clipboardPastePromise: Promise<void> = Promise.resolve();
   private session: AgentSession;
   private ui: TUI;
   private chatContainer: Container;
@@ -315,8 +317,9 @@ export class InteractiveMode {
   private customHeader: (Component & { dispose?(): void }) | undefined =
     undefined;
 
-  // Attachments state
-  private attachments: { path: string; mimeType?: string }[] = [];
+  // Attachments state (bytes = in-memory clipboard payload for reliable inline images)
+  private attachments: { path: string; mimeType?: string; bytes?: Uint8Array }[] =
+    [];
   private selectedAttachmentIndex: number = -1;
   private attachmentsContainer: Container | undefined = undefined;
   private attachmentsBar: AttachmentsBarComponent | undefined = undefined;
@@ -2287,27 +2290,41 @@ export class InteractiveMode {
     };
   }
 
-  private async handleClipboardImagePaste(): Promise<void> {
+  private handleClipboardImagePaste(): void {
+    this.enqueueClipboardPaste(() => this.loadClipboardImageIntoAttachments());
+  }
+
+  /**
+   * Chain clipboard work so rapid Enter after paste still waits for attachment registration.
+   */
+  private enqueueClipboardPaste(task: () => Promise<void>): void {
+    this.clipboardPastePromise = this.clipboardPastePromise
+      .catch(() => undefined)
+      .then(() => task())
+      .catch(() => undefined);
+  }
+
+  private async loadClipboardImageIntoAttachments(): Promise<void> {
     try {
       const image = await readClipboardImage();
       if (!image) {
         return;
       }
 
-      // Save to a dedicated _paste/ directory so the model finds ONLY
-      // the clipboard image when browsing (avoids confusion with other
-      // image files like IMG_*.JPG in the project root).
+      // Save to project root for cleanup tracking and optional tool reads.
       const ext = extensionForImageMimeType(image.mimeType) ?? "png";
       const seq = ++InteractiveMode.clipboardImageSeq;
-      const fileName = `image_${seq}.${ext}`;
-      const pasteDir = path.join(this.session.cwd, "_paste");
-      fs.mkdirSync(pasteDir, { recursive: true });
-      const filePath = path.join(pasteDir, fileName);
+      const fileName = `_np_clipboard_image_${seq}.${ext}`;
+      const filePath = path.join(this.session.cwd, fileName);
       fs.writeFileSync(filePath, Buffer.from(image.bytes));
 
-      // Track for cleanup and add to attachments list
       this.clipboardImageFiles.push(filePath);
-      this.attachments.push({ path: filePath, mimeType: image.mimeType });
+      // Keep a copy of bytes so submit uses memory (avoids races with disk/cleanup).
+      this.attachments.push({
+        path: filePath,
+        mimeType: image.mimeType,
+        bytes: Uint8Array.from(image.bytes),
+      });
       this.updateAttachmentsBar();
 
       // Show success feedback to user
@@ -2421,20 +2438,47 @@ export class InteractiveMode {
 
   /**
    * Convert attachment files to ImageContent array for sending to the model.
-   * Reads each file, base64-encodes, and resizes.
+   * Prefers in-memory bytes (clipboard) then falls back to disk read.
    */
-  private async processAttachmentFiles(attachments: { path: string; mimeType?: string }[]): Promise<ImageContent[]> {
+  private async processAttachmentFiles(
+    attachments: { path: string; mimeType?: string; bytes?: Uint8Array }[],
+  ): Promise<ImageContent[]> {
+    const supportedMime = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+    ]);
+    const normalizedMime = (raw?: string): string | null => {
+      if (!raw) return null;
+      const base = raw.split(";")[0]?.trim().toLowerCase() ?? "";
+      return supportedMime.has(base) ? base : null;
+    };
+
     const result: ImageContent[] = [];
     for (const attachment of attachments) {
       try {
-        if (!fs.existsSync(attachment.path)) continue;
-        const mimeType =
-          attachment.mimeType ??
-          (await detectSupportedImageMimeTypeFromFile(attachment.path));
+        let mimeType = normalizedMime(attachment.mimeType);
+        let base64Content: string;
+
+        if (attachment.bytes && attachment.bytes.length > 0) {
+          base64Content = Buffer.from(attachment.bytes).toString("base64");
+          if (!mimeType) {
+            mimeType = fs.existsSync(attachment.path)
+              ? await detectSupportedImageMimeTypeFromFile(attachment.path)
+              : null;
+          }
+        } else {
+          if (!fs.existsSync(attachment.path)) continue;
+          mimeType =
+            mimeType ??
+            (await detectSupportedImageMimeTypeFromFile(attachment.path));
+          if (!mimeType) continue;
+          base64Content = fs.readFileSync(attachment.path).toString("base64");
+        }
+
         if (!mimeType) continue;
 
-        const content = fs.readFileSync(attachment.path);
-        const base64Content = content.toString("base64");
         const resized = await resizeImage({
           type: "image",
           data: base64Content,
@@ -2517,6 +2561,8 @@ export class InteractiveMode {
     this.defaultEditor.onSubmit = async (text: string) => {
       text = text.trim();
       if (!text) return;
+
+      await this.clipboardPastePromise;
 
       // Handle commands
       if (text === "/settings") {
@@ -2790,39 +2836,27 @@ export class InteractiveMode {
         await this.extractImagesFromText(text);
 
       // Collect and clear pending attachments upfront (ensures cleanup even on error).
-      // Clipboard images are saved under .pi/images/ so models can read them via
-      // file tools — this is more reliable than inline base64 (some models like
-      // Kimi K2.5 re-map inline images to internal server paths that break MCP).
-      let attachmentPaths: string[] = [];
+      // Clipboard images are read as inline base64 AND saved to disk. The inline
+      // base64 is sent directly in the user message so the model sees the image
+      // regardless of whether it uses the `read` tool or not.
       if (this.attachments.length > 0) {
         const pendingAttachments = this.attachments.splice(0);
         this.selectedAttachmentIndex = -1;
         this.updateAttachmentsBar();
         this.ui.requestRender();
-        attachmentPaths = pendingAttachments.map((a) => a.path);
+        const inlineImages = await this.processAttachmentFiles(pendingAttachments);
+        images.push(...inlineImages);
       }
 
       // Check model image support; warn and drop images if not supported
-      if (images.length > 0 || attachmentPaths.length > 0) {
+      if (images.length > 0) {
         const currentModel = this.session.model;
         if (currentModel && !currentModel.input.includes("image")) {
           this.showWarning(
             `Model "${currentModel.name}" does not support image input. Images have been removed from this message.`,
           );
           images.length = 0;
-          attachmentPaths = [];
         }
-      }
-
-      // Build image references using the relative path (_paste/image_N.ext).
-      // Prepended before user text so the model processes it first.
-      let imageRefPrefix = "";
-      if (attachmentPaths.length > 0) {
-        const cwd = this.session.cwd;
-        const refs = attachmentPaths
-          .map((p) => `@${path.relative(cwd, p).replace(/\\/g, "/")}`)
-          .join(" ");
-        imageRefPrefix = refs + "  ";
       }
 
       if (!processedText.startsWith("/")) {
@@ -2843,10 +2877,7 @@ export class InteractiveMode {
       try {
         // Clear persona switch flag - interview should now run normally for subsequent messages
         delete process.env.PI_JUST_SWITCHED_PERSONA;
-        const promptText = imageRefPrefix
-          ? imageRefPrefix + processedText
-          : processedText;
-        await this.session.prompt(promptText, {
+        await this.session.prompt(processedText, {
           images: images.length > 0 ? images : undefined,
         });
       } catch (error: unknown) {
@@ -2873,20 +2904,14 @@ export class InteractiveMode {
     try {
       const cwd = this.session.cwd;
 
-      // Clean old-format root files (_clipboard_*.png)
+      // Clean legacy clipboard files from older implementations.
       for (const entry of fs.readdirSync(cwd)) {
-        if (/^_clipboard_\d+\.\w+$/.test(entry)) {
+        if (
+          /^_clipboard_\d+\.\w+$/.test(entry) ||
+          /^_np_clipboard_image_\d+\.\w+$/.test(entry)
+        ) {
           try { fs.unlinkSync(path.join(cwd, entry)); } catch { /* best-effort */ }
         }
-      }
-
-      // Clean _paste/ directory from previous sessions
-      const pasteDir = path.join(cwd, "_paste");
-      if (fs.existsSync(pasteDir)) {
-        for (const entry of fs.readdirSync(pasteDir)) {
-          try { fs.unlinkSync(path.join(pasteDir, entry)); } catch { /* best-effort */ }
-        }
-        try { fs.rmdirSync(pasteDir); } catch { /* best-effort */ }
       }
     } catch {
       // Ignore errors during cleanup
@@ -2904,19 +2929,6 @@ export class InteractiveMode {
       }
     }
     this.clipboardImageFiles = [];
-
-    // Remove _paste/ directory if empty
-    try {
-      const pasteDir = path.join(this.session.cwd, "_paste");
-      if (fs.existsSync(pasteDir)) {
-        const remaining = fs.readdirSync(pasteDir);
-        if (remaining.length === 0) {
-          fs.rmdirSync(pasteDir);
-        }
-      }
-    } catch {
-      // Best-effort
-    }
   }
 
   private subscribeToAgent(): void {

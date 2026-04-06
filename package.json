@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.16.1",
+    "@mariozechner/clipboard": "^0.3.2",
     "@mariozechner/jiti": "^2.6.2",
     "@silvia-odwyer/photon-node": "^0.3.4",
     "chalk": "^5.5.0",

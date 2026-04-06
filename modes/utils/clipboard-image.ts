@@ -6,7 +6,7 @@
  */
 import { spawnSync } from "child_process";
 
-import { clipboard } from "./clipboard-native.js";
+import { clipboard, getClipboardBinary } from "./clipboard-native.js";
 import { loadPhoton } from "../../utils/photon.js";
 
 export type ClipboardImage = {
@@ -78,11 +78,14 @@ async function convertToPng(bytes: Uint8Array): Promise<Uint8Array | null> {
 	try {
 		const image = photon.PhotonImage.new_from_byteslice(bytes);
 		try {
-			return image.get_bytes();
+			const result = image.get_bytes();
+			// Copy to JS heap to prevent use-after-free after image.free()
+			return new Uint8Array(result);
 		} finally {
 			image.free();
 		}
-	} catch {
+	} catch (error: unknown) {
+		console.warn("[Clipboard] BMP to PNG conversion failed:", error instanceof Error ? error.message : error);
 		return null;
 	}
 }
@@ -187,13 +190,13 @@ export async function readClipboardImage(options?: {
 			return null;
 		}
 
-		const imageData = await clipboard.getImageBinary();
-		if (!imageData || imageData.length === 0) {
+		// Use timeout-guarded read to prevent indefinite hang
+		const imageData = await getClipboardBinary();
+		if (!imageData) {
 			return null;
 		}
 
-		const bytes = imageData instanceof Uint8Array ? imageData : Uint8Array.from(imageData);
-		image = { bytes, mimeType: "image/png" };
+		image = { bytes: imageData, mimeType: "image/png" };
 	}
 
 	if (!image) {

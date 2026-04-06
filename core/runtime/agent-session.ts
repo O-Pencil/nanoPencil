@@ -213,6 +213,8 @@ export interface AgentSessionConfig {
   baseToolsOverride?: Record<string, AgentTool>;
   /** Mutable ref used by Agent to access the current ExtensionRunner */
   extensionRunnerRef?: { current?: ExtensionRunner };
+  /** External abort signal for stopping the session (e.g., from SubAgent runtime) */
+  signal?: AbortSignal;
 }
 
 export interface ExtensionBindings {
@@ -392,6 +394,13 @@ export class AgentSession {
     // Always subscribe to agent events for internal handling
     // (session persistence, extensions, auto-compaction, retry logic)
     this._unsubscribeAgent = this.agent.subscribe(this._handleAgentEvent);
+
+    // Listen to external abort signal (e.g., from SubAgent runtime)
+    if (config.signal) {
+      config.signal.addEventListener("abort", () => {
+        this.abort();
+      });
+    }
 
     this._buildRuntime({
       activeToolNames: this._initialActiveToolNames,

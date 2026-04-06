@@ -1,0 +1,132 @@
+/**
+ * [UPSTREAM]: Depends on sub-agent-types.ts, core/runtime/sdk.ts
+ * [SURFACE]: InProcessSubAgentBackend
+ * [LOCUS]: core/sub-agent/sub-agent-backend.ts
+ */
+
+import { createAgentSession, type CreateAgentSessionOptions } from "../runtime/sdk.js";
+import type { SubAgentBackend, SubAgentHandle, SubAgentSpec, SubAgentResult } from "./sub-agent-types.js";
+
+/**
+ * In-process SubAgent backend.
+ * Wraps createAgentSession() to run SubAgent in the same process.
+ */
+export class InProcessSubAgentBackend implements SubAgentBackend {
+  async spawn(spec: SubAgentSpec): Promise<SubAgentHandle> {
+    const id = crypto.randomUUID();
+
+    // Create an internal AbortController that can be triggered by external signal or timeout
+    const internalAbortController = new AbortController();
+
+    // Forward external signal abort to internal controller
+    const signalHandler = () => {
+      if (!internalAbortController.signal.aborted) {
+        internalAbortController.abort();
+      }
+    };
+    spec.signal.addEventListener("abort", signalHandler);
+
+    // Create agent session with our internal signal
+    const options: CreateAgentSessionOptions = {
+      cwd: spec.cwd,
+      tools: spec.tools,
+      signal: internalAbortController.signal,
+      model: spec.model,
+    };
+
+    const { session } = await createAgentSession(options);
+    const timeoutMs = spec.timeoutMs;
+
+    let status: "running" | "done" | "aborted" | "error" = "running";
+    let result: SubAgentResult | undefined;
+
+    // Set up timeout if specified
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (timeoutMs !== undefined) {
+      timeoutId = setTimeout(() => {
+        if (status === "running") {
+          internalAbortController.abort();
+        }
+      }, timeoutMs);
+    }
+
+    // Extract text from assistant message content
+    const extractTextFromContent = (content: unknown): string => {
+      if (typeof content === "string") return content;
+      if (Array.isArray(content)) {
+        return content
+          .filter((part): part is { type: "text"; text: string } =>
+            typeof part === "object" && part !== null && "type" in part && part.type === "text" && typeof (part as { text?: unknown }).text === "string"
+          )
+          .map((part) => part.text)
+          .join("\n");
+      }
+      return "";
+    };
+
+    // Start the prompt
+    const promptPromise = (async () => {
+      try {
+        await session.prompt(spec.prompt, {
+          images: spec.images,
+        });
+        status = "done";
+
+        // Extract the last assistant message as the result
+        const messages = (session as any).messages ?? [];
+        const assistantMessages = messages.filter((m: any) => m.role === "assistant");
+        const lastAssistant = assistantMessages[assistantMessages.length - 1];
+        const responseText = lastAssistant ? extractTextFromContent(lastAssistant.content) : "";
+
+        result = {
+          success: true,
+          response: responseText,
+        };
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          status = "aborted";
+          result = {
+            success: false,
+            error: "Aborted",
+          };
+        } else {
+          status = "error";
+          result = {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      } finally {
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
+        // Clean up signal handler
+        spec.signal.removeEventListener("abort", signalHandler);
+      }
+    })();
+
+    return {
+      id,
+      get status() {
+        return status;
+      },
+      async result(): Promise<SubAgentResult> {
+        await promptPromise;
+        return (
+          result ?? {
+            success: false,
+            error: "No result available",
+          }
+        );
+      },
+      async abort(): Promise<void> {
+        internalAbortController.abort();
+        await session.abort();
+      },
+      async terminate(): Promise<void> {
+        internalAbortController.abort();
+        await session.abort();
+      },
+    };
+  }
+}

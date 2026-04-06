@@ -325,3 +325,66 @@ export function createBashTool(cwd: string, options?: BashToolOptions): AgentToo
 
 /** Default bash tool using process.cwd() - for backwards compatibility */
 export const bashTool = createBashTool(process.cwd());
+
+/**
+ * Patterns that indicate write operations in bash commands.
+ * These are blocked in sandbox mode.
+ */
+const SANDBOX_BLOCKED_PATTERNS = [
+  // Output redirection
+  /^\s*>|\s>|\s>>|\s&\d>/,
+  // File deletion
+  /\brm\s+/,
+  // Move/copy
+  /\bmv\s+/,
+  /\bcp\s+.*\s+\//,
+  // Git write operations
+  /\bgit\s+(commit|push|pull|add|checkout\s+[^-|]|reset|rebase\s+[^--]|merge)/,
+  // Create directories
+  /\bmkdir\s+[^-]/,
+  // chmod/chown
+  /\bchmod\s+/,
+  /\bchown\s+/,
+  //ln -s
+  /\bln\s+.*-s/,
+  // tee
+  /\btee\s+/,
+  // wget/curl with output
+  /\bwget\s+.*-O/,
+  /\bcurl\s+.*-o/,
+];
+
+export interface BashSandboxOptions {
+  /** Additional patterns to block (in addition to default blocked patterns) */
+  additionalBlockedPatterns?: RegExp[];
+  /** Custom error message for blocked commands */
+  blockedMessage?: string;
+}
+
+/**
+ * Create a sandboxed bash hook that blocks dangerous write operations.
+ * This is a defense-in-depth measure for read-only SubAgents.
+ */
+export function createSandboxHook(options?: BashSandboxOptions): BashSpawnHook {
+  const blockedPatterns = [
+    ...SANDBOX_BLOCKED_PATTERNS,
+    ...(options?.additionalBlockedPatterns ?? []),
+  ];
+  const blockedMessage = options?.blockedMessage ?? "Write operations are not allowed in sandbox mode";
+
+  return (context) => {
+    const command = context.command.trim();
+
+    // Check if command contains any blocked patterns
+    for (const pattern of blockedPatterns) {
+      if (pattern.test(command)) {
+        return {
+          ...context,
+          command: `echo "${blockedMessage}" >&2; exit 1`,
+        };
+      }
+    }
+
+    return context;
+  };
+}

@@ -941,7 +941,7 @@ async function orchestrateTeamRun(
 			role: "Implementation Worker",
 			mode: "implementation",
 			task: plan.implementationTask ?? `Implement the requested changes for: ${goal}`,
-			writeAccess: mode === "execute" || mode === "auto",
+			writeAccess: mode === "execute",
 		};
 		controller.update({ stage: "implementation" });
 		persistState(pi, controller.getActive()!);

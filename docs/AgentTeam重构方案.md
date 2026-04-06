@@ -389,13 +389,13 @@ extensions/defaults/team/        # 新（与阶段 A 的 subagent 并存）
 
 ### 阶段 A（必做）
 
-1. `core/runtime/sdk.ts` 加 `AbortSignal` 透传 + 单测
-2. `core/sub-agent/` 接口与 in-process backend
-3. `core/workspace/` 临时工作区
-4. `core/tools/` 强化 read-only 边界 + bash 沙箱
-5. 删除 `extensions/defaults/team/`，新建 `extensions/defaults/subagent/`
-6. 砍掉 `auto` 模式自决定写代码的分支
-7. 验收 M-A
+1. `core/runtime/sdk.ts` 加 `AbortSignal` 透传 + 单测 ✅
+2. `core/sub-agent/` 接口与 in-process backend ✅
+3. `core/workspace/` 临时工作区 ✅
+4. `core/tools/` 强化 read-only 边界 + bash 沙箱 ✅
+5. 删除 `extensions/defaults/team/`，新建 `extensions/defaults/subagent/` 🚧 (subagent 已完成，team 仍保留待删除)
+6. 砍掉 `auto` 模式自决定写代码的分支 ✅
+7. 验收 M-A 🚧 (核心功能完成，部分功能待完善)
 
 ### 阶段 B（可独立决策）
 
@@ -407,6 +407,42 @@ extensions/defaults/team/        # 新（与阶段 A 的 subagent 并存）
 6. subprocess backend
 7. 观察 / 调试 / 测试
 8. 验收 M-B
+
+---
+
+## 八、阶段 A 当前实现状态 (2026-04-07)
+
+### ✅ 已完成
+
+| 功能 | 文件 | 说明 |
+|------|------|------|
+| AbortSignal 透传 | `core/runtime/sdk.ts`, `core/runtime/agent-session.ts` | `createAgentSession()` 支持外部 signal |
+| SubAgent Runtime | `core/sub-agent/sub-agent-types.ts`, `sub-agent-backend.ts`, `sub-agent-runtime.ts` | 完整的 SubAgentHandle/SubAgentSpec 接口 |
+| Worktree Manager | `core/workspace/worktree-manager.ts` | 临时工作区和 git worktree 管理 |
+| Bash 沙箱 Hook | `core/tools/bash.ts` | `createSandboxHook()` 阻止写操作 |
+| SubAgent 扩展 | `extensions/defaults/subagent/` | `/subagent` 命令系列已可用 |
+| 移除 auto 写权限 | `extensions/defaults/team/index.ts` | `auto` 模式不再自动授予写权限 |
+
+### 🚧 部分完成 / 待优化
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| `/subagent` 命令 | 🚧 | 基础功能可用，缺少命令补全提示 |
+| 消息渲染器 | ❌ | 未注册 `registerMessageRenderer` |
+| `--write` 模式 | 🚧 | 命令解析支持，实际效果未验证 |
+| 临时工作区集成 | ❌ | `WorktreeManager` 未集成到 runner |
+| 超时机制 | ❌ | `timeoutMs` 参数未使用 |
+| 图片支持 | ❌ | `images` 参数未传递 |
+| team 扩展删除 | ❌ | 仍保留，未删除旧 team 扩展 |
+
+### ❌ 未实现
+
+| 功能 | 说明 |
+|------|------|
+| `/agent team` 删除 | 旧命令仍可用，需确认迁移 |
+| diff 回写确认 | implementation 结果需用户确认才能写回主工作区 |
+| lint 检查 | spawn 调用点未验证 read-only 模式 |
+| 单元测试 | `AbortSignal` 单测未编写 |
 
 ---
 

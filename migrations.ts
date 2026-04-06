@@ -124,8 +124,8 @@ export function migrateSessionsFromAgentRoot(): void {
 			if (existsSync(newPath)) continue; // Skip if target exists
 
 			renameSync(file, newPath);
-		} catch {
-			// Skip files that can't be migrated
+		} catch (e) {
+			console.warn("Warning: Could not migrate session file:", file, e instanceof Error ? e.message : e);
 		}
 	}
 }

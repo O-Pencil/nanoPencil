@@ -1098,7 +1098,15 @@ export default async function teamExtension(pi: ExtensionAPI) {
 						.filter((part): part is { type: "text"; text: string } => part.type === "text")
 						.map((part) => part.text)
 						.join("\n");
-		return renderTeamMessage(message.details, fallbackText, (color, text) => theme.fg(color as never, text));
+		// Background colors that should use theme.bg() instead of theme.fg()
+		const bgColors = new Set(["selectedBg", "userMessageBg", "customMessageBg", "toolPendingBg", "toolSuccessBg", "toolErrorBg"]);
+		const themeFn = (color: string, text: string) => {
+			if (bgColors.has(color)) {
+				return theme.bg(color as never, text);
+			}
+			return theme.fg(color as never, text);
+		};
+		return renderTeamMessage(message.details, fallbackText, themeFn);
 	});
 
 	pi.registerTool({

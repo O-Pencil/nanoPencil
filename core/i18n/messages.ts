@@ -67,4 +67,22 @@ export const messages = {
 	confirmQuit: "Are you sure you want to quit?",
 	confirmNewSession: "Start a new session? Current session will be saved.",
 	confirmDelete: "Are you sure you want to delete?",
+
+	// Presence (AI generation fails or memory is empty - fallback messages)
+	presence: {
+		opening: [
+			"Hey, what's up?",
+			"Ready when you are.",
+			"What do you want to work on?",
+			"Any ideas?",
+			"Let's do this.",
+		],
+		idle: [
+			"Still here when you need me.",
+			"No rush, take your time.",
+			"Ready when you are.",
+			"I'll be here.",
+			"Whenever you're ready.",
+		],
+	},
 };

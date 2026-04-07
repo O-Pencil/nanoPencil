@@ -113,6 +113,10 @@ export interface Settings {
 			lockStaleMinutes?: number;
 		};
 	};
+	/** Presence extension settings - AI greeting and idle messages */
+	presence?: {
+		enabled?: boolean; // default: true - show AI-generated greeting and idle reminders
+	};
 	/** Auto-update setting: 'always' = auto-update on startup, 'prompt' = ask user (default), 'never' = never check */
 	autoUpdate?: "always" | "prompt" | "never";
 	/** Last skipped version for update prompts */
@@ -883,6 +887,19 @@ export class SettingsManager {
 		}
 		this.globalSettings.terminal.showMemoryTrace = enabled;
 		this.markModified("terminal", "showMemoryTrace");
+		this.save();
+	}
+
+	getPresenceEnabled(): boolean {
+		return this.settings.presence?.enabled ?? true;
+	}
+
+	setPresenceEnabled(enabled: boolean): void {
+		if (!this.globalSettings.presence) {
+			this.globalSettings.presence = {};
+		}
+		this.globalSettings.presence.enabled = enabled;
+		this.markModified("presence", "enabled");
 		this.save();
 	}
 

@@ -22,7 +22,6 @@ const BUNDLED_SOUL_EXTENSION = join(__dirname, "extensions", "defaults", "soul",
 const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "presence", "index.js");
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
-const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
 const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "defaults", "mcp", "index.js");
 const BUNDLED_EXPORT_HTML_EXTENSION = join(__dirname, "extensions", "optional", "export-html", "index.js");
@@ -142,14 +141,6 @@ export function getBuiltinExtensionPaths(): string[] {
 	}
 
 	// === MCP extension (MCP tool protocol adapter) ===
-	// Built-in team extension
-	if (existsSync(BUNDLED_TEAM_EXTENSION)) {
-		paths.push(BUNDLED_TEAM_EXTENSION);
-	} else {
-		const teamTs = join(__dirname, "extensions", "defaults", "team", "index.ts");
-		if (existsSync(teamTs)) paths.push(teamTs);
-	}
-
 	// Built-in SubAgent extension
 	if (existsSync(BUNDLED_SUBAGENT_EXTENSION)) {
 		paths.push(BUNDLED_SUBAGENT_EXTENSION);

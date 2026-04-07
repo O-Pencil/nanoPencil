@@ -33,6 +33,7 @@
     "copy:assets": "node scripts/copy-assets.js",
     "bundle:packages": "node scripts/bundle-deps.js",
     "watch": "tsc --watch",
+    "test:subagent": "node --test --import tsx test/subagent-parser.test.ts test/worktree-manager.test.ts test/bash-sandbox.test.ts",
     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
     "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",

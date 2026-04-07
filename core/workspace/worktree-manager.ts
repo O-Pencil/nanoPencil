@@ -378,6 +378,8 @@ export class WorktreeManager {
       !relativePath ||
       relativePath === ".git" ||
       relativePath.startsWith(".git/") ||
+      relativePath === ".nanopencil" ||
+      relativePath.startsWith(".nanopencil/") ||
       relativePath === "node_modules" ||
       relativePath.startsWith("node_modules/") ||
       relativePath === "dist" ||

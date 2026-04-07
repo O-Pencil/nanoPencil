@@ -6,10 +6,10 @@ Member List
 link-world/index.ts: Internet access extension, provides internet-search Skill after setup
 mcp/index.ts: MCP protocol integration extension, MCP guidance resources
 presence/index.ts: AI-driven opening greetings and idle cues, uses NanoMemEngine for memory context, generates personalized greetings via completeSimple, configurable via settings.presence.enabled, PRESENCE_MESSAGE_TYPE renderer
-team/team-parser.ts: Team command parsing, parseTeamCommand/buildTeamHelp
-team/team-controller.ts: Multi-agent coordination, TeamRunState management
-team/team-types.ts: Team types, TeamCommandMode/TeamRunStatus/TeamWorkerMode
-team/index.ts: Team extension entry, multi-agent orchestration with plan/research/execute
+subagent/index.ts: SubAgent extension entry, /subagent:/subagent:run/:stop/:status/:report/:apply commands, SUBAGENT_MESSAGE_TYPE renderer
+subagent/subagent-parser.ts: SubAgent command parsing, parseSubAgentCommand/buildSubAgentHelp
+subagent/subagent-runner.ts: SubAgent orchestration — research (read-only) and implement (isolated worktree) roles, diff preview and apply flow
+subagent/subagent-types.ts: SubAgent extension types — SubAgentPhase, SubAgentWorkerInfo, SubAgentRunState, SubAgentRunReport
 interview/index.ts: Requirement clarification extension, /interview command, lightweight before_agent_start hook
 security-audit/interface.ts: Security audit interface, SecurityCheckResult/AuditEvent/SecurityEngine
 security-audit/index.ts: Security extension entry, audit logging and dangerous pattern detection

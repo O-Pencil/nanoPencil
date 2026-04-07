@@ -54,4 +54,9 @@ export interface SubAgentRunReport {
   changedFiles: string[];
   duration: number;
   success: boolean;
+  reportPath?: string;
+  workspacePath?: string;
+  patchPath?: string;
+  patchPreview?: string;
+  appliedAt?: number;
 }

@@ -52,7 +52,8 @@
 | `/subagent:run <task>` | 启动一次 SubAgent 编排（planner → research → impl → review） |
 | `/subagent:stop` | 中断当前 run（所有 worker） |
 | `/subagent:status` | 显示当前 run 的阶段、各 worker 状态 |
-| `/subagent:report` | 输出最近一次 run 的报告路径 |
+| `/subagent:report` | 输出最近一次 run 的报告路径与 patch 摘要 |
+| `/subagent:apply` | 将最近一次隔离写工作区中的改动显式回写到主工作区 |
 
 旧的 `/agent team ...` 在阶段 A 落地时**直接下线**，不保留别名，避免长期歧义。
 
@@ -427,20 +428,16 @@ extensions/defaults/team/        # 新（与阶段 A 的 subagent 并存）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| `/subagent` 命令 | 🚧 | 基础功能可用，缺少命令补全提示 |
-| 消息渲染器 | ❌ | 未注册 `registerMessageRenderer` |
-| `--write` 模式 | 🚧 | 命令解析支持，实际效果未验证 |
-| 临时工作区集成 | ❌ | `WorktreeManager` 未集成到 runner |
-| 超时机制 | ❌ | `timeoutMs` 参数未使用 |
+| `/subagent` 命令 | 🚧 | 已支持 `/subagent:run|stop|status|report|apply`，但补全与帮助文案还可继续优化 |
+| `--write` 模式 | 🚧 | 已进入隔离工作区、生成 patch/report/patch preview，并通过 `/subagent:apply` 显式回写；仍缺 interactive diff 审批 UI |
+| 超时机制 | 🚧 | `timeoutMs` 已透传到 SubAgent runtime，但缺少用户侧配置入口 |
 | 图片支持 | ❌ | `images` 参数未传递 |
-| team 扩展删除 | ❌ | 仍保留，未删除旧 team 扩展 |
+| changedFiles 精确性 | 🚧 | git worktree 下可列出变更，snapshot fallback 仍未做文件级 diff |
 
 ### ❌ 未实现
 
 | 功能 | 说明 |
 |------|------|
-| `/agent team` 删除 | 旧命令仍可用，需确认迁移 |
-| diff 回写确认 | implementation 结果需用户确认才能写回主工作区 |
 | lint 检查 | spawn 调用点未验证 read-only 模式 |
 | 单元测试 | `AbortSignal` 单测未编写 |
 

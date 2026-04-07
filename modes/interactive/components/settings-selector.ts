@@ -53,6 +53,7 @@ export interface SettingsConfig {
 	showTokenStats: boolean;
 	showWorkingTrace: boolean;
 	showMemoryTrace: boolean;
+	presenceEnabled: boolean;
 }
 
 export interface SettingsCallbacks {
@@ -78,6 +79,7 @@ export interface SettingsCallbacks {
 	onShowTokenStatsChange: (enabled: boolean) => void;
 	onShowWorkingTraceChange: (enabled: boolean) => void;
 	onShowMemoryTraceChange: (enabled: boolean) => void;
+	onPresenceEnabledChange: (enabled: boolean) => void;
 	onCancel: () => void;
 }
 
@@ -368,6 +370,16 @@ export class SettingsSelectorComponent extends Container {
 			values: ["true", "false"],
 		});
 
+		// Presence toggle (insert after show-token-stats)
+		const tokenStatsIndex = items.findIndex((item) => item.id === "show-token-stats");
+		items.splice(tokenStatsIndex + 1, 0, {
+			id: "presence-enabled",
+			label: "Presence greeting",
+			description: "Show AI-generated greeting and idle messages based on memory context",
+			currentValue: config.presenceEnabled ? "true" : "false",
+			values: ["true", "false"],
+		});
+
 		// Add borders
 		this.addChild(new DynamicBorder());
 
@@ -433,6 +445,9 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "show-token-stats":
 						callbacks.onShowTokenStatsChange(newValue === "true");
+						break;
+					case "presence-enabled":
+						callbacks.onPresenceEnabledChange(newValue === "true");
 						break;
 				}
 			},

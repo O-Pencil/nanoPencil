@@ -5,7 +5,7 @@
 Member List
 link-world/index.ts: Internet access extension, provides internet-search Skill after setup
 mcp/index.ts: MCP protocol integration extension, MCP guidance resources
-presence/index.ts: Opening and idle presence cues, PRESENCE_MESSAGE_TYPE hook
+presence/index.ts: AI-driven opening greetings and idle cues, uses NanoMemEngine for memory context, generates personalized greetings via completeSimple, configurable via settings.presence.enabled, PRESENCE_MESSAGE_TYPE renderer
 team/team-parser.ts: Team command parsing, parseTeamCommand/buildTeamHelp
 team/team-controller.ts: Multi-agent coordination, TeamRunState management
 team/team-types.ts: Team types, TeamCommandMode/TeamRunStatus/TeamWorkerMode

@@ -4225,6 +4225,7 @@ export class InteractiveMode {
           showTokenStats: this.settingsManager.getShowTokenStats(),
           showWorkingTrace: this.settingsManager.getShowWorkingTrace(),
           showMemoryTrace: this.settingsManager.getShowMemoryTrace(),
+          presenceEnabled: this.settingsManager.getPresenceEnabled(),
         },
         {
           onAutoCompactChange: (enabled) => {
@@ -4339,6 +4340,9 @@ export class InteractiveMode {
             this.settingsManager.setShowTokenStats(enabled);
             this.footer.setShowTokenStats(enabled);
             this.ui.requestRender();
+          },
+          onPresenceEnabledChange: (enabled) => {
+            this.settingsManager.setPresenceEnabled(enabled);
           },
           onCancel: () => {
             done();

@@ -224,7 +224,11 @@ export class WorktreeManager {
       await cp(sourcePath, targetPath, { recursive: true, force: true });
     }
 
-    return changes;
+    // Normalize paths to use forward slashes for cross-platform consistency
+    return changes.map((change) => ({
+      ...change,
+      path: change.path.replace(/\\/g, "/"),
+    }));
   }
 
   /**
@@ -333,7 +337,11 @@ export class WorktreeManager {
       }
     }
 
-    return changes;
+    // Normalize paths to use forward slashes for cross-platform consistency
+    return changes.map((change) => ({
+      ...change,
+      path: change.path.replace(/\\/g, "/"),
+    }));
   }
 
   private async collectWorkspaceFiles(rootPath: string, currentPath: string): Promise<Map<string, FileFingerprint>> {

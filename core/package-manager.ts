@@ -170,7 +170,7 @@ function addIgnoreRules(ig: IgnoreMatcher, dir: string, rootDir: string): void {
 			if (patterns.length > 0) {
 				ig.add(patterns);
 			}
-		} catch {}
+		} catch (e) { console.warn("Warning: Failed to read ignore file:", e instanceof Error ? e.message : e); }
 	}
 }
 

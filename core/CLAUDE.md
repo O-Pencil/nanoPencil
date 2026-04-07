@@ -98,6 +98,18 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `figma-auth.ts`: Figma OAuth integration for MCP servers, P3: SURFACE FigmaAuth; LOCUS OAuth handling
 
+### SubAgent Runtime (`core/sub-agent/`)
+
+`sub-agent-types.ts`: Core SubAgent interfaces — SubAgentSpec, SubAgentHandle, SubAgentResult, SubAgentBackend; consumed by backend and runtime
+`sub-agent-backend.ts`: InProcessSubAgentBackend — wraps createAgentSession() with AbortSignal forwarding and optional timeout; P3: UPSTREAM runtime/sdk.ts; SURFACE InProcessSubAgentBackend
+`sub-agent-runtime.ts`: SubAgentRuntime class — active agent registry, spawn/abortAll/terminateAll, default global instance; P3: SURFACE SubAgentRuntime, subAgentRuntime
+`index.ts`: Barrel exports for sub-agent module
+
+### Workspace Management (`core/workspace/`)
+
+`worktree-manager.ts`: WorktreeManager — createTempWorkspace, createGitWorktree, detectChanges, generatePatch, dispose/disposeAll; default global instance; P3: UPSTREAM node:fs, node:child_process; SURFACE WorktreeManager, worktreeManager, WorkspacePath
+`index.ts`: Barrel exports for workspace module
+
 ### Session Management (`core/session/`)
 
 `session-manager.ts`: Session persistence to JSONL, handles forking, branching, switching, P3: SURFACE SessionManager; LOCUS state persistence

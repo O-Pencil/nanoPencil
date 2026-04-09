@@ -5,7 +5,7 @@
 Member List
 link-world/index.ts: Internet access extension, provides internet-search Skill after setup
 mcp/index.ts: MCP protocol integration extension, MCP guidance resources
-presence/index.ts: AI-driven opening greetings and idle cues, uses NanoMemEngine for memory context, generates personalized greetings via completeSimple, configurable via settings.presence.enabled, PRESENCE_MESSAGE_TYPE renderer
+presence/index.ts: AI-driven opening + idle presence lines, uses NanoMemEngine episodes/preferences/lessons + git/cwd snapshot, injects latest line into agent systemPrompt every turn for main-conversation perception, 30s debounce + idle in-flight lock, configurable via settings.presence.enabled, PRESENCE_MESSAGE_TYPE renderer
 subagent/index.ts: SubAgent extension entry, /subagent:/subagent:run/:stop/:status/:report/:apply commands, SUBAGENT_MESSAGE_TYPE renderer
 subagent/subagent-parser.ts: SubAgent command parsing, parseSubAgentCommand/buildSubAgentHelp
 subagent/subagent-runner.ts: SubAgent orchestration — research (read-only) and implement (isolated worktree) roles, diff preview and apply flow

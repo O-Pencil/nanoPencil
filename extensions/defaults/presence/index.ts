@@ -101,7 +101,7 @@ async function initSoulManager(state: PresenceState): Promise<void> {
 	state.soulInitTried = true;
 	try {
 		const { SoulManager, getSoulConfig } = await import("@pencil-agent/soul-core");
-		const manager = new SoulManager(getSoulConfig());
+		const manager = new SoulManager({ config: getSoulConfig() });
 		await manager.initialize();
 		state.soulManager = manager;
 	} catch {

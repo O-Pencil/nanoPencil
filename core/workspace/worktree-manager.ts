@@ -238,17 +238,15 @@ export class WorktreeManager {
    */
   async dispose(workspace: WorkspacePath): Promise<void> {
     if (workspace.type === "temp") {
-      if (this.tempDirs.has(workspace.path)) {
-        try {
-          await rm(workspace.path, { recursive: true, force: true });
-        } catch {
-          // Ignore errors during cleanup
-        }
-        this.tempDirs.delete(workspace.path);
-        this.snapshots.delete(workspace.path);
+      try {
+        await rm(workspace.path, { recursive: true, force: true });
+      } catch {
+        // Ignore errors during cleanup
       }
+      this.tempDirs.delete(workspace.path);
+      this.snapshots.delete(workspace.path);
     } else if (workspace.type === "worktree") {
-      const originalCwd = this.worktrees.get(workspace.path);
+      const originalCwd = this.worktrees.get(workspace.path) ?? this.resolveWorktreeOwner(workspace.path);
       if (originalCwd) {
         // Try to remove the git worktree first
         const { execSync } = await import("node:child_process");
@@ -291,6 +289,24 @@ export class WorktreeManager {
     this.tempDirs.clear();
     this.worktrees.clear();
     this.snapshots.clear();
+  }
+
+  private resolveWorktreeOwner(workspacePath: string): string | undefined {
+    try {
+      const commonDir = execFileSync(
+        "git",
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        {
+          cwd: workspacePath,
+          encoding: "utf-8",
+          stdio: ["ignore", "pipe", "ignore"],
+        },
+      ).trim();
+
+      return commonDir ? dirname(commonDir) : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private parseGitStatusLine(line: string): WorkspaceChange | null {

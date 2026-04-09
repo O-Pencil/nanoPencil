@@ -1,11 +1,11 @@
 /**
- * [WHO]: parseSchedulerCommand, buildSchedulerHelp
- * [FROM]: Depends on ./scheduler-types.js
- * [TO]: Consumed by extension entry point (./index.ts)
- * [HERE]: extensions/defaults/loop/scheduler-parser.ts - scheduled loop parser
+ * [WHO]: parseSchedulerCommand, parseDurationSpec, buildSchedulerHelp
+ * [FROM]: Depends on ./scheduler-types
+ * [TO]: Consumed by ./index.ts
+ * [HERE]: extensions/defaults/loop/scheduler-parser.ts - /loop command parser with flags and subcommands
  */
 
-import type { ParsedSchedulerCommand } from "./scheduler-types.js";
+import type { LoopPayloadKind, ParsedSchedulerCommand } from "./scheduler-types.js";
 
 const DURATION_TOKEN = /(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)/gi;
 const DEFAULT_INTERVAL_MS = 10 * 60 * 1000;
@@ -25,17 +25,11 @@ export function parseDurationSpec(raw: string): { intervalMs: number; intervalLa
 	const normalized = raw.trim().toLowerCase();
 	if (!normalized) return undefined;
 
-	if (normalized === "hourly") {
-		return { intervalMs: 60 * 60 * 1000, intervalLabel: "1h" };
-	}
-	if (normalized === "daily") {
-		return { intervalMs: 24 * 60 * 60 * 1000, intervalLabel: "1d" };
-	}
+	if (normalized === "hourly") return { intervalMs: 60 * 60 * 1000, intervalLabel: "1h" };
+	if (normalized === "daily") return { intervalMs: 24 * 60 * 60 * 1000, intervalLabel: "1d" };
 
 	const matches = [...normalized.matchAll(DURATION_TOKEN)];
-	if (matches.length === 0) {
-		return undefined;
-	}
+	if (matches.length === 0) return undefined;
 
 	let consumed = "";
 	let totalMs = 0;
@@ -44,9 +38,7 @@ export function parseDurationSpec(raw: string): { intervalMs: number; intervalLa
 		consumed += match[0];
 		const value = Number.parseInt(match[1] ?? "", 10);
 		const unit = match[2] ?? "";
-		if (!Number.isFinite(value) || value <= 0) {
-			return undefined;
-		}
+		if (!Number.isFinite(value) || value <= 0) return undefined;
 
 		if (unit.startsWith("s")) totalMs += value * 1000;
 		else if (unit.startsWith("m")) totalMs += value * 60 * 1000;
@@ -56,101 +48,199 @@ export function parseDurationSpec(raw: string): { intervalMs: number; intervalLa
 		parts.push({ value, unit });
 	}
 
-	if (consumed.replace(/\s+/g, "") !== normalized.replace(/\s+/g, "")) {
-		return undefined;
-	}
-	if (totalMs > 0) {
-		return {
-			intervalMs: totalMs,
-			intervalLabel: normalizeDurationLabel(parts),
-		};
+	if (consumed.replace(/\s+/g, "") !== normalized.replace(/\s+/g, "")) return undefined;
+	if (totalMs > 0) return { intervalMs: totalMs, intervalLabel: normalizeDurationLabel(parts) };
+	return undefined;
+}
+
+type ExtractedFlags = {
+	rest: string;
+	name?: string;
+	maxRuns?: number;
+	quiet?: boolean;
+	error?: "max" | "ref";
+};
+
+/**
+ * Strip --name <slug>, --max <n>, --quiet from the input. Flags may appear
+ * anywhere in the string. Returns the remaining text plus parsed flag values.
+ */
+function extractFlags(input: string): ExtractedFlags {
+	const tokens = input.split(/\s+/).filter(Boolean);
+	const rest: string[] = [];
+	const out: ExtractedFlags = { rest: "" };
+
+	for (let i = 0; i < tokens.length; i += 1) {
+		const token = tokens[i]!;
+		if (token === "--quiet" || token === "-q") {
+			out.quiet = true;
+			continue;
+		}
+		if (token === "--name") {
+			const next = tokens[i + 1];
+			if (!next) {
+				out.error = "ref";
+				continue;
+			}
+			out.name = next;
+			i += 1;
+			continue;
+		}
+		const nameEq = token.match(/^--name=(.+)$/);
+		if (nameEq) {
+			out.name = nameEq[1];
+			continue;
+		}
+		if (token === "--max") {
+			const next = tokens[i + 1];
+			const n = next ? Number.parseInt(next, 10) : NaN;
+			if (!Number.isFinite(n) || n <= 0) {
+				out.error = "max";
+				continue;
+			}
+			out.maxRuns = n;
+			i += 1;
+			continue;
+		}
+		const maxEq = token.match(/^--max=(.+)$/);
+		if (maxEq) {
+			const n = Number.parseInt(maxEq[1] ?? "", 10);
+			if (!Number.isFinite(n) || n <= 0) {
+				out.error = "max";
+				continue;
+			}
+			out.maxRuns = n;
+			continue;
+		}
+		rest.push(token);
 	}
 
-	return undefined;
+	out.rest = rest.join(" ");
+	return out;
+}
+
+function classifyPayload(input: string): LoopPayloadKind {
+	return input.trim().startsWith("/") ? "command" : "prompt";
+}
+
+function withDefaults(
+	input: string,
+	intervalMs: number,
+	intervalLabel: string,
+	flags: ExtractedFlags,
+): ParsedSchedulerCommand {
+	if (!input.trim()) return { type: "help", reason: "input" };
+	if (flags.error === "max") return { type: "help", reason: "max" };
+	return {
+		type: "start",
+		input: input.trim(),
+		kind: classifyPayload(input),
+		intervalMs,
+		intervalLabel,
+		name: flags.name,
+		maxRuns: flags.maxRuns,
+		quiet: flags.quiet,
+	};
 }
 
 export function parseSchedulerCommand(input: string): ParsedSchedulerCommand {
 	const raw = input.trim();
-	if (!raw) {
-		return { type: "help", reason: "empty" };
-	}
+	if (!raw) return { type: "help", reason: "empty" };
 
 	const lower = raw.toLowerCase();
 	if (lower === "help") return { type: "help" };
-	if (lower === "status" || lower === "list" || lower === "ls") return { type: "list" };
+	if (lower === "list" || lower === "ls") return { type: "list" };
 	if (lower === "clear" || lower === "stop all" || lower === "cancel all" || lower === "remove all") {
 		return { type: "clear" };
 	}
 
-	const cancelMatch = raw.match(/^(?:cancel|remove|delete|stop)\s+(.+)$/i);
-	if (cancelMatch) {
-		const id = cancelMatch[1]?.trim();
-		if (!id) return { type: "help", reason: "cancel" };
-		return { type: "cancel", id };
+	// Subcommands taking a ref
+	const subcommandRefs: Array<{ verbs: RegExp; type: ParsedSchedulerCommand["type"] }> = [
+		{ verbs: /^(?:cancel|remove|delete|stop)\s+(.+)$/i, type: "cancel" },
+		{ verbs: /^pause\s+(.+)$/i, type: "pause" },
+		{ verbs: /^(?:resume|unpause)\s+(.+)$/i, type: "resume" },
+		{ verbs: /^(?:run|now|trigger)\s+(.+)$/i, type: "run" },
+		{ verbs: /^status\s+(.+)$/i, type: "status" },
+	];
+	for (const { verbs, type } of subcommandRefs) {
+		const match = raw.match(verbs);
+		if (match) {
+			const ref = match[1]?.trim();
+			if (!ref) return { type: "help", reason: "ref" };
+			return { type, ref } as ParsedSchedulerCommand;
+		}
 	}
 
-	const everyPrefix = raw.match(/^every\s+(.+?)\s+(.+)$/i);
+	// `status` with no ref → list (kept for muscle memory)
+	if (lower === "status") return { type: "list" };
+
+	// Otherwise it's a /loop start. Strip flags first.
+	const flags = extractFlags(raw);
+	const body = flags.rest;
+
+	// every <duration> <input>
+	const everyPrefix = body.match(/^every\s+(.+?)\s+(.+)$/i);
 	if (everyPrefix) {
 		const duration = parseDurationSpec(everyPrefix[1] ?? "");
 		const scheduledInput = (everyPrefix[2] ?? "").trim();
 		if (!duration) return { type: "help", reason: "interval" };
-		if (!scheduledInput) return { type: "help", reason: "input" };
-		return { type: "start", input: scheduledInput, ...duration };
+		return withDefaults(scheduledInput, duration.intervalMs, duration.intervalLabel, flags);
 	}
 
-	const everySuffix = raw.match(/^(.+?)\s+every\s+(.+)$/i);
+	// <input> every <duration>
+	const everySuffix = body.match(/^(.+?)\s+every\s+(.+)$/i);
 	if (everySuffix) {
 		const scheduledInput = (everySuffix[1] ?? "").trim();
 		const duration = parseDurationSpec(everySuffix[2] ?? "");
 		if (!duration) return { type: "help", reason: "interval" };
-		if (!scheduledInput) return { type: "help", reason: "input" };
-		return { type: "start", input: scheduledInput, ...duration };
+		return withDefaults(scheduledInput, duration.intervalMs, duration.intervalLabel, flags);
 	}
 
-	const firstToken = raw.match(/^(\S+)\s+(.+)$/);
+	// <duration> <input>
+	const firstToken = body.match(/^(\S+)\s+(.+)$/);
 	if (firstToken) {
 		const duration = parseDurationSpec(firstToken[1] ?? "");
 		const scheduledInput = (firstToken[2] ?? "").trim();
 		if (duration) {
-			if (!scheduledInput) return { type: "help", reason: "input" };
-			return { type: "start", input: scheduledInput, ...duration };
+			return withDefaults(scheduledInput, duration.intervalMs, duration.intervalLabel, flags);
 		}
 	}
 
-	return {
-		type: "start",
-		input: raw,
-		intervalMs: DEFAULT_INTERVAL_MS,
-		intervalLabel: DEFAULT_INTERVAL_LABEL,
-	};
+	// fall through: default interval
+	return withDefaults(body || raw, DEFAULT_INTERVAL_MS, DEFAULT_INTERVAL_LABEL, flags);
 }
 
-export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "cancel"): string {
+export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "cancel" | "ref" | "max"): string {
 	const lines: string[] = [];
 
 	if (reason === "empty") lines.push("[Loop] Missing loop arguments.");
-		if (reason === "interval") lines.push("[Loop] Invalid interval. Use seconds (10s), minutes (10m), hours (1h), or days (1d).");
+	if (reason === "interval") lines.push("[Loop] Invalid interval. Use seconds (10s), minutes (10m), hours (1h), or days (1d).");
 	if (reason === "input") lines.push("[Loop] Missing scheduled prompt or slash command.");
-	if (reason === "cancel") lines.push("[Loop] Missing task id to cancel.");
+	if (reason === "cancel") lines.push("[Loop] Missing task id or name to cancel.");
+	if (reason === "ref") lines.push("[Loop] Missing task id or name.");
+	if (reason === "max") lines.push("[Loop] --max requires a positive integer.");
 
 	lines.push(
-			"[Loop] Usage:",
-			"  /loop check the build",
-			"  /loop every 10m Review test failures",
-			"  /loop 30m Run /grub status",
-			"  /loop every 10s Drink water reminder",
-			"  /loop Check npm updates every 1d",
-		"  /loop list",
-		"  /loop cancel <id>",
-		"  /loop clear",
+		"[Loop] Usage:",
+		"  /loop check the build                       — schedule a prompt every 10m (default)",
+		"  /loop 5m /grub status                       — slash command every 5 minutes",
+		"  /loop every 10m Review test failures",
+		"  /loop Drink water every 30m --name hydrate --max 8 --quiet",
 		"",
-			"[Loop] Notes:",
-			"  - If no interval is provided, /loop defaults to every 10 minutes.",
-			"  - Schedules are session-scoped and run only while this NanoPencil session stays open.",
-			"  - Due tasks wait until the agent is idle; missed intervals collapse to one pending run.",
-			"  - Supports seconds (10s), minutes (10m), hours (1h), and days (1d).",
-			"  - Scheduled slash commands run through the same slash-command dispatcher as interactive input.",
-		);
+		"[Loop] Manage:",
+		"  /loop list                                  — show all scheduled loops",
+		"  /loop status <ref>                          — detail one loop (ref = name or id)",
+		"  /loop pause <ref> | resume <ref>",
+		"  /loop run <ref>                             — fire immediately",
+		"  /loop cancel <ref> | clear",
+		"",
+		"[Loop] Notes:",
+		"  - If no interval is provided, /loop defaults to every 10 minutes.",
+		"  - Schedules are session-scoped and run only while this session stays open.",
+		"  - Due tasks wait until the agent is idle; missed intervals collapse to one pending run.",
+		"  - --quiet suppresses tick messages but still records them via appendEntry.",
+		"  - --max <n> auto-cancels the loop after N runs.",
+	);
 
 	return lines.join("\n");
 }

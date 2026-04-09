@@ -207,10 +207,17 @@ function formatMoney(value: number): string {
 function createAcpExtensionUIContext(): ExtensionUIContext {
 	return {
 		__nonInteractive: true,
-		select: async () => unsupportedAcpUi("Interactive selection"),
-		confirm: async () => unsupportedAcpUi("Interactive confirmation"),
-		input: async () => unsupportedAcpUi("Interactive text input"),
-		editor: async () => unsupportedAcpUi("Interactive editor"),
+		// ACP has no interactive UI surface; degrade rather than throw so that
+		// extensions like `interview` can keep contributing memory/context instead
+		// of aborting on the first prompt. Callers that strictly need interaction
+		// should detect __nonInteractive and skip themselves.
+		select: async (options: any) => {
+			const choices = options?.choices ?? options?.options ?? [];
+			return choices[0]?.value ?? choices[0] ?? undefined;
+		},
+		confirm: async (options: any) => options?.default ?? true,
+		input: async (options: any) => options?.default ?? "",
+		editor: async (options: any) => options?.default ?? "",
 
 		notify(message: string, type?: "info" | "warning" | "error"): void {
 			process.stderr.write(`[${type ?? "info"}] ${message}\n`);
@@ -689,6 +696,9 @@ class NanoPencilAgent implements acp.Agent {
 			if (!switched) {
 				throw new Error(`Failed to switch to session ${state.sessionId}`);
 			}
+			// Re-emit session_ready after switching so extensions rebuild
+			// memory/soul/presence context against the freshly loaded history.
+			await this.session.extensionRunner?.emit({ type: "session_ready" });
 		}
 		this.currentSessionId = state.sessionId;
 		await this.applySessionMode(state);
@@ -696,6 +706,10 @@ class NanoPencilAgent implements acp.Agent {
 
 	private async bindSession(session: AgentSession): Promise<void> {
 		await session.bindExtensions(this.extensionBindings);
+		// Mirror interactive-mode: emit session_ready so memory/soul/presence/
+		// interview extensions can install per-session state and inject context
+		// into the system prompt. Without this, ACP loses memory continuity.
+		await session.extensionRunner?.emit({ type: "session_ready" });
 	}
 
 	private async ensureWorkspaceSession(cwd: string): Promise<void> {

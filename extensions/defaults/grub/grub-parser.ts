@@ -1,13 +1,13 @@
 /**
- * [WHO]: parseLoopCommand, buildHelp
- * [FROM]: No external dependencies
+ * [WHO]: parseGrubCommand, buildGrubHelp
+ * [FROM]: Depends on ./grub-types
  * [TO]: Consumed by extension entry point (./index.ts)
- * [HERE]: extensions/defaults/loop/loop-parser.ts -
+ * [HERE]: extensions/defaults/grub/grub-parser.ts - /grub command parser
  */
 
-import type { ParsedLoopCommand } from "./loop-types.js";
+import type { ParsedGrubCommand } from "./grub-types.js";
 
-export function parseLoopCommand(input: string): ParsedLoopCommand {
+export function parseGrubCommand(input: string): ParsedGrubCommand {
 	const raw = input.trim();
 	if (!raw) {
 		return { type: "help", reason: "empty" };
@@ -27,7 +27,7 @@ export function parseLoopCommand(input: string): ParsedLoopCommand {
 	return { type: "start", goal: raw };
 }
 
-export function buildHelp(reason?: string): string {
+export function buildGrubHelp(reason?: string): string {
 	const lines: string[] = [];
 	if (reason) {
 		lines.push(`[Grub] ${reason}`);

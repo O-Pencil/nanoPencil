@@ -22,6 +22,7 @@ const BUNDLED_SOUL_EXTENSION = join(__dirname, "extensions", "defaults", "soul",
 const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "presence", "index.js");
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
+const BUNDLED_GRUB_EXTENSION = join(__dirname, "extensions", "defaults", "grub", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
 const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
 const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "defaults", "mcp", "index.js");
@@ -133,7 +134,15 @@ export function getBuiltinExtensionPaths(): string[] {
 		if (existsSync(interviewTs)) paths.push(interviewTs);
 	}
 
-	// === Loop extension (/grub autonomous task, /loop scheduler) ===
+	// === Grub extension (/grub autonomous iterative task) ===
+	if (existsSync(BUNDLED_GRUB_EXTENSION)) {
+		paths.push(BUNDLED_GRUB_EXTENSION);
+	} else {
+		const grubTs = join(__dirname, "extensions", "defaults", "grub", "index.ts");
+		if (existsSync(grubTs)) paths.push(grubTs);
+	}
+
+	// === Loop extension (/loop recurring scheduler) ===
 	if (existsSync(BUNDLED_LOOP_EXTENSION)) {
 		paths.push(BUNDLED_LOOP_EXTENSION);
 	} else {

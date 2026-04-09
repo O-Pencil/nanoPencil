@@ -2,7 +2,7 @@
  * [WHO]: Extension interface, AI-driven personalized greetings and idle cues
  * [FROM]: Depends on @pencil-agent/tui, @pencil-agent/mem-core, core/extensions/types.js, core/i18n
  * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory + git snapshot, injects latest line into agent systemPrompt per turn, configurable via settings.presence.enabled
+ * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
@@ -78,17 +78,57 @@ type PresenceState = {
 	idleTimer?: ReturnType<typeof setInterval>;
 	unsubscribeInput?: () => void;
 	memEngine?: import("@pencil-agent/mem-core").NanoMemEngine;
-	lastPresenceLine?: string; // Latest presence line for per-turn agent injection
+	soulManager?: any; // import("@pencil-agent/soul-core").SoulManager (dynamic, package may not be type-resolved)
+	soulInitTried?: boolean;
+	recentPresenceLines: string[]; // Last few presence lines (max 3) for per-turn agent injection
 	lastPresenceAt?: number; // Timestamp of last sendPresence (debounce)
 	idleGenerating?: boolean; // In-flight lock for async idle generation
 };
+
+const MAX_RECENT_PRESENCE = 3;
 
 function createState(): PresenceState {
 	return {
 		lastActivityAt: Date.now(),
 		idleReminderSent: false,
 		openingSent: false,
+		recentPresenceLines: [],
 	};
+}
+
+async function initSoulManager(state: PresenceState): Promise<void> {
+	if (state.soulManager || state.soulInitTried) return;
+	state.soulInitTried = true;
+	try {
+		const { SoulManager, getSoulConfig } = await import("@pencil-agent/soul-core");
+		const manager = new SoulManager(getSoulConfig());
+		await manager.initialize();
+		state.soulManager = manager;
+	} catch {
+		state.soulManager = undefined;
+	}
+}
+
+function collectSoulHints(state: PresenceState): { traits: string[]; tone?: string } {
+	const out: { traits: string[]; tone?: string } = { traits: [] };
+	if (!state.soulManager) return out;
+	try {
+		const profile = state.soulManager.getProfile();
+		const personality = (profile as any)?.personality;
+		if (personality && typeof personality === "object") {
+			const top = Object.entries(personality)
+				.filter(([, v]) => typeof v === "number")
+				.sort((a, b) => (b[1] as number) - (a[1] as number))
+				.slice(0, 3)
+				.map(([k, v]) => `${k}:${(v as number).toFixed(2)}`);
+			out.traits = top;
+		}
+		const mood = (profile as any)?.emotionalState?.mood;
+		if (typeof mood === "string") out.tone = mood;
+	} catch {
+		/* fail-soft */
+	}
+	return out;
 }
 
 function touch(state: PresenceState): void {
@@ -228,12 +268,12 @@ async function collectMemoryHighlights(state: PresenceState): Promise<MemoryHigh
 	return out;
 }
 
-type ProjectSnapshot = { name: string; branch?: string; lastCommit?: string };
+type ProjectSnapshot = { name: string; branch?: string; lastCommit?: string; changedFiles: string[] };
 
 async function collectProjectSnapshot(): Promise<ProjectSnapshot> {
 	const cwd = process.cwd();
-	const snap: ProjectSnapshot = { name: getProject() };
-	const deadline = Date.now() + 250;
+	const snap: ProjectSnapshot = { name: getProject(), changedFiles: [] };
+	const deadline = Date.now() + 350;
 	const tryGit = async (args: string[]) => {
 		if (Date.now() > deadline) return undefined;
 		try {
@@ -246,6 +286,14 @@ async function collectProjectSnapshot(): Promise<ProjectSnapshot> {
 	snap.branch = await tryGit(["rev-parse", "--abbrev-ref", "HEAD"]);
 	snap.lastCommit = await tryGit(["log", "-1", "--format=%s"]);
 	if (snap.lastCommit && snap.lastCommit.length > 80) snap.lastCommit = snap.lastCommit.slice(0, 80);
+	const status = await tryGit(["status", "--porcelain"]);
+	if (status) {
+		snap.changedFiles = status
+			.split("\n")
+			.map((l) => l.trim().split(/\s+/).slice(-1)[0] || "")
+			.filter(Boolean)
+			.slice(0, 5);
+	}
 	return snap;
 }
 
@@ -271,6 +319,7 @@ async function buildGreetingPrompt(
 
 		const highlights = await collectMemoryHighlights(state);
 		const snapshot = await collectProjectSnapshot();
+		const soulHints = collectSoulHints(state);
 		const project = snapshot.name;
 		const now = new Date();
 		const timeOfDay = now.getHours() < 12 ? "morning" : now.getHours() < 18 ? "afternoon" : "evening";
@@ -308,6 +357,20 @@ async function buildGreetingPrompt(
 			if (highlights.lessons.length > 0) {
 				lines.push("", "记下的经验:");
 				for (const l of highlights.lessons) lines.push(`- ${l}`);
+			}
+
+			if (snapshot.changedFiles.length > 0) {
+				lines.push("", "他正在改的文件:");
+				for (const f of snapshot.changedFiles) lines.push(`- ${f}`);
+			}
+
+			if (soulHints.traits.length > 0) {
+				lines.push("", `你的人格倾向: ${soulHints.traits.join(", ")}${soulHints.tone ? ` (心情: ${soulHints.tone})` : ""}`);
+			}
+
+			if (state.recentPresenceLines.length > 0) {
+				lines.push("", "你之前刚说过的（别重复）:");
+				for (const l of state.recentPresenceLines) lines.push(`- ${l}`);
 			}
 
 			if (kind === "idle" && lastUserMessage) {
@@ -350,6 +413,20 @@ async function buildGreetingPrompt(
 			if (highlights.lessons.length > 0) {
 				lines.push("", "Lessons remembered:");
 				for (const l of highlights.lessons) lines.push(`- ${l}`);
+			}
+
+			if (snapshot.changedFiles.length > 0) {
+				lines.push("", "Files they're currently editing:");
+				for (const f of snapshot.changedFiles) lines.push(`- ${f}`);
+			}
+
+			if (soulHints.traits.length > 0) {
+				lines.push("", `Your personality tilt: ${soulHints.traits.join(", ")}${soulHints.tone ? ` (mood: ${soulHints.tone})` : ""}`);
+			}
+
+			if (state.recentPresenceLines.length > 0) {
+				lines.push("", "What you already said recently (don't repeat):");
+				for (const l of state.recentPresenceLines) lines.push(`- ${l}`);
 			}
 
 			if (kind === "idle" && lastUserMessage) {
@@ -473,7 +550,10 @@ function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): voi
 		content: line,
 		display: true,
 	});
-	state.lastPresenceLine = line;
+	state.recentPresenceLines.push(line);
+	if (state.recentPresenceLines.length > MAX_RECENT_PRESENCE) {
+		state.recentPresenceLines.splice(0, state.recentPresenceLines.length - MAX_RECENT_PRESENCE);
+	}
 	state.lastPresenceAt = now;
 	touch(state);
 }
@@ -486,8 +566,9 @@ async function maybeSendOpening(
 	if (state.openingSent) return true;
 	if (!canSendOpening(ctx)) return false;
 
-	// Initialize memory engine if not already done
+	// Initialize memory + soul engines if not already done
 	await initMemEngine(state);
+	await initSoulManager(state);
 
 	// Generate AI-powered greeting
 	const greeting = await generatePresenceLine(pi, ctx, state, "opening");
@@ -524,6 +605,8 @@ function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: P
 	state.idleGenerating = true;
 	void (async () => {
 		try {
+			await initMemEngine(state);
+			await initSoulManager(state);
 			const line = await generatePresenceLine(pi, ctx, state, "idle");
 			if (canSendPresence(ctx)) {
 				sendPresence(pi, state, line);
@@ -612,9 +695,10 @@ export default async function presenceExtension(pi: ExtensionAPI) {
 	// Inject the latest presence line into the agent's system prompt every turn,
 	// so the main conversation always perceives what presence said to the user.
 	pi.on("before_agent_start", (event) => {
-		const line = state.lastPresenceLine;
-		if (!line) return undefined;
-		const injection = `\n\n## Recent Presence Line\nYou (via the presence extension) just showed the user:\n"${line}"\nAcknowledge it naturally if relevant; do not repeat it verbatim.`;
+		const lines = state.recentPresenceLines;
+		if (!lines.length) return undefined;
+		const list = lines.map((l) => `- "${l}"`).join("\n");
+		const injection = `\n\n## Recent Presence Lines\nYou (via the presence extension) recently showed the user these lines, in order:\n${list}\nAcknowledge them naturally if relevant; do not repeat them verbatim.`;
 		return { systemPrompt: `${event.systemPrompt}${injection}` };
 	});
 

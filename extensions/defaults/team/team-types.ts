@@ -1,0 +1,108 @@
+/**
+ * [WHO]: TeammateRole, TeammateMode, TeammateStatus, TeammateIdentity, TeammateMessage, PersistedTeammate, TeamSpawnSpec, TeamSendResult
+ * [FROM]: No external deps
+ * [TO]: Consumed by team-state-store.ts, team-runtime.ts, team-parser.ts, index.ts
+ * [HERE]: extensions/defaults/team/team-types.ts - shared type surface for team extension (Phase B M1)
+ */
+
+/**
+ * Teammate role. Determines default mode and toolset.
+ * - researcher: read-only exploration
+ * - reviewer: read-only review/audit
+ * - implementer: sandboxed write in isolated worktree
+ * - planner: read-only, produces plans
+ * - generic: read-only by default, caller supplies mode
+ */
+export type TeammateRole = "researcher" | "reviewer" | "implementer" | "planner" | "generic";
+
+/**
+ * Teammate operating mode. Controls the permission envelope.
+ * - research: read-only exploration
+ * - plan: read-only plan production; execute requires leader approval
+ * - execute: sandboxed write in worktree
+ * - review: read-only review
+ */
+export type TeammateMode = "research" | "plan" | "execute" | "review";
+
+/**
+ * Teammate lifecycle status.
+ * - idle: spawned, no work in flight
+ * - running: currently processing a message
+ * - stopped: current turn aborted, teammate still alive
+ * - terminated: fully disposed
+ * - error: last turn failed
+ */
+export type TeammateStatus = "idle" | "running" | "stopped" | "terminated" | "error";
+
+/** Stable identity for a teammate, assigned at spawn time. */
+export interface TeammateIdentity {
+  /** Unique id (uuid) */
+  id: string;
+  /** Human-friendly name (user-supplied or auto-generated) */
+  name: string;
+  /** Role determines default tools and mode */
+  role: TeammateRole;
+  /** Creation timestamp (ms) */
+  createdAt: number;
+}
+
+/** One conversation turn persisted with the teammate. */
+export interface TeammateMessage {
+  /** Turn id (uuid) */
+  id: string;
+  /** Timestamp (ms) */
+  timestamp: number;
+  /** Who spoke */
+  direction: "leader" | "teammate";
+  /** Plain text body */
+  content: string;
+  /** Whether the turn was aborted mid-flight */
+  aborted?: boolean;
+  /** Whether the turn errored */
+  error?: string;
+}
+
+/**
+ * Durable teammate state. Only plain JSON fields — no runtime handles.
+ * This is the on-disk shape managed by TeamStateStore.
+ */
+export interface PersistedTeammate {
+  identity: TeammateIdentity;
+  mode: TeammateMode;
+  status: TeammateStatus;
+  /** Working directory for the teammate (main cwd or worktree path) */
+  cwd: string;
+  /** Worktree path if the teammate owns one, otherwise undefined */
+  worktreePath?: string;
+  /** Git branch name for worktree teammates */
+  worktreeBranch?: string;
+  /** Conversation history */
+  messages: TeammateMessage[];
+  /** Last activity timestamp */
+  lastActiveAt: number;
+  /** Last error message if status = error */
+  lastError?: string;
+}
+
+/** Input for spawning a new teammate. */
+export interface TeamSpawnSpec {
+  /** Desired name; if taken or empty, runtime generates one */
+  name?: string;
+  /** Role selection */
+  role: TeammateRole;
+  /** Optional explicit mode override (defaults to role's natural mode) */
+  mode?: TeammateMode;
+  /** Base cwd for the teammate (usually the main session cwd) */
+  baseCwd: string;
+}
+
+/** Result of a /team:send call. */
+export interface TeamSendResult {
+  teammateId: string;
+  teammateName: string;
+  success: boolean;
+  response: string;
+  aborted?: boolean;
+  error?: string;
+  durationMs: number;
+}

@@ -23,6 +23,7 @@ const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "pr
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
+const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
 const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "defaults", "mcp", "index.js");
 const BUNDLED_EXPORT_HTML_EXTENSION = join(__dirname, "extensions", "optional", "export-html", "index.js");
 
@@ -147,6 +148,14 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const subagentTs = join(__dirname, "extensions", "defaults", "subagent", "index.ts");
 		if (existsSync(subagentTs)) paths.push(subagentTs);
+	}
+
+	// Built-in AgentTeam extension (Phase B - persistent teammates)
+	if (existsSync(BUNDLED_TEAM_EXTENSION)) {
+		paths.push(BUNDLED_TEAM_EXTENSION);
+	} else {
+		const teamTs = join(__dirname, "extensions", "defaults", "team", "index.ts");
+		if (existsSync(teamTs)) paths.push(teamTs);
 	}
 
 	// Built-in MCP extension

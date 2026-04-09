@@ -17,13 +17,16 @@ security-audit/engine/interceptor.ts: Request/response interception, Interceptor
 security-audit/engine/logger.ts: Security event logging, JSON file audit trail
 security-audit/engine/detector.ts: Vulnerability detection, pattern matching for dangerous commands
 soul/index.ts: AI personality evolution extension, persistent personality across sessions
-loop/scheduler-controller.ts: Scheduled loop controller, MAX_SCHEDULED_TASKS=50 limit
-loop/loop-types.ts: Loop types, LoopStatus/LoopDecisionStatus/LoopDecision
-loop/loop-controller.ts: Loop controller, LoopTaskState management
-loop/scheduler-types.ts: Scheduled loop types, ScheduledLoopTask/ParsedSchedulerCommand
-loop/scheduler-parser.ts: Scheduled loop parser, DURATION_TOKEN regex parsing
-loop/index.ts: Loop extension entry, timed prompt scheduler
-loop/loop-parser.ts: Loop command parsing, parseLoopCommand/buildHelp
+grub/index.ts: Grub extension entry - autonomous iterative task runner extracted from legacy loop, /grub command + GRUB_MESSAGE_TYPE renderer
+grub/grub-controller.ts: GrubController - drives autonomous grub iterations, state machine for LoopTaskState
+grub/grub-parser.ts: Grub command parsing, parseGrubCommand/buildGrubHelp
+grub/grub-types.ts: Grub types, GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState/GrubTaskSnapshot
+grub/README.md: Grub extension documentation - autonomous "keep digging until done" runner
+loop/index.ts: Loop extension entry - session-scoped recurring prompt/command scheduler with pause/resume/run-now/max-runs/quiet, /loop command + LOOP_MESSAGE_TYPE renderer
+loop/scheduler-controller.ts: SchedulerController - in-memory recurring task store with pause/resume/run-now/max-runs, MAX_SCHEDULED_TASKS=50
+loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
+loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
+loop/README.md: Loop extension documentation - recurring scheduler usage and flags
 team/index.ts: AgentTeam extension entry, /team:/team:spawn/:send/:status/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer
 team/team-types.ts: TeammateRole/TeammateMode/TeammateStatus/TeammateIdentity/TeammateMessage/PersistedTeammate/TeamSpawnSpec/TeamSendResult types
 team/team-state-store.ts: TeamStateStore class - durable teammate persistence via JSON files in <agentDir>/teams/

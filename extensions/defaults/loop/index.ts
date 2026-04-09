@@ -1,57 +1,24 @@
 /**
- * [WHO]: loopExtension
- * [FROM]: ./loop-parser.js, ./loop-controller.js, ./scheduler-parser.js, ./scheduler-controller.js
- * [TO]: Consumed by builtin-extensions.ts, auto-loaded default extension
- * [HERE]: extensions/defaults/loop/index.ts
+ * [WHO]: loopExtension default export - registers /loop scheduler command + loop renderer
+ * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions/types, core/runtime/event-bus, ./scheduler-controller, ./scheduler-parser, ./scheduler-types
+ * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
+ * [HERE]: extensions/defaults/loop/index.ts - session-scoped recurring prompt/command scheduler with pause/resume/run-now/max-runs/quiet
  */
 
 import type { AgentMessage } from "@pencil-agent/agent-core";
+import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions/types.js";
 import type { EventBus } from "../../../core/runtime/event-bus.js";
-import { buildHelp, parseLoopCommand } from "./loop-parser.js";
-import { LoopController } from "./loop-controller.js";
-import type { LoopDecision, LoopTaskSnapshot, LoopTaskState } from "./loop-types.js";
-import { buildSchedulerHelp, parseSchedulerCommand } from "./scheduler-parser.js";
 import { SchedulerController } from "./scheduler-controller.js";
+import { buildSchedulerHelp, parseSchedulerCommand } from "./scheduler-parser.js";
 import type { ScheduledLoopTask } from "./scheduler-types.js";
 
-const GRUB_CUSTOM_TYPE = "grub";
 const LOOP_CUSTOM_TYPE = "loop";
-const LOOP_STATE_START = "<loop-state>";
-const LOOP_STATE_END = "</loop-state>";
 const SCHEDULER_TICK_MS = 1000;
 
-const LOOP_SYSTEM_PROMPT = `
-You are executing inside NanoPencil autonomous grub mode.
-
-Your job is to keep pushing the same goal forward until it is actually complete.
-Do not stop just because one reply finished. If more work can be done autonomously, keep the task in progress.
-
-At the end of your final assistant message for this run, append exactly one XML block with a single JSON object:
-<loop-state>{"status":"continue|complete|blocked","summary":"short summary","nextStep":"next concrete step when status is continue"}</loop-state>
-
-Rules:
-- Use "continue" when the goal still needs more autonomous work.
-- Use "complete" only when the requested goal is fully done as far as you can verify.
-- Use "blocked" only when you cannot continue without external input, permissions, missing resources, or repeated hard failure.
-- Keep "summary" concise and factual.
-- Include "nextStep" whenever status is "continue".
-- Do not wrap the JSON in markdown fences.
-`.trim();
-
-const controllersByBus = new WeakMap<EventBus, LoopController>();
 const schedulerByBus = new WeakMap<EventBus, SchedulerController>();
 const notifyByBus = new WeakMap<EventBus, (msg: string, type?: "info" | "warning" | "error") => void>();
 const schedulerTimerByBus = new WeakMap<EventBus, ReturnType<typeof setInterval>>();
-
-function getController(bus: EventBus): LoopController {
-	let controller = controllersByBus.get(bus);
-	if (!controller) {
-		controller = new LoopController();
-		controllersByBus.set(bus, controller);
-	}
-	return controller;
-}
 
 function getScheduler(bus: EventBus): SchedulerController {
 	let scheduler = schedulerByBus.get(bus);
@@ -62,45 +29,8 @@ function getScheduler(bus: EventBus): SchedulerController {
 	return scheduler;
 }
 
-function recordCustomEvent(pi: ExtensionAPI, customType: string, message: string): void {
-	pi.appendEntry(customType, {
-		message,
-		timestamp: Date.now(),
-	});
-}
-
 function notify(bus: EventBus, message: string, type: "info" | "warning" | "error" = "info"): void {
 	notifyByBus.get(bus)?.(message, type);
-}
-
-function publishCustomUpdate(
-	pi: ExtensionAPI,
-	bus: EventBus,
-	customType: string,
-	message: string,
-	type: "info" | "warning" | "error" = "info",
-): void {
-	recordCustomEvent(pi, customType, message);
-	notify(bus, message, type);
-	pi.sendMessage({
-		customType,
-		content: message,
-		display: true,
-		details: {
-			message,
-			level: type,
-			timestamp: Date.now(),
-		},
-	});
-}
-
-function publishGrubUpdate(
-	pi: ExtensionAPI,
-	bus: EventBus,
-	message: string,
-	type: "info" | "warning" | "error" = "info",
-): void {
-	publishCustomUpdate(pi, bus, GRUB_CUSTOM_TYPE, message, type);
 }
 
 function publishLoopUpdate(
@@ -108,106 +38,94 @@ function publishLoopUpdate(
 	bus: EventBus,
 	message: string,
 	type: "info" | "warning" | "error" = "info",
+	options: { quiet?: boolean } = {},
 ): void {
-	publishCustomUpdate(pi, bus, LOOP_CUSTOM_TYPE, message, type);
+	pi.appendEntry(LOOP_CUSTOM_TYPE, { message, level: type, timestamp: Date.now() });
+	// Quiet loops still record errors and terminal events to the UI; routine
+	// info ticks are recorded only via appendEntry above.
+	if (options.quiet && type === "info") return;
+	notify(bus, message, type);
+	pi.sendMessage({
+		customType: LOOP_CUSTOM_TYPE,
+		content: message,
+		display: true,
+		details: { message, level: type, timestamp: Date.now() },
+	});
 }
 
-function formatDate(timestamp: number): string {
-	return new Date(timestamp).toLocaleString();
+function formatRelative(ms: number): string {
+	if (ms <= 0) return "now";
+	const sec = Math.round(ms / 1000);
+	if (sec < 60) return `${sec}s`;
+	const min = Math.floor(sec / 60);
+	const remSec = sec % 60;
+	if (min < 60) return remSec ? `${min}m ${remSec}s` : `${min}m`;
+	const hr = Math.floor(min / 60);
+	const remMin = min % 60;
+	if (hr < 24) return remMin ? `${hr}h ${remMin}m` : `${hr}h`;
+	const day = Math.floor(hr / 24);
+	const remHr = hr % 24;
+	return remHr ? `${day}d ${remHr}h` : `${day}d`;
 }
 
-function formatTaskState(task: LoopTaskState): string {
+function formatLoopDate(timestamp: number | undefined): string {
+	return timestamp ? new Date(timestamp).toLocaleString() : "never";
+}
+
+function summarizeLoopInput(input: string, maxLength = 72): string {
+	const trimmed = input.trim();
+	return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength - 3)}...`;
+}
+
+function refLabel(task: ScheduledLoopTask): string {
+	return task.name ? `${task.name} (${task.id})` : task.id;
+}
+
+function formatScheduledTask(task: ScheduledLoopTask): string {
+	const now = Date.now();
+	const status = task.paused
+		? "paused"
+		: task.pending
+			? "pending"
+			: task.nextRunAt <= now
+				? "due"
+				: "scheduled";
 	const lines = [
-		`[Grub] Active task ${task.id}`,
-		`Status: ${task.status}`,
-		`Goal: ${task.goal}`,
-		`Started: ${formatDate(task.startedAt)}`,
-		`Current iteration: ${task.currentIteration}`,
-		`Awaiting result: ${task.awaitingTurn ? "yes" : "no"}`,
-		`Consecutive failures: ${task.consecutiveFailures}/${task.maxConsecutiveFailures}`,
-		`Max iterations: ${task.maxIterations}`,
+		`[Loop] ${refLabel(task)} — ${status}`,
+		`Every: ${task.intervalLabel}`,
+		`Kind: ${task.kind}${task.quiet ? " (quiet)" : ""}`,
+		`Next run: ${formatLoopDate(task.nextRunAt)} (in ${formatRelative(task.nextRunAt - now)})`,
+		`Last run: ${formatLoopDate(task.lastRunAt)}`,
+		`Run count: ${task.runCount}${task.maxRuns ? `/${task.maxRuns}` : ""}`,
+		`Input: ${task.input}`,
 	];
-
-	if (task.lastDecision?.summary) {
-		lines.push(`Last summary: ${task.lastDecision.summary}`);
-	}
-	if (task.lastDecision?.nextStep) {
-		lines.push(`Last next step: ${task.lastDecision.nextStep}`);
-	}
-	if (task.lastError) {
-		lines.push(`Last error: ${task.lastError}`);
-	}
-
+	if (task.lastOutputSnippet) lines.push(`Last output: ${task.lastOutputSnippet}`);
+	if (task.lastError) lines.push(`Last error: ${task.lastError}`);
 	return lines.join("\n");
 }
 
-function formatSnapshot(snapshot: LoopTaskSnapshot): string {
-	const lines = [
-		`[Grub] Last task ${snapshot.id}`,
-		`Status: ${snapshot.status}`,
-		`Goal: ${snapshot.goal}`,
-		`Started: ${formatDate(snapshot.startedAt)}`,
-		`Updated: ${formatDate(snapshot.updatedAt)}`,
-		`Completed iterations: ${snapshot.completedIterations}`,
-		`Consecutive failures: ${snapshot.consecutiveFailures}`,
-	];
-
-	if (snapshot.lastDecision?.summary) {
-		lines.push(`Last summary: ${snapshot.lastDecision.summary}`);
-	}
-	if (snapshot.lastDecision?.nextStep) {
-		lines.push(`Last next step: ${snapshot.lastDecision.nextStep}`);
-	}
-	if (snapshot.lastError) {
-		lines.push(`Last error: ${snapshot.lastError}`);
-	}
-
-	return lines.join("\n");
+function formatScheduledList(tasks: ScheduledLoopTask[]): string {
+	if (tasks.length === 0) return "[Loop] No scheduled tasks are active.";
+	const now = Date.now();
+	return [
+		`[Loop] ${tasks.length} scheduled task${tasks.length === 1 ? "" : "s"}:`,
+		...tasks.map((task) => {
+			const flags: string[] = [];
+			if (task.paused) flags.push("paused");
+			if (task.quiet) flags.push("quiet");
+			if (task.maxRuns) flags.push(`max ${task.runCount}/${task.maxRuns}`);
+			const flagStr = flags.length ? ` [${flags.join(", ")}]` : "";
+			const next = task.paused ? "paused" : `next in ${formatRelative(task.nextRunAt - now)}`;
+			return `- ${refLabel(task)}  every ${task.intervalLabel}  ${next}${flagStr}  ${summarizeLoopInput(task.input)}`;
+		}),
+	].join("\n");
 }
 
-function appendSystemPrompt(systemPrompt: string): string {
-	return `${systemPrompt}\n\n${LOOP_SYSTEM_PROMPT}`;
-}
-
-function extractText(message: AgentMessage | undefined): string {
-	if (!message || (message as { role?: string }).role !== "assistant") {
-		return "";
-	}
-
+function extractAssistantText(message: AgentMessage | undefined): string {
+	if (!message || (message as { role?: string }).role !== "assistant") return "";
 	const content = (message as { content?: unknown }).content;
-	if (typeof content === "string") {
-		return content;
-	}
-	if (!Array.isArray(content)) {
-		return "";
-	}
-
-	return content
-		.filter(
-			(part): part is { type: "text"; text: string } =>
-				typeof part === "object" &&
-				part !== null &&
-				"type" in part &&
-				(part as { type?: unknown }).type === "text" &&
-				typeof (part as { text?: unknown }).text === "string",
-		)
-		.map((part) => part.text)
-		.join("\n");
-}
-
-function extractUserText(message: AgentMessage | undefined): string {
-	if (!message || (message as { role?: string }).role !== "user") {
-		return "";
-	}
-
-	const content = (message as { content?: unknown }).content;
-	if (typeof content === "string") {
-		return content;
-	}
-	if (!Array.isArray(content)) {
-		return "";
-	}
-
+	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return "";
 	return content
 		.filter(
 			(part): part is { type: "text"; text: string } =>
@@ -223,139 +141,39 @@ function extractUserText(message: AgentMessage | undefined): string {
 
 function getLastAssistantMessage(messages: AgentMessage[]): AgentMessage | undefined {
 	for (let i = messages.length - 1; i >= 0; i -= 1) {
-		if ((messages[i] as { role?: string }).role === "assistant") {
-			return messages[i];
-		}
+		if ((messages[i] as { role?: string }).role === "assistant") return messages[i];
 	}
 	return undefined;
 }
 
-function extractLoopDecision(text: string): LoopDecision | undefined {
-	const startIndex = text.lastIndexOf(LOOP_STATE_START);
-	const endIndex = text.lastIndexOf(LOOP_STATE_END);
-	if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
-		return undefined;
-	}
-
-	const payload = text.slice(startIndex + LOOP_STATE_START.length, endIndex).trim();
-	try {
-		const parsed = JSON.parse(payload) as Partial<LoopDecision>;
-		if (parsed.status !== "continue" && parsed.status !== "complete" && parsed.status !== "blocked") {
-			return undefined;
-		}
-
-		const summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
-		const nextStep = typeof parsed.nextStep === "string" ? parsed.nextStep.trim() : undefined;
-		if (!summary) {
-			return undefined;
-		}
-		if (parsed.status === "continue" && !nextStep) {
-			return undefined;
-		}
-
-		return {
-			status: parsed.status,
-			summary,
-			nextStep,
-		};
-	} catch {
-		return undefined;
-	}
-}
-
-function describeDecision(decision: LoopDecision): string {
-	const lines = [`[Grub] Decision: ${decision.status}`, `Summary: ${decision.summary}`];
-	if (decision.nextStep) {
-		lines.push(`Next step: ${decision.nextStep}`);
-	}
-	return lines.join("\n");
-}
-
-function describeTerminalSnapshot(snapshot: LoopTaskSnapshot | undefined): string {
-	if (!snapshot) {
-		return "[Grub] No grub task is active.";
-	}
-	return formatSnapshot(snapshot);
-}
-
-function dispatchNextIteration(pi: ExtensionAPI, bus: EventBus, controller: LoopController): void {
-	const task = controller.getActiveTask();
-	if (!task) {
-		return;
-	}
-
-	const prompt = controller.buildPrompt();
-	controller.markDispatched();
-	publishGrubUpdate(pi, bus, `[Grub] Starting iteration ${task.currentIteration} for ${task.id}.`, "info");
-	pi.sendUserMessage(prompt, { deliverAs: "followUp" });
-}
-
-function formatLoopDate(timestamp: number | undefined): string {
-	return timestamp ? new Date(timestamp).toLocaleString() : "never";
-}
-
-function summarizeLoopInput(input: string, maxLength = 72): string {
-	const trimmed = input.trim();
-	return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength - 3)}...`;
-}
-
-function formatScheduledTask(task: ScheduledLoopTask): string {
-	const lines = [
-		`[Loop] Scheduled task ${task.id}`,
-		`Every: ${task.intervalLabel}`,
-		`Next run: ${formatLoopDate(task.nextRunAt)}`,
-		`Last run: ${formatLoopDate(task.lastRunAt)}`,
-		`Run count: ${task.runCount}`,
-		`Pending dispatch: ${task.pending ? "yes" : "no"}`,
-		`Input: ${task.input}`,
-	];
-	if (task.lastError) {
-		lines.push(`Last error: ${task.lastError}`);
-	}
-	return lines.join("\n");
-}
-
-function formatScheduledList(tasks: ScheduledLoopTask[]): string {
-	if (tasks.length === 0) {
-		return "[Loop] No scheduled tasks are active.";
-	}
-
-	return [
-		`[Loop] ${tasks.length} scheduled task${tasks.length === 1 ? "" : "s"}:`,
-		...tasks.map((task) => `- ${task.id}  every ${task.intervalLabel}  next ${formatLoopDate(task.nextRunAt)}  ${summarizeLoopInput(task.input)}`),
-	].join("\n");
-}
-
 function maybeDispatchScheduledTask(pi: ExtensionAPI, bus: EventBus): void {
 	const scheduler = getScheduler(bus);
-	if (!pi.isIdle()) {
-		return;
-	}
+	if (!pi.isIdle()) return;
 
 	const dueTask = scheduler.nextDue();
-	if (!dueTask) {
-		return;
-	}
+	if (!dueTask) return;
 
 	const task = scheduler.markDispatched(dueTask.id);
 	const scheduledInput = task.input.trim();
 	publishLoopUpdate(
 		pi,
 		bus,
-		`[Loop] Triggering ${task.id} (${task.intervalLabel}): ${summarizeLoopInput(scheduledInput)}`,
+		`[Loop] Triggering ${refLabel(task)} (${task.intervalLabel}): ${summarizeLoopInput(scheduledInput)}`,
 		"info",
+		{ quiet: task.quiet },
 	);
 
-	if (scheduledInput.startsWith("/")) {
+	if (task.kind === "command") {
 		void pi.executeCommand(scheduledInput).then((handled) => {
 			if (!handled) {
 				scheduler.markSettled(task.id, "Unknown slash command.");
-				publishLoopUpdate(pi, bus, `[Loop] Failed to run ${task.id}: unknown slash command.`, "error");
+				publishLoopUpdate(pi, bus, `[Loop] Failed to run ${refLabel(task)}: unknown slash command.`, "error");
 				return;
 			}
 
 			if (pi.isIdle()) {
 				scheduler.markSettled(task.id);
+				maybeAutoCancel(pi, bus, task.id);
 			}
 		});
 		return;
@@ -364,11 +182,21 @@ function maybeDispatchScheduledTask(pi: ExtensionAPI, bus: EventBus): void {
 	pi.sendUserMessage(scheduledInput, { deliverAs: "followUp" });
 }
 
-function ensureSchedulerTicker(pi: ExtensionAPI, bus: EventBus): void {
-	if (schedulerTimerByBus.has(bus)) {
-		return;
-	}
+function maybeAutoCancel(pi: ExtensionAPI, bus: EventBus, id: string): void {
+	const scheduler = getScheduler(bus);
+	if (!scheduler.hasReachedMaxRuns(id)) return;
+	const task = scheduler.cancel(id);
+	if (!task) return;
+	publishLoopUpdate(
+		pi,
+		bus,
+		`[Loop] ${refLabel(task)} hit its max runs (${task.maxRuns}); auto-cancelled.`,
+		"info",
+	);
+}
 
+function ensureSchedulerTicker(pi: ExtensionAPI, bus: EventBus): void {
+	if (schedulerTimerByBus.has(bus)) return;
 	const timer = setInterval(() => {
 		maybeDispatchScheduledTask(pi, bus);
 	}, SCHEDULER_TICK_MS);
@@ -377,181 +205,55 @@ function ensureSchedulerTicker(pi: ExtensionAPI, bus: EventBus): void {
 
 export default async function loopExtension(pi: ExtensionAPI) {
 	const bus = pi.events;
-	const controller = getController(bus);
 	getScheduler(bus);
-	// Defer scheduler ticker until session starts (runtime must be initialized)
-	// ensureSchedulerTicker is called on session_start below
+
+	pi.registerMessageRenderer(LOOP_CUSTOM_TYPE, (message, _options, theme) => {
+		const text =
+			typeof message.content === "string"
+				? message.content
+				: message.content
+						.filter((part): part is { type: "text"; text: string } => part.type === "text")
+						.map((part) => part.text)
+						.join("\n");
+
+		const level =
+			typeof message.details === "object" && message.details !== null && "level" in message.details
+				? ((message.details as { level?: string }).level ?? "info")
+				: "info";
+		const colorKey = level === "error" ? "danger" : level === "warning" ? "warning" : "dim";
+
+		const box = new Box(1, 1, (value) => theme.bg("customMessageBg", value));
+		box.addChild(new Text(theme.fg(colorKey, text), 0, 0));
+
+		const container = new Container();
+		container.addChild(new Spacer(1));
+		container.addChild(box);
+		return container;
+	});
 
 	pi.on("session_start", () => {
 		ensureSchedulerTicker(pi, bus);
 	});
 
 	pi.on("session_shutdown", () => {
-		controller.stop("Session shutdown stopped the grub task.", "stopped");
 		const timer = schedulerTimerByBus.get(bus);
-		if (timer) {
-			clearInterval(timer);
-		}
-		controllersByBus.delete(bus);
+		if (timer) clearInterval(timer);
 		schedulerByBus.delete(bus);
 		schedulerTimerByBus.delete(bus);
 		notifyByBus.delete(bus);
 	});
 
-	pi.on("before_agent_start", (event) => {
-		if (!controller.isLoopPrompt(event.prompt)) {
-			return;
-		}
-
-		return {
-			systemPrompt: appendSystemPrompt(event.systemPrompt),
-		};
-	});
-
-	pi.on("input", (event) => {
-		if (event.source !== "extension" || !event.text.startsWith("[LOOP:")) {
-			return;
-		}
-
-		if (!controller.isLoopPrompt(event.text)) {
-			return { action: "handled" };
-		}
-
-		return { action: "continue" };
-	});
-
-	pi.on("context", (event) => {
-		const lastMessage = event.messages[event.messages.length - 1];
-		const lastUserText = extractUserText(lastMessage);
-		if (!lastUserText.startsWith("[LOOP:")) {
-			return;
-		}
-
-		if (controller.isLoopPrompt(lastUserText)) {
-			return;
-		}
-
-		return {
-			messages: event.messages.slice(0, -1),
-		};
-	});
-
 	pi.on("agent_end", (event) => {
-		const activeTask = controller.getActiveTask();
-		if (!activeTask?.awaitingTurn) {
-			const pendingLoopTask = getScheduler(bus).getPendingTask();
-			if (pendingLoopTask) {
-				getScheduler(bus).markSettled(pendingLoopTask.id);
-				maybeDispatchScheduledTask(pi, bus);
-			}
-			return;
-		}
+		const scheduler = getScheduler(bus);
+		const pendingLoopTask = scheduler.getPendingTask();
+		if (!pendingLoopTask) return;
 
-		const assistantText = extractText(getLastAssistantMessage(event.messages));
-		if (!assistantText) {
-			const failure = controller.recordFailure("Grub run ended without an assistant message.");
-			if (failure.action === "stop") {
-				publishGrubUpdate(pi, bus, describeTerminalSnapshot(failure.snapshot), "warning");
-				return;
-			}
-			publishGrubUpdate(
-				pi,
-				bus,
-				`[Grub] Iteration failed. Retrying iteration ${failure.task?.currentIteration}.`,
-				"warning",
-			);
-			dispatchNextIteration(pi, bus, controller);
-			return;
-		}
-
-		const decision = extractLoopDecision(assistantText);
-		if (!decision) {
-			const failure = controller.recordFailure("Assistant response did not include a valid <loop-state> block.");
-			if (failure.action === "stop") {
-				publishGrubUpdate(pi, bus, describeTerminalSnapshot(failure.snapshot), "warning");
-				return;
-			}
-			publishGrubUpdate(
-				pi,
-				bus,
-				`[Grub] Missing or invalid loop-state block. Retrying iteration ${failure.task?.currentIteration}.`,
-				"warning",
-			);
-			dispatchNextIteration(pi, bus, controller);
-			return;
-		}
-
-		publishGrubUpdate(pi, bus, describeDecision(decision), "info");
-		const next = controller.finishTurn(decision);
-		if (next.action === "stop") {
-			publishGrubUpdate(
-				pi,
-				bus,
-				describeTerminalSnapshot(next.snapshot),
-				decision.status === "complete" ? "info" : "warning",
-			);
-			return;
-		}
-
-		dispatchNextIteration(pi, bus, controller);
+		const assistantText = extractAssistantText(getLastAssistantMessage(event.messages));
+		const snippet = assistantText.replace(/\s+/g, " ").trim() || undefined;
+		scheduler.markSettled(pendingLoopTask.id, undefined, snippet);
+		maybeAutoCancel(pi, bus, pendingLoopTask.id);
+		maybeDispatchScheduledTask(pi, bus);
 	});
-
-	const handleGrubCommand = async (args: string, ctx: ExtensionCommandContext) => {
-		if (ctx.ui.notify) {
-			notifyByBus.set(bus, ctx.ui.notify.bind(ctx.ui));
-		}
-
-		const parsed = parseLoopCommand(args);
-		if (parsed.type === "help") {
-			const reason = parsed.reason === "empty" ? "Missing grub goal." : undefined;
-			publishGrubUpdate(pi, bus, buildHelp(reason), "warning");
-			return;
-		}
-
-		if (parsed.type === "status") {
-			const state = controller.getState();
-			const message = state.active
-				? formatTaskState(state.active)
-				: state.lastTerminal
-					? formatSnapshot(state.lastTerminal)
-					: "[Grub] No grub task has been started in this session.";
-			publishGrubUpdate(pi, bus, message, "info");
-			return;
-		}
-
-		if (parsed.type === "stop") {
-			const activeTask = controller.getActiveTask();
-			if (!activeTask) {
-				publishGrubUpdate(pi, bus, "[Grub] No active grub task is running.", "warning");
-				return;
-			}
-
-			controller.stop("Stopped by user request.", "stopped");
-			if (!ctx.isIdle()) {
-				ctx.abort();
-			}
-			publishGrubUpdate(pi, bus, `[Grub] Stopped grub task ${activeTask.id}.`, "info");
-			return;
-		}
-
-		try {
-			const task = controller.start(parsed.goal);
-			publishGrubUpdate(
-				pi,
-				bus,
-				[
-					`[Grub] Started autonomous grub task ${task.id}.`,
-					`Goal: ${task.goal}`,
-					`Safety limits: ${task.maxIterations} iterations, ${task.maxConsecutiveFailures} consecutive failures.`,
-				].join("\n"),
-				"info",
-			);
-			dispatchNextIteration(pi, bus, controller);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			publishGrubUpdate(pi, bus, `[Grub] ${message}`, "error");
-		}
-	};
 
 	const handleLoopCommand = async (args: string, ctx: ExtensionCommandContext) => {
 		if (ctx.ui.notify) {
@@ -571,6 +273,16 @@ export default async function loopExtension(pi: ExtensionAPI) {
 			return;
 		}
 
+		if (parsed.type === "status") {
+			const task = scheduler.resolve(parsed.ref);
+			if (!task) {
+				publishLoopUpdate(pi, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
+				return;
+			}
+			publishLoopUpdate(pi, bus, formatScheduledTask(task), "info");
+			return;
+		}
+
 		if (parsed.type === "clear") {
 			const cleared = scheduler.clear();
 			publishLoopUpdate(
@@ -583,18 +295,59 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		}
 
 		if (parsed.type === "cancel") {
-			const removed = scheduler.cancel(parsed.id);
+			const removed = scheduler.cancel(parsed.ref);
 			publishLoopUpdate(
 				pi,
 				bus,
-				removed ? `[Loop] Cancelled scheduled task ${removed.id}.` : `[Loop] Scheduled task ${parsed.id} was not found.`,
+				removed ? `[Loop] Cancelled ${refLabel(removed)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
 				removed ? "info" : "warning",
 			);
 			return;
 		}
 
+		if (parsed.type === "pause") {
+			const paused = scheduler.pause(parsed.ref);
+			publishLoopUpdate(
+				pi,
+				bus,
+				paused ? `[Loop] Paused ${refLabel(paused)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
+				paused ? "info" : "warning",
+			);
+			return;
+		}
+
+		if (parsed.type === "resume") {
+			const resumed = scheduler.resume(parsed.ref);
+			publishLoopUpdate(
+				pi,
+				bus,
+				resumed ? `[Loop] Resumed ${refLabel(resumed)}; next run in ${formatRelative(resumed.intervalMs)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
+				resumed ? "info" : "warning",
+			);
+			return;
+		}
+
+		if (parsed.type === "run") {
+			const triggered = scheduler.forceDue(parsed.ref);
+			if (!triggered) {
+				publishLoopUpdate(pi, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
+				return;
+			}
+			publishLoopUpdate(pi, bus, `[Loop] Forcing ${refLabel(triggered)} to run now.`, "info");
+			maybeDispatchScheduledTask(pi, bus);
+			return;
+		}
+
 		try {
-			const task = scheduler.create(parsed.input, parsed.intervalMs, parsed.intervalLabel);
+			const task = scheduler.create({
+				input: parsed.input,
+				kind: parsed.kind,
+				intervalMs: parsed.intervalMs,
+				intervalLabel: parsed.intervalLabel,
+				name: parsed.name,
+				maxRuns: parsed.maxRuns,
+				quiet: parsed.quiet,
+			});
 			publishLoopUpdate(pi, bus, formatScheduledTask(task), "info");
 			maybeDispatchScheduledTask(pi, bus);
 		} catch (error) {
@@ -602,11 +355,6 @@ export default async function loopExtension(pi: ExtensionAPI) {
 			publishLoopUpdate(pi, bus, `[Loop] ${message}`, "error");
 		}
 	};
-
-	pi.registerCommand("grub", {
-		description: "Dig through one autonomous task until it is complete, blocked, stopped, or fails.",
-		handler: handleGrubCommand,
-	});
 
 	pi.registerCommand("loop", {
 		description: "Schedule a recurring prompt or slash command for this session.",

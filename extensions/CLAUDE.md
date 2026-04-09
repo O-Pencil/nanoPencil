@@ -36,18 +36,31 @@ Auto-loaded extensions available to all users.
 - `interview` tool: Agent-triggered clarification via tool_call
 - `before_agent_start` hook: Lightweight synchronous check only
 
-#### loop/ — Timed Prompt Scheduler
+#### grub/ — Autonomous Iterative Task Runner
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface with timer hooks; LOCUS loop extension entry
+`index.ts`: UPSTREAM core/extensions/types, @pencil-agent/tui; SURFACE Extension with /grub command, GRUB_MESSAGE_TYPE renderer, before_agent_start/context/input/agent_end hooks; LOCUS grub extension entry
 
-`loop-controller.ts`: Timer management, scheduled prompt triggering
+`grub-controller.ts`: GrubController - state machine for autonomous iterations, LoopTaskState management
 
-`loop-parser.ts`: Loop command parsing (`/loop every 5m ...`)
+`grub-parser.ts`: Grub command parsing, parseGrubCommand/buildGrubHelp
 
-`loop-types.ts`: Loop-specific type definitions
+`grub-types.ts`: Grub-specific type definitions (GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState)
 
-`README.md`: Usage documentation
+`README.md`: Usage documentation for autonomous "keep digging until done" runner
+
+#### loop/ — Recurring Prompt Scheduler
+
+**P3 Contract:**
+`index.ts`: UPSTREAM core/extensions/types, @pencil-agent/tui; SURFACE Extension with /loop command, LOOP_MESSAGE_TYPE renderer, session-scoped recurring scheduler with pause/resume/run-now/max-runs/quiet; LOCUS loop extension entry
+
+`scheduler-controller.ts`: SchedulerController - in-memory recurring task store with pause/resume/run-now, MAX_SCHEDULED_TASKS=50
+
+`scheduler-parser.ts`: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp
+
+`scheduler-types.ts`: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
+
+`README.md`: Usage documentation for recurring scheduler
 
 #### link-world/ — Internet Access
 

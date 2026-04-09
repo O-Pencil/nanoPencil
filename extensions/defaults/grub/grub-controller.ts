@@ -1,26 +1,26 @@
 /**
- * [WHO]: LoopController
- * [FROM]: Depends on node:crypto
+ * [WHO]: GrubController - drives autonomous iterative tasks
+ * [FROM]: Depends on node:crypto, ./grub-types
  * [TO]: Consumed by extension entry point (./index.ts)
- * [HERE]: extensions/defaults/loop/loop-controller.ts -
+ * [HERE]: extensions/defaults/grub/grub-controller.ts - state machine for /grub iterations
  */
 
 import { randomBytes } from "node:crypto";
 import type {
-	LoopControllerState,
-	LoopDecision,
-	LoopTaskSnapshot,
-	LoopTaskState,
-} from "./loop-types.js";
+	GrubControllerState,
+	GrubDecision,
+	GrubTaskSnapshot,
+	GrubTaskState,
+} from "./grub-types.js";
 
 const DEFAULT_MAX_ITERATIONS = 25;
 const DEFAULT_MAX_CONSECUTIVE_FAILURES = 3;
 
-export class LoopController {
-	private activeTask?: LoopTaskState;
-	private lastTerminalTask?: LoopTaskSnapshot;
+export class GrubController {
+	private activeTask?: GrubTaskState;
+	private lastTerminalTask?: GrubTaskSnapshot;
 
-	getState(): LoopControllerState {
+	getState(): GrubControllerState {
 		return {
 			active: this.activeTask ? { ...this.activeTask } : undefined,
 			lastTerminal: this.lastTerminalTask ? { ...this.lastTerminalTask } : undefined,
@@ -31,21 +31,21 @@ export class LoopController {
 		return this.activeTask !== undefined;
 	}
 
-	getActiveTask(): LoopTaskState | undefined {
+	getActiveTask(): GrubTaskState | undefined {
 		return this.activeTask;
 	}
 
-	start(goal: string): LoopTaskState {
+	start(goal: string): GrubTaskState {
 		const trimmedGoal = goal.trim();
 		if (!trimmedGoal) {
-			throw new Error("Loop goal cannot be empty.");
+			throw new Error("Grub goal cannot be empty.");
 		}
 		if (this.activeTask) {
-			throw new Error(`Loop ${this.activeTask.id} is already running. Stop it before starting a new one.`);
+			throw new Error(`Grub ${this.activeTask.id} is already running. Stop it before starting a new one.`);
 		}
 
 		const now = Date.now();
-		const task: LoopTaskState = {
+		const task: GrubTaskState = {
 			id: this.generateTaskId(),
 			goal: trimmedGoal,
 			status: "running",
@@ -62,13 +62,13 @@ export class LoopController {
 		return task;
 	}
 
-	stop(reason: string, status: LoopTaskSnapshot["status"] = "stopped"): LoopTaskSnapshot | undefined {
+	stop(reason: string, status: GrubTaskSnapshot["status"] = "stopped"): GrubTaskSnapshot | undefined {
 		if (!this.activeTask) {
 			return this.lastTerminalTask;
 		}
 
 		const task = this.activeTask;
-		const snapshot: LoopTaskSnapshot = {
+		const snapshot: GrubTaskSnapshot = {
 			id: task.id,
 			goal: task.goal,
 			status,
@@ -85,28 +85,28 @@ export class LoopController {
 		return snapshot;
 	}
 
-	isLoopPrompt(prompt: string): boolean {
+	isGrubPrompt(prompt: string): boolean {
 		return this.activeTask !== undefined && prompt.startsWith(this.getPromptPrefix(this.activeTask.id));
 	}
 
 	buildPrompt(): string {
 		if (!this.activeTask) {
-			throw new Error("No active loop task.");
+			throw new Error("No active grub task.");
 		}
 
 		const task = this.activeTask;
 		const sections = [
 			`${this.getPromptPrefix(task.id)}${task.currentIteration}]`,
 			"",
-			"Autonomous loop goal:",
+			"Autonomous grub goal:",
 			task.goal,
 			"",
-			"You are inside a managed loop. Continue making concrete progress on this same goal.",
+			"You are inside a managed grub loop. Continue making concrete progress on this same goal.",
 			"Use tools, edit files, run checks, and verify results as needed.",
 		];
 
 		if (task.lastDecision?.summary) {
-			sections.push("", "Previous loop summary:", task.lastDecision.summary);
+			sections.push("", "Previous summary:", task.lastDecision.summary);
 		}
 
 		if (task.lastDecision?.nextStep) {
@@ -126,16 +126,16 @@ export class LoopController {
 		return sections.join("\n");
 	}
 
-	markDispatched(): LoopTaskState {
+	markDispatched(): GrubTaskState {
 		if (!this.activeTask) {
-			throw new Error("No active loop task.");
+			throw new Error("No active grub task.");
 		}
 		this.activeTask.awaitingTurn = true;
 		this.activeTask.updatedAt = Date.now();
 		return this.activeTask;
 	}
 
-	finishTurn(decision: LoopDecision): { action: "continue" | "stop"; task?: LoopTaskState; snapshot?: LoopTaskSnapshot } {
+	finishTurn(decision: GrubDecision): { action: "continue" | "stop"; task?: GrubTaskState; snapshot?: GrubTaskSnapshot } {
 		if (!this.activeTask) {
 			return { action: "stop", snapshot: this.lastTerminalTask };
 		}
@@ -148,16 +148,16 @@ export class LoopController {
 		task.updatedAt = Date.now();
 
 		if (decision.status === "complete") {
-			return { action: "stop", snapshot: this.stop("Loop goal completed.", "complete") };
+			return { action: "stop", snapshot: this.stop("Grub goal completed.", "complete") };
 		}
 		if (decision.status === "blocked") {
-			return { action: "stop", snapshot: this.stop("Loop reported it is blocked.", "blocked") };
+			return { action: "stop", snapshot: this.stop("Grub reported it is blocked.", "blocked") };
 		}
 
 		if (task.currentIteration >= task.maxIterations) {
 			return {
 				action: "stop",
-				snapshot: this.stop(`Loop hit the iteration limit (${task.maxIterations}).`, "failed"),
+				snapshot: this.stop(`Grub hit the iteration limit (${task.maxIterations}).`, "failed"),
 			};
 		}
 
@@ -165,7 +165,7 @@ export class LoopController {
 		return { action: "continue", task: { ...task } };
 	}
 
-	recordFailure(message: string): { action: "continue" | "stop"; task?: LoopTaskState; snapshot?: LoopTaskSnapshot } {
+	recordFailure(message: string): { action: "continue" | "stop"; task?: GrubTaskState; snapshot?: GrubTaskSnapshot } {
 		if (!this.activeTask) {
 			return { action: "stop", snapshot: this.lastTerminalTask };
 		}
@@ -180,7 +180,7 @@ export class LoopController {
 			return {
 				action: "stop",
 				snapshot: this.stop(
-					`Loop stopped after ${task.consecutiveFailures} consecutive failures. Last error: ${message}`,
+					`Grub stopped after ${task.consecutiveFailures} consecutive failures. Last error: ${message}`,
 					"failed",
 				),
 			};
@@ -189,7 +189,7 @@ export class LoopController {
 		if (task.currentIteration >= task.maxIterations) {
 			return {
 				action: "stop",
-				snapshot: this.stop(`Loop hit the iteration limit (${task.maxIterations}).`, "failed"),
+				snapshot: this.stop(`Grub hit the iteration limit (${task.maxIterations}).`, "failed"),
 			};
 		}
 
@@ -198,7 +198,7 @@ export class LoopController {
 	}
 
 	private getPromptPrefix(taskId: string): string {
-		return `[LOOP:${taskId}:`;
+		return `[GRUB:${taskId}:`;
 	}
 
 	private generateTaskId(): string {

@@ -1,13 +1,17 @@
 /**
- * [WHO]: ScheduledLoopTask, ParsedSchedulerCommand
+ * [WHO]: ScheduledLoopTask, ParsedSchedulerCommand, LoopPayloadKind
  * [FROM]: No external dependencies
- * [TO]: Consumed by extension entry point (./index.ts)
- * [HERE]: extensions/defaults/loop/scheduler-types.ts - scheduled loop types
+ * [TO]: Consumed by ./scheduler-controller.ts, ./scheduler-parser.ts, ./index.ts
+ * [HERE]: extensions/defaults/loop/scheduler-types.ts - scheduled loop type definitions
  */
+
+export type LoopPayloadKind = "prompt" | "command";
 
 export interface ScheduledLoopTask {
 	id: string;
+	name?: string;
 	input: string;
+	kind: LoopPayloadKind;
 	intervalMs: number;
 	intervalLabel: string;
 	createdAt: number;
@@ -15,13 +19,31 @@ export interface ScheduledLoopTask {
 	nextRunAt: number;
 	lastRunAt?: number;
 	runCount: number;
+	maxRuns?: number;
 	pending: boolean;
+	paused: boolean;
+	quiet: boolean;
 	lastError?: string;
+	lastOutputSnippet?: string;
+}
+
+export interface LoopStartSpec {
+	input: string;
+	kind: LoopPayloadKind;
+	intervalMs: number;
+	intervalLabel: string;
+	name?: string;
+	maxRuns?: number;
+	quiet?: boolean;
 }
 
 export type ParsedSchedulerCommand =
-	| { type: "help"; reason?: "empty" | "interval" | "input" | "cancel" }
+	| { type: "help"; reason?: "empty" | "interval" | "input" | "cancel" | "ref" | "max" }
 	| { type: "list" }
+	| { type: "status"; ref: string }
 	| { type: "clear" }
-	| { type: "cancel"; id: string }
-	| { type: "start"; input: string; intervalMs: number; intervalLabel: string };
+	| { type: "cancel"; ref: string }
+	| { type: "pause"; ref: string }
+	| { type: "resume"; ref: string }
+	| { type: "run"; ref: string }
+	| ({ type: "start" } & LoopStartSpec);

@@ -2,7 +2,7 @@
  * [WHO]: Extension interface, AI-driven personalized greetings and idle cues
  * [FROM]: Depends on @pencil-agent/tui, @pencil-agent/mem-core, core/extensions/types.js, core/i18n
  * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/defaults/presence/index.ts - AI-generated presence messages with memory context, configurable via settings.presence.enabled
+ * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory + git snapshot, injects latest line into agent systemPrompt per turn, configurable via settings.presence.enabled
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
@@ -10,12 +10,18 @@ import type { ExtensionAPI, ExtensionContext, SessionReadyEvent, SessionStartEve
 import { t, getLocale } from "../../../core/i18n/index.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const PRESENCE_MESSAGE_TYPE = "presence";
 const OPENING_DELAY_MS = 1200;
 const IDLE_POLL_MS = 15000;
 const LONG_IDLE_MS = 4 * 60 * 1000;
 const GREETING_TIMEOUT_MS = 8000;
+const PRESENCE_DEBOUNCE_MS = 30_000;
+const GIT_TIMEOUT_MS = 200;
 
 // Fallback messages for when AI generation fails or memory is empty
 function getFallbackOpeningLines(locale?: "en" | "zh"): string[] {
@@ -72,8 +78,9 @@ type PresenceState = {
 	idleTimer?: ReturnType<typeof setInterval>;
 	unsubscribeInput?: () => void;
 	memEngine?: import("@pencil-agent/mem-core").NanoMemEngine;
-	lastGreeting?: string; // Store greeting for agent context injection
-	greetingInjected?: boolean; // Track if greeting was injected to agent context
+	lastPresenceLine?: string; // Latest presence line for per-turn agent injection
+	lastPresenceAt?: number; // Timestamp of last sendPresence (debounce)
+	idleGenerating?: boolean; // In-flight lock for async idle generation
 };
 
 function createState(): PresenceState {
@@ -192,7 +199,62 @@ async function detectLanguageFromMemory(state: PresenceState): Promise<"en" | "z
 	}
 }
 
-async function buildGreetingPrompt(state: PresenceState, detectedLocale: "en" | "zh"): Promise<string | undefined> {
+type MemoryHighlights = { preferences: string[]; lessons: string[] };
+
+async function collectMemoryHighlights(state: PresenceState): Promise<MemoryHighlights> {
+	const out: MemoryHighlights = { preferences: [], lessons: [] };
+	if (!state.memEngine) return out;
+	try {
+		const entries = await state.memEngine.getAllEntries();
+		const prefs = [
+			...entries.knowledge.filter((e) => e.type === "preference" || e.tags.includes("preference")),
+			...entries.lessons.filter((e) => e.type === "preference" || e.tags.includes("preference")),
+		].slice(0, 3);
+		for (const p of prefs) {
+			const text = (p.summary || p.detail || p.content || "").toString().slice(0, 80);
+			if (text) out.preferences.push(`${p.name || "pref"}: ${text}`);
+		}
+		const lessons = (entries.lessons || [])
+			.filter((e) => e.type !== "preference")
+			.sort((a, b) => (b.importance ?? 0) - (a.importance ?? 0))
+			.slice(0, 2);
+		for (const l of lessons) {
+			const text = (l.summary || l.detail || l.content || "").toString().slice(0, 80);
+			if (text) out.lessons.push(`${l.name || "lesson"}: ${text}`);
+		}
+	} catch {
+		/* fail-soft */
+	}
+	return out;
+}
+
+type ProjectSnapshot = { name: string; branch?: string; lastCommit?: string };
+
+async function collectProjectSnapshot(): Promise<ProjectSnapshot> {
+	const cwd = process.cwd();
+	const snap: ProjectSnapshot = { name: getProject() };
+	const deadline = Date.now() + 250;
+	const tryGit = async (args: string[]) => {
+		if (Date.now() > deadline) return undefined;
+		try {
+			const { stdout } = await execFileAsync("git", args, { cwd, timeout: GIT_TIMEOUT_MS });
+			return stdout.trim() || undefined;
+		} catch {
+			return undefined;
+		}
+	};
+	snap.branch = await tryGit(["rev-parse", "--abbrev-ref", "HEAD"]);
+	snap.lastCommit = await tryGit(["log", "-1", "--format=%s"]);
+	if (snap.lastCommit && snap.lastCommit.length > 80) snap.lastCommit = snap.lastCommit.slice(0, 80);
+	return snap;
+}
+
+async function buildGreetingPrompt(
+	state: PresenceState,
+	detectedLocale: "en" | "zh",
+	kind: "opening" | "idle" = "opening",
+	lastUserMessage?: string,
+): Promise<string | undefined> {
 	if (!state.memEngine) return undefined;
 
 	try {
@@ -207,24 +269,27 @@ async function buildGreetingPrompt(state: PresenceState, detectedLocale: "en" | 
 			})
 			.slice(0, 3);
 
-		// Get user preferences
-		const stats = await state.memEngine.getStats();
-		const project = getProject();
+		const highlights = await collectMemoryHighlights(state);
+		const snapshot = await collectProjectSnapshot();
+		const project = snapshot.name;
 		const now = new Date();
 		const timeOfDay = now.getHours() < 12 ? "morning" : now.getHours() < 18 ? "afternoon" : "evening";
 
 		if (detectedLocale === "zh") {
 			const lines: string[] = [
-				"你是一个程序员的好搭档，根据用户的记忆上下文，生成一句开场问候语。",
+				kind === "opening"
+					? "根据下面的上下文，生成一句开场问候语。"
+					: "用户安静了几分钟。轻轻问候一下，别打扰他。一句话就够。",
 				"",
 				"要求:",
 				"- 像老朋友一样自然，不要太正式",
-				"- 简短随意，1-2句话就好",
-				"- 如果有上次聊天的上下文，可以提一句",
-				"- 语气轻松，像同事打招呼",
+				"- 简短随意",
+				kind === "idle" ? "- 不要重复你之前说过的开场白" : "- 如果有上下文，可以自然提一句",
 				"",
-				"当前信息:",
+				"项目状态:",
 				`项目: ${project}`,
+				...(snapshot.branch ? [`分支: ${snapshot.branch}`] : []),
+				...(snapshot.lastCommit ? [`最近提交: ${snapshot.lastCommit}`] : []),
 				`时间: ${now.toLocaleDateString("zh-CN", { weekday: "long", hour: "2-digit", minute: "2-digit" })}`,
 			];
 
@@ -236,21 +301,37 @@ async function buildGreetingPrompt(state: PresenceState, detectedLocale: "en" | 
 				}
 			}
 
+			if (highlights.preferences.length > 0) {
+				lines.push("", "你知道他的偏好:");
+				for (const p of highlights.preferences) lines.push(`- ${p}`);
+			}
+			if (highlights.lessons.length > 0) {
+				lines.push("", "记下的经验:");
+				for (const l of highlights.lessons) lines.push(`- ${l}`);
+			}
+
+			if (kind === "idle" && lastUserMessage) {
+				lines.push("", `他最后说的是: "${lastUserMessage.slice(0, 120)}"`);
+			}
+
 			lines.push("", "直接说问候语，别加引号。");
 
 			return lines.join("\n");
 		} else {
 			const lines: string[] = [
-				"You're a developer's coding buddy. Generate a casual opening greeting based on the user's memory context.",
+				kind === "opening"
+					? "Generate a casual opening greeting based on the context below."
+					: "The user has been quiet for a few minutes. Drop a soft, non-pushy check-in. One short sentence.",
 				"",
 				"Requirements:",
 				"- Sound like a friend, not formal",
-				"- Keep it short and casual, 1-2 sentences",
-				"- If there's recent context, mention it naturally",
-				"- Relaxed tone, like a coworker saying hi",
+				"- Short and casual",
+				kind === "idle" ? "- Do NOT repeat your earlier opening greeting" : "- If there's recent context, mention it naturally",
 				"",
-				"Current info:",
+				"Project state:",
 				`Project: ${project}`,
+				...(snapshot.branch ? [`Branch: ${snapshot.branch}`] : []),
+				...(snapshot.lastCommit ? [`Last commit: ${snapshot.lastCommit}`] : []),
 				`Time: ${now.toLocaleDateString("en-US", { weekday: "long", hour: "2-digit", minute: "2-digit" })} (${timeOfDay})`,
 			];
 
@@ -262,7 +343,20 @@ async function buildGreetingPrompt(state: PresenceState, detectedLocale: "en" | 
 				}
 			}
 
-			lines.push("", "Just say the greeting, no quotes.");
+			if (highlights.preferences.length > 0) {
+				lines.push("", "What you know about them:");
+				for (const p of highlights.preferences) lines.push(`- ${p}`);
+			}
+			if (highlights.lessons.length > 0) {
+				lines.push("", "Lessons remembered:");
+				for (const l of highlights.lessons) lines.push(`- ${l}`);
+			}
+
+			if (kind === "idle" && lastUserMessage) {
+				lines.push("", `Their last message was: "${lastUserMessage.slice(0, 120)}"`);
+			}
+
+			lines.push("", "Just say the line, no quotes.");
 
 			return lines.join("\n");
 		}
@@ -271,37 +365,61 @@ async function buildGreetingPrompt(state: PresenceState, detectedLocale: "en" | 
 	}
 }
 
-async function generateGreeting(
+function getLastUserMessage(ctx: ExtensionContext): string | undefined {
+	const entries = ctx.sessionManager.getEntries();
+	for (let i = entries.length - 1; i >= 0; i -= 1) {
+		const entry = entries[i] as any;
+		if (entry.type !== "message") continue;
+		if (entry.role !== "user") continue;
+		const c = entry.content;
+		if (typeof c === "string") return c;
+		if (Array.isArray(c)) {
+			const text = c.find((p: any) => p?.type === "text")?.text;
+			if (typeof text === "string") return text;
+		}
+		return undefined;
+	}
+	return undefined;
+}
+
+async function generatePresenceLine(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
 	state: PresenceState,
+	kind: "opening" | "idle",
 ): Promise<string> {
-	// Detect language from memory, fallback to settings
 	const detectedLocale = await detectLanguageFromMemory(state);
-	const locale = detectedLocale || getLocale();
+	const locale = (detectedLocale || getLocale()) as "en" | "zh";
+	const fallback = () =>
+		pickLine(
+			kind === "opening" ? getFallbackOpeningLines(locale) : getFallbackIdleLines(locale),
+			Date.now(),
+		);
 
-	// Try AI-generated greeting
-	const prompt = await buildGreetingPrompt(state, locale as "en" | "zh");
-	if (!prompt) {
-		return pickLine(getFallbackOpeningLines(locale as "en" | "zh"), Date.now());
-	}
+	const lastUser = kind === "idle" ? getLastUserMessage(ctx) : undefined;
+	const prompt = await buildGreetingPrompt(state, locale, kind, lastUser);
+	if (!prompt) return fallback();
 
-	// Use completeSimple to generate greeting - make it sound human
-	const systemPrompt = locale === "zh"
-		? "你是个程序员的好朋友，现在来打个招呼。说得随意自然点。"
-		: "You're a developer's coding buddy saying hi. Keep it casual and human.";
+	const systemPrompt = (() => {
+		if (locale === "zh") {
+			return kind === "opening"
+				? "你是个程序员的好朋友，现在来打个招呼。说得随意自然点。"
+				: "你是个程序员的好朋友。轻声问候，不打扰。一句话。";
+		}
+		return kind === "opening"
+			? "You're a developer's coding buddy saying hi. Keep it casual and human."
+			: "You're a developer's coding buddy doing a quiet check-in. One short, non-pushy line.";
+	})();
 
 	try {
-		const greeting = await ctx.completeSimple(systemPrompt, prompt);
-		if (greeting && greeting.trim().length > 0 && greeting.trim().length < 200) {
-			return greeting.trim();
+		const line = await ctx.completeSimple(systemPrompt, prompt);
+		if (line && line.trim().length > 0 && line.trim().length < 200) {
+			return line.trim();
 		}
 	} catch {
-		// Fall through to fallback
+		/* fall through */
 	}
-
-	// Fallback to static messages
-	return pickLine(getFallbackOpeningLines(locale as "en" | "zh"), Date.now());
+	return fallback();
 }
 
 function countConversationEntries(ctx: ExtensionContext): number {
@@ -346,13 +464,17 @@ function pickLine(lines: readonly string[], seed: number): string {
 }
 
 function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): void {
+	const now = Date.now();
+	if (state.lastPresenceAt && now - state.lastPresenceAt < PRESENCE_DEBOUNCE_MS) {
+		return;
+	}
 	pi.sendMessage({
 		customType: PRESENCE_MESSAGE_TYPE,
 		content: line,
 		display: true,
 	});
-	state.lastGreeting = line; // Store for agent context injection
-	state.greetingInjected = false;
+	state.lastPresenceLine = line;
+	state.lastPresenceAt = now;
 	touch(state);
 }
 
@@ -368,7 +490,7 @@ async function maybeSendOpening(
 	await initMemEngine(state);
 
 	// Generate AI-powered greeting
-	const greeting = await generateGreeting(pi, ctx, state);
+	const greeting = await generatePresenceLine(pi, ctx, state, "opening");
 	sendPresence(pi, state, greeting);
 	state.openingSent = true;
 	return true;
@@ -396,11 +518,21 @@ function scheduleOpening(
 
 function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): void {
 	if (state.idleReminderSent) return;
+	if (state.idleGenerating) return;
 	if (!canSendPresence(ctx)) return;
 	if (Date.now() - state.lastActivityAt < LONG_IDLE_MS) return;
-	const locale = getLocale() as "en" | "zh";
-	sendPresence(pi, state, pickLine(getFallbackIdleLines(locale), state.lastActivityAt));
-	state.idleReminderSent = true;
+	state.idleGenerating = true;
+	void (async () => {
+		try {
+			const line = await generatePresenceLine(pi, ctx, state, "idle");
+			if (canSendPresence(ctx)) {
+				sendPresence(pi, state, line);
+				state.idleReminderSent = true;
+			}
+		} finally {
+			state.idleGenerating = false;
+		}
+	})();
 }
 
 function startPresenceLoop(
@@ -477,17 +609,12 @@ export default async function presenceExtension(pi: ExtensionAPI) {
 		handleSessionReady(pi, event, ctx, state);
 	});
 
-	// Inject greeting into agent context so agent knows what it said
+	// Inject the latest presence line into the agent's system prompt every turn,
+	// so the main conversation always perceives what presence said to the user.
 	pi.on("before_agent_start", (event) => {
-		if (!state.lastGreeting || state.greetingInjected) return undefined;
-
-		// Mark as injected to avoid repeating
-		state.greetingInjected = true;
-		const greeting = state.lastGreeting;
-
-		// Inject into system prompt so agent knows its own greeting
-		const injection = `\n\n## Your Opening Greeting\nYou already said this to the user when they arrived:\n"${greeting}"\n\nContinue naturally from this greeting. If the user responds, react as if you just said it.`;
-
+		const line = state.lastPresenceLine;
+		if (!line) return undefined;
+		const injection = `\n\n## Recent Presence Line\nYou (via the presence extension) just showed the user:\n"${line}"\nAcknowledge it naturally if relevant; do not repeat it verbatim.`;
 		return { systemPrompt: `${event.systemPrompt}${injection}` };
 	});
 

@@ -6863,6 +6863,8 @@ export class InteractiveMode {
     // Step 1: Uninstall
     const uninstall = spawn(npmCmd, ["uninstall", "-g", PACKAGE_NAME], {
       stdio: ["ignore", "pipe", "pipe"],
+        shell: true,
+        env: process.env,
     });
 
     uninstall.on("close", (code) => {
@@ -6881,6 +6883,8 @@ export class InteractiveMode {
 
       const cacheClean = spawn(npmCmd, ["cache", "clean", "--force"], {
         stdio: ["ignore", "pipe", "pipe"],
+        shell: true,
+        env: process.env,
       });
 
       cacheClean.on("close", () => {
@@ -6892,6 +6896,8 @@ export class InteractiveMode {
 
         const install = spawn(npmCmd, ["install", "-g", "--force", `${PACKAGE_NAME}@latest`], {
           stdio: ["ignore", "pipe", "pipe"],
+        shell: true,
+        env: process.env,
         });
 
         install.on("close", (installCode) => {
@@ -6960,6 +6966,8 @@ export class InteractiveMode {
       const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
       const child = spawn(npmCmd, ["install", "-g", "--force", `${PACKAGE_NAME}@latest`], {
         stdio: ["ignore", "pipe", "pipe"],
+        shell: true,
+        env: process.env,
       });
 
       let errorOutput = "";

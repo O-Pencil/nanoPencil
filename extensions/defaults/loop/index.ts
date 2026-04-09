@@ -220,7 +220,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 			typeof message.details === "object" && message.details !== null && "level" in message.details
 				? ((message.details as { level?: string }).level ?? "info")
 				: "info";
-		const colorKey = level === "error" ? "danger" : level === "warning" ? "warning" : "dim";
+		const colorKey = level === "error" ? "error" : level === "warning" ? "warning" : "dim";
 
 		const box = new Box(1, 1, (value) => theme.bg("customMessageBg", value));
 		box.addChild(new Text(theme.fg(colorKey, text), 0, 0));

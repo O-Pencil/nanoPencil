@@ -13,6 +13,7 @@ import { SubAgentRuntime } from "../../../core/sub-agent/index.js";
 import type { SubAgentHandle, SubAgentSpec } from "../../../core/sub-agent/index.js";
 import { WorktreeManager } from "../../../core/workspace/index.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
+import { join } from "node:path";
 import {
 	createBashTool,
 	createCodingTools,
@@ -106,7 +107,10 @@ export class TeamRuntime {
 					// Verify worktree still exists by checking if directory exists
 					const { stat } = await import("node:fs/promises");
 					await stat(state.worktreePath);
-					worktree = { path: state.worktreePath, type: "worktree" };
+					worktree = {
+						path: state.worktreePath,
+						type: await this.detectWorkspaceType(state.worktreePath),
+					};
 				} catch {
 					state.worktreePath = undefined;
 					state.worktreeBranch = undefined;
@@ -116,6 +120,7 @@ export class TeamRuntime {
 			if (state.status === "running") {
 				state.status = "idle";
 			}
+			this.bumpNameCounter(state.identity.name, state.identity.role);
 
 			const teammate: RuntimeTeammate = {
 				state,
@@ -139,7 +144,9 @@ export class TeamRuntime {
 		await this.ensureLoaded();
 
 		let name = spec.name?.trim();
-		if (!name || this.findByName(name)) {
+		if (!name) {
+			name = this.generateName(spec.role);
+		} else if (this.findByName(name)) {
 			name = this.generateName(spec.role);
 		}
 
@@ -271,10 +278,13 @@ export class TeamRuntime {
 				error: result.success ? undefined : result.error,
 			};
 			teammate.state.messages.push(teammateResponse);
-			teammate.state.status = result.success ? "idle" : "error";
-			if (!result.success && result.error) {
+			teammate.state.status = result.success ? "idle" : teammateResponse.aborted ? "stopped" : "error";
+			if (!result.success && result.error && !teammateResponse.aborted) {
 				teammate.state.lastError = result.error;
+			} else {
+				teammate.state.lastError = undefined;
 			}
+			teammate.state.lastActiveAt = Date.now();
 			await this.store.save(teammate.state);
 
 			this.mailbox.post({
@@ -317,9 +327,29 @@ export class TeamRuntime {
 				error: errorMsg,
 			};
 			teammate.state.messages.push(errorMessage);
-			teammate.state.status = "error";
-			teammate.state.lastError = errorMsg;
+			teammate.state.status = errorMsg === "Aborted" ? "stopped" : "error";
+			teammate.state.lastError = errorMsg === "Aborted" ? undefined : errorMsg;
+			teammate.state.lastActiveAt = Date.now();
 			await this.store.save(teammate.state);
+
+			this.mailbox.post({
+				teammateId: teammate.state.identity.id,
+				teammateName: teammate.state.identity.name,
+				type: "task_result",
+				direction: "teammate_to_leader",
+				payload: {
+					success: false,
+					content: errorMessage.content,
+					error: errorMsg,
+					aborted: errorMsg === "Aborted",
+				},
+			});
+			await this.transcripts.append(teammate.state.identity.id, {
+				timestamp: Date.now(),
+				kind: "teammate",
+				content: errorMessage.content,
+				meta: { success: false, aborted: errorMsg === "Aborted", error: errorMsg },
+			});
 
 			return {
 				teammateId: teammate.state.identity.id,
@@ -458,6 +488,15 @@ export class TeamRuntime {
 				direction: "leader_to_teammate",
 				payload: { requestId, approved },
 			});
+			if (approved) {
+				this.mailbox.post({
+					teammateId: teammate.state.identity.id,
+					teammateName: teammate.state.identity.name,
+					type: "mode_change",
+					direction: "leader_to_teammate",
+					payload: { mode },
+				});
+			}
 		});
 
 		return { ok: true, pending: { requestId } };
@@ -526,8 +565,32 @@ export class TeamRuntime {
 	}
 
 	private generateName(role: TeammateRole): string {
-		this.nameCounter++;
-		return `${role}-${this.nameCounter}`;
+		let candidate: string;
+		do {
+			this.nameCounter++;
+			candidate = `${role}-${this.nameCounter}`;
+		} while (this.findByName(candidate));
+		return candidate;
+	}
+
+	private bumpNameCounter(name: string, role: TeammateRole): void {
+		const match = new RegExp(`^${role}-(\\d+)$`).exec(name);
+		if (!match) return;
+
+		const nextCounter = Number.parseInt(match[1] ?? "", 10);
+		if (Number.isFinite(nextCounter)) {
+			this.nameCounter = Math.max(this.nameCounter, nextCounter);
+		}
+	}
+
+	private async detectWorkspaceType(workspacePath: string): Promise<WorkspacePath["type"]> {
+		try {
+			const { stat } = await import("node:fs/promises");
+			await stat(join(workspacePath, ".git"));
+			return "worktree";
+		} catch {
+			return "temp";
+		}
 	}
 
 	private getDefaultModeForRole(role: TeammateRole): TeammateMode {

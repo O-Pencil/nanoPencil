@@ -55,7 +55,10 @@ export function parseTeamCommand(commandName: string, args = ""): ParsedTeamComm
 
 	switch (commandName) {
 		case "team":
-			if (!trimmedArgs || trimmedArgs === "help") {
+			if (!trimmedArgs) {
+				return { command: "list" };
+			}
+			if (trimmedArgs === "help") {
 				return { command: "help" };
 			}
 			// Try to parse as subcommand with colon syntax fallback
@@ -74,8 +77,11 @@ export function parseTeamCommand(commandName: string, args = ""): ParsedTeamComm
 			if (trimmedArgs.startsWith("terminate ")) {
 				return { command: "terminate", target: trimmedArgs.slice(10).trim() };
 			}
+			if (trimmedArgs === "approve") {
+				return { command: "approve" };
+			}
 			if (trimmedArgs.startsWith("approve ")) {
-				return { command: "approve", requestId: trimmedArgs.slice(8).trim() };
+				return { command: "approve", requestId: trimmedArgs.slice(8).trim() || undefined };
 			}
 			if (trimmedArgs.startsWith("mode ")) {
 				return parseModeArgs(trimmedArgs.slice(5));
@@ -94,7 +100,7 @@ export function parseTeamCommand(commandName: string, args = ""): ParsedTeamComm
 		case "team:terminate":
 			return trimmedArgs ? { command: "terminate", target: trimmedArgs } : null;
 		case "team:approve":
-			return trimmedArgs ? { command: "approve", requestId: trimmedArgs } : null;
+			return trimmedArgs ? { command: "approve", requestId: trimmedArgs } : { command: "approve" };
 		case "team:mode":
 			return parseModeArgs(trimmedArgs);
 		default:

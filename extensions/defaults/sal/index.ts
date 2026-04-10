@@ -48,6 +48,12 @@ interface SalRuntime {
 	sidecarDir: string;
 }
 
+interface SalBridgeAnchor {
+	modulePath?: string;
+	filePath?: string;
+	candidatePaths: string[];
+}
+
 function approxTokens(text: string): number {
 	return Math.ceil(text.length * APPROX_TOKENS_PER_CHAR);
 }
@@ -281,6 +287,9 @@ export default async function salExtension(api: ExtensionAPI) {
 			event: BeforeAgentStartEvent,
 			_ctx: ExtensionContext,
 		): Promise<BeforeAgentStartEventResult | undefined> => {
+			// Clear global bridge — always, even when disabled, to prevent stale data.
+			(globalThis as any).__salAnchor = undefined;
+
 			if (!isEnabled()) return undefined;
 			runtime.turn = { touchedFiles: new Set<string>(), prompt: event.prompt };
 			const forceRebuild = Boolean(api.getFlag(SAL_REBUILD_FLAG));
@@ -294,6 +303,21 @@ export default async function salExtension(api: ExtensionAPI) {
 				weights: runtime.weights,
 			});
 			runtime.turn.taskResolution = resolution;
+
+			// Write anchor paths to process-global for mem-core structural boost.
+			// mem-core reads this during scoring; if SAL is absent the global is undefined → boost = 0.
+			const selectedAnchor = resolution.selected;
+			const candidatePaths = resolution.candidates
+				.slice(0, 4)
+				.flatMap((c) => [c.anchor.modulePath, c.anchor.filePath].filter(Boolean) as string[]);
+			if (selectedAnchor || candidatePaths.length > 0) {
+				const bridgeAnchor: SalBridgeAnchor = {
+					modulePath: selectedAnchor?.modulePath,
+					filePath: selectedAnchor?.filePath,
+					candidatePaths,
+				};
+				(globalThis as any).__salAnchor = bridgeAnchor;
+			}
 
 			const injection = buildContextInjection(resolution, snapshot);
 			if (!injection) return undefined;

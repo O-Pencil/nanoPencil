@@ -78,7 +78,7 @@ import {
 	type NanoMemV2Paths,
 } from "./store-v2.js";
 import { compileProcedureFromEpisode } from "./procedural-v2.js";
-import type { EmbeddingFn, EpisodeFacet, EpisodeMemory, FacetKind, MemoryLink, ProceduralMemory, SemanticMemory } from "./types-v2.js";
+import type { BaseMemoryV2, EmbeddingFn, EpisodeFacet, EpisodeMemory, FacetKind, MemoryLink, ProceduralMemory, SemanticMemory } from "./types-v2.js";
 import { applyExtraction, checkConsolidationEntry, checkWorkDuplicate } from "./update.js";
 
 export class NanoMemEngine {
@@ -1298,6 +1298,7 @@ export class NanoMemEngine {
 				aliases: [],
 				causalRole: facet.causalRole,
 				outcomeScore: facet.outcomeScore,
+				structuralAnchor: this.currentStructuralAnchor(),
 			};
 		});
 
@@ -1343,6 +1344,7 @@ export class NanoMemEngine {
 			derivedSemanticIds: [],
 			derivedProcedureIds: [],
 			consolidatedAt: ep.consolidated ? now : undefined,
+			structuralAnchor: this.currentStructuralAnchor(),
 		};
 
 		return { episode, facets, links };
@@ -2414,6 +2416,7 @@ export class NanoMemEngine {
 			createdAt: now,
 			updatedAt: now,
 			abstractionLevel: semanticType === "event" ? "instance" : "generalization",
+			structuralAnchor: this.currentStructuralAnchor(),
 		});
 	}
 
@@ -2822,6 +2825,60 @@ export class NanoMemEngine {
 			.filter((match) => match.score >= 0.18);
 	}
 
+	/** Read current SAL anchor and return a structuralAnchor value (or undefined when SAL is absent). */
+	private currentStructuralAnchor(): { modulePath?: string; filePath?: string } | undefined {
+		const anchor = (globalThis as any).__salAnchor as
+			| { modulePath?: string; filePath?: string; candidatePaths?: string[] }
+			| undefined;
+		if (!anchor || (!anchor.modulePath && !anchor.filePath)) return undefined;
+		return {
+			modulePath: anchor.modulePath,
+			filePath: anchor.filePath,
+		};
+	}
+
+	/**
+	 * Compute structural proximity boost from SAL anchor paths.
+	 * Reads globalThis.__salAnchor (set by SAL extension before_agent_start).
+	 * Returns 0 when SAL is absent or no file overlap found.
+	 */
+	private computeStructuralBoost(entry: BaseMemoryV2): number {
+		const anchor = (globalThis as any).__salAnchor as
+			| { modulePath?: string; filePath?: string; candidatePaths?: string[] }
+			| undefined;
+		const anchorPaths = anchor?.candidatePaths;
+		if (!anchorPaths || anchorPaths.length === 0) return 0;
+
+		const entryPaths: string[] = [];
+		if (entry.structuralAnchor) {
+			if (entry.structuralAnchor.modulePath) entryPaths.push(entry.structuralAnchor.modulePath);
+			if (entry.structuralAnchor.filePath) entryPaths.push(entry.structuralAnchor.filePath);
+		}
+		if (entry.evidence) {
+			for (const ev of entry.evidence) {
+				if (ev.filePath) entryPaths.push(ev.filePath);
+			}
+		}
+		const ep = entry as any;
+		if (Array.isArray(ep.filesModified)) {
+			for (const f of ep.filesModified) {
+				if (typeof f === "string") entryPaths.push(f);
+			}
+		}
+		if (entryPaths.length === 0) return 0;
+
+		const anchorSet = new Set(anchorPaths);
+		let hits = 0;
+		for (const p of entryPaths) {
+			// Match full path or module prefix
+			if (anchorSet.has(p)) { hits++; continue; }
+			for (const a of anchorPaths) {
+				if (p.startsWith(a + "/") || a.startsWith(p + "/")) { hits++; break; }
+			}
+		}
+		return Math.min(hits / entryPaths.length, 1);
+	}
+
 	private scoreEpisodeMemory(entry: EpisodeMemory, project: string, contextTags: string[]): number {
 		const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
 		const tagScore = tagOverlap(entry.tags, contextTags);
@@ -2829,7 +2886,7 @@ export class NanoMemEngine {
 		const semanticScore = tagOverlap(summaryTags, contextTags);
 		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
 		const salienceBoost = (entry.salience ?? entry.importance) / 10;
-		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.18 + salienceBoost * 0.22;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.18 + salienceBoost * 0.22 + this.computeStructuralBoost(entry) * this.cfg.structuralWeight;
 	}
 
 	private scoreEpisodeFacet(entry: EpisodeFacet, project: string, contextTags: string[]): number {
@@ -2839,7 +2896,7 @@ export class NanoMemEngine {
 		const semanticScore = tagOverlap(semanticTags, contextTags);
 		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
 		const salienceBoost = (entry.salience ?? entry.importance) / 10;
-		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.24;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.24 + this.computeStructuralBoost(entry) * this.cfg.structuralWeight;
 	}
 
 	private scoreV2SemanticMemory(entry: SemanticMemory, project: string, contextTags: string[]): number {
@@ -2849,7 +2906,7 @@ export class NanoMemEngine {
 		const semanticScore = tagOverlap(semanticTags, contextTags);
 		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
 		const salienceBoost = (entry.salience ?? entry.importance) / 10;
-		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.14 + salienceBoost * 0.2;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.14 + salienceBoost * 0.2 + this.computeStructuralBoost(entry) * this.cfg.structuralWeight;
 	}
 
 	private scoreProceduralMemory(entry: ProceduralMemory, project: string, contextTags: string[]): number {
@@ -2860,7 +2917,7 @@ export class NanoMemEngine {
 		const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
 		const statusBoost = entry.status === "active" ? 0.2 : entry.status === "draft" ? 0.05 : -0.2;
 		const salienceBoost = (entry.salience ?? entry.importance) / 10;
-		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.2 + statusBoost;
+		return projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore)) + recency * 0.15 + salienceBoost * 0.2 + statusBoost + this.computeStructuralBoost(entry) * this.cfg.structuralWeight;
 	}
 
 	private async reinforceEntries(recalled: MemoryEntry[], all: MemoryEntry[], savePath: string): Promise<void> {

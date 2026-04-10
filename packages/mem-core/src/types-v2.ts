@@ -122,6 +122,8 @@ export interface BaseMemoryV2 {
 	embedding?: EmbeddingRef;
 	sourceEpisodeIds?: string[];
 	evidence?: EvidenceRef[];
+	/** SAL structural anchor — module/file path where this memory is located in the project terrain. Written by SAL extension at agent_end; undefined when SAL is disabled. */
+	structuralAnchor?: { modulePath?: string; filePath?: string };
 }
 
 export interface EpisodeMemory extends BaseMemoryV2 {

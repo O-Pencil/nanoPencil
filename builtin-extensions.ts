@@ -67,6 +67,18 @@ function findPackageRoot(startDir: string): string | null {
 export function getBuiltinExtensionPaths(): string[] {
 	const paths: string[] = [];
 
+	// === SAL extension (Structural Anchor Localization, default-on) ===
+	// MUST load before NanoMem so SAL sets globalThis.__salAnchor
+	// before mem-core reads it during before_agent_start scoring.
+	// Pluggable: when --nosal is set, the extension is a runtime no-op.
+	// Deleting this directory + this block must leave the system fully functional.
+	if (existsSync(BUNDLED_SAL_EXTENSION)) {
+		paths.push(BUNDLED_SAL_EXTENSION);
+	} else {
+		const salTs = join(__dirname, "extensions", "defaults", "sal", "index.ts");
+		if (existsSync(salTs)) paths.push(salTs);
+	}
+
 	// === NanoMem extension ===
 	// 1) Prefer extension bundled to dist/packages during build
 	if (existsSync(BUNDLED_NANOMEM_EXTENSION_PACKAGES)) {
@@ -149,16 +161,6 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const loopTs = join(__dirname, "extensions", "defaults", "loop", "index.ts");
 		if (existsSync(loopTs)) paths.push(loopTs);
-	}
-
-	// === SAL extension (Structural Anchor Localization, opt-in via --sal) ===
-	// Pluggable: when --sal is not set, the extension is a runtime no-op.
-	// Deleting this directory + this block must leave the system fully functional.
-	if (existsSync(BUNDLED_SAL_EXTENSION)) {
-		paths.push(BUNDLED_SAL_EXTENSION);
-	} else {
-		const salTs = join(__dirname, "extensions", "defaults", "sal", "index.ts");
-		if (existsSync(salTs)) paths.push(salTs);
 	}
 
 	// === MCP extension (MCP tool protocol adapter) ===

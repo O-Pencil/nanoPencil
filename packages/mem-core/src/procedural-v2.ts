@@ -137,5 +137,6 @@ export function compileProcedureFromEpisode(
 		scope: episode.scope,
 		createdAt: now,
 		updatedAt: now,
+		structuralAnchor: episode.structuralAnchor,
 	};
 }

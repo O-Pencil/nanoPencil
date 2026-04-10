@@ -55,6 +55,8 @@ export interface NanomemConfig {
 	forgetting: { ambientTtlDays: number; workTtlDays: number; reviveCooldownDays: number };
 	/** Embedding configuration for semantic episodic/procedural recall */
 	embeddings: EmbeddingConfig;
+	/** Weight for SAL structural proximity boost in V2 recall scoring (0 = disabled). */
+	structuralWeight: number;
 }
 
 const DEFAULT_BUDGET = {
@@ -102,6 +104,7 @@ const DEFAULT_EMBEDDINGS: EmbeddingConfig = {
 	dim: 256,
 	autoSync: true,
 };
+const DEFAULT_STRUCTURAL_WEIGHT = 0.15;
 
 export function getConfig(overrides?: Partial<NanomemConfig>): NanomemConfig {
 	const tokenBudget = Number(process.env.NANOMEM_TOKEN_BUDGET) || 6000;
@@ -132,5 +135,6 @@ export function getConfig(overrides?: Partial<NanomemConfig>): NanomemConfig {
 				dim: embeddingsDim,
 				autoSync: DEFAULT_EMBEDDINGS.autoSync,
 			},
+		structuralWeight: overrides?.structuralWeight ?? DEFAULT_STRUCTURAL_WEIGHT,
 	};
 }

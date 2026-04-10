@@ -27,7 +27,7 @@
   "scripts": {
     "dev": "tsx cli.ts",
     "build": "npm run clean:dist && npm run build:deps && tsc && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages",
-    "build:deps": "npm run build --prefix packages/agent-core && npm run build --prefix packages/ai && npm run build --prefix packages/tui",
+    "build:deps": "npm run build --prefix packages/ai && npm run build --prefix packages/agent-core && npm run build --prefix packages/tui",
     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "copy:theme:json": "node -e \"const fs=require('fs');const p=require('path');const d='dist/modes/interactive/theme';if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});fs.readdirSync('modes/interactive/theme').forEach(f=>{if(f.endsWith('.json'))fs.copyFileSync(p.join('modes/interactive/theme',f),p.join(d,f))})\"",
     "copy:assets": "node scripts/copy-assets.js",

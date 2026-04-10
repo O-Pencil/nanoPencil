@@ -1,8 +1,11 @@
 /**
- * Test helper for resolving API keys from ~/.pi/agent/auth.json
+ * [WHO]: OAuth test helper - resolveApiKey for auth.json
+ * [FROM]: Depends on node:fs, node:os, node:path, ../src/utils/oauth
+ * [TO]: Consumed by ai package OAuth tests
+ * [HERE]: packages/ai/test/oauth.ts - OAuth test helper
  *
  * Supports both API key and OAuth credentials.
- * OAuth tokens are automatically refreshed if expired and saved back to auth.json.
+ * OAuth tokens are automatically refreshed if expired.
  */
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";

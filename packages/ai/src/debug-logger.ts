@@ -1,6 +1,8 @@
 /**
- * Debug logging system for nanopencil
- * Used to troubleshoot AI provider issues, especially for non-standard providers like dashscope-coding
+ * [WHO]: DebugLogger class, debug logging system for AI provider troubleshooting
+ * [FROM]: Depends on node:fs, node:path, ./config-path
+ * [TO]: Consumed by ai package providers for logging
+ * [HERE]: packages/ai/src/debug-logger.ts - debug logging for nanopencil AI providers
  */
 import { appendFileSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";

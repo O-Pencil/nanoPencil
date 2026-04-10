@@ -1,7 +1,8 @@
 /**
- * [UPSTREAM]: Depends on core/sub-agent/*, core/workspace/*
- * [SURFACE]: SubAgent extension - /subagent commands
- * [LOCUS]: extensions/defaults/subagent/index.ts
+ * [WHO]: SubAgent extension, registers /subagent commands and message renderer
+ * [FROM]: Depends on @pencil-agent/tui, core/extensions/types, ./subagent-runner, ./subagent-parser, ./subagent-types
+ * [TO]: Consumed by builtin-extensions.ts as default extension
+ * [HERE]: extensions/defaults/subagent/index.ts - entry point for subagent extension
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";

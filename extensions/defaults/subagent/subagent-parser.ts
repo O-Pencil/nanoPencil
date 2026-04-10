@@ -1,7 +1,8 @@
 /**
- * [UPSTREAM]: None
- * [SURFACE]: SubAgent command parser
- * [LOCUS]: extensions/defaults/subagent/subagent-parser.ts
+ * [WHO]: parseSubAgentCommand, buildSubAgentHelp, SubAgentSubcommand, ParsedSubAgentCommand
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by ./index.ts
+ * [HERE]: extensions/defaults/subagent/subagent-parser.ts - command parser for /subagent
  */
 
 export type SubAgentSubcommand = "run" | "stop" | "status" | "report" | "apply" | "help";

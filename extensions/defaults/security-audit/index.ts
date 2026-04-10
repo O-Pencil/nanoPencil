@@ -1,18 +1,13 @@
 /**
- * Security Audit Extension
+ * [WHO]: SecurityAudit extension - audit logging and dangerous pattern detection
+ * [FROM]: Depends on node:fs, node:path, node:crypto, node:os, core/extensions/types, ./interface
+ * [TO]: Consumed by builtin-extensions.ts as default extension
+ * [HERE]: extensions/defaults/security-audit/index.ts - security auditing for NanoPencil operations
  *
- * Provides security auditing for NanoPencil operations:
+ * Features:
  * - Audit logging for all operations
  * - Dangerous pattern detection
  * - Optional interception for dangerous operations
- *
- * [POS]: Entry point - composes all components and registers with extension system
- */
-/**
- * [WHO]: Extension interface
- * [FROM]: Depends on node:fs, node:path, node:crypto, node:os, ./interface.js
- * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/defaults/security-audit/index.ts -
  */
 
 

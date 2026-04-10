@@ -1,6 +1,8 @@
 /**
- * Get the path to the debug log file.
- * This is a simplified version for use within the ai package.
+ * [WHO]: getDebugLogPath function - returns path to debug log file
+ * [FROM]: Depends on node:os, node:path
+ * [TO]: Consumed by ./debug-logger.ts, ai package internals
+ * [HERE]: packages/ai/src/config-path.ts - debug log path utility
  */
 import { homedir } from "os";
 import { join } from "path";

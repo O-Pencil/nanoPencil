@@ -1,5 +1,10 @@
 /**
- * Utility functions for Amazon Bedrock tests
+ * [WHO]: hasBedrockCredentials utility - AWS credential checker for tests
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by agent-core Bedrock tests
+ * [HERE]: packages/agent-core/test/bedrock-utils.ts - test utility
+ *
+ * Check if any valid AWS credentials are configured for Bedrock.
  */
 
 /**

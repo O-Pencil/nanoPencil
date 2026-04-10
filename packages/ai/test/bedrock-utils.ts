@@ -1,5 +1,8 @@
 /**
- * Utility functions for Amazon Bedrock tests
+ * [WHO]: hasBedrockCredentials utility - AWS credential checker for AI tests
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by ai package Bedrock tests
+ * [HERE]: packages/ai/test/bedrock-utils.ts - test utility
  */
 
 /**

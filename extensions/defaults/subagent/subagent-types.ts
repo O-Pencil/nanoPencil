@@ -1,7 +1,8 @@
 /**
- * [UPSTREAM]: Depends on core/sub-agent/*
- * [SURFACE]: SubAgent extension types
- * [LOCUS]: extensions/defaults/subagent/subagent-types.ts
+ * [WHO]: SubAgent types - SubAgentPhase, SubAgentWorkerStatus, SubAgentRunState, SubAgentRunReport
+ * [FROM]: Depends on core/sub-agent for SubAgentHandle
+ * [TO]: Consumed by ./index.ts, ./subagent-runner.ts, ./subagent-parser.ts
+ * [HERE]: extensions/defaults/subagent/subagent-types.ts - type definitions for SubAgent extension
  */
 
 import type { SubAgentHandle } from "../../../core/sub-agent/index.js";

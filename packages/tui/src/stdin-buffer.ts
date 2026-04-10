@@ -1,26 +1,11 @@
 /**
- * StdinBuffer buffers input and emits complete sequences.
+ * [WHO]: StdinBuffer class - buffers input and emits complete sequences
+ * [FROM]: Depends on node:events
+ * [TO]: Consumed by packages/tui/src/index.ts, TUI input handling
+ * [HERE]: packages/tui/src/stdin-buffer.ts - input buffering for terminal sequences
  *
- * This is necessary because stdin data events can arrive in partial chunks,
- * especially for escape sequences like mouse events. Without buffering,
- * partial sequences can be misinterpreted as regular keypresses.
- *
- * For example, the mouse SGR sequence `\x1b[<35;20;5m` might arrive as:
- * - Event 1: `\x1b`
- * - Event 2: `[<35`
- * - Event 3: `;20;5m`
- *
- * The buffer accumulates these until a complete sequence is detected.
- * Call the `process()` method to feed input data.
- *
- * Based on code from OpenTUI (https://github.com/anomalyco/opentui)
- * MIT License - Copyright (c) 2025 opentui
- */
-/**
- * [WHO]: StdinBuffer
- * [FROM]: Depends on events
- * [TO]: Consumed by packages/tui/src/index.ts
- * [HERE]: packages/tui/src/stdin-buffer.ts -
+ * Buffers stdin data events that arrive in partial chunks, especially for
+ * escape sequences like mouse events. Based on OpenTUI.
  */
 
 

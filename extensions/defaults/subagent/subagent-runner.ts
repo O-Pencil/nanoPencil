@@ -1,7 +1,8 @@
 /**
- * [UPSTREAM]: Depends on core/sub-agent/*, core/workspace/*, core/tools/*
- * [SURFACE]: SubAgent orchestration logic
- * [LOCUS]: extensions/defaults/subagent/subagent-runner.ts
+ * [WHO]: SubAgentRunner class - spawns and manages SubAgents
+ * [FROM]: Depends on node:fs/promises, node:path, core/sub-agent, core/workspace, core/tools, ./subagent-types
+ * [TO]: Consumed by ./index.ts
+ * [HERE]: extensions/defaults/subagent/subagent-runner.ts - SubAgent orchestration logic
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";

@@ -1,9 +1,9 @@
 /**
- * [UPSTREAM]: Depends on core/sub-agent/*, core/workspace/*, ./team-runtime, ./team-parser, ./team-types
- * [SURFACE]: AgentTeam extension - /team commands
- * [LOCUS]: extensions/defaults/team/index.ts
+ * [WHO]: AgentTeam extension, registers /team commands for persistent teammates
+ * [FROM]: Depends on @pencil-agent/tui, core/extensions/types, ./team-runtime, ./team-parser, ./team-types
+ * [TO]: Consumed by builtin-extensions.ts as default extension
+ * [HERE]: extensions/defaults/team/index.ts - AgentTeam extension entry point
  *
- * Phase B: True AgentTeam with persistent teammates.
  * Commands:
  *   /team                      - List teammates
  *   /team:spawn <role> [--name <id>] - Create teammate

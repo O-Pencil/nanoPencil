@@ -5,6 +5,7 @@
 > Status: Proposed
 > Scope: DIP x NanoMem x Localization
 > Purpose: Give tasks, memories, and actions stable addresses inside the project terrain
+> Pluggability: SAL is fully removable — core logic must not depend on it
 > Isomorphism Rule: Every anchor must be traceable to verifiable structural evidence
 > Verification Rule: Localization quality must be measured by hit rate, recall relevance, and prediction accuracy
 
@@ -28,8 +29,9 @@ active understanding cannot emerge unless the agent has stable address awareness
 Provides:
 - a localization model for project-space addressing
 - anchor schema for task, memory, and action
-- evidence-based anchor scoring
+- evidence-based anchor scoring with tunable weights
 - a progressive localization state machine
+- an extension-packaged implementation contract
 - an experimental validation framework
 
 ## FROM
@@ -39,10 +41,12 @@ Depends on:
 - NanoMem V1/V2 memories as the experience substrate
 - tool traces, file reads/writes, and session outcomes as localization evidence
 - existing graph and recall infrastructure in `mem-core`
+- `core/extensions/types.ts` for ExtensionAPI, `registerFlag`, lifecycle hooks
 
 ## TO
 
 Consumed by:
+- `extensions/defaults/sal/` (planned extension implementation)
 - future memory anchoring
 - structure-first recall
 - impact prediction
@@ -109,6 +113,96 @@ Non-goals for the first version:
 - personality-driven cognitive map mutation
 - abstract self-modeling of the agent
 - replacing all existing NanoMem retrieval logic
+
+---
+
+## Pluggable Extension Architecture
+
+SAL must be implemented as a self-contained extension in `extensions/defaults/sal/`.
+
+### Core Non-Coupling Contract
+
+This is a hard constraint:
+
+- no code in `core/`, `modes/`, `packages/`, or other extensions may import from `extensions/defaults/sal/`
+- all SAL behavior must be injected via extension hooks and the `registerFlag` API
+- removing the entire `extensions/defaults/sal/` directory must leave the system fully functional
+- SAL can be disabled at runtime without side effects
+
+The test for compliance:
+
+if `extensions/defaults/sal/` is deleted and the CLI is run with `--nosal`, behavior must be byte-for-byte identical to the pre-SAL baseline.
+
+### Extension Entry Point
+
+SAL registers itself as a standard nanoPencil extension:
+
+```ts
+// extensions/defaults/sal/index.ts
+import type { ExtensionAPI } from "../../../core/extensions/types.js";
+
+export default function salExtension(api: ExtensionAPI) {
+  api.registerFlag("nosal", {
+    type: "boolean",
+    description: "Disable Structural Anchor Localization",
+    default: false,
+  });
+
+  // All hooks check opt-out. SAL is on by default.
+  // If --nosal is set, this extension is a no-op at runtime.
+  const isEnabled = () => !api.getFlag("nosal");
+
+  api.on("before_agent_start", async (event, ctx) => {
+    if (!isEnabled()) return;
+    // Task localization and context injection
+  });
+
+  api.on("tool_execution_end", async (event, ctx) => {
+    if (!isEnabled()) return;
+    // Evidence accumulation: update action anchor from touched files
+  });
+
+  api.on("agent_end", async (event, ctx) => {
+    if (!isEnabled()) return;
+    // Memory commit: write anchors against final resolved location
+  });
+}
+```
+
+### Activation
+
+SAL is **enabled by default** on every nanoPencil session.
+
+```bash
+# SAL active (default)
+pencil -p "your prompt"
+
+# SAL disabled — baseline memory mode
+pencil --nosal -p "your prompt"
+```
+
+### Hook Responsibilities
+
+| Hook | SAL Responsibility |
+|------|--------------------|
+| `before_agent_start` | Produce task anchor, inject terrain summary + anchored memories into system prompt via `systemPrompt` return |
+| `tool_execution_start` | Begin evidence collection for current turn |
+| `tool_execution_end` | Accumulate action evidence from file reads/writes/bash |
+| `agent_end` | Commit final anchors to memory store |
+| `session_shutdown` | Persist terrain graph snapshot if changed |
+
+### Context Budget Contract
+
+SAL's `before_agent_start` handler must honor the context window budget.
+
+The handler must not inject unbounded terrain context.
+Its injection should not exceed a configurable `contextBudgetTokens` limit (default: 800 tokens).
+
+Reason:
+
+if SAL-injected context is too large, it competes with conversation history and may be silently discarded during compaction, defeating its own purpose.
+
+Injection fields: `regionSummary` (1–3 lines), `anchoredMemories` (top N truncated), `impactNeighbors` (top M), `procedures` (applicable local). Each field has an individual token cap. The handler must select and truncate rather than overflow.
 
 ---
 
@@ -278,16 +372,30 @@ SAL should explicitly rank evidence by strength.
 
 ## Anchor Scoring
 
-The first scoring model should bias toward explicit structure.
+Scoring weights are explicit runtime parameters, not constants.
+
+They are configurable via `SalWeights` and must be adjustable before each experiment run.
 
 ```ts
-anchorScore =
-  directFileEvidence * 0.40 +
-  moduleResponsibilityMatch * 0.20 +
-  dipContractMatch * 0.15 +
-  importNeighborhoodMatch * 0.15 +
-  memoryHistoryMatch * 0.10
+interface SalWeights {
+  // Anchor scoring weights (must sum to 1.0)
+  directFileEvidence: number;        // default: 0.40
+  moduleResponsibilityMatch: number; // default: 0.20
+  dipContractMatch: number;          // default: 0.15
+  importNeighborhoodMatch: number;   // default: 0.15
+  memoryHistoryMatch: number;        // default: 0.10
+  // Retrieval scoring weights (must sum to 1.0)
+  semanticScore: number;             // default: 0.25
+  recencyScore: number;              // default: 0.15
+  importanceScore: number;           // default: 0.15
+  structuralSalience: number;        // default: 0.30
+  proceduralApplicability: number;   // default: 0.15
+}
 ```
+
+Weights are loadable from `sal-config.json` adjacent to the memory directory, allowing per-experiment overrides without code changes.
+
+The anchor score is a weighted sum of the first five fields; the retrieval score is a weighted sum of the last five. Both formulas apply their respective weight groups linearly.
 
 ### Scoring Principle
 
@@ -296,6 +404,9 @@ File evidence is stronger than semantic resemblance.
 This is intentional.
 
 The purpose of SAL is to reduce the number of semantically plausible but structurally irrelevant recalls.
+
+Default weights are initial hypotheses.
+They must be treated as experimental parameters until validated by the A/B experiment.
 
 ---
 
@@ -368,60 +479,85 @@ Output:
 
 ---
 
+## Terrain Graph and DIP Coverage
+
+### DIP Coverage Prerequisite
+
+SAL's terrain graph is built from DIP P2/P3 headers.
+
+Localization quality degrades proportionally to DIP coverage gaps:
+
+- missing P3 headers produce address space holes
+- outdated `WHO/FROM/TO` fields produce wrong neighbor inferences
+- missing P2 member entries make entire modules invisible to anchoring
+
+**Before running SAL experiments on any target region**, verify that the region meets minimum coverage:
+
+| Coverage Level | Requirement |
+|----------------|-------------|
+| Module (P2) | P2 CLAUDE.md exists, member list complete |
+| Files in target module | ≥ 90% of `.ts` files have P3 headers |
+| P3 fields | `WHO`, `FROM`, `TO`, `HERE` all non-empty |
+
+If coverage is below threshold, the experiment will measure a handicapped baseline rather than SAL's actual capability.
+
+The coverage check should run before the first experiment task:
+
+```bash
+pencil
+> /sal:coverage core/runtime core/session
+```
+
+This command should report per-module coverage and block execution if below threshold.
+
+### Terrain Graph Invalidation
+
+The terrain graph is a snapshot derived from DIP documents and file structure.
+It becomes stale when either changes.
+
+Invalidation triggers:
+
+| Event | Required Action |
+|-------|----------------|
+| New file added to a module | Regenerate module-level nodes |
+| P3 header edited | Regenerate affected file node and neighbor edges |
+| P2 CLAUDE.md updated | Regenerate module node and all child edges |
+| File deleted | Remove node; mark anchors pointing to it as stale |
+| Module moved or renamed | Regenerate full terrain graph |
+
+Invalidation strategy for the first version:
+
+- regenerate the terrain graph at session start if any DIP file has changed since last snapshot
+- use file mtimes against `generatedAt` timestamp in `TerrainSnapshot`
+- stale anchors (pointing to missing/moved files) must be flagged with `confidence: 0` rather than silently removed
+- the extension can force full regeneration via `pencil --sal-rebuild-terrain`
+
+Stale anchors must not silently improve recall scores.
+If an anchor points to a path that no longer exists, it must be treated as unresolved, not matched.
+
+---
+
 ## Integration with Cognitive Map Architecture
 
-SAL is the first implementation layer of the Bridge Map defined in the cognitive-map draft.
-
-Relationship:
+SAL is the first implementation layer of the Bridge Map (see `认知地图架构草案.md`):
 
 - Terrain Map answers: what exists and how it is connected
 - Memory Map answers: what has been learned before
 - SAL answers: where should this memory or action be attached
 
-Therefore:
-
-SAL does not replace the cognitive map.
-It enables it.
-
-Without SAL, the bridge between terrain and memory stays weak.
+SAL does not replace the cognitive map. It enables it.
 
 ---
 
 ## Integration with DIP
 
-DIP is the canonical coordinate system.
+DIP is the canonical coordinate system. SAL uses it in three ways:
 
-SAL should use DIP in three ways:
+**Address Vocabulary**: P2/P3 provide stable structural names — module path, file responsibility, upstream/downstream.
 
-### 1. Address Vocabulary
+**Relevance Filtering**: P3 fields allow cheap relevance estimation. `WHO` tells what the file provides; `TO` suggests impact neighbors; `FROM` suggests dependency context.
 
-P2 and P3 provide stable structural names.
-
-Examples:
-
-- module path
-- file responsibility
-- downstream consumers
-- upstream dependencies
-
-### 2. Relevance Filtering
-
-P3 allows cheap relevance estimation before deep reading.
-
-Examples:
-
-- `WHO` tells what the file provides
-- `TO` suggests likely impact neighbors
-- `FROM` suggests dependency context
-
-### 3. Anchor Validation
-
-An anchor should be explainable in DIP terms whenever possible.
-
-Examples:
-
-- "anchored to this file because the task matched its WHO and the tool edited it"
-- "anchored to this module because multiple P3 files inside it matched the same responsibility band"
+**Anchor Validation**: Every anchor should be explainable in DIP terms — e.g. "anchored to this file because the task matched its WHO and the tool edited it."
 
 ---
 
@@ -461,9 +597,7 @@ This is the simplest structure-first recall policy.
 
 ## Retrieval Hypothesis
 
-SAL introduces one new retrieval signal:
-
-### Structural Proximity
+SAL introduces structural proximity as a new retrieval signal:
 
 ```ts
 structuralSalience =
@@ -473,19 +607,7 @@ structuralSalience =
   procedureApplicabilityBoost
 ```
 
-A practical hybrid ranking formula could be:
-
-```ts
-finalScore =
-  semanticScore * 0.25 +
-  recencyScore * 0.15 +
-  importanceScore * 0.15 +
-  structuralSalience * 0.30 +
-  proceduralApplicability * 0.15
-```
-
-This formula should remain experimental.
-Its purpose is to validate whether structural proximity deserves first-class ranking weight.
+The final retrieval score uses `SalWeights`. Default weights are initial hypotheses; adjust them after Layer 1 and Layer 2 evaluations produce evidence.
 
 ---
 
@@ -500,6 +622,7 @@ The first experimental SAL implementation should remain intentionally small.
 3. Produce an action anchor after execution
 4. Attach episode memory to the resolved anchor
 5. Prefer same-anchor memories during recall
+6. Load `SalWeights` from `sal-config.json` if present
 
 ### Explicitly deferred
 
@@ -516,9 +639,18 @@ the first experiment should test localization quality, not total map sophisticat
 
 ## Testing Strategy
 
-SAL should be tested in three layers.
+SAL should be tested in three sequential layers.
+
+**Layer N must pass its success gate before Layer N+1 is run.**
+
+Reason:
+
+each failure points to a different defect.
+Testing recall quality before localization accuracy is confirmed produces uninterpretable results.
 
 ### Layer 1: Localization Accuracy
+
+**Prerequisite**: DIP coverage check passes for target modules.
 
 Question:
 
@@ -551,9 +683,14 @@ Example samples:
 
 #### Success gate
 
-If module-level Top-3 accuracy is weak, SAL should not yet be used to drive memory recall.
+**Module-level Top-3 hit rate ≥ 70%.**
+
+If this gate fails, do not proceed to Layer 2.
+Diagnose whether the failure is caused by weak evidence inference, stale terrain, or insufficient DIP coverage.
 
 ### Layer 2: Recall Quality Improvement
+
+**Prerequisite**: Layer 1 success gate passed.
 
 Question:
 
@@ -583,9 +720,14 @@ Suggested relevance labels:
 
 #### Success gate
 
-If SAL does not reduce irrelevant local recall noise, the anchors are not providing enough structural value.
+**SAL relevant recall ratio must exceed baseline by at least 15 percentage points.**
+
+If this gate fails, SAL is not converting localization accuracy into retrieval value.
+Inspect whether anchors are being used in the retrieval scoring or only stored.
 
 ### Layer 3: Active Understanding Proxy
+
+**Prerequisite**: Layer 2 success gate passed.
 
 Question:
 
@@ -611,22 +753,28 @@ After execution, compare prediction against actual touched files and failures.
 #### Success gate
 
 If localization improves recall but not prediction, then SAL is still acting only as a better retrieval layer.
+This is not a failure — it means SAL is useful for recall but the prediction loop needs additional work.
 
 ---
 
 ## Recommended Evaluation Sequence
 
-SAL should be evaluated in this order:
-
-1. localization accuracy
-2. recall quality improvement
-3. impact prediction improvement
+```
+DIP Coverage Check
+      ↓ (pass threshold)
+Layer 1: Localization Accuracy
+      ↓ (≥ 70% Top-3 module hit rate)
+Layer 2: Recall Quality Improvement
+      ↓ (SAL recall relevance ≥ baseline + 15pp)
+Layer 3: Active Understanding Proxy
+```
 
 This order matters because each failure points to a different defect:
 
-- poor localization means address inference is weak
-- weak recall improvement means anchors are not adding enough value
-- weak prediction improvement means graph neighborhood reasoning is still too shallow
+- DIP coverage failure → fix documentation before experimenting
+- poor localization → address inference is weak
+- weak recall improvement → anchors are not adding retrieval value
+- weak prediction improvement → graph neighborhood reasoning is too shallow
 
 ---
 
@@ -653,44 +801,13 @@ better grounded recall, better local prediction, and more auditable reasoning.
 
 ## Failure Modes
 
-### 1. Over-anchoring
-
-A memory is attached to the wrong module or file.
-
-Mitigation:
-
-- anchor confidence
-- multiple candidates
-- weak-anchor decay
-
-### 2. Graph Explosion
-
-Too many address candidates create noise.
-
-Mitigation:
-
-- begin at module/file level
-- cap secondary anchors
-- add symbols later only if justified
-
-### 3. Stale Terrain
-
-DIP documentation drifts from real structure.
-
-Mitigation:
-
-- tie terrain indexing to DIP verification
-- mark stale anchors with lower trust
-
-### 4. Historical Overfitting
-
-Old local memories dominate even after the region changes.
-
-Mitigation:
-
-- procedure status lifecycle
-- confidence decay
-- prediction validation feedback
+| Failure | Mitigation |
+|---------|-----------|
+| **Over-anchoring** — memory attached to wrong location | Anchor confidence; multiple candidates; weak-anchor decay |
+| **Graph Explosion** — too many candidates create noise | Module/file level first; cap secondary anchors; symbol-level deferred |
+| **Stale Terrain** — DIP drifts from code | Mtime-based regeneration at session start; stale anchors get `confidence: 0`; `--sal-rebuild-terrain` for forced refresh |
+| **Historical Overfitting** — old local memories dominate | Procedure status lifecycle; confidence decay; prediction validation feedback |
+| **Context Budget Overflow** — SAL injection crowds conversation history | `contextBudgetTokens` cap (default: 800); per-field truncation; re-evaluate injection post-compaction, never use pre-compaction cache |
 
 ---
 
@@ -705,6 +822,13 @@ SAL is worth continuing only if it improves at least one of the following in mea
 
 If none of these improve, then SAL has become a naming layer rather than a functional architecture improvement.
 
+If the experiment confirms SAL is not valuable:
+- delete `extensions/defaults/sal/`
+- remove anchor metadata from memory store
+- no other module requires changes
+
+This is the pluggability guarantee.
+
 ---
 
 ## Summary
@@ -713,10 +837,15 @@ SAL is the technical scheme that gives nanoPencil address awareness inside the c
 
 Its minimal path is:
 
-1. localize the task
-2. localize the executed action
-3. anchor memory to the resulting structural address
-4. recall memory by structural neighborhood before semantic fallback
-5. test whether this improves retrieval and prediction
+1. verify DIP coverage in target modules
+2. localize the task via extension hook before execution
+3. localize the executed action via tool trace observation
+4. anchor memory to the resulting structural address
+5. recall memory by structural neighborhood before semantic fallback
+6. test localization accuracy before testing recall quality
+7. tune `SalWeights` based on evidence, not intuition
 
 This is the narrowest and most testable path from passive retrieval to active understanding.
+
+SAL's value proposition is falsifiable by design.
+Its exit is clean by contract.

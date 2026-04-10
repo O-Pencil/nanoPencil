@@ -74,9 +74,9 @@ It can be decomposed into four smaller questions:
 
 The experiment should use a same-code different-switch design.
 
-### Control Group
+### Treatment Group (default)
 
-Run nanoPencil without SAL:
+Run nanoPencil normally — SAL is enabled by default:
 
 ```powershell
 pencil
@@ -88,18 +88,18 @@ or in print mode:
 pencil -p "your prompt"
 ```
 
-### Treatment Group
+### Control Group
 
-Run nanoPencil with SAL enabled:
+Run nanoPencil with SAL disabled:
 
 ```powershell
-pencil --sal
+pencil --nosal
 ```
 
 or:
 
 ```powershell
-pencil --sal -p "your prompt"
+pencil --nosal -p "your prompt"
 ```
 
 ### Experimental Constraint
@@ -116,7 +116,7 @@ Everything else should remain as consistent as possible:
 - same model
 - same thinking level
 - same tools
-- same extension set unless SAL itself requires one extra extension path
+- same extension set
 
 ---
 
@@ -124,14 +124,14 @@ Everything else should remain as consistent as possible:
 
 The experiment assumes the following switch design.
 
-### 1. `--sal`
+### 1. `--nosal`
 
 Boolean flag.
 
 Semantics:
 
-- disabled: current memory behavior
-- enabled: SAL task localization, action localization, anchored-memory persistence, and SAL-assisted recall
+- absent (default): SAL task localization, action localization, anchored-memory persistence, and SAL-assisted recall are active
+- present: SAL disabled, current baseline memory behavior
 
 ### 2. Optional `--sal-export`
 
@@ -183,18 +183,18 @@ NANOMEM_MEMORY_DIR
 
 ### Example Usage
 
-Control:
+Control (SAL disabled):
 
 ```powershell
 $env:NANOMEM_MEMORY_DIR="D:\Projects\nanoPencil\.memory-experiments\control\run-001"
-pencil -p "Analyze session restoration behavior"
+pencil --nosal -p "Analyze session restoration behavior"
 ```
 
-Treatment:
+Treatment (SAL enabled, default):
 
 ```powershell
 $env:NANOMEM_MEMORY_DIR="D:\Projects\nanoPencil\.memory-experiments\sal\run-001"
-pencil --sal -p "Analyze session restoration behavior"
+pencil -p "Analyze session restoration behavior"
 ```
 
 This ensures:
@@ -365,36 +365,36 @@ If your eventual implementation uses a project-local experiment directory rather
 
 ### Recommended Export Command Shapes
 
-Control:
+Control (SAL disabled):
 
 ```powershell
 $env:NANOMEM_MEMORY_DIR="D:\Projects\nanoPencil\.memory-experiments\control\run-001"
+pencil --nosal -p "Fix extension shutdown lifecycle"
+```
+
+Then export:
+
+```powershell
+pencil --nosal --export-memory "D:\Projects\nanoPencil\.memory-experiments\exports\control\run-001"
+```
+
+SAL (default):
+
+```powershell
+$env:NANOMEM_MEMORY_DIR="D:\Projects\nanoPencil\.memory-experiments\sal\run-001"
 pencil -p "Fix extension shutdown lifecycle"
 ```
 
 Then export:
 
 ```powershell
-pencil --export-memory "D:\Projects\nanoPencil\.memory-experiments\exports\control\run-001"
-```
-
-SAL:
-
-```powershell
-$env:NANOMEM_MEMORY_DIR="D:\Projects\nanoPencil\.memory-experiments\sal\run-001"
-pencil --sal -p "Fix extension shutdown lifecycle"
-```
-
-Then export:
-
-```powershell
-pencil --sal --export-memory "D:\Projects\nanoPencil\.memory-experiments\exports\sal\run-001"
+pencil --export-memory "D:\Projects\nanoPencil\.memory-experiments\exports\sal\run-001"
 ```
 
 If you prefer a single-run export flow, this is also valid:
 
 ```powershell
-pencil --sal --export-memory "D:\Projects\nanoPencil\.memory-experiments\exports\sal\run-001" -p "Fix extension shutdown lifecycle"
+pencil --export-memory "D:\Projects\nanoPencil\.memory-experiments\exports\sal\run-001" -p "Fix extension shutdown lifecycle"
 ```
 
 ### Export Requirement
@@ -637,7 +637,7 @@ Mitigation:
 
 This document does not require immediate implementation, but it does imply a practical feature set:
 
-- `--sal`
+- `--nosal` (opt out — SAL is on by default)
 - `--export-memory <dir>`
 - optional `--experiment-id <id>`
 - exported report files for localization and recall

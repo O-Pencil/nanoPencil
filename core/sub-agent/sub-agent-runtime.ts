@@ -1,7 +1,8 @@
 /**
- * [UPSTREAM]: Depends on sub-agent-types.ts, sub-agent-backend.ts
- * [SURFACE]: SubAgentRuntime - spawn, abort, lifecycle management
- * [LOCUS]: core/sub-agent/sub-agent-runtime.ts
+ * [WHO]: SubAgentRuntime class - spawn, abort, lifecycle management for SubAgents
+ * [FROM]: Depends on ./sub-agent-types, ./sub-agent-backend
+ * [TO]: Consumed by ./index.ts, extensions/defaults/subagent/*
+ * [HERE]: core/sub-agent/sub-agent-runtime.ts - SubAgent runtime implementation
  */
 
 import { InProcessSubAgentBackend } from "./sub-agent-backend.js";

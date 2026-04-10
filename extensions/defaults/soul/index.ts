@@ -1,19 +1,14 @@
 /**
- * Soul Extension - AI Personality Evolution
+ * [WHO]: Soul extension - AI personality evolution (NanoSoul)
+ * [FROM]: Depends on node:path, node:os, node:fs, node:url, node:module, core/extensions/types, packages/soul-core
+ * [TO]: Consumed by builtin-extensions.ts as default extension
+ * [HERE]: extensions/defaults/soul/index.ts - AI personality evolution for NanoPencil
  *
- * This extension provides AI personality evolution capabilities for NanoPencil:
+ * Features:
  * - Maintains persistent personality state across sessions
  * - Updates expertise based on tool usage patterns
  * - Injects personality into system prompt
  * - Generates memory expression directives
- *
- * This is a DEFAULT extension - automatically loaded with NanoPencil unless disabled.
- */
-/**
- * [WHO]: Extension interface
- * [FROM]: Depends on node:path, node:os, node:fs, node:url, node:path
- * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/defaults/soul/index.ts -
  */
 
 

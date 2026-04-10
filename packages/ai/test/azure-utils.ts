@@ -1,5 +1,8 @@
 /**
- * Utility functions for Azure OpenAI tests
+ * [WHO]: Azure OpenAI test utilities - parseDeploymentNameMap
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by ai package Azure tests
+ * [HERE]: packages/ai/test/azure-utils.ts - test utility
  */
 
 function parseDeploymentNameMap(value: string | undefined): Map<string, string> {

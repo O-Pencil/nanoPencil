@@ -1,22 +1,11 @@
 /**
- * Removes unpaired Unicode surrogate characters from a string.
+ * [WHO]: sanitizeSurrogates function - removes unpaired Unicode surrogate characters
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by AI providers for JSON-safe text
+ * [HERE]: packages/ai/src/utils/sanitize-unicode.ts - Unicode sanitization utility
  *
- * Unpaired surrogates (high surrogates 0xD800-0xDBFF without matching low surrogates 0xDC00-0xDFFF,
- * or vice versa) cause JSON serialization errors in many API providers.
- *
- * Valid emoji and other characters outside the Basic Multilingual Plane use properly paired
- * surrogates and will NOT be affected by this function.
- *
- * @param text - The text to sanitize
- * @returns The sanitized text with unpaired surrogates removed
- *
- * @example
- * // Valid emoji (properly paired surrogates) are preserved
- * sanitizeSurrogates("Hello 🙈 World") // => "Hello 🙈 World"
- *
- * // Unpaired high surrogate is removed
- * const unpaired = String.fromCharCode(0xD83D); // high surrogate without low
- * sanitizeSurrogates(`Text ${unpaired} here`) // => "Text  here"
+ * Unpaired surrogates cause JSON serialization errors in many API providers.
+ * Valid emoji with properly paired surrogates are preserved.
  */
 /**
  * [WHO]: sanitizeSurrogates

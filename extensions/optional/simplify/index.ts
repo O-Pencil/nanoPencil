@@ -1,19 +1,14 @@
 /**
- * Simplify Extension - Claude Code style code simplification tool
+ * [WHO]: Simplify extension - Claude Code style code simplification tool
+ * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, fs, path, core/extensions/types, modes/interactive/components/dynamic-border, modes/interactive/theme/theme
+ * [TO]: Consumed by builtin-extensions.ts as optional extension
+ * [HERE]: extensions/optional/simplify/index.ts - code simplification for NanoPencil
  *
- * Based on Claude Code's /simplify instruction, providing:
+ * Features:
  * 1. Perception layer: Scan Git Diff + read project rules + analyze code
  * 2. Decision layer: Apply refactoring patterns (guard clauses, expression folding, redundancy removal)
  * 3. Execution layer: Generate Diff and apply to files
  * 4. Validation layer: Run tests to verify, rollback on failure
- *
- * Built-in extension: Auto-loaded with nanopencil
- */
-/**
- * [WHO]: Extension interface
- * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, fs, path
- * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/optional/simplify/index.ts -
  */
 
 

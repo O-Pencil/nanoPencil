@@ -1,3 +1,10 @@
+/**
+ * [WHO]: Type declarations for @pencil-agent/nano-pencil host interface
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/mem-core for host type checking
+ * [HERE]: packages/mem-core/src/nano-pencil-host.d.ts - ambient type declarations
+ */
+
 declare module "@pencil-agent/nano-pencil" {
 	export type ExtensionContext = {
 		cwd: string;

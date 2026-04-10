@@ -1,3 +1,10 @@
+/**
+ * [WHO]: getCurrentTime test utility - timezone-aware time for agent testing
+ * [FROM]: Depends on @sinclair/typebox, ../../src/types
+ * [TO]: Consumed by agent-core tests
+ * [HERE]: packages/agent-core/test/utils/get-current-time.ts - test utility
+ */
+
 import { type Static, Type } from "@sinclair/typebox";
 import type { AgentTool, AgentToolResult } from "../../src/types.js";
 

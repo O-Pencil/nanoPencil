@@ -1,27 +1,11 @@
 /**
- * Keyboard input handling for terminal applications.
+ * [WHO]: Keyboard input handling - setKittyProtocolActive, isKittyProtocolActive, Key, matchesKey, parseKey
+ * [FROM]: No external dependencies
+ * [TO]: Consumed by packages/tui/src/index.ts, TUI components
+ * [HERE]: packages/tui/src/keys.ts - keyboard input handling for terminal applications
  *
  * Supports both legacy terminal sequences and Kitty keyboard protocol.
  * See: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
- * Reference: https://github.com/sst/opentui/blob/7da92b4088aebfe27b9f691c04163a48821e49fd/packages/core/src/lib/parse.keypress.ts
- *
- * Symbol keys are also supported, however some ctrl+symbol combos
- * overlap with ASCII codes, e.g. ctrl+[ = ESC.
- * See: https://sw.kovidgoyal.net/kitty/keyboard-protocol/#legacy-ctrl-mapping-of-ascii-keys
- * Those can still be * used for ctrl+shift combos
- *
- * API:
- * - matchesKey(data, keyId) - Check if input matches a key identifier
- * - parseKey(data) - Parse input and return the key identifier
- * - Key - Helper object for creating typed key identifiers
- * - setKittyProtocolActive(active) - Set global Kitty protocol state
- * - isKittyProtocolActive() - Query global Kitty protocol state
- */
-/**
- * [WHO]: setKittyProtocolActive, isKittyProtocolActive, Key, isKeyRelease, isKeyRepeat
- * [FROM]: No external dependencies
- * [TO]: Consumed by packages/tui/src/index.ts
- * [HERE]: packages/tui/src/keys.ts -
  */
 
 

@@ -1,7 +1,8 @@
 /**
- * [UPSTREAM]: Depends on sub-agent-types.ts, core/runtime/sdk.ts
- * [SURFACE]: InProcessSubAgentBackend
- * [LOCUS]: core/sub-agent/sub-agent-backend.ts
+ * [WHO]: InProcessSubAgentBackend class - in-process SubAgent backend
+ * [FROM]: Depends on core/runtime/sdk, ./sub-agent-types
+ * [TO]: Consumed by ./sub-agent-runtime, ./index.ts
+ * [HERE]: core/sub-agent/sub-agent-backend.ts - in-process SubAgent implementation
  */
 
 import { createAgentSession, type CreateAgentSessionOptions } from "../runtime/sdk.js";

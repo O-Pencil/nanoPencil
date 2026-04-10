@@ -1,18 +1,11 @@
 /**
- * OAuth credential management for AI providers.
+ * [WHO]: OAuth credential management - loginAnthropic, refreshAnthropicToken, loginGitHubCopilot, loginGoogleGeminiCli, loginOpenAICodex
+ * [FROM]: Depends on ./anthropic, ./github-copilot, ./google-antigravity, ./google-gemini-cli, ./openai-codex, ../http-proxy
+ * [TO]: Consumed by packages/ai/src/index.ts, AI providers
+ * [HERE]: packages/ai/src/utils/oauth/index.ts - OAuth credential management for AI providers
  *
- * This module handles login, token refresh, and credential storage
- * for OAuth-based providers:
- * - Anthropic (Claude Pro/Max)
- * - GitHub Copilot
- * - Google Cloud Code Assist (Gemini CLI)
- * - Antigravity (Gemini 3, Claude, GPT-OSS via Google Cloud)
- */
-/**
- * [WHO]: anthropicOAuthProvider, loginAnthropic, refreshAnthropicToken, antigravityOAuthProvider, loginAntigravity
- * [FROM]: Depends on ./anthropic.js, ./github-copilot.js, ./google-antigravity.js, ./google-gemini-cli.js, ./openai-codex.js
- * [TO]: Consumed by packages/ai/src/index.ts
- * [HERE]: packages/ai/src/utils/oauth/index.ts -
+ * Handles login, token refresh, and credential storage for:
+ * Anthropic, GitHub Copilot, Google Cloud Code Assist, Antigravity
  */
 
 

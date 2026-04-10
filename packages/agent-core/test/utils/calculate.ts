@@ -1,3 +1,10 @@
+/**
+ * [WHO]: calculate test utility - simple calculator for agent testing
+ * [FROM]: Depends on @sinclair/typebox, ../../src/types
+ * [TO]: Consumed by agent-core tests
+ * [HERE]: packages/agent-core/test/utils/calculate.ts - test utility
+ */
+
 import { type Static, Type } from "@sinclair/typebox";
 import type { AgentTool, AgentToolResult } from "../../src/types.js";
 

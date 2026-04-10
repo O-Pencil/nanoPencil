@@ -22,6 +22,7 @@ const BUNDLED_SOUL_EXTENSION = join(__dirname, "extensions", "defaults", "soul",
 const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "presence", "index.js");
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
+const BUNDLED_SAL_EXTENSION = join(__dirname, "extensions", "defaults", "sal", "index.js");
 const BUNDLED_GRUB_EXTENSION = join(__dirname, "extensions", "defaults", "grub", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
 const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
@@ -148,6 +149,16 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const loopTs = join(__dirname, "extensions", "defaults", "loop", "index.ts");
 		if (existsSync(loopTs)) paths.push(loopTs);
+	}
+
+	// === SAL extension (Structural Anchor Localization, opt-in via --sal) ===
+	// Pluggable: when --sal is not set, the extension is a runtime no-op.
+	// Deleting this directory + this block must leave the system fully functional.
+	if (existsSync(BUNDLED_SAL_EXTENSION)) {
+		paths.push(BUNDLED_SAL_EXTENSION);
+	} else {
+		const salTs = join(__dirname, "extensions", "defaults", "sal", "index.ts");
+		if (existsSync(salTs)) paths.push(salTs);
 	}
 
 	// === MCP extension (MCP tool protocol adapter) ===

@@ -17,39 +17,39 @@ Internationalization (i18n) module for NanoPencil. Provides multi-language suppo
 ## Member List
 
 `index.ts`: i18n core - locale management, translation function `t()`, type exports
-- UPSTREAM: none
-- SURFACE: `i18n`, `t()`, `setLocale()`, `getLocale()`, `AVAILABLE_LOCALES`, `Locale`
-- LOCUS: core/i18n/ - central i18n entry point
+- [FROM]: none
+- [WHO]: `i18n`, `t()`, `setLocale()`, `getLocale()`, `AVAILABLE_LOCALES`, `Locale`
+- [HERE]: core/i18n/ - central i18n entry point
 
 `slash-commands.ts`: English translations for slash command descriptions
-- UPSTREAM: none
-- SURFACE: `slashCommands` object
-- LOCUS: core/i18n/slash-commands.ts
+- [FROM]: none
+- [WHO]: `slashCommands` object
+- [HERE]: core/i18n/slash-commands.ts
 
 `slash-commands.zh.ts`: Chinese translations for slash command descriptions
-- UPSTREAM: none
-- SURFACE: `slashCommands` object
-- LOCUS: core/i18n/slash-commands.zh.ts
+- [FROM]: none
+- [WHO]: `slashCommands` object
+- [HERE]: core/i18n/slash-commands.zh.ts
 
 `messages.ts`: English translations for general UI messages
-- UPSTREAM: none
-- SURFACE: `messages` object
-- LOCUS: core/i18n/messages.ts
+- [FROM]: none
+- [WHO]: `messages` object
+- [HERE]: core/i18n/messages.ts
 
 `messages.zh.ts`: Chinese translations for general UI messages
-- UPSTREAM: none
-- SURFACE: `messages` object
-- LOCUS: core/i18n/messages.zh.ts
+- [FROM]: none
+- [WHO]: `messages` object
+- [HERE]: core/i18n/messages.zh.ts
 
 `themes.ts`: English translations for theme names
-- UPSTREAM: none
-- SURFACE: `themes` object
-- LOCUS: core/i18n/themes.ts
+- [FROM]: none
+- [WHO]: `themes` object
+- [HERE]: core/i18n/themes.ts
 
 `themes.zh.ts`: Chinese translations for theme names
-- UPSTREAM: none
-- SURFACE: `themes` object
-- LOCUS: core/i18n/themes.zh.ts
+- [FROM]: none
+- [WHO]: `themes` object
+- [HERE]: core/i18n/themes.zh.ts
 
 ---
 

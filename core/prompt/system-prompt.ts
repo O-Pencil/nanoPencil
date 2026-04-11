@@ -30,6 +30,17 @@ export interface BuildSystemPromptOptions {
   extensionToolsGuidance?: Record<string, string>;
 }
 
+function buildSoulSection(soulInjection?: string): string {
+  if (!soulInjection?.trim()) return "";
+  return [
+    "## Stable Personality Layer",
+    "Use this section for long-term collaboration style, personality, and relationship cues only.",
+    "Do not repeat short-term presence lines, temporary memory recall blocks, or raw factual preference lists unless the user asks.",
+    "",
+    soulInjection.trim(),
+  ].join("\n");
+}
+
 /** Build system prompt from tools, rules, and context */
 export function buildSystemPrompt(
   options: BuildSystemPromptOptions = {},
@@ -61,20 +72,17 @@ export function buildSystemPrompt(
     "\nFor exact current time or any date-sensitive reasoning, you must use the `time` tool before answering. This includes questions about the current time, current date, today, tomorrow, yesterday, this week, deadlines, elapsed time, or anything that depends on the real system clock. Do not rely only on this prompt timestamp for those answers.";
 
   const appendSection = appendSystemPrompt ? `\n\n${appendSystemPrompt}` : "";
+  const soulSection = buildSoulSection(soulInjection);
 
   const contextFiles = providedContextFiles ?? [];
   const skills = providedSkills ?? [];
 
   if (customPrompt) {
-    let prompt = "";
+    let prompt = customPrompt;
 
-    // Soul injection goes at the top in customPrompt scenario as well
-    if (soulInjection) {
-      prompt += soulInjection;
-      prompt += "\n\n---\n\n";
+    if (soulSection) {
+      prompt += `\n\n${soulSection}`;
     }
-
-    prompt += customPrompt;
 
     if (appendSection) {
       prompt += appendSection;
@@ -180,13 +188,6 @@ export function buildSystemPrompt(
   const guidelines = guidelinesList.map((g) => `- ${g}`).join("\n");
 
   let prompt = "";
-
-  // Soul injection goes at the very top - as AI identity framework, highest priority
-  if (soulInjection) {
-    prompt += soulInjection;
-    prompt += "\n\n---\n\n";
-  }
-
   prompt += `You are the writing assistant in nanopencil. You help users by reading files, running commands, editing and writing text.
 
 Available tools:
@@ -291,6 +292,10 @@ Only read the following docs when user asks about nano-pencil, SDK, extensions, 
 - When asked about: extensions (docs/extensions.md, examples/extensions/), themes (docs/themes.md), skills (docs/skills.md), prompt templates (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings (docs/keybindings.md), SDK integration (docs/sdk.md), custom providers (docs/custom-provider.md), adding models (docs/models.md), packages (docs/packages.md)
 - When handling related topics, first read docs and examples, then implement following cross-references in .md files
 - Must fully read .md files and follow related links (e.g., TUI API details in tui.md)`;
+
+  if (soulSection) {
+    prompt += `\n\n${soulSection}`;
+  }
 
   if (appendSection) {
     prompt += appendSection;

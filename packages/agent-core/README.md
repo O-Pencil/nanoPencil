@@ -1,6 +1,6 @@
 # @pencil-agent/agent-core
 
-> This package is derived from [pi-mono](https://github.com/badlogic/pi-mono) (MIT License). Stateful agent with tool execution and event streaming. Built on `@pencil-agent/ai`.
+> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (MIT License). Stateful agent with tool execution and event streaming. Built on `@pencil-agent/ai`.
 
 ## Installation
 

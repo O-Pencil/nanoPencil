@@ -312,7 +312,7 @@ function formatDreamSummary(params: {
 	].join("\n");
 }
 
-export default function nanomemExtension(pi: ExtensionAPI) {
+export default function nanomemExtension(api: ExtensionAPI) {
 	const project = getProject();
 	const ctxTags = extractTags(process.cwd());
 	const engine = new NanoMemEngine();
@@ -349,7 +349,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		await injectionRefreshInFlight;
 	};
 
-	pi.on("session_start", async (_event, ctx) => {
+	api.on("session_start", async (_event, ctx) => {
 		sessionStartedAt = getSystemTimeSnapshot();
 		const file = ctx.sessionManager.getSessionFile();
 		if (file) sessionId = basename(file, ".jsonl");
@@ -447,12 +447,12 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		}
 	};
 
-	pi.on("turn_end", async (_event, ctx) => {
+	api.on("turn_end", async (_event, ctx) => {
 		// Never block turn lifecycle
 		void maybeRunAutoDream(ctx).catch(() => {});
 	});
 
-	pi.on("before_agent_start", async (event) => {
+	api.on("before_agent_start", async (event) => {
 		if (sessionGoal === undefined && event.prompt?.trim()) sessionGoal = event.prompt.trim().slice(0, 300);
 		const cacheFresh = cachedInjection && Date.now() - lastInjectionAt < 30_000;
 		const recallInjection = await withTimeout(
@@ -462,7 +462,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		if (cacheFresh) {
 			void refreshInjection();
 			const additions = [cachedInjection, recallInjection].filter(Boolean).join("\n\n");
-			return additions ? { systemPrompt: `${event.systemPrompt}\n\n${additions}` } : undefined;
+			return additions ? { appendSystemPrompt: additions } : undefined;
 		}
 
 		const freshInjection = await withTimeout(engine.getMemoryInjection(project, ctxTags), 600);
@@ -470,19 +470,19 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			cachedInjection = freshInjection;
 			lastInjectionAt = Date.now();
 			const additions = [freshInjection, recallInjection].filter(Boolean).join("\n\n");
-			return { systemPrompt: `${event.systemPrompt}\n\n${additions}` };
+			return { appendSystemPrompt: additions };
 		}
 
 		void refreshInjection();
-		return recallInjection ? { systemPrompt: `${event.systemPrompt}\n\n${recallInjection}` } : undefined;
+		return recallInjection ? { appendSystemPrompt: recallInjection } : undefined;
 	});
 
-	pi.on("tool_execution_start", async (event) => {
+	api.on("tool_execution_start", async (event) => {
 		pendingArgs.set(event.toolCallId, event.args);
 		toolsUsed[event.toolName] = (toolsUsed[event.toolName] || 0) + 1;
 	});
 
-	pi.on("tool_execution_end", async (event) => {
+	api.on("tool_execution_end", async (event) => {
 		const args = pendingArgs.get(event.toolCallId) ?? {};
 		pendingArgs.delete(event.toolCallId);
 		const { observation, lesson, file } = extractObservation(event.toolName, args, event.result, event.isError);
@@ -492,7 +492,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		if (event.isError) errors.push(lesson ?? `${event.toolName} failed`);
 	});
 
-	pi.on("agent_end", async (event, ctx) => {
+	api.on("agent_end", async (event, ctx) => {
 		const llmCtx = ctx as LlmCapableContext;
 		if (llmCtx.completeSimple) {
 			engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
@@ -519,7 +519,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		});
 	});
 
-	pi.on("session_shutdown", async () => {
+	api.on("session_shutdown", async () => {
 		// Save episode if there was tool activity OR substantial conversation goal
 		const hasActivity = observations.length > 0 || errors.length > 0;
 		const hasGoal = sessionGoal && sessionGoal.length > 10;
@@ -553,7 +553,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		}
 	});
 
-	pi.registerCommand("dream", {
+	api.registerCommand("dream", {
 		description: "Consolidate NanoMem episodes into durable memories. Usage: /dream [run|stop|status]",
 		handler: async (args, ctx) => {
 			const cmd = (args || "").trim().toLowerCase();
@@ -612,7 +612,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("mem-search", {
+	api.registerCommand("mem-search", {
 		description: "Search NanoMem memories",
 		handler: async (query, ctx) => {
 			const results = await engine.searchEntries(query || project);
@@ -624,7 +624,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("mem-stats", {
+	api.registerCommand("mem-stats", {
 		description: "NanoMem memory statistics",
 		handler: async (_args, ctx) => {
 			const s = await engine.getStats();
@@ -692,12 +692,12 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 			}
 		};
 
-	pi.registerCommand("mem-insights", {
+	api.registerCommand("mem-insights", {
 		description: "Generate NanoMem full insights HTML report (uses LLM when available)",
 		handler: runMemInsights,
 	});
 
-	pi.registerCommand("mem-align", {
+	api.registerCommand("mem-align", {
 		description: "Show which stable memories and current states are shaping the agent",
 		handler: async (_args, ctx) => {
 			const snapshot = await engine.getAlignmentSnapshot();
@@ -721,7 +721,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("mem-review", {
+	api.registerCommand("mem-review", {
 		description: "Review the highest-risk memory conflicts and suggested actions",
 		handler: async (_args, ctx) => {
 			const snapshot = await engine.getAlignmentSnapshot();
@@ -737,7 +737,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("mem-edit", {
+	api.registerCommand("mem-edit", {
 		description: "Edit a memory entry by ID. Usage: /mem-edit <id> <field> <value>",
 		handler: async (args, ctx) => {
 			const parts = (args || "").trim().split(/\s+/);
@@ -756,7 +756,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("mem-resolve", {
+	api.registerCommand("mem-resolve", {
 		description: "Resolve a memory conflict. Usage: /mem-resolve <aId> <bId> [merge|demote|forget|mark-situational]",
 		handler: async (args, ctx) => {
 			const [aId, bId, action] = (args || "").trim().split(/\s+/);
@@ -781,7 +781,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 
 	// ─── Progressive Recall Agent Tools ─────────────────────────
 
-	pi.registerTool({
+	api.registerTool({
 		name: "nanomem_recall",
 		label: "Recall Memory",
 		description:
@@ -818,7 +818,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerTool({
+	api.registerTool({
 		name: "nanomem_search",
 		label: "Search All Memories",
 		description:
@@ -854,7 +854,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerTool({
+	api.registerTool({
 		name: "nanomem_alignment",
 		label: "Inspect Memory Alignment",
 		description:
@@ -899,7 +899,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerTool({
+	api.registerTool({
 		name: "nanomem_review",
 		label: "Review Memory Conflicts",
 		description:
@@ -928,7 +928,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerTool({
+	api.registerTool({
 		name: "nanomem_edit",
 		label: "Edit Memory Entry",
 		description:
@@ -966,7 +966,7 @@ export default function nanomemExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerTool({
+	api.registerTool({
 		name: "nanomem_resolve_conflict",
 		label: "Resolve Memory Conflict",
 		description:

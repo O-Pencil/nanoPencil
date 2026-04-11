@@ -24,8 +24,8 @@ function getRunner(): SubAgentRunner {
 	return runner;
 }
 
-export default async function subagentExtension(pi: ExtensionAPI): Promise<void> {
-	pi.registerMessageRenderer(SUBAGENT_MESSAGE_TYPE, (message, _options, theme) => {
+export default async function subagentExtension(api: ExtensionAPI): Promise<void> {
+	api.registerMessageRenderer(SUBAGENT_MESSAGE_TYPE, (message, _options, theme) => {
 		const text =
 			typeof message.content === "string"
 				? message.content
@@ -45,7 +45,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 
 	const commandNames = ["subagent", "subagent:run", "subagent:stop", "subagent:status", "subagent:report", "subagent:apply"] as const;
 	for (const commandName of commandNames) {
-		pi.registerCommand(commandName, {
+		api.registerCommand(commandName, {
 			description: getCommandDescription(commandName),
 			handler: async (args: string, ctx) => {
 				const parsed = parseSubAgentCommand(commandName, args);
@@ -59,7 +59,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 
 				switch (parsed.command) {
 					case "help": {
-						pi.sendMessage({ customType: SUBAGENT_MESSAGE_TYPE, content: buildSubAgentHelp(), display: true });
+						api.sendMessage({ customType: SUBAGENT_MESSAGE_TYPE, content: buildSubAgentHelp(), display: true });
 						break;
 					}
 
@@ -71,7 +71,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 
 						const model = (ctx as any).model;
 
-						pi.sendMessage({
+						api.sendMessage({
 							customType: SUBAGENT_MESSAGE_TYPE,
 							content: `Starting SubAgent run (${parsed.options?.write ? "isolated write workspace" : "read-only"})...\n\nTask: ${parsed.task}${model ? `\nModel: ${model.id ?? model.name ?? "unknown"}` : ""}`,
 							display: true,
@@ -108,7 +108,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 								lines.push("Confirm write-back with /subagent:apply");
 							}
 
-							pi.sendMessage({
+							api.sendMessage({
 								customType: SUBAGENT_MESSAGE_TYPE,
 								content: lines.join("\n"),
 								display: true,
@@ -123,7 +123,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 
 					case "stop": {
 						await subRunner.stop();
-						pi.sendMessage({
+						api.sendMessage({
 							customType: SUBAGENT_MESSAGE_TYPE,
 							content: "Stopping SubAgent run...",
 							display: true,
@@ -132,7 +132,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 					}
 
 					case "status": {
-						pi.sendMessage({
+						api.sendMessage({
 							customType: SUBAGENT_MESSAGE_TYPE,
 							content: subRunner.getStatusText(),
 							display: true,
@@ -142,7 +142,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 
 					case "report": {
 						if (!lastReport) {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: SUBAGENT_MESSAGE_TYPE,
 								content: "No SubAgent report available.",
 								display: true,
@@ -164,7 +164,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 							lastReport.summary || "(no summary)",
 							...(lastReport.patchPreview ? ["", "Patch Preview:", lastReport.patchPreview] : []),
 						];
-						pi.sendMessage({
+						api.sendMessage({
 							customType: SUBAGENT_MESSAGE_TYPE,
 							content: lines.join("\n"),
 							display: true,
@@ -182,7 +182,7 @@ export default async function subagentExtension(pi: ExtensionAPI): Promise<void>
 							...(report.changedFiles.length > 0 ? report.changedFiles.map((file) => `- ${file}`) : ["- (no changed files)"]),
 							...(report.reportPath ? ["", `Report: ${report.reportPath}`] : []),
 						];
-						pi.sendMessage({
+						api.sendMessage({
 							customType: SUBAGENT_MESSAGE_TYPE,
 							content: lines.join("\n"),
 							display: true,

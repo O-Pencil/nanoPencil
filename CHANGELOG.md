@@ -777,7 +777,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Interview 扩展优化**
   - 降低 Interview 触发频率，只在模糊需求或短文本时触发
-  - 添加 `PI_JUST_SWITCHED_PERSONA` 环境变量，人格切换后跳过 interview
+  - 添加 `NANOPENCIL_JUST_SWITCHED_PERSONA` 环境变量，人格切换后跳过 interview
   - 添加 Interview 过程可视化（状态栏和通知）
 - **人格包一键切换**: 支持在同一运行环境下按角色隔离 Pencil/Soul/NanoMEM/Skills/MCP 并通过 reload 即时生效
 

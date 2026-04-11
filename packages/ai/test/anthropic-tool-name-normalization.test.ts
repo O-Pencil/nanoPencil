@@ -68,8 +68,8 @@ describe.skipIf(!oauthToken)("Anthropic OAuth tool name normalization", () => {
 		expect(toolCallName).toBe("todowrite");
 	});
 
-	it("should handle pi's built-in tools (read, write, edit, bash)", async () => {
-		// Pi's tools use lowercase names, CC uses PascalCase
+	it("should handle nanoPencil's built-in tools (read, write, edit, bash)", async () => {
+		// NanoPencil's tools use lowercase names, CC uses PascalCase
 		const readTool: Tool = {
 			name: "read",
 			description: "Read a file",
@@ -110,7 +110,7 @@ describe.skipIf(!oauthToken)("Anthropic OAuth tool name normalization", () => {
 	});
 
 	it("should NOT map find to Glob - find is not a CC tool name", async () => {
-		// Pi has a "find" tool, CC has "Glob" - these are DIFFERENT tools
+		// NanoPencil has a "find" tool, CC has "Glob" - these are DIFFERENT tools
 		// The old code incorrectly mapped find -> Glob, which broke the round-trip
 		// because there's no tool named "glob" in context.tools
 		const findTool: Tool = {

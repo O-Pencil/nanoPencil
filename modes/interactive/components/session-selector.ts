@@ -528,7 +528,7 @@ class SessionList implements Component, Focusable {
 				void this.onDeleteSession?.(pathToDelete);
 				return;
 			}
-			// Allow both Escape and Ctrl+C to cancel (consistent with pi UX)
+			// Allow both Escape and Ctrl+C to cancel (consistent with nanoPencil UX)
 			if (kb.matches(keyData, "selectCancel") || matchesKey(keyData, "ctrl+c")) {
 				this.setConfirmingDeletePath(null);
 				return;

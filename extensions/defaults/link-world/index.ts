@@ -49,9 +49,9 @@ function isAgentReachInstalled(): boolean {
 	}
 }
 
-export default function linkWorldExtension(pi: ExtensionAPI) {
+export default function linkWorldExtension(api: ExtensionAPI) {
 	/** TUI shows brief prompt only, not full installation doc content */
-	pi.registerMessageRenderer(LINK_WORLD_CUSTOM_TYPE, (message, _options, theme) => {
+	api.registerMessageRenderer(LINK_WORLD_CUSTOM_TYPE, (message, _options, theme) => {
 		const box = new Box(1, 1, (t) => theme.bg("customMessageBg", t));
 		const label = theme.fg("customMessageLabel", `\x1b[1m[link-world]\x1b[22m `);
 		const text = theme.fg("customMessageText", "Starting Link-world execution...");
@@ -64,7 +64,7 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 	});
 
 	// Register resources_discover event: when agent-reach is installed, provide internet-search skill
-	pi.on("resources_discover", async (_event: ResourcesDiscoverEvent): Promise<ResourcesDiscoverResult> => {
+	api.on("resources_discover", async (_event: ResourcesDiscoverEvent): Promise<ResourcesDiscoverResult> => {
 		// Always expose the skill so the model knows how to install or use link-world.
 		// The skill itself checks whether agent-reach is already available.
 		if (!existsSync(SKILL_PATH)) {
@@ -77,11 +77,11 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 		};
 	});
 
-	pi.registerCommand("link-world", {
+	api.registerCommand("link-world", {
 		description: "Install link-world to provide internet access for AI (Twitter, YouTube, Bilibili, Xiaohongshu, Douyin, etc.)",
 		handler: async (_args: string, _ctx: ExtensionCommandContext) => {
 			if (isAgentReachInstalled()) {
-				pi.sendMessage(
+				api.sendMessage(
 					{
 						customType: LINK_WORLD_CUSTOM_TYPE,
 						content:
@@ -97,7 +97,7 @@ export default function linkWorldExtension(pi: ExtensionAPI) {
 			const content = doc
 				? `Please follow the installation guide below strictly to help me install link-world. Do not modify files in the workspace, all installation follows the directory rules in the doc.\n\n---\n\n${doc}`
 				: "Please help me install link-world according to official docs: https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md";
-			pi.sendMessage(
+			api.sendMessage(
 				{
 					customType: LINK_WORLD_CUSTOM_TYPE,
 					content,

@@ -266,9 +266,9 @@ const SECURITY_MODE = process.env.SECURITY_MODE as string || "strict";
 
 const logger = new AuditLogger();
 
-export default function securityAuditExtension(pi: ExtensionAPI) {
+export default function securityAuditExtension(api: ExtensionAPI) {
 	// /security - Show security dashboard
-	pi.registerCommand("security", {
+	api.registerCommand("security", {
 		description: "Show security audit dashboard and logs",
 		handler: async (_args: string, _ctx: ExtensionCommandContext) => {
 			const stats = logger.getStats();
@@ -297,7 +297,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 				content += `| ${time} | ${log.type} | ${log.level} | \`${log.target.slice(0, 30)}...\` |\n`;
 			}
 
-			pi.sendMessage(
+			api.sendMessage(
 				{
 					customType: SECURITY_MESSAGE_TYPE,
 					content,
@@ -309,7 +309,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 	});
 
 	// /security-logs - Show detailed logs
-	pi.registerCommand("security-logs", {
+	api.registerCommand("security-logs", {
 		description: "Show detailed security audit logs",
 		handler: async (args: string, _ctx: ExtensionCommandContext) => {
 			const limit = parseInt(args) || 50;
@@ -328,7 +328,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 				content += "\n";
 			}
 
-			pi.sendMessage(
+			api.sendMessage(
 				{
 					customType: SECURITY_MESSAGE_TYPE,
 					content,
@@ -340,7 +340,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 	});
 
 	// /security-stats - Show statistics
-	pi.registerCommand("security-stats", {
+	api.registerCommand("security-stats", {
 		description: "Show security audit statistics",
 		handler: async (_args: string, _ctx: ExtensionCommandContext) => {
 			const stats = logger.getStats();
@@ -367,7 +367,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 				}
 			}
 
-			pi.sendMessage(
+			api.sendMessage(
 				{
 					customType: SECURITY_MESSAGE_TYPE,
 					content,
@@ -379,11 +379,11 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 	});
 
 	// /security-clear - Clear logs
-	pi.registerCommand("security-clear", {
+	api.registerCommand("security-clear", {
 		description: "Clear security audit logs",
 		handler: async (_args: string, _ctx: ExtensionCommandContext) => {
 			logger.clear();
-			pi.sendMessage(
+			api.sendMessage(
 				{
 					customType: SECURITY_MESSAGE_TYPE,
 					content: "✅ Security audit logs cleared.",
@@ -395,7 +395,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 	});
 
 	// Tool execution start - log all operations
-	pi.on("tool_execution_start", async (event: ToolExecutionStartEvent) => {
+	api.on("tool_execution_start", async (event: ToolExecutionStartEvent) => {
 		const toolName = event.toolName;
 		const args = event.args || {};
 
@@ -429,7 +429,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 				if (result.level === "dangerous") {
 					if (SECURITY_MODE === "strict") {
 						// Strict mode: show blocking message
-						pi.sendMessage(
+						api.sendMessage(
 							{
 								customType: SECURITY_MESSAGE_TYPE,
 								content: `🔴 SECURITY BLOCKED: ${result.reason}\n\nCommand: \`${command}\`\n\n❌ This command was BLOCKED for security reasons.\n\nDo NOT execute this command. Find an alternative safer approach or ask the user for confirmation before proceeding.`,
@@ -439,7 +439,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 						);
 					} else {
 						// Audit mode: just warn
-						pi.sendMessage(
+						api.sendMessage(
 							{
 								customType: SECURITY_MESSAGE_TYPE,
 								content: `⚠️  Security Warning: ${result.reason}\n\nCommand: \`${command}\`\n\nThis will be logged to security audit.`,
@@ -477,7 +477,7 @@ export default function securityAuditExtension(pi: ExtensionAPI) {
 
 				// Block access to sensitive files
 				if (result.level === "dangerous") {
-					pi.sendMessage(
+					api.sendMessage(
 						{
 							customType: SECURITY_MESSAGE_TYPE,
 							content: `🔴 Security Blocked: ${result.reason}\n\nPath: \`${filePath}\``,

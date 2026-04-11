@@ -1,19 +1,22 @@
 /**
  * [WHO]: Extension interface, AI-driven personalized greetings and idle cues
- * [FROM]: Depends on @pencil-agent/tui, @pencil-agent/mem-core, core/extensions/types.js, core/i18n
+ * [FROM]: Depends on @pencil-agent/tui, core/extensions/types.js, core/i18n, node:path, node:url, node:fs
  * [TO]: Loaded by core/extensions/loader.ts as extension entry point
  * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
 import type { ExtensionAPI, ExtensionContext, SessionReadyEvent, SessionStartEvent } from "../../../core/extensions/types.js";
-import { t, getLocale } from "../../../core/i18n/index.js";
-import { join } from "node:path";
+import { getLocale, tValue } from "../../../core/i18n/index.js";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { existsSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const execFileAsync = promisify(execFile);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PRESENCE_MESSAGE_TYPE = "presence";
 const OPENING_DELAY_MS = 1200;
@@ -26,7 +29,7 @@ const GIT_TIMEOUT_MS = 200;
 // Fallback messages for when AI generation fails or memory is empty
 function getFallbackOpeningLines(locale?: "en" | "zh"): string[] {
 	const useLocale = locale || getLocale();
-	const lines = t("msg.presence.opening");
+	const lines = tValue<string[]>("msg.presence.opening");
 	if (Array.isArray(lines)) return lines;
 	// More human-like fallback messages
 	if (useLocale === "zh") {
@@ -49,7 +52,7 @@ function getFallbackOpeningLines(locale?: "en" | "zh"): string[] {
 
 function getFallbackIdleLines(locale?: "en" | "zh"): string[] {
 	const useLocale = locale || getLocale();
-	const lines = t("msg.presence.idle");
+	const lines = tValue<string[]>("msg.presence.idle");
 	if (Array.isArray(lines)) return lines;
 	if (useLocale === "zh") {
 		return [
@@ -77,9 +80,14 @@ type PresenceState = {
 	openingTimer?: ReturnType<typeof setTimeout>;
 	idleTimer?: ReturnType<typeof setInterval>;
 	unsubscribeInput?: () => void;
-	memEngine?: import("@pencil-agent/mem-core").NanoMemEngine;
-	soulManager?: any; // import("@pencil-agent/soul-core").SoulManager (dynamic, package may not be type-resolved)
-	soulInitTried?: boolean;
+	memEngine?: {
+		getAllEntries(): Promise<{
+			knowledge: Array<{ type?: string; tags: string[]; name?: string; summary?: string; detail?: string; content?: string }>;
+			lessons: Array<{ type?: string; tags: string[]; name?: string; summary?: string; detail?: string; content?: string; importance?: number }>;
+		}>;
+		getAllEpisodes(): Promise<Array<{ date?: string; consolidated?: boolean; endedAt?: string; startedAt?: string; summary?: string; userGoal?: string }>>;
+		searchEntries(query: string): Promise<Array<{ type?: string; tags: string[] }>>;
+	};
 	recentPresenceLines: string[]; // Last few presence lines (max 3) for per-turn agent injection
 	lastPresenceAt?: number; // Timestamp of last sendPresence (debounce)
 	idleGenerating?: boolean; // In-flight lock for async idle generation
@@ -96,24 +104,53 @@ function createState(): PresenceState {
 	};
 }
 
-async function initSoulManager(state: PresenceState): Promise<void> {
-	if (state.soulManager || state.soulInitTried) return;
-	state.soulInitTried = true;
-	try {
-		const { SoulManager, getSoulConfig } = await import("@pencil-agent/soul-core");
-		const manager = new SoulManager({ config: getSoulConfig() });
-		await manager.initialize();
-		state.soulManager = manager;
-	} catch {
-		state.soulManager = undefined;
-	}
+function getBundledPackageCandidates(packageName: "mem-core" | "soul-core"): string[] {
+	return [
+		join(__dirname, "..", "..", "..", "packages", packageName),
+		join(process.cwd(), "dist", "packages", packageName),
+		join(process.cwd(), "packages", packageName, "dist"),
+	];
 }
 
-function collectSoulHints(state: PresenceState): { traits: string[]; tone?: string } {
+function resolveBundledPackageEntry(packageName: "mem-core" | "soul-core"): string | undefined {
+	for (const dir of getBundledPackageCandidates(packageName)) {
+		const entry = join(dir, "index.js");
+		if (existsSync(entry)) return entry;
+	}
+	return undefined;
+}
+
+async function importRuntimeModule<T>(
+	moduleNames: string[],
+	bundledPackageName?: "mem-core" | "soul-core",
+): Promise<T | undefined> {
+	if (bundledPackageName) {
+		const bundledEntry = resolveBundledPackageEntry(bundledPackageName);
+		if (bundledEntry) {
+			try {
+				return await import(pathToFileURL(bundledEntry).href) as T;
+			} catch {
+				// Fall through to package-name resolution.
+			}
+		}
+	}
+
+	for (const moduleName of moduleNames) {
+		try {
+			return await import(moduleName) as T;
+		} catch {
+			// Try the next runtime candidate.
+		}
+	}
+
+	return undefined;
+}
+
+function collectSoulHints(soulManager: unknown): { traits: string[]; tone?: string } {
 	const out: { traits: string[]; tone?: string } = { traits: [] };
-	if (!state.soulManager) return out;
+	if (!soulManager || typeof soulManager !== "object") return out;
 	try {
-		const profile = state.soulManager.getProfile();
+		const profile = (soulManager as { getProfile?: () => unknown }).getProfile?.();
 		const personality = (profile as any)?.personality;
 		if (personality && typeof personality === "object") {
 			const top = Object.entries(personality)
@@ -157,8 +194,15 @@ function getMemoryDir(): string {
 async function initMemEngine(state: PresenceState): Promise<void> {
 	if (state.memEngine) return;
 	try {
-		// Dynamic import for bundled package compatibility
-		const { NanoMemEngine, getConfig } = await import("@pencil-agent/mem-core");
+		const memModule = await importRuntimeModule<{
+			NanoMemEngine: new (config: unknown) => NonNullable<PresenceState["memEngine"]>;
+			getConfig: (options: { memoryDir: string; locale: "en" | "zh" }) => unknown;
+		}>(["@pencil-agent/mem-core"], "mem-core");
+		if (!memModule?.NanoMemEngine || !memModule.getConfig) {
+			state.memEngine = undefined;
+			return;
+		}
+		const { NanoMemEngine, getConfig } = memModule;
 		const memoryDir = getMemoryDir();
 		const config = getConfig({ memoryDir, locale: getLocale() === "zh" ? "zh" : "en" });
 		state.memEngine = new NanoMemEngine(config);
@@ -300,6 +344,7 @@ async function collectProjectSnapshot(): Promise<ProjectSnapshot> {
 async function buildGreetingPrompt(
 	state: PresenceState,
 	detectedLocale: "en" | "zh",
+	soulHints: { traits: string[]; tone?: string },
 	kind: "opening" | "idle" = "opening",
 	lastUserMessage?: string,
 ): Promise<string | undefined> {
@@ -319,7 +364,6 @@ async function buildGreetingPrompt(
 
 		const highlights = await collectMemoryHighlights(state);
 		const snapshot = await collectProjectSnapshot();
-		const soulHints = collectSoulHints(state);
 		const project = snapshot.name;
 		const now = new Date();
 		const timeOfDay = now.getHours() < 12 ? "morning" : now.getHours() < 18 ? "afternoon" : "evening";
@@ -460,7 +504,7 @@ function getLastUserMessage(ctx: ExtensionContext): string | undefined {
 }
 
 async function generatePresenceLine(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	ctx: ExtensionContext,
 	state: PresenceState,
 	kind: "opening" | "idle",
@@ -474,7 +518,14 @@ async function generatePresenceLine(
 		);
 
 	const lastUser = kind === "idle" ? getLastUserMessage(ctx) : undefined;
-	const prompt = await buildGreetingPrompt(state, locale, kind, lastUser);
+	const soulHints = collectSoulHints(ctx.getSoulManager());
+	const prompt = await buildGreetingPrompt(
+		state,
+		locale,
+		soulHints,
+		kind,
+		lastUser,
+	);
 	if (!prompt) return fallback();
 
 	const systemPrompt = (() => {
@@ -540,12 +591,12 @@ function pickLine(lines: readonly string[], seed: number): string {
 	return lines[index] ?? lines[0]!;
 }
 
-function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): void {
+function sendPresence(api: ExtensionAPI, state: PresenceState, line: string): void {
 	const now = Date.now();
 	if (state.lastPresenceAt && now - state.lastPresenceAt < PRESENCE_DEBOUNCE_MS) {
 		return;
 	}
-	pi.sendMessage({
+	api.sendMessage({
 		customType: PRESENCE_MESSAGE_TYPE,
 		content: line,
 		display: true,
@@ -559,7 +610,7 @@ function sendPresence(pi: ExtensionAPI, state: PresenceState, line: string): voi
 }
 
 async function maybeSendOpening(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	ctx: ExtensionContext,
 	state: PresenceState,
 ): Promise<boolean> {
@@ -568,23 +619,22 @@ async function maybeSendOpening(
 
 	// Initialize memory + soul engines if not already done
 	await initMemEngine(state);
-	await initSoulManager(state);
 
 	// Generate AI-powered greeting
-	const greeting = await generatePresenceLine(pi, ctx, state, "opening");
-	sendPresence(pi, state, greeting);
+	const greeting = await generatePresenceLine(api, ctx, state, "opening");
+	sendPresence(api, state, greeting);
 	state.openingSent = true;
 	return true;
 }
 
 function scheduleOpening(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	ctx: ExtensionContext,
 	state: PresenceState,
 	delayMs: number,
 ): void {
 	state.openingTimer = setTimeout(async () => {
-		const sent = await maybeSendOpening(pi, ctx, state);
+		const sent = await maybeSendOpening(api, ctx, state);
 		if (sent) {
 			state.openingTimer = undefined;
 			return;
@@ -593,11 +643,11 @@ function scheduleOpening(
 			state.openingTimer = undefined;
 			return;
 		}
-		scheduleOpening(pi, ctx, state, 500);
+		scheduleOpening(api, ctx, state, 500);
 	}, delayMs);
 }
 
-function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): void {
+function maybeSendIdleReminder(api: ExtensionAPI, ctx: ExtensionContext, state: PresenceState): void {
 	if (state.idleReminderSent) return;
 	if (state.idleGenerating) return;
 	if (!canSendPresence(ctx)) return;
@@ -606,10 +656,9 @@ function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: P
 	void (async () => {
 		try {
 			await initMemEngine(state);
-			await initSoulManager(state);
-			const line = await generatePresenceLine(pi, ctx, state, "idle");
+			const line = await generatePresenceLine(api, ctx, state, "idle");
 			if (canSendPresence(ctx)) {
-				sendPresence(pi, state, line);
+				sendPresence(api, state, line);
 				state.idleReminderSent = true;
 			}
 		} finally {
@@ -619,7 +668,7 @@ function maybeSendIdleReminder(pi: ExtensionAPI, ctx: ExtensionContext, state: P
 }
 
 function startPresenceLoop(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	_event: SessionStartEvent,
 	ctx: ExtensionContext,
 	state: PresenceState,
@@ -644,12 +693,12 @@ function startPresenceLoop(
 	});
 
 	state.idleTimer = setInterval(() => {
-		maybeSendIdleReminder(pi, ctx, state);
+		maybeSendIdleReminder(api, ctx, state);
 	}, IDLE_POLL_MS);
 }
 
 function handleSessionReady(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	_event: SessionReadyEvent,
 	ctx: ExtensionContext,
 	state: PresenceState,
@@ -660,13 +709,13 @@ function handleSessionReady(
 	const presenceEnabled = settings?.presence?.enabled ?? true;
 	if (!presenceEnabled) return;
 	state.openingStartedAt = Date.now();
-	scheduleOpening(pi, ctx, state, OPENING_DELAY_MS);
+	scheduleOpening(api, ctx, state, OPENING_DELAY_MS);
 }
 
-export default async function presenceExtension(pi: ExtensionAPI) {
+export default async function presenceExtension(api: ExtensionAPI) {
 	const state = createState();
 
-	pi.registerMessageRenderer(PRESENCE_MESSAGE_TYPE, (message, _options, theme) => {
+	api.registerMessageRenderer(PRESENCE_MESSAGE_TYPE, (message, _options, theme) => {
 		const text =
 			typeof message.content === "string"
 				? message.content
@@ -684,41 +733,48 @@ export default async function presenceExtension(pi: ExtensionAPI) {
 		return container;
 	});
 
-	pi.on("session_start", (event, ctx) => {
-		startPresenceLoop(pi, event, ctx, state);
+	api.on("session_start", (event, ctx) => {
+		startPresenceLoop(api, event, ctx, state);
 	});
 
-	pi.on("session_ready", (event, ctx) => {
-		handleSessionReady(pi, event, ctx, state);
+	api.on("session_ready", (event, ctx) => {
+		handleSessionReady(api, event, ctx, state);
 	});
 
 	// Inject the latest presence line into the agent's system prompt every turn,
 	// so the main conversation always perceives what presence said to the user.
-	pi.on("before_agent_start", (event) => {
+	api.on("before_agent_start", (event) => {
 		const lines = state.recentPresenceLines;
 		if (!lines.length) return undefined;
 		const list = lines.map((l) => `- "${l}"`).join("\n");
 		const injection = `\n\n## Recent Presence Lines\nYou (via the presence extension) recently showed the user these lines, in order:\n${list}\nAcknowledge them naturally if relevant; do not repeat them verbatim.`;
-		return { systemPrompt: `${event.systemPrompt}${injection}` };
+		return { appendSystemPrompt: injection };
 	});
 
-	pi.on("input", () => {
+	api.on("input", () => {
 		touch(state);
 	});
 
-	pi.on("agent_start", () => {
+	api.on("agent_start", () => {
 		touch(state);
 	});
 
-	pi.on("agent_end", () => {
+	api.on("agent_end", () => {
 		touch(state);
 	});
 
-	pi.on("message_end", () => {
+	api.on("message_end", () => {
 		touch(state);
 	});
 
-	pi.on("session_shutdown", () => {
+	api.on("session_shutdown", () => {
 		clearTimers(state);
 	});
 }
+
+export const __testUtils = {
+	getFallbackOpeningLines,
+	getFallbackIdleLines,
+	resolveBundledPackageEntry,
+	importRuntimeModule,
+};

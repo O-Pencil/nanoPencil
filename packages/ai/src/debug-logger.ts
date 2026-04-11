@@ -43,7 +43,6 @@ class DebugLogger {
 	private detectEnabled(): boolean {
 		return (
 			process.env.NANOPENCIL_DEBUG === "1" ||
-			process.env.PI_DEBUG === "1" ||
 			process.env.DEBUG?.includes("nanopencil") ||
 			false
 		);
@@ -53,7 +52,7 @@ class DebugLogger {
 	 * Detect log level from environment
 	 */
 	private detectLevel(): DebugLogLevel {
-		const level = process.env.NANOPENCIL_DEBUG_LEVEL ?? process.env.PI_DEBUG_LEVEL;
+		const level = process.env.NANOPENCIL_DEBUG_LEVEL;
 		if (level && level in LOG_LEVELS) {
 			return level as DebugLogLevel;
 		}

@@ -145,15 +145,15 @@ async function probeFigmaRemoteEndpoint(
 	}
 }
 
-export default async function mcpExtension(pi: ExtensionAPI) {
-	pi.registerCommand("figma", {
+export default async function mcpExtension(api: ExtensionAPI) {
+	api.registerCommand("figma", {
 		description: "Connect NanoPencil to Figma for generative design",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const [rawAction, ...rest] = args.trim().split(/\s+/).filter(Boolean);
 			const action = (rawAction || "help").toLowerCase();
 			if (action === "help") {
 				const importable = findImportableFigmaOAuthSession();
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content:
 						`Figma setup:\n1. Run \`/figma auth\`. NanoPencil will try a standalone browser OAuth flow first.${importable ? ` If Figma refuses first-time client registration, it can fall back to the existing ${importable.source} session on this machine.` : ""}\n2. Run \`/figma remote\` to enable the built-in remote MCP preset and reload the session.\n3. If you prefer the local desktop route, open the Figma desktop app, enable its MCP server in Dev Mode, and run \`/figma setup\`.\n4. Then ask me to generate or edit a design in Figma.\n\nAdvanced: you can also set \`NANOPENCIL_FIGMA_CLIENT_ID\` and \`NANOPENCIL_FIGMA_CLIENT_SECRET\` before running NanoPencil.\n\nUse \`/figma status\` to inspect the current connection.`,
@@ -168,7 +168,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 					try {
 						await getFigmaAuthStorage().login("figma", {
 							onAuth: (info) => {
-								pi.sendMessage({
+								api.sendMessage({
 									customType: "text",
 									content: `${info.instructions ?? "Figma authentication requires additional setup."}\n\n${info.url}`,
 									display: true,
@@ -176,7 +176,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 							},
 							onPrompt: async (prompt) => (await ctx.ui.input("Figma Auth", prompt.message, { initialValue: prompt.placeholder ?? "" })) ?? "",
 							onProgress: (message) => {
-								pi.sendMessage({
+								api.sendMessage({
 									customType: "text",
 									content: message,
 									display: true,
@@ -199,7 +199,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 					}
 					if (remoteProbe.reachable && remoteProbe.authenticated) {
 						setMCPServerEnabled("figma-remote", true);
-						pi.sendMessage({
+						api.sendMessage({
 							customType: "text",
 							content:
 								`The remote Figma MCP endpoint is reachable (${remoteProbe.detail ?? "ok"}). Enabled the built-in \`figma-remote\` preset and reloading now so NanoPencil can pick up the Figma tools.`,
@@ -213,7 +213,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 				const probe = await probeFigmaDesktopEndpoint();
 				if (!probe.reachable) {
 					const importHint = findImportableFigmaOAuthSession();
-					pi.sendMessage({
+					api.sendMessage({
 						customType: "text",
 						content:
 							`I could not reach the local Figma Desktop MCP endpoint at ${FIGMA_DESKTOP_URL}.\n\nNext steps:\n1. For the remote path, run \`/figma auth\`${importHint ? ` to try NanoPencil OAuth first and then fall back to the existing ${importHint.source} session if needed` : ""}.\n2. Then run \`/figma remote\`.\n3. Or open the Figma desktop app, turn on the Figma MCP server in Dev Mode, and run \`/figma setup\` again.\n\nProbe detail: ${probe.detail ?? "connection failed"}`,
@@ -223,7 +223,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 				}
 
 				setMCPServerEnabled("figma-desktop", true);
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content:
 						`The local Figma MCP endpoint is reachable (${probe.detail ?? "ok"}). Enabled the built-in \`figma-desktop\` MCP preset and reloading now so NanoPencil can pick up the Figma tools.`,
@@ -237,7 +237,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 				try {
 					await getFigmaAuthStorage().login("figma", {
 						onAuth: (info) => {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: "text",
 								content: `${info.instructions ?? "Figma authentication needs another official client session."}\n\n${info.url}`,
 								display: true,
@@ -245,21 +245,21 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 						},
 						onPrompt: async (prompt) => (await ctx.ui.input("Figma Auth", prompt.message, { initialValue: prompt.placeholder ?? "" })) ?? "",
 						onProgress: (message) => {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: "text",
 								content: message,
 								display: true,
 							});
 						},
 					});
-					pi.sendMessage({
+					api.sendMessage({
 						customType: "text",
 						content:
 							"Saved Figma OAuth credentials in auth storage. Run `/figma remote` to enable the remote MCP preset and connect NanoPencil to Figma.",
 						display: true,
 					});
 				} catch (error) {
-					pi.sendMessage({
+					api.sendMessage({
 						customType: "text",
 						content: error instanceof Error ? error.message : String(error),
 						display: true,
@@ -270,7 +270,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 
 			if (action === "logout") {
 				getFigmaAuthStorage().logout("figma");
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content:
 						"Removed the saved Figma OAuth credentials from auth storage. Run `/reload` if you want the current session to drop remote Figma access immediately.",
@@ -281,7 +281,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 
 			if (action === "enable") {
 				setMCPServerEnabled("figma-desktop", true);
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content:
 						"Enabled the built-in `figma-desktop` MCP preset. Reloading now so NanoPencil can pick up the Figma tools.",
@@ -293,7 +293,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 
 			if (action === "disable") {
 				setMCPServerEnabled("figma-desktop", false);
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content:
 						"Disabled the built-in `figma-desktop` MCP preset. Run `/reload` if you want the current session to drop the Figma tools immediately.",
@@ -305,7 +305,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 			if (action === "remote") {
 				const token = await getFigmaAccessToken();
 				if (!token) {
-					pi.sendMessage({
+					api.sendMessage({
 						customType: "text",
 						content:
 							"No Figma OAuth session is configured yet. Run `/figma auth` first, then run `/figma remote` again.",
@@ -322,7 +322,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 					}
 				}
 				if (!probe.reachable || !probe.authenticated) {
-					pi.sendMessage({
+					api.sendMessage({
 						customType: "text",
 						content:
 							`I could reach the remote Figma MCP endpoint, but authentication is not working yet.\n\nDetail: ${probe.detail ?? "authentication failed"}\n\nRun \`/figma auth\` again and retry. If standalone registration is blocked by Figma, NanoPencil will fall back to any existing official local session it can import.`,
@@ -332,7 +332,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 				}
 
 				setMCPServerEnabled("figma-remote", true);
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content:
 						"Enabled the built-in `figma-remote` MCP preset. Reloading now so NanoPencil can pick up the authenticated remote Figma tools.",
@@ -356,7 +356,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 						remoteProbe = await probeFigmaRemoteEndpoint(remoteToken);
 					}
 				}
-				const figmaTools = pi
+				const figmaTools = api
 					.getAllTools()
 					.filter(
 						(tool) =>
@@ -386,7 +386,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 					lines.push("If either route is already enabled, run `/reload` and try again.");
 				}
 
-				pi.sendMessage({
+				api.sendMessage({
 					customType: "text",
 					content: lines.join("\n"),
 					display: true,
@@ -394,7 +394,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			pi.sendMessage({
+			api.sendMessage({
 				customType: "text",
 				content: "Usage: /figma [help|setup|connect|login|auth|logout|enable|disable|status|remote]",
 				display: true,
@@ -402,7 +402,7 @@ export default async function mcpExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.on("resources_discover", async (_event: ResourcesDiscoverEvent): Promise<ResourcesDiscoverResult> => {
+	api.on("resources_discover", async (_event: ResourcesDiscoverEvent): Promise<ResourcesDiscoverResult> => {
 		const skillPaths: string[] = [];
 		if (existsSync(MCP_SKILL_PATH)) {
 			skillPaths.push(MCP_SKILL_PATH);

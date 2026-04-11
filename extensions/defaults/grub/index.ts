@@ -52,14 +52,14 @@ function notify(bus: EventBus, message: string, type: "info" | "warning" | "erro
 }
 
 function publishGrubUpdate(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	bus: EventBus,
 	message: string,
 	type: "info" | "warning" | "error" = "info",
 ): void {
-	pi.appendEntry(GRUB_CUSTOM_TYPE, { message, timestamp: Date.now() });
+	api.appendEntry(GRUB_CUSTOM_TYPE, { message, timestamp: Date.now() });
 	notify(bus, message, type);
-	pi.sendMessage({
+	api.sendMessage({
 		customType: GRUB_CUSTOM_TYPE,
 		content: message,
 		display: true,
@@ -106,10 +106,6 @@ function formatSnapshot(snapshot: GrubTaskSnapshot): string {
 	if (snapshot.lastError) lines.push(`Last error: ${snapshot.lastError}`);
 
 	return lines.join("\n");
-}
-
-function appendSystemPrompt(systemPrompt: string): string {
-	return `${systemPrompt}\n\n${GRUB_SYSTEM_PROMPT}`;
 }
 
 function extractAssistantText(message: AgentMessage | undefined): string {
@@ -191,21 +187,21 @@ function describeTerminalSnapshot(snapshot: GrubTaskSnapshot | undefined): strin
 	return formatSnapshot(snapshot);
 }
 
-function dispatchNextIteration(pi: ExtensionAPI, bus: EventBus, controller: GrubController): void {
+function dispatchNextIteration(api: ExtensionAPI, bus: EventBus, controller: GrubController): void {
 	const task = controller.getActiveTask();
 	if (!task) return;
 
 	const prompt = controller.buildPrompt();
 	controller.markDispatched();
-	publishGrubUpdate(pi, bus, `[Grub] Starting iteration ${task.currentIteration} for ${task.id}.`, "info");
-	pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+	publishGrubUpdate(api, bus, `[Grub] Starting iteration ${task.currentIteration} for ${task.id}.`, "info");
+	api.sendUserMessage(prompt, { deliverAs: "followUp" });
 }
 
-export default async function grubExtension(pi: ExtensionAPI) {
-	const bus = pi.events;
+export default async function grubExtension(api: ExtensionAPI) {
+	const bus = api.events;
 	const controller = getController(bus);
 
-	pi.registerMessageRenderer(GRUB_CUSTOM_TYPE, (message, _options, theme) => {
+	api.registerMessageRenderer(GRUB_CUSTOM_TYPE, (message, _options, theme) => {
 		const text =
 			typeof message.content === "string"
 				? message.content
@@ -223,24 +219,24 @@ export default async function grubExtension(pi: ExtensionAPI) {
 		return container;
 	});
 
-	pi.on("session_shutdown", () => {
+	api.on("session_shutdown", () => {
 		controller.stop("Session shutdown stopped the grub task.", "stopped");
 		controllersByBus.delete(bus);
 		notifyByBus.delete(bus);
 	});
 
-	pi.on("before_agent_start", (event) => {
+	api.on("before_agent_start", (event) => {
 		if (!controller.isGrubPrompt(event.prompt)) return;
-		return { systemPrompt: appendSystemPrompt(event.systemPrompt) };
+		return { appendSystemPrompt: GRUB_SYSTEM_PROMPT };
 	});
 
-	pi.on("input", (event) => {
+	api.on("input", (event) => {
 		if (event.source !== "extension" || !event.text.startsWith("[GRUB:")) return;
 		if (!controller.isGrubPrompt(event.text)) return { action: "handled" };
 		return { action: "continue" };
 	});
 
-	pi.on("context", (event) => {
+	api.on("context", (event) => {
 		const lastMessage = event.messages[event.messages.length - 1];
 		const lastUserText = extractUserText(lastMessage);
 		if (!lastUserText.startsWith("[GRUB:")) return;
@@ -248,7 +244,7 @@ export default async function grubExtension(pi: ExtensionAPI) {
 		return { messages: event.messages.slice(0, -1) };
 	});
 
-	pi.on("agent_end", (event) => {
+	api.on("agent_end", (event) => {
 		const activeTask = controller.getActiveTask();
 		if (!activeTask?.awaitingTurn) return;
 
@@ -256,16 +252,16 @@ export default async function grubExtension(pi: ExtensionAPI) {
 		if (!assistantText) {
 			const failure = controller.recordFailure("Grub run ended without an assistant message.");
 			if (failure.action === "stop") {
-				publishGrubUpdate(pi, bus, describeTerminalSnapshot(failure.snapshot), "warning");
+				publishGrubUpdate(api, bus, describeTerminalSnapshot(failure.snapshot), "warning");
 				return;
 			}
 			publishGrubUpdate(
-				pi,
+				api,
 				bus,
 				`[Grub] Iteration failed. Retrying iteration ${failure.task?.currentIteration}.`,
 				"warning",
 			);
-			dispatchNextIteration(pi, bus, controller);
+			dispatchNextIteration(api, bus, controller);
 			return;
 		}
 
@@ -273,24 +269,24 @@ export default async function grubExtension(pi: ExtensionAPI) {
 		if (!decision) {
 			const failure = controller.recordFailure("Assistant response did not include a valid <loop-state> block.");
 			if (failure.action === "stop") {
-				publishGrubUpdate(pi, bus, describeTerminalSnapshot(failure.snapshot), "warning");
+				publishGrubUpdate(api, bus, describeTerminalSnapshot(failure.snapshot), "warning");
 				return;
 			}
 			publishGrubUpdate(
-				pi,
+				api,
 				bus,
 				`[Grub] Missing or invalid loop-state block. Retrying iteration ${failure.task?.currentIteration}.`,
 				"warning",
 			);
-			dispatchNextIteration(pi, bus, controller);
+			dispatchNextIteration(api, bus, controller);
 			return;
 		}
 
-		publishGrubUpdate(pi, bus, describeDecision(decision), "info");
+		publishGrubUpdate(api, bus, describeDecision(decision), "info");
 		const next = controller.finishTurn(decision);
 		if (next.action === "stop") {
 			publishGrubUpdate(
-				pi,
+				api,
 				bus,
 				describeTerminalSnapshot(next.snapshot),
 				decision.status === "complete" ? "info" : "warning",
@@ -298,7 +294,7 @@ export default async function grubExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		dispatchNextIteration(pi, bus, controller);
+		dispatchNextIteration(api, bus, controller);
 	});
 
 	const handleGrubCommand = async (args: string, ctx: ExtensionCommandContext) => {
@@ -309,7 +305,7 @@ export default async function grubExtension(pi: ExtensionAPI) {
 		const parsed = parseGrubCommand(args);
 		if (parsed.type === "help") {
 			const reason = parsed.reason === "empty" ? "Missing grub goal." : undefined;
-			publishGrubUpdate(pi, bus, buildGrubHelp(reason), "warning");
+			publishGrubUpdate(api, bus, buildGrubHelp(reason), "warning");
 			return;
 		}
 
@@ -320,14 +316,14 @@ export default async function grubExtension(pi: ExtensionAPI) {
 				: state.lastTerminal
 					? formatSnapshot(state.lastTerminal)
 					: "[Grub] No grub task has been started in this session.";
-			publishGrubUpdate(pi, bus, message, "info");
+			publishGrubUpdate(api, bus, message, "info");
 			return;
 		}
 
 		if (parsed.type === "stop") {
 			const activeTask = controller.getActiveTask();
 			if (!activeTask) {
-				publishGrubUpdate(pi, bus, "[Grub] No active grub task is running.", "warning");
+				publishGrubUpdate(api, bus, "[Grub] No active grub task is running.", "warning");
 				return;
 			}
 
@@ -335,14 +331,14 @@ export default async function grubExtension(pi: ExtensionAPI) {
 			if (!ctx.isIdle()) {
 				ctx.abort();
 			}
-			publishGrubUpdate(pi, bus, `[Grub] Stopped grub task ${activeTask.id}.`, "info");
+			publishGrubUpdate(api, bus, `[Grub] Stopped grub task ${activeTask.id}.`, "info");
 			return;
 		}
 
 		try {
 			const task = controller.start(parsed.goal);
 			publishGrubUpdate(
-				pi,
+				api,
 				bus,
 				[
 					`[Grub] Started autonomous grub task ${task.id}.`,
@@ -351,14 +347,14 @@ export default async function grubExtension(pi: ExtensionAPI) {
 				].join("\n"),
 				"info",
 			);
-			dispatchNextIteration(pi, bus, controller);
+			dispatchNextIteration(api, bus, controller);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			publishGrubUpdate(pi, bus, `[Grub] ${message}`, "error");
+			publishGrubUpdate(api, bus, `[Grub] ${message}`, "error");
 		}
 	};
 
-	pi.registerCommand("grub", {
+	api.registerCommand("grub", {
 		description: "Dig through one autonomous task until it is complete, blocked, stopped, or fails.",
 		handler: handleGrubCommand,
 	});

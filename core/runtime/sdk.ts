@@ -64,7 +64,7 @@ import {
 export interface CreateAgentSessionOptions {
   /** Working directory for project-local discovery. Default: process.cwd() */
   cwd?: string;
-  /** Global config directory. Default: ~/.pi/agent */
+  /** Global config directory. Default: ~/.nanopencil/agent */
   agentDir?: string;
 
   /** Auth storage for credentials. Default: AuthStorage.create(agentDir/auth.json) */
@@ -198,6 +198,11 @@ export async function createAgentSession(
   options: CreateAgentSessionOptions = {},
 ): Promise<CreateAgentSessionResult> {
   registerFigmaMcpOAuthProvider();
+  const isProductionBuild =
+    typeof import.meta.url === "string" && import.meta.url.includes("node_modules");
+  const isProductionLike =
+    process.env.NODE_ENV === "production" ||
+    (process.env.NODE_ENV !== "development" && isProductionBuild);
 
   const cwd = options.cwd ?? process.cwd();
   const agentDir = options.agentDir ?? getDefaultAgentDir();
@@ -421,8 +426,7 @@ export async function createAgentSession(
       initialMcpTools = [...currentMcpManager.getTools()];
       time("mcp.initialize");
       const mcpStatus = currentMcpManager.getStatus();
-      const isProduction = process.env.NODE_ENV === "production";
-      if (isProduction) {
+      if (isProductionLike) {
         // Production mode: concise summary
         const started = mcpStatus.startedServers;
         const failed = mcpStatus.failedServers;
@@ -444,6 +448,11 @@ export async function createAgentSession(
           );
         } else {
           console.error(`MCP tools loaded: ${mcpStatus.toolCount}`);
+          if (mcpStatus.failedServers.length > 0) {
+            console.warn(
+              `MCP: ${mcpStatus.failedServers.length} server(s) failed to start (${mcpStatus.failedServers.join(", ")}); tools from other servers are still available.`,
+            );
+          }
         }
       }
       process.once("exit", () => currentMcpManager?.dispose());

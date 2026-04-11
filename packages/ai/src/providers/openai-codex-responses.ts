@@ -852,8 +852,8 @@ function buildHeaders(
 	headers.set("Authorization", `Bearer ${token}`);
 	headers.set("chatgpt-account-id", accountId);
 	headers.set("OpenAI-Beta", "responses=experimental");
-	headers.set("originator", "pi");
-	const userAgent = _os ? `pi (${_os.platform()} ${_os.release()}; ${_os.arch()})` : "pi (browser)";
+	headers.set("originator", "nanopencil");
+	const userAgent = _os ? `nanopencil (${_os.platform()} ${_os.release()}; ${_os.arch()})` : "nanopencil (browser)";
 	headers.set("User-Agent", userAgent);
 	headers.set("accept", "text/event-stream");
 	headers.set("content-type", "application/json");

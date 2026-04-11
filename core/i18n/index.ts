@@ -50,33 +50,38 @@ export interface TranslationPaths {
 	themes: string[];
 }
 
-export function t(path: string): string {
+export function tValue<T = unknown>(path: string): T | undefined {
 	const parts = path.split(".");
 	const locale = translations[currentLocale];
 
 	if (parts[0] === "slash") {
-		return getNestedValue(locale.slashCommands as unknown as Record<string, unknown>, parts.slice(1));
+		return getNestedValue(locale.slashCommands as unknown as Record<string, unknown>, parts.slice(1)) as T | undefined;
 	}
 	if (parts[0] === "msg") {
-		return getNestedValue(locale.messages as unknown as Record<string, unknown>, parts.slice(1));
+		return getNestedValue(locale.messages as unknown as Record<string, unknown>, parts.slice(1)) as T | undefined;
 	}
 	if (parts[0] === "theme") {
-		return getNestedValue(locale.themes as unknown as Record<string, unknown>, parts.slice(1));
+		return getNestedValue(locale.themes as unknown as Record<string, unknown>, parts.slice(1)) as T | undefined;
 	}
 
-	return path; // Return path if not found
+	return undefined;
 }
 
-function getNestedValue(obj: Record<string, unknown>, keys: string[]): string {
+export function t(path: string): string {
+	const value = tValue(path);
+	return typeof value === "string" ? value : path;
+}
+
+function getNestedValue(obj: Record<string, unknown>, keys: string[]): unknown {
 	let result: unknown = obj;
 	for (const key of keys) {
 		if (result && typeof result === "object" && key in result) {
 			result = (result as Record<string, unknown>)[key];
 		} else {
-			return keys.join(".");
+			return undefined;
 		}
 	}
-	return typeof result === "string" ? result : keys.join(".");
+	return result;
 }
 
 // Re-export slash commands with translations

@@ -14,7 +14,7 @@ import { dirname, join } from "path";
 import { getOAuthApiKey } from "../src/utils/oauth/index.js";
 import type { OAuthCredentials, OAuthProvider } from "../src/utils/oauth/types.js";
 
-const AUTH_PATH = join(homedir(), ".pi", "agent", "auth.json");
+const AUTH_PATH = join(homedir(), ".nanopencil", "agent", "auth.json");
 
 type ApiKeyCredential = {
 	type: "api_key";
@@ -51,7 +51,7 @@ function saveAuthStorage(storage: AuthStorage): void {
 }
 
 /**
- * Resolve API key for a provider from ~/.pi/agent/auth.json
+ * Resolve API key for a provider from ~/.nanopencil/agent/auth.json
  *
  * For API key credentials, returns the key directly.
  * For OAuth credentials, returns the access token (refreshing if expired and saving back).

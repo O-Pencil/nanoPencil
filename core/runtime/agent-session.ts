@@ -598,11 +598,19 @@ export class AgentSession {
       }
     }
 
-    // Emit to extensions first
-    await this._emitExtensionEvent(event);
-
-    // Notify all listeners
-    this._emit(event);
+    // Notify all listeners (UI) first for responsive rendering,
+    // then emit to extensions in parallel (they shouldn't block rendering).
+    // For high-frequency streaming events (message_update), extensions run in background.
+    if (event.type === "message_update") {
+      // Streaming updates: emit to UI immediately, don't await extensions
+      this._emit(event);
+      this._emitExtensionEvent(event).catch(() => {});
+    } else {
+      // All other events: extensions run concurrently with UI notification
+      const extensionPromise = this._emitExtensionEvent(event);
+      this._emit(event);
+      await extensionPromise;
+    }
 
     // Handle session persistence
     if (event.type === "message_end") {

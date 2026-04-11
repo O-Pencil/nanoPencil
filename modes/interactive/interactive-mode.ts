@@ -2664,6 +2664,8 @@ export class InteractiveMode {
         if (this.attachments.length > 0) {
           const pendingAttachments = this.attachments.splice(0);
           this.selectedAttachmentIndex = -1;
+          // Reset the sequence counter when all attachments are sent
+          InteractiveMode.clipboardImageSeq = 0;
           this.updateAttachmentsBar();
           this.ui.requestRender();
           steerAttachmentPaths = pendingAttachments.map((a) => a.path);
@@ -2721,6 +2723,8 @@ export class InteractiveMode {
       if (this.attachments.length > 0) {
         const pendingAttachments = this.attachments.splice(0);
         this.selectedAttachmentIndex = -1;
+        // Reset the sequence counter when all attachments are sent
+        InteractiveMode.clipboardImageSeq = 0;
         this.updateAttachmentsBar();
         this.ui.requestRender();
         const inlineImages = await this.processAttachmentFiles(pendingAttachments);

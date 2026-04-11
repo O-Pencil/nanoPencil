@@ -241,7 +241,16 @@ nanomem insights [--output <path>]  # Generate HTML report
 ## Files Reference
 
 - `index.ts` - Barrel export (public API surface)
-- `engine.ts` - Main engine class (690 lines)
+- `engine.ts` - Main engine facade class (~2400 lines), orchestrates subsystems
+- `engine-scoring-v2.ts` - V2 memory scoring and structural proximity computation
+- `engine-injection-text.ts` - Injection text formatting and conversation preference detection
+- `engine-v2-mapping.ts` - V2 type mapping and extraction-to-semantic conversion
+- `engine-archive.ts` - Archive partitioning, merging, and staleness detection
+- `engine-links.ts` - V2 link materialization, conflict detection, procedural chain building
+- `engine-insights.ts` - Insights report generation (LLM + rules-based)
+- `engine-episode-sync.ts` - Episode-to-V2 sync and mapping
+- `engine-reinforce.ts` - Memory reinforcement and reconsolidation after recall
+- `engine-recall-select.ts` - Recall entry selection and budget allocation for progressive recall
 - `config.ts` - Configuration management
 - `types.ts` - All type definitions
 - `store.ts` - JSON persistence layer

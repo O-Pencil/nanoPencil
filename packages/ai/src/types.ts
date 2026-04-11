@@ -67,6 +67,17 @@ export interface StreamOptions {
 	temperature?: number;
 	maxTokens?: number;
 	signal?: AbortSignal;
+		/** Retry configuration for automatic retry on retriable errors */
+		retry?: {
+			/** Maximum number of retry attempts (default: 3) */
+			maxRetries?: number;
+			/** Base delay in ms for exponential backoff (default: 1000) */
+			baseDelayMs?: number;
+			/** Maximum delay cap in ms (default: 30000) */
+			maxDelayMs?: number;
+			/** Whether to add jitter to avoid thundering herd (default: true) */
+			jitter?: boolean;
+		};
 	apiKey?: string;
 	/**
 	 * Preferred transport for providers that support multiple transports.

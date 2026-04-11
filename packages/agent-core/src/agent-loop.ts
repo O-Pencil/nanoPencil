@@ -27,6 +27,7 @@ import type {
 	AgentToolResult,
 	StreamFn,
 } from "./types.js";
+import { ToolNotFoundError, ToolExecutionError, ValidationError } from "./errors.js";
 
 /**
  * Start an agent loop with a new prompt message.
@@ -76,11 +77,11 @@ export function agentLoopContinue(
 	streamFn?: StreamFn,
 ): EventStream<AgentEvent, AgentMessage[]> {
 	if (context.messages.length === 0) {
-		throw new Error("Cannot continue: no messages in context");
+		throw new ValidationError("Cannot continue: no messages in context");
 	}
 
 	if (context.messages[context.messages.length - 1].role === "assistant") {
-		throw new Error("Cannot continue from message role: assistant");
+		throw new ValidationError("Cannot continue from message role: assistant");
 	}
 
 	const stream = createAgentStream();
@@ -324,7 +325,7 @@ async function executeToolCalls(
 		let isError = false;
 
 		try {
-			if (!tool) throw new Error(`Tool ${toolCall.name} not found`);
+			if (!tool) throw new ToolNotFoundError(toolCall.name);
 
 			const validatedArgs = validateToolArguments(tool, toolCall);
 

@@ -2679,7 +2679,14 @@ export class InteractiveMode {
         ) {
           steerImages.length = 0;
           steerAttachmentPaths = [];
-          this.showStatus(`Images dropped: ${steerModel.id} does not support images`);
+          // Suggest vision variant for GLM models
+          let suggestion = "";
+          if (steerModel.id === "glm-5" || steerModel.id === "glm-5-turbo") {
+            suggestion = " Try glm-5v-turbo for image support.";
+          } else if (steerModel.id === "glm-4.5" || steerModel.id === "glm-4.5-air") {
+            suggestion = " Try glm-4.5v for image support.";
+          }
+          this.showStatus(`Images dropped: ${steerModel.name} does not support images.${suggestion}`);
           this.ui.requestRender();
         }
         let steerPromptText = steerResult.text;
@@ -2735,8 +2742,15 @@ export class InteractiveMode {
       if (images.length > 0) {
         const currentModel = this.session.model;
         if (currentModel && !currentModel.input.includes("image")) {
+          // Suggest vision variant for GLM models
+          let suggestion = "";
+          if (currentModel.id === "glm-5" || currentModel.id === "glm-5-turbo") {
+            suggestion = " Try using glm-5v-turbo for image support.";
+          } else if (currentModel.id === "glm-4.5" || currentModel.id === "glm-4.5-air") {
+            suggestion = " Try using glm-4.5v for image support.";
+          }
           this.showWarning(
-            `Model "${currentModel.name}" does not support image input. Images have been removed from this message.`,
+            `Model "${currentModel.name}" does not support image input. Images have been removed from this message.${suggestion}`,
           );
           images.length = 0;
         }

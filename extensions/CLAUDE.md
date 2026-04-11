@@ -23,7 +23,9 @@ Auto-loaded extensions available to all users.
 #### interview/ — Requirement Clarification
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types, core/session/session-manager; SURFACE Extension with /interview command, interview tool, lightweight before_agent_start hook; LOCUS interview extension entry
+`index.ts`: - [WHO]: Extension with /interview command, interview tool, lightweight before_agent_start hook
+    - [FROM]: core/extensions/types, core/session/session-manager
+    - [HERE]: interview extension entry
 
 **Design Principle (CRITICAL):**
 - `before_agent_start` hook MUST be synchronous and fast (<10ms)
@@ -39,7 +41,9 @@ Auto-loaded extensions available to all users.
 #### grub/ — Autonomous Iterative Task Runner
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types, @pencil-agent/tui; SURFACE Extension with /grub command, GRUB_MESSAGE_TYPE renderer, before_agent_start/context/input/agent_end hooks; LOCUS grub extension entry
+`index.ts`: - [WHO]: Extension with /grub command, GRUB_MESSAGE_TYPE renderer, before_agent_start/context/input/agent_end hooks
+    - [FROM]: core/extensions/types, @pencil-agent/tui
+    - [HERE]: grub extension entry
 
 `grub-controller.ts`: GrubController - state machine for autonomous iterations, LoopTaskState management
 
@@ -52,7 +56,9 @@ Auto-loaded extensions available to all users.
 #### loop/ — Recurring Prompt Scheduler
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types, @pencil-agent/tui; SURFACE Extension with /loop command, LOOP_MESSAGE_TYPE renderer, session-scoped recurring scheduler with pause/resume/run-now/max-runs/quiet; LOCUS loop extension entry
+`index.ts`: - [WHO]: Extension with /loop command, LOOP_MESSAGE_TYPE renderer, session-scoped recurring scheduler with pause/resume/run-now/max-runs/quiet
+    - [FROM]: core/extensions/types, @pencil-agent/tui
+    - [HERE]: loop extension entry
 
 `scheduler-controller.ts`: SchedulerController - in-memory recurring task store with pause/resume/run-now, MAX_SCHEDULED_TASKS=50
 
@@ -65,7 +71,9 @@ Auto-loaded extensions available to all users.
 #### link-world/ — Internet Access
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface; LOCUS link-world entry
+`index.ts`: - [WHO]: Extension interface
+    - [FROM]: core/extensions/types
+    - [HERE]: link-world entry
 
 `linkworld.ts`: Main link-world logic
 
@@ -74,7 +82,9 @@ Auto-loaded extensions available to all users.
 #### mcp/ — MCP Protocol Integration
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface for MCP; LOCUS MCP extension entry
+`index.ts`: - [WHO]: Extension interface for MCP
+    - [FROM]: core/extensions/types
+    - [HERE]: MCP extension entry
 
 `mcp-management.md`: MCP configuration and usage guide
 
@@ -83,7 +93,9 @@ Auto-loaded extensions available to all users.
 #### security-audit/ — Security Vulnerability Detection
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface; LOCUS security extension entry
+`index.ts`: - [WHO]: Extension interface
+    - [FROM]: core/extensions/types
+    - [HERE]: security extension entry
 
 `interface.ts`: Security audit interface definitions
 
@@ -97,14 +109,18 @@ Auto-loaded extensions available to all users.
 #### soul/ — AI Personality Evolution
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types, soul-core; SURFACE Extension interface; LOCUS soul extension entry
+`index.ts`: - [WHO]: Extension interface
+    - [FROM]: core/extensions/types, soul-core
+    - [HERE]: soul extension entry
 
 **Note**: Core implementation in `packages/soul-core/`
 
 #### team/ — Multi-Agent Orchestration
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface for team; LOCUS team extension entry
+`index.ts`: - [WHO]: Extension interface for team
+    - [FROM]: core/extensions/types
+    - [HERE]: team extension entry
 
 `team-controller.ts`: Multi-agent coordination logic
 
@@ -119,12 +135,16 @@ Extensions that must be explicitly enabled.
 #### simplify/ — Simplification Extension
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface; LOCUS simplify extension entry
+`index.ts`: - [WHO]: Extension interface
+    - [FROM]: core/extensions/types
+    - [HERE]: simplify extension entry
 
 #### export-html/ — HTML Export Extension
 
 **P3 Contract:**
-`index.ts`: UPSTREAM core/extensions/types; SURFACE Extension interface; LOCUS export extension entry
+`index.ts`: - [WHO]: Extension interface
+    - [FROM]: core/extensions/types
+    - [HERE]: export extension entry
 
 ---
 

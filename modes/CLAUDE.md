@@ -20,7 +20,11 @@ The `modes/` module contains the three distinct execution modes for nanoPencil. 
 
 ### Mode Selection
 
-`index.ts`: Mode exports and selection logic, P3: SURFACE runMode(), ModeType; LOCUS mode router
+`index.ts`: Mode exports and selection logic
+- [WHO]: Provides runMode(), ModeType
+- [FROM]: Depends on interactive-mode, print-mode, rpc-mode
+- [TO]: Consumed by main.ts
+- [HERE]: modes/index.ts - mode router
 
 ### Interactive Mode (`modes/interactive/`)
 
@@ -30,9 +34,9 @@ Primary TUI mode for terminal-based interaction.
 ```
 interactive/
 ├── interactive-mode.ts    # Main TUI controller
-├── components/            # UI widgets (42 files)
+├── components/            # UI widgets (41 files)
 │   ├── index.ts           # Component barrel exports
-│   ├── editor.ts          # Input editor
+│   ├── custom-editor.ts   # Custom input editor with keybindings
 │   ├── assistant-message.ts # AI response display
 │   ├── user-message.ts    # User input display
 │   ├── bash-execution.ts  # Bash output display
@@ -51,14 +55,13 @@ interactive/
 │   ├── extension-input.ts    # Extension prompts
 │   ├── extension-editor.ts   # Extension config editor
 │   ├── custom-message.ts     # Custom message renderer
-│   ├── custom-editor.ts      # Custom input editor
 │   ├── apikey-input.ts       # API key dialog
 │   ├── login-dialog.ts       # Login UI
 │   ├── oauth-selector.ts     # OAuth picker
 │   ├── scoped-models-selector.ts # Scoped models
 │   ├── session-selector-search.ts # Fuzzy session search
 │   ├── tree-selector.ts      # Session tree view
-│   ├── memory-stats.ts       # Memory statistics
+│   ├── memory-stats.ts       # NanoMem statistics
 │   ├── soul-stats.ts         # Soul statistics
 │   ├── skill-invocation-message.ts # Skill output
 │   ├── branch-summary-message.ts # Branch display
@@ -69,57 +72,110 @@ interactive/
 │   ├── dynamic-border.ts     # Animated borders
 │   ├── bordered-loader.ts    # Loading animation
 │   ├── pencil-loader.ts      # Brand animation
-│   ├── loader.ts             # Generic loader
-│   ├── cancellable-loader.ts # Interruptible loader
 │   ├── visual-truncate.ts    # Smart truncation
-│   └── ...
+│   ├── armin.ts              # Argon2 + Minio utilities
+│   ├── daxnuts.ts            # Data exchange nuts
+│   └── user-message-selector.ts # User message picker
 └── theme/                   # Theme definitions
     ├── theme.ts             # Theme loader
-    ├── theme-schema.ts      # Theme type schema
+    ├── theme-schema.json    # Theme type schema
     ├── dark.json            # Dark theme
     ├── light.json           # Light theme
     └── warm.json            # Warm/amber theme
 ```
 
 **P3 Contract:**
-`interactive-mode.ts`: UPSTREAM tui package, agent-session; SURFACE InteractiveMode class, runInteractiveMode(); LOCUS TUI orchestration hub
+`interactive-mode.ts`:
+- [WHO]: Provides InteractiveMode class, runInteractiveMode()
+- [FROM]: Depends on @pencil-agent/tui, agent-session, components
+- [TO]: Consumed by cli.ts, main.ts
+- [HERE]: modes/interactive/interactive-mode.ts - TUI orchestration hub
 
 ### Print Mode (`modes/print/`)
 
 Non-interactive mode for scripting and piping.
 
 **P3 Contract:**
-`print-mode.ts`: UPSTREAM agent-session; SURFACE runPrintMode(options); LOCUS batch processing mode
+`print-mode.ts`:
+- [WHO]: Provides runPrintMode(options)
+- [FROM]: Depends on agent-session
+- [TO]: Consumed by main.ts
+- [HERE]: modes/print-mode.ts - batch processing mode
 
 ### RPC Mode (`modes/rpc/`)
 
 JSON-RPC over stdin/stdout for IDE integration.
 
 **P3 Contract:**
-`rpc-mode.ts`: UPSTREAM agent-session; SURFACE runRpcMode(); LOCUS IDE bridge
+`rpc-mode.ts`:
+- [WHO]: Provides runRpcMode()
+- [FROM]: Depends on agent-session, rpc-client
+- [TO]: Consumed by main.ts
+- [HERE]: modes/rpc/rpc-mode.ts - IDE bridge
 
 **P3 Contract:**
-`rpc-client.ts`: SURFACE RpcClient class; LOCUS RPC client implementation
+`rpc-client.ts`:
+- [WHO]: Provides RpcClient class
+- [FROM]: Depends on rpc-types
+- [TO]: Consumed by rpc-mode
+- [HERE]: modes/rpc/rpc-client.ts - RPC client implementation
 
 **P3 Contract:**
-`rpc-types.ts`: SURFACE RpcRequest, RpcResponse types; LOCUS RPC protocol definitions
+`rpc-types.ts`:
+- [WHO]: Provides RpcRequest, RpcResponse types
+- [FROM]: No dependencies
+- [TO]: Consumed by rpc-client, rpc-mode
+- [HERE]: modes/rpc/rpc-types.ts - RPC protocol definitions
 
 ### ACP Mode (`modes/acp/`)
 
 Agent Communication Protocol mode.
 
 **P3 Contract:**
-`acp-mode.ts`: SURFACE AcpMode class; LOCUS ACP protocol handler
+`acp-mode.ts`:
+- [WHO]: Provides AcpMode class, runAcpMode()
+- [FROM]: Depends on agent-session
+- [TO]: Consumed by main.ts
+- [HERE]: modes/acp/acp-mode.ts - ACP protocol handler
 
 ### Utilities (`modes/utils/`)
 
 Shared utilities for all modes.
 
 **P3 Contract:**
-`clipboard.ts`: Platform-agnostic clipboard access
-`clipboard-native.ts`: Platform-specific clipboard (falls back to clipboard.ts)
-`image-convert.ts`: Image format conversion
-`image-resize.ts`: Image resizing for display
+`clipboard.ts`:
+- [WHO]: Provides copyToClipboard()
+- [FROM]: No dependencies
+- [TO]: Consumed by interactive-mode
+- [HERE]: modes/utils/clipboard.ts - platform-agnostic clipboard access
+
+**P3 Contract:**
+`clipboard-native.ts`:
+- [WHO]: Provides clipboard module, getClipboardBinary()
+- [FROM]: Depends on @mariozechner/clipboard
+- [TO]: Consumed by clipboard-image
+- [HERE]: modes/utils/clipboard-native.ts - platform-specific clipboard
+
+**P3 Contract:**
+`clipboard-image.ts`:
+- [WHO]: Provides readClipboardImage(), ClipboardImage type
+- [FROM]: Depends on clipboard-native, photon-node
+- [TO]: Consumed by interactive-mode (image paste)
+- [HERE]: modes/utils/clipboard-image.ts - clipboard image operations
+
+**P3 Contract:**
+`image-convert.ts`:
+- [WHO]: Provides convertImageFormat()
+- [FROM]: Depends on photon-node
+- [TO]: Consumed by clipboard-image
+- [HERE]: modes/utils/image-convert.ts - image format conversion
+
+**P3 Contract:**
+`image-resize.ts`:
+- [WHO]: Provides resizeImage()
+- [FROM]: Depends on photon-node
+- [TO]: Consumed by interactive-mode
+- [HERE]: modes/utils/image-resize.ts - image resizing for display
 
 ---
 

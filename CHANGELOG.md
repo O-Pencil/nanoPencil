@@ -12,6 +12,182 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - feat(interactive): suggest vision model variants when images are dropped
 - feat(sal): implement SAL extension with default-on structural anchor localization
+
+### Fixed
+- fix(interactive): reset clipboard image sequence counter after sending
+- fix(build): correct build:deps order — ai must precede agent-core
+- fix(sal): stabilize structural anchor bridge
+- fix(build): add path aliases for mem-core and soul-core
+- fix(team): complete AgentTeam Phase B runtime gaps
+- fix(update): add shell:true and env for Windows spawn
+- fix(presence): pass SoulOptions to SoulManager
+
+### Changed
+- refactor(mem-core): split engine into modules
+- refactor: unify config paths, env vars, and extension API surface
+
+### Documentation
+- docs(test): add SAL experiment template
+- docs(dip): migrate CLAUDE.md files to WHO/FROM/TO/HERE format
+- docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
+- docs(changelog): add v1.11.39 release notes
+- docs(memory): add cognitive map and SAL experiment drafts
+
+### Maintenance
+- chore(changelog): regenerate before release
+- chore: add SAL experiment output files
+- chore(release): v1.11.39
+
+
+## [1.11.39] - 2026-04-11
+
+### Added
+- feat(interactive): suggest vision model variants when images are dropped
+- feat(sal): implement SAL extension with default-on structural anchor localization
+- feat(presence): integrate soul personality hints and recent lines history
+- feat(extensions): split grub from loop, refactor scheduler
+- feat(presence): AI-generated idle nudges and per-turn agent perception
+- feat(team): add Phase B AgentTeam extension with persistent teammates
+- feat(presence): AI-driven personalized greetings with memory context
+- feat(subagent): add isolated workspace review and apply flow
+- feat(update): add /reinstall command and force update flag
+- feat(subagent): add SubAgent runtime and /subagent command
+- feat(ai): add MiniMax thinking tag support
+- feat(model): improve OAuth token handling in model switching
+- feat(debug): export debug logger from core module
+- feat(debug): add comprehensive debug logging system for AI providers
+- feat(interactive-mode): enhance update workflow with interactive options
+- feat(model-selector): add Ctrl+N to append OpenRouter model by id
+- feat(interactive): enhance custom editor and mode orchestration
+- feat(auth): expose openrouter in login selector
+- feat(presence): add gentle proactive chat extension
+- feat(mem-core): retain superseded procedural rows on merge
+- feat(interview): synchronous before_agent_start hook and heuristics
+- feat(mem-core): release v1.1.0
+- feat(mem-core): add semantic recall and reconsolidation loop
+- feat(i18n): add internationalization support (EN/ZH)
+- feat(mem-core): add v2 episodic and procedural memory bridge
+- feat(dream): add abortable consolidation and auto-dream gating
+- feat(acp): improve zed agent parity
+- feat(figma): improve remote MCP authentication flow
+- feat(agent): hide internal traces and improve time grounding
+- feat(mem): add graph-driven memory governance
+- feat(team): add multi-agent team orchestration extension
+- feat(providers): support custom protocol endpoints
+- feat(loop): replace timer loop with autonomous task loop
+
+### Fixed
+- fix(interactive): reset clipboard image sequence counter after sending
+- fix(build): correct build:deps order — ai must precede agent-core
+- fix(sal): stabilize structural anchor bridge
+- fix(build): add path aliases for mem-core and soul-core
+- fix(team): complete AgentTeam Phase B runtime gaps
+- fix(update): add shell:true and env for Windows spawn
+- fix(presence): pass SoulOptions to SoulManager
+- fix(loop): use valid ThemeColor "error" instead of "danger" in renderer
+- fix(subagent): normalize Windows paths to forward slashes
+- fix(loop): update duration parsing and help messages
+- fix(loop): defer scheduler ticker until session_start
+- fix(build): bundle zod for global install; workspace tsc; soul empty JSON
+- fix(utils): improve clipboard timeout and image resize safety
+- fix(interactive): improve clipboard and attachment error handling
+- fix(clipboard): add missing @mariozechner/clipboard dependency
+- fix(team): resolve theme color error and abort listener leak
+- fix(debug-logger): enable late environment variable detection
+- fix(model-cycling): improve OAuth error handling with typed errors
+- fix(interactive-mode): improve update system reliability
+- fix(nanopencil): correct MiniMax API endpoint from /anthropic to /v1
+- fix(build): bundle zod to dist/node_modules for peerDependency resolution
+- fix(interactive-mode): replace npm update with npm install in version check prompt
+- fix(tui): show NanoMem command notifications
+- fix(ai): avoid InvalidCharacterError when OAuth client placeholders are not base64
+- fix(nanopencil): OpenRouter in /login and slim built-in OpenRouter models
+- fix(memory): verify insights and startup presence behavior
+- fix(auth): preserve provider api keys in config flows
+- fix(presence): wait for ui readiness before greeting
+- fix(tui): stabilize startup presence and user echo
+- fix(memory): prioritize conversation preferences in recall
+- fix(presence): show startup greeting after UI init
+- fix(memory): shift runtime recall toward V2
+- fix(memory): back up legacy data before maintenance
+- fix(memory): stabilize recall and startup maintenance
+- fix(release): rebuild bundled packages before publish
+- fix(ci): add workspaces config for npm workspace commands
+- fix(tui): prevent duplicate Working messages in PencilLoader
+- fix(interview): stabilize trigger and clarification flow
+- fix(acp): improve zed loop and team progress visibility
+- fix(mcp): load runtime config from the active MCP path
+- fix(interactive): harden extension prompt focus flow
+- fix(runtime): tighten workspace handling and startup prompts @o-pencil-agent
+- fix(runtime): improve loop recovery and insights reporting
+- fix(deps): add zod runtime dependency
+- fix(ux): improve custom provider messaging
+- fix(providers): reopen and refresh custom provider edits
+- fix(providers): streamline custom provider setup
+- fix: extract clipboard image data before sending to model
+
+### Changed
+- refactor(mem-core): split engine into modules
+- refactor: unify config paths, env vars, and extension API surface
+- refactor(i18n): translate all Chinese comments and strings to English
+
+### Documentation
+- docs(test): add SAL experiment template
+- docs(dip): migrate CLAUDE.md files to WHO/FROM/TO/HERE format
+- docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
+- docs(changelog): add v1.11.39 release notes
+- docs(memory): add cognitive map and SAL experiment drafts
+- docs(dip): add P2 for core/sub-agent and core/workspace; sync extensions/defaults
+- docs: update CHANGELOG for 1.11.37
+- docs: update CHANGELOG for 1.11.36
+- docs: update CHANGELOG for 1.11.35
+- docs(dip): complete DIP protocol compliance for all source files
+- docs(team): restructure SubAgent and AgentTeam as two-phase plan
+- docs(team): add agent team refactor plan
+- docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
+- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(prompt): refine project assistant charter @o-pencil-agent
+- docs(agents): require English for code strings and commits
+
+### Maintenance
+- chore(changelog): regenerate before release
+- chore: add SAL experiment output files
+- chore(release): v1.11.39
+- chore(release): v1.11.38
+- chore(models): update generated model catalog
+- chore: remove old /agent team extension
+- chore(release): 1.11.35
+- chore(ai): regenerate models.generated.ts after build
+- chore: merge origin/main into main
+- chore: merge origin/main into main
+- chore: release v1.11.34
+- chore: run changelog before build in prepublishOnly
+- chore(release): 1.11.33
+- chore(release): 1.11.32
+- chore(release): 1.11.31
+- chore(ai): update model definitions
+- chore(release): publish v1.11.18
+- chore(release): v1.11.17
+- chore(release): prepare 1.11.16 changelog
+- chore(release): prepare 1.11.15 changelog
+- chore(release): publish 1.11.15
+- chore(release): prepare 1.11.14 changelog
+- chore(release): prepare 1.11.13 changelog
+- chore(release): publish 1.11.12
+- chore(release): prepare 1.11.12 changelog
+- chore(release): publish 1.11.11
+- chore(release): publish 1.11.10
+- chore(release): publish 1.11.8
+- chore(release): publish 1.11.6
+- chore(release): publish 1.11.5
+
+
+## [1.11.39] - 2026-04-11
+
+### Added
+- feat(interactive): suggest vision model variants when images are dropped
+- feat(sal): implement SAL extension with default-on structural anchor localization
 - feat(presence): integrate soul personality hints and recent lines history
 - feat(extensions): split grub from loop, refactor scheduler
 - feat(presence): AI-generated idle nudges and per-turn agent perception

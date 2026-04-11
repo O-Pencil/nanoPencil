@@ -1,8 +1,8 @@
 /**
- * [WHO]: NanoMemEngine class - unified API for memory CRUD, injection, consolidation
- * [FROM]: Depends on node:path, ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js
- * [TO]: Consumed by packages/mem-core/src/index.ts
- * [HERE]: packages/mem-core/src/engine.ts - facade layer composing all memory subsystems
+ * [WHO]: NanoMemEngine class - unified facade for memory CRUD, injection, consolidation; delegates to engine-* modules
+ * [FROM]: Depends on node:fs/promises, node:path; ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js; ./engine-scoring-v2.js, ./engine-injection-text.js, ./engine-v2-mapping.js, ./engine-archive.js, ./engine-links.js, ./engine-insights.js, ./engine-episode-sync.js, ./engine-reinforce.js, ./engine-recall-select.js
+ * [TO]: Consumed by packages/mem-core/src/index.ts, extension.ts, cli.ts, test/*
+ * [HERE]: packages/mem-core/src/engine.ts - facade layer composing all memory subsystems via thin delegation wrappers
  */
 
 import { cp, mkdir, readdir } from "node:fs/promises";
@@ -88,30 +88,64 @@ import {
 	scoreProceduralMemory as scoreProceduralMemoryFn,
 	scoreV2SemanticMemory as scoreV2SemanticMemoryFn,
 } from "./engine-scoring-v2.js";
+import {
+	CONVERSATION_PREFERENCE_PATTERNS,
+	buildProgressiveInjectionText,
+	isConversationPreference as isConversationPreferenceFn,
+	mergeUniqueEntries as mergeUniqueEntriesFn,
+	selectConversationPreferences as selectConversationPreferencesFn,
+	rankConversationPreference as rankConversationPreferenceFn,
+} from "./engine-injection-text.js";
+import {
+	inferSemanticRetention as inferSemanticRetentionFn,
+	inferSemanticStability as inferSemanticStabilityFn,
+	inferSemanticImportance as inferSemanticImportanceFn,
+	mapExtractedItemToSemanticType as mapExtractedItemToSemanticTypeFn,
+	upsertSemanticFromExtractedItem as upsertSemanticFromExtractedItemFn,
+	semanticKindToLegacyType as semanticKindToLegacyTypeFn,
+	semanticToRuntimeEntry as semanticToRuntimeEntryFn,
+	proceduralToRuntimeEntry as proceduralToRuntimeEntryFn,
+} from "./engine-v2-mapping.js";
+import {
+	mergeArchivedEntries as mergeArchivedEntriesFn,
+	mergeArchivedWork as mergeArchivedWorkFn,
+	mergeArchivedV2 as mergeArchivedV2Fn,
+	partitionArchivedEntries as partitionArchivedEntriesFn,
+	partitionArchivedWork as partitionArchivedWorkFn,
+	partitionArchivedSemantic as partitionArchivedSemanticFn,
+	partitionArchivedProcedural as partitionArchivedProceduralFn,
+	type ForgettingConfig,
+} from "./engine-archive.js";
+import {
+	AUTO_V2_LINK_PREFIX,
+	buildProceduralChains as buildProceduralChainsFn,
+	materializeV2Links as materializeV2LinksFn,
+	detectProceduralConflicts as detectProceduralConflictsFn,
+	detectSemanticConflicts as detectSemanticConflictsFn,
+	detectAlignmentConflicts as detectAlignmentConflictsFn,
+	suggestConflictAction as suggestConflictActionFn,
+	explainConflictAction as explainConflictActionFn,
+} from "./engine-links.js";
+import { generateInsightsReport } from "./engine-insights.js";
+import { makeEpisodeMemoryId, mapEpisodeToV2, syncEpisodeToV2 } from "./engine-episode-sync.js";
+import {
+	reinforceProcedural as reinforceProceduralFn,
+	reinforceEpisodeMemories as reinforceEpisodeMemoriesFn,
+	reinforceEpisodeFacets as reinforceEpisodeFacetsFn,
+	reinforceV2SemanticMemories as reinforceV2SemanticMemoriesFn,
+	reinforceWork as reinforceWorkFn,
+	reconsolidateV2AfterRecall as reconsolidateV2AfterRecallFn,
+	reconsolidateIfNeeded as reconsolidateIfNeededFn,
+} from "./engine-reinforce.js";
+import { selectRecallEntries } from "./engine-recall-select.js";
 
 export class NanoMemEngine {
 	readonly cfg: NanomemConfig;
 	private llmFn?: LlmFn;
 	private embeddingFn?: EmbeddingFn;
-	private static readonly AUTO_V2_LINK_PREFIX = "auto:v2:";
+	private static readonly AUTO_V2_LINK_PREFIX = AUTO_V2_LINK_PREFIX;
 	private static readonly AUTO_REVIVE_MAX_ITEMS = 2;
-	private static readonly CONVERSATION_PREFERENCE_PATTERNS = [
-		/\bcall me\b/i,
-		/\baddress me\b/i,
-		/\bmy name is\b/i,
-		/\bi am called\b/i,
-		/\bspeak (?:to me )?(?:like|in)\b/i,
-		/\btalk (?:to me )?(?:like|in)\b/i,
-		/\buse (?:a |the )?(?:tone|style|voice)\b/i,
-		/\b(?:tone|style|voice|persona)\b/i,
-		/call me/,
-		/address me as/,
-		/address user/,
-		/tone/,
-		/style of speaking/,
-		/speaking style/,
-		/communication style/,
-	];
+	private static readonly CONVERSATION_PREFERENCE_PATTERNS = CONVERSATION_PREFERENCE_PATTERNS;
 
 	private knowledgePath: string;
 	private lessonsPath: string;
@@ -459,287 +493,80 @@ export class NanoMemEngine {
 
 	// ─── Retrieval & Injection (Progressive Recall) ────────────
 
-	async getMemoryInjection(project: string, contextTags: string[], scope?: MemoryScope): Promise<string> {
-		await this.autoReviveRelevantArchive([project, ...contextTags].join(" ").trim(), scope);
-		const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork, allV2Episodes, allV2EpisodeFacets, allV2Semantic, allProcedural] = await Promise.all([
-			loadEntries(this.knowledgePath),
-			loadEntries(this.lessonsPath),
-			loadEntries(this.eventsPath),
-			loadEntries(this.preferencesPath),
-			loadEntries(this.facetsPath),
-			loadEpisodes(this.episodesDir),
-			loadWork(this.workPath),
-			loadV2Episodes(this.v2Paths),
-			loadV2Facets(this.v2Paths),
-			loadV2Semantic(this.v2Paths),
-			loadV2Procedural(this.v2Paths),
-		]);
+		async getMemoryInjection(project: string, contextTags: string[], scope?: MemoryScope): Promise<string> {
+			await this.autoReviveRelevantArchive([project, ...contextTags].join(" ").trim(), scope);
+			const [allKnowledge, allLessons, allEvents, allPrefs, allFacets, allEpisodes, allWork, allV2Episodes, allV2EpisodeFacets, allV2Semantic, allProcedural] = await Promise.all([
+				loadEntries(this.knowledgePath),
+				loadEntries(this.lessonsPath),
+				loadEntries(this.eventsPath),
+				loadEntries(this.preferencesPath),
+				loadEntries(this.facetsPath),
+				loadEpisodes(this.episodesDir),
+				loadWork(this.workPath),
+				loadV2Episodes(this.v2Paths),
+				loadV2Facets(this.v2Paths),
+				loadV2Semantic(this.v2Paths),
+				loadV2Procedural(this.v2Paths),
+			]);
 
-		const knowledge = this.filterAndCleanEntries(allKnowledge, scope);
-		const lessons = this.filterAndCleanEntries(allLessons, scope);
-		const events = this.filterAndCleanEntries(allEvents, scope);
-		const prefs = this.filterAndCleanEntries(allPrefs, scope);
-		const facets = this.filterAndCleanEntries(allFacets, scope);
-		const work = this.filterAndCleanWork(allWork, scope);
-		const episodes = filterByScope(allEpisodes, scope);
-		const v2Episodes = this.filterAndCleanV2Episodes(allV2Episodes, project, scope);
-		const v2EpisodeFacets = this.filterAndCleanV2Facets(allV2EpisodeFacets, project, scope);
-		const v2Semantic = this.filterAndCleanV2Semantic(allV2Semantic, project, scope);
-		const procedural = this.filterAndCleanProcedural(allProcedural, project, scope);
+			const semanticCandidates = await this.querySemanticCandidates(
+				[project, ...contextTags].join(" ").trim(),
+				project,
+				scope,
+				this.filterAndCleanV2Episodes(allV2Episodes, project, scope),
+				this.filterAndCleanV2Facets(allV2EpisodeFacets, project, scope),
+				this.filterAndCleanV2Semantic(allV2Semantic, project, scope),
+				this.filterAndCleanProcedural(allProcedural, project, scope),
+			);
 
-		const hl = this.cfg.halfLife;
-		const sw = this.cfg.scoreWeights;
-		const pr = this.cfg.progressiveRecall;
-		const p = PROMPTS[this.cfg.locale] ?? PROMPTS.en;
-		const semanticQuery = [project, ...contextTags].join(" ").trim();
-		const semanticCandidates = await this.querySemanticCandidates(
-			semanticQuery,
-			project,
-			scope,
-			v2Episodes,
-			v2EpisodeFacets,
-			v2Semantic,
-			procedural,
-		);
-		const semanticEpisodeIds = new Set(
-			semanticCandidates.filter((item) => item.memoryKind === "episode").map((item) => item.memoryId),
-		);
-		const semanticFacetIds = new Set(
-			semanticCandidates.filter((item) => item.memoryKind === "facet").map((item) => item.memoryId),
-		);
-		const semanticProcedureIds = new Set(
-			semanticCandidates.filter((item) => item.memoryKind === "procedural").map((item) => item.memoryId),
-		);
-		const semanticV2SemanticIds = new Set(
-			semanticCandidates.filter((item) => item.memoryKind === "semantic").map((item) => item.memoryId),
-		);
+			const selection = selectRecallEntries({
+				knowledge: this.filterAndCleanEntries(allKnowledge, scope),
+				lessons: this.filterAndCleanEntries(allLessons, scope),
+				events: this.filterAndCleanEntries(allEvents, scope),
+				prefs: this.filterAndCleanEntries(allPrefs, scope),
+				facets: this.filterAndCleanEntries(allFacets, scope),
+				work: this.filterAndCleanWork(allWork, scope),
+				episodes: filterByScope(allEpisodes, scope),
+				v2Episodes: this.filterAndCleanV2Episodes(allV2Episodes, project, scope),
+				v2EpisodeFacets: this.filterAndCleanV2Facets(allV2EpisodeFacets, project, scope),
+				v2Semantic: this.filterAndCleanV2Semantic(allV2Semantic, project, scope),
+				procedural: this.filterAndCleanProcedural(allProcedural, project, scope),
+				allKnowledge, allLessons, allEvents, allPrefs, allFacets,
+				semanticCandidates,
+				halfLife: this.cfg.halfLife,
+				scoreWeights: this.cfg.scoreWeights,
+				progressiveRecall: this.cfg.progressiveRecall,
+				tokenBudget: this.cfg.tokenBudget,
+				structuralWeight: this.cfg.structuralWeight,
+				project, contextTags,
+			});
 
-		// Tier all MemoryEntry categories
-		const tieredKnowledge = tierEntries(knowledge, project, contextTags, hl, sw, pr);
-		const tieredLessons = tierEntries(lessons, project, contextTags, hl, sw, pr);
-		const tieredEvents = tierEntries(events, project, contextTags, hl, sw, pr);
-		const tieredPrefs = tierEntries(prefs, project, contextTags, hl, sw, pr);
-		const tieredFacets = tierEntries(facets, project, contextTags, hl, sw, pr);
-		const forcedConversationPrefs = this.selectConversationPreferences(prefs);
+			// Reinforce all recalled entries via spaced repetition
+			await this.reinforceEntries(selection.injectedActiveKnowledge, allKnowledge, this.knowledgePath);
+			await this.reinforceEntries(selection.injectedActiveLessons, allLessons, this.lessonsPath);
+			await this.reinforceEntries(selection.injectedActiveEvents, allEvents, this.eventsPath);
+			await this.reinforceEntries(selection.injectedActivePrefs, allPrefs, this.preferencesPath);
+			await this.reinforceEntries(selection.legacyFacetBridgeActive, allFacets, this.facetsPath);
+			await this.reinforceWork(selection.cue.work, allWork);
+			await this.reinforceEpisodeMemories([...selection.active.episodeMemories, ...selection.cue.episodeMemories], allV2Episodes);
+			await this.reinforceEpisodeFacets([...selection.active.episodeFacets, ...selection.cue.episodeFacets], allV2EpisodeFacets);
+			await this.reinforceV2SemanticMemories([...selection.active.semanticMemories, ...selection.cue.semanticMemories], allV2Semantic);
+			await this.reinforceProcedural([...selection.active.procedural, ...selection.cue.procedural], allProcedural);
+			await this.reconsolidateV2AfterRecall(
+				allV2Episodes, allV2EpisodeFacets, allProcedural,
+				[...selection.active.episodeMemories, ...selection.cue.episodeMemories],
+				[...selection.active.episodeFacets, ...selection.cue.episodeFacets],
+				[...selection.active.procedural, ...selection.cue.procedural],
+			);
 
-		// Budget calculation
-		const totalChars = this.cfg.tokenBudget * 4;
-		const activeChars = Math.floor(totalChars * pr.budgetActive);
-		const cueChars = Math.floor(totalChars * pr.budgetCue);
-		const proceduralChars = Math.floor(totalChars * 0.18);
+			if (this.llmFn) {
+				await this.reconsolidateIfNeeded(selection.injectedActiveKnowledge, contextTags, allKnowledge);
+				await this.reconsolidateIfNeeded(selection.injectedActiveLessons, contextTags, allLessons);
+			}
 
-		// Entry length helpers
-		const activeLen = (e: MemoryEntry) =>
-			(e.name?.length || 0) + (e.summary?.length || 0) + (e.detail?.length || 0) + 30;
-		const cueLen = (e: MemoryEntry) => (e.name?.length || 0) + (e.summary?.length || 0) + 30;
-		const scoreFn = (e: MemoryEntry) => scoreEntry(e, project, contextTags, hl, sw);
-		const proceduralLen = (pItem: ProceduralMemory) =>
-			(pItem.name?.length || 0) + (pItem.summary?.length || 0) + pItem.steps.reduce((sum, step) => sum + step.text.length, 0) + 60;
-		const proceduralCueLen = (pItem: ProceduralMemory) =>
-			(pItem.name?.length || 0) + (pItem.summary?.length || 0) + 40;
-		const proceduralScoreFn = (pItem: ProceduralMemory) => this.scoreProceduralMemory(pItem, project, contextTags);
-		const episodeMemoryLen = (item: EpisodeMemory) => (item.title?.length || 0) + item.summary.length + 40;
-		const episodeFacetLen = (item: EpisodeFacet) =>
-			item.searchText.length + (item.anchorText?.length || 0) + (item.summary?.length || 0) + 40;
-		const episodeCueLen = (item: EpisodeMemory) => (item.title?.length || 0) + item.summary.length + 36;
-		const episodeFacetCueLen = (item: EpisodeFacet) =>
-			item.searchText.length + (item.summary?.length || 0) + (item.anchorText?.length || 0) + 36;
-		const semanticMemoryLen = (item: SemanticMemory) =>
-			(item.name?.length || 0) + item.summary.length + (item.detail?.length || 0) + 40;
-		const semanticMemoryCueLen = (item: SemanticMemory) => (item.name?.length || 0) + item.summary.length + 36;
-		const episodeScoreFn = (item: EpisodeMemory) => this.scoreEpisodeMemory(item, project, contextTags);
-		const episodeFacetScoreFn = (item: EpisodeFacet) => this.scoreEpisodeFacet(item, project, contextTags);
-		const semanticMemoryScoreFn = (item: SemanticMemory) => this.scoreV2SemanticMemory(item, project, contextTags);
-
-		// Active tier: pick top entries with full detail, split budget across categories
-		const activeBudgetPer = Math.floor(activeChars / 5);
-		const activeKnowledge = pickTop(tieredKnowledge.active, scoreFn, activeLen, activeBudgetPer);
-		const activeLessons = pickTop(tieredLessons.active, scoreFn, activeLen, activeBudgetPer);
-		const activeEvents = pickTop(tieredEvents.active, scoreFn, activeLen, activeBudgetPer);
-		const activePrefs = this.mergeUniqueEntries(
-			forcedConversationPrefs,
-			pickTop(tieredPrefs.active, scoreFn, activeLen, activeBudgetPer),
-		);
-		const activeFacets = pickTop(tieredFacets.active, scoreFn, activeLen, activeBudgetPer);
-		const activeProcedural = pickTop(
-			procedural.filter((item) => semanticProcedureIds.has(item.id) || proceduralScoreFn(item) >= 0.45),
-			proceduralScoreFn,
-			proceduralLen,
-			Math.max(400, Math.floor(proceduralChars * 0.55)),
-		);
-		const activeEpisodeMemories = pickTop(
-			v2Episodes.filter((item) => semanticEpisodeIds.has(item.id) || episodeScoreFn(item) >= 0.45),
-			episodeScoreFn,
-			episodeMemoryLen,
-			Math.max(320, Math.floor(activeChars * 0.18)),
-		);
-		const activeEpisodeFacets = pickTop(
-			v2EpisodeFacets.filter((item) => semanticFacetIds.has(item.id) || episodeFacetScoreFn(item) >= 0.42),
-			episodeFacetScoreFn,
-			episodeFacetLen,
-			Math.max(320, Math.floor(activeChars * 0.18)),
-		);
-		const activeSemanticMemories = pickTop(
-			v2Semantic.filter((item) => semanticV2SemanticIds.has(item.id) || semanticMemoryScoreFn(item) >= 0.42),
-			semanticMemoryScoreFn,
-			semanticMemoryLen,
-			Math.max(280, Math.floor(activeChars * 0.16)),
-		);
-
-		const activeSeeds = [...activeKnowledge, ...activeLessons, ...activeEvents, ...activePrefs, ...activeFacets];
-		const allEntries = [...allKnowledge, ...allLessons, ...allEvents, ...allPrefs, ...allFacets];
-		const activeIds = new Set(activeSeeds.map((entry) => entry.id));
-		const graphContext = getGraphNeighborhoodBySeeds(activeSeeds, allEntries, 8).filter(
-			(neighbor) => !activeIds.has(neighbor.entry.id),
-		);
-
-		// Cue tier: pick top entries with name + summary + id, split budget across categories
-		const cueBudgetPer = Math.floor(cueChars / 7); // 7 = knowledge + lessons + events + prefs + facets + episodes + work
-		const cueKnowledge = pickTop(tieredKnowledge.cue, scoreFn, cueLen, cueBudgetPer);
-		const cueLessons = pickTop(tieredLessons.cue, scoreFn, cueLen, cueBudgetPer);
-		const cueEvents = pickTop(tieredEvents.cue, scoreFn, cueLen, cueBudgetPer);
-		const forcedConversationPrefIds = new Set(forcedConversationPrefs.map((entry) => entry.id));
-		const cuePrefs = pickTop(
-			tieredPrefs.cue.filter((entry) => !forcedConversationPrefIds.has(entry.id)),
-			scoreFn,
-			cueLen,
-			cueBudgetPer,
-		);
-		const cueFacets = pickTop(tieredFacets.cue, scoreFn, cueLen, cueBudgetPer);
-		const graphContextIds = new Set(graphContext.map((neighbor) => neighbor.entry.id));
-		const dedupeCue = (entries: MemoryEntry[]) => entries.filter((entry) => !graphContextIds.has(entry.id));
-		const dedupedCueKnowledge = dedupeCue(cueKnowledge);
-		const dedupedCueLessons = dedupeCue(cueLessons);
-		const dedupedCueEvents = dedupeCue(cueEvents);
-		const dedupedCuePrefs = dedupeCue(cuePrefs);
-		const dedupedCueFacets = dedupeCue(cueFacets);
-
-		// Episodes and Work use their existing scoring for cue layer
-		const topEpisodes = pickTop(
-			episodes,
-			(ep) => scoreEpisode(ep, project, contextTags, hl, sw),
-			(ep) => ep.summary.length + 30,
-			cueBudgetPer,
-		);
-		const topWork = pickTop(
-			work,
-			(w) => scoreWorkEntry(w, project, contextTags, hl, sw),
-			(w) => w.goal.length + w.summary.length + 30,
-			cueBudgetPer,
-		);
-		const cueProcedural = pickTop(
-			procedural.filter((item) => !activeProcedural.some((activeItem) => activeItem.id === item.id)),
-			proceduralScoreFn,
-			proceduralCueLen,
-			Math.max(280, Math.floor(proceduralChars * 0.45)),
-		);
-		const cueEpisodeMemories = pickTop(
-			v2Episodes.filter((item) => !activeEpisodeMemories.some((activeItem) => activeItem.id === item.id)),
-			episodeScoreFn,
-			episodeCueLen,
-			Math.max(220, Math.floor(cueChars * 0.12)),
-		);
-		const cueEpisodeFacets = pickTop(
-			v2EpisodeFacets.filter((item) => !activeEpisodeFacets.some((activeItem) => activeItem.id === item.id)),
-			episodeFacetScoreFn,
-			episodeFacetCueLen,
-			Math.max(220, Math.floor(cueChars * 0.12)),
-		);
-		const cueSemanticMemories = pickTop(
-			v2Semantic.filter((item) => !activeSemanticMemories.some((activeItem) => activeItem.id === item.id)),
-			semanticMemoryScoreFn,
-			semanticMemoryCueLen,
-			Math.max(220, Math.floor(cueChars * 0.12)),
-		);
-
-		const legacyFacetBridgeActive = activeFacets.filter(
-			(entry) => entry.facetData?.kind === "pattern" || entry.facetData?.kind === "struggle",
-		);
-		const legacyFacetBridgeCue = dedupedCueFacets.filter(
-			(entry) => entry.facetData?.kind === "pattern" || entry.facetData?.kind === "struggle",
-		);
-		const v2SignalCount =
-			activeEpisodeMemories.length +
-			activeEpisodeFacets.length +
-			activeSemanticMemories.length +
-			activeProcedural.length +
-			cueEpisodeMemories.length +
-			cueEpisodeFacets.length +
-			cueSemanticMemories.length +
-			cueProcedural.length;
-		const useLegacyFallback = v2SignalCount === 0;
-		const injectedActiveKnowledge = useLegacyFallback ? activeKnowledge : [];
-		const injectedActiveLessons = useLegacyFallback ? activeLessons : [];
-		const injectedActiveEvents = useLegacyFallback ? activeEvents : [];
-		const injectedActivePrefs = useLegacyFallback ? activePrefs : [];
-		const injectedCueKnowledge = useLegacyFallback ? dedupedCueKnowledge : [];
-		const injectedCueLessons = useLegacyFallback ? dedupedCueLessons : [];
-		const injectedCueEvents = useLegacyFallback ? dedupedCueEvents : [];
-		const injectedCuePrefs = useLegacyFallback ? dedupedCuePrefs : [];
-		const injectedCueEpisodes = useLegacyFallback ? topEpisodes : [];
-
-		// Reinforce all recalled entries (Active + Cue) via spaced repetition
-		const allRecalledKnowledge = [...injectedActiveKnowledge, ...injectedCueKnowledge];
-		const allRecalledLessons = [...injectedActiveLessons, ...injectedCueLessons];
-		const allRecalledEvents = [...injectedActiveEvents, ...injectedCueEvents];
-		const allRecalledPrefs = [...injectedActivePrefs, ...injectedCuePrefs];
-		const allRecalledFacets = [...legacyFacetBridgeActive, ...legacyFacetBridgeCue];
-
-		await this.reinforceEntries(allRecalledKnowledge, allKnowledge, this.knowledgePath);
-		await this.reinforceEntries(allRecalledLessons, allLessons, this.lessonsPath);
-		await this.reinforceEntries(allRecalledEvents, allEvents, this.eventsPath);
-		await this.reinforceEntries(allRecalledPrefs, allPrefs, this.preferencesPath);
-		await this.reinforceEntries(allRecalledFacets, allFacets, this.facetsPath);
-		await this.reinforceWork(topWork, allWork);
-		await this.reinforceEpisodeMemories([...activeEpisodeMemories, ...cueEpisodeMemories], allV2Episodes);
-		await this.reinforceEpisodeFacets([...activeEpisodeFacets, ...cueEpisodeFacets], allV2EpisodeFacets);
-		await this.reinforceV2SemanticMemories([...activeSemanticMemories, ...cueSemanticMemories], allV2Semantic);
-		await this.reinforceProcedural([...activeProcedural, ...cueProcedural], allProcedural);
-		await this.reconsolidateV2AfterRecall(
-			allV2Episodes,
-			allV2EpisodeFacets,
-			allProcedural,
-			[...activeEpisodeMemories, ...cueEpisodeMemories],
-			[...activeEpisodeFacets, ...cueEpisodeFacets],
-			[...activeProcedural, ...cueProcedural],
-		);
-
-		// Optional reconsolidation for low-relevance recalled entries
-		if (this.llmFn) {
-			await this.reconsolidateIfNeeded(allRecalledKnowledge, contextTags, allKnowledge);
-			await this.reconsolidateIfNeeded(allRecalledLessons, contextTags, allLessons);
+			const p = PROMPTS[this.cfg.locale] ?? PROMPTS.en;
+			return this.buildProgressiveInjectionText(selection.active, selection.cue, selection.allEntries, selection.graphContext, p);
 		}
-
-		return this.buildProgressiveInjectionText(
-			{
-				knowledge: injectedActiveKnowledge,
-				lessons: injectedActiveLessons,
-				events: injectedActiveEvents,
-				preferences: injectedActivePrefs,
-				facets: legacyFacetBridgeActive,
-				episodeMemories: activeEpisodeMemories,
-				episodeFacets: activeEpisodeFacets,
-				semanticMemories: activeSemanticMemories,
-				procedural: activeProcedural,
-			},
-			{
-				knowledge: injectedCueKnowledge,
-				lessons: injectedCueLessons,
-				events: injectedCueEvents,
-				preferences: injectedCuePrefs,
-				facets: legacyFacetBridgeCue,
-				episodes: injectedCueEpisodes,
-				work: topWork,
-				episodeMemories: cueEpisodeMemories,
-				episodeFacets: cueEpisodeFacets,
-				semanticMemories: cueSemanticMemories,
-				procedural: cueProcedural,
-			},
-			allEntries,
-			graphContext,
-			p,
-		);
-	}
 
 	// ─── Progressive Recall Tools ───────────────────────────────
 
@@ -2207,294 +2034,48 @@ export class NanoMemEngine {
 		});
 	}
 
-	private mergeArchivedEntries(existing: MemoryEntry[], incoming: MemoryEntry[]): MemoryEntry[] {
-		const merged = new Map(existing.map((entry) => [entry.id, entry]));
-		for (const entry of incoming) merged.set(entry.id, entry);
-		return [...merged.values()].sort((a, b) => (b.archivedAt ?? b.created).localeCompare(a.archivedAt ?? a.created));
-	}
+	private mergeArchivedEntries = mergeArchivedEntriesFn;
 
-	private mergeArchivedWork(existing: WorkEntry[], incoming: WorkEntry[]): WorkEntry[] {
-		const merged = new Map(existing.map((entry) => [entry.id, entry]));
-		for (const entry of incoming) merged.set(entry.id, entry);
-		return [...merged.values()].sort((a, b) => (b.archivedAt ?? b.created).localeCompare(a.archivedAt ?? a.created));
-	}
+	private mergeArchivedWork = mergeArchivedWorkFn;
 
-	private mergeArchivedV2<T extends { id: string; createdAt: string; archivedAt?: string }>(existing: T[], incoming: T[]): T[] {
-		const merged = new Map(existing.map((entry) => [entry.id, entry]));
-		for (const entry of incoming) merged.set(entry.id, entry);
-		return [...merged.values()].sort((a, b) => (b.archivedAt ?? b.createdAt).localeCompare(a.archivedAt ?? a.createdAt));
-	}
+	private mergeArchivedV2 = mergeArchivedV2Fn;
 
-	private partitionArchivedEntries(entries: MemoryEntry[], now: string): { active: MemoryEntry[]; archived: MemoryEntry[] } {
-		const active: MemoryEntry[] = [];
-		const archived: MemoryEntry[] = [];
-		for (const entry of entries) {
-			const reason = this.getLegacyArchiveReason(entry);
-			if (!reason) {
-				active.push(entry);
-				continue;
-			}
-			archived.push({
-				...entry,
-				archivedAt: entry.archivedAt ?? now,
-				archiveReason: entry.archiveReason ?? reason,
-			});
-		}
-		return { active, archived };
-	}
+	private partitionArchivedEntries(entries: MemoryEntry[], now: string) { return partitionArchivedEntriesFn(entries, now, this.cfg.forgetting); }
 
-	private partitionArchivedWork(entries: WorkEntry[], now: string): { active: WorkEntry[]; archived: WorkEntry[] } {
-		const active: WorkEntry[] = [];
-		const archived: WorkEntry[] = [];
-		for (const entry of entries) {
-			const reason = this.getWorkArchiveReason(entry);
-			if (!reason) {
-				active.push(entry);
-				continue;
-			}
-			archived.push({
-				...entry,
-				archivedAt: entry.archivedAt ?? now,
-				archiveReason: entry.archiveReason ?? reason,
-			});
-		}
-		return { active, archived };
-	}
+	private partitionArchivedWork(entries: WorkEntry[], now: string) { return partitionArchivedWorkFn(entries, now, this.cfg.forgetting); }
 
-	private partitionArchivedSemantic(entries: SemanticMemory[], now: string): { active: SemanticMemory[]; archived: SemanticMemory[] } {
-		const active: SemanticMemory[] = [];
-		const archived: SemanticMemory[] = [];
-		for (const entry of entries) {
-			const reason = this.getSemanticArchiveReason(entry);
-			if (!reason) {
-				active.push(entry);
-				continue;
-			}
-			archived.push({
-				...entry,
-				archivedAt: entry.archivedAt ?? now,
-				archiveReason: entry.archiveReason ?? reason,
-			});
-		}
-		return { active, archived };
-	}
+	private partitionArchivedSemantic(entries: SemanticMemory[], now: string) { return partitionArchivedSemanticFn(entries, now, this.cfg.forgetting); }
 
-	private partitionArchivedProcedural(entries: ProceduralMemory[], now: string): { active: ProceduralMemory[]; archived: ProceduralMemory[] } {
-		const active: ProceduralMemory[] = [];
-		const archived: ProceduralMemory[] = [];
-		for (const entry of entries) {
-			const reason = this.getProceduralArchiveReason(entry);
-			if (!reason) {
-				active.push(entry);
-				continue;
-			}
-			archived.push({
-				...entry,
-				archivedAt: entry.archivedAt ?? now,
-				archiveReason: entry.archiveReason ?? reason,
-			});
-		}
-		return { active, archived };
-	}
+	private partitionArchivedProcedural(entries: ProceduralMemory[], now: string) { return partitionArchivedProceduralFn(entries, now, this.cfg.forgetting); }
 
 	private getLegacyArchiveReason(entry: MemoryEntry): string | undefined {
+		const f = this.cfg.forgetting;
 		if (entry.archivedAt) return entry.archiveReason ?? "pre-archived";
-		if (entry.revivedAt && daysSince(entry.revivedAt) <= this.cfg.forgetting.reviveCooldownDays) return undefined;
+		if (entry.revivedAt && daysSince(entry.revivedAt) <= f.reviveCooldownDays) return undefined;
 		const anchor = entry.lastAccessed ?? entry.eventTime ?? entry.created;
 		const ageDays = daysSince(anchor);
 		const lowSignal = (entry.accessCount ?? 0) <= 1 && entry.importance <= 6 && (entry.salience ?? entry.importance) <= 6;
-		if (entry.retention === "ambient" && lowSignal && ageDays > this.cfg.forgetting.ambientTtlDays) {
-			return "stale-ambient-memory";
-		}
+		if (entry.retention === "ambient" && lowSignal && ageDays > f.ambientTtlDays) return "stale-ambient-memory";
 		return undefined;
 	}
 
-	private inferSemanticRetention(item: ExtractedItem): SemanticMemory["retention"] {
-		if (item.retention) return item.retention;
-		if (item.stability === "situational" || item.stateData) return "ambient";
-		switch (item.type) {
-			case "preference":
-			case "pattern":
-				return "core";
-			case "lesson":
-			case "decision":
-			case "event":
-			case "struggle":
-				return "key-event";
-			default:
-				return "ambient";
-		}
-	}
+	private inferSemanticRetention = inferSemanticRetentionFn;
 
-	private inferSemanticStability(item: ExtractedItem): SemanticMemory["stability"] {
-		if (item.stability === "situational") return "situational";
-		if (item.stateData) return "volatile";
-		switch (item.type) {
-			case "preference":
-			case "pattern":
-				return "stable";
-			case "event":
-			case "struggle":
-				return "situational";
-			default:
-				return "stable";
-		}
-	}
+	private inferSemanticStability = inferSemanticStabilityFn;
 
-	private inferSemanticImportance(item: ExtractedItem): number {
-		switch (item.type) {
-			case "struggle":
-			case "event":
-				return 9;
-			case "lesson":
-			case "decision":
-				return 8;
-			case "pattern":
-				return 7;
-			case "preference":
-				return 6;
-			default:
-				return 5;
-		}
-	}
+	private inferSemanticImportance = inferSemanticImportanceFn;
 
-	private mapExtractedItemToSemanticType(item: ExtractedItem): SemanticMemory["semanticType"] {
-		switch (item.type) {
-			case "lesson":
-				return "lesson";
-			case "preference":
-				return "preference";
-			case "decision":
-				return "decision";
-			case "pattern":
-				return "pattern";
-			case "struggle":
-				return "struggle";
-			case "event":
-				return "event";
-			default:
-				return "fact";
-		}
-	}
+	private mapExtractedItemToSemanticType = mapExtractedItemToSemanticTypeFn;
 
 	private upsertSemanticFromExtractedItem(semantic: SemanticMemory[], item: ExtractedItem, project: string): void {
-		if (item.type === "retract") return;
-		const detail = filterPII(item.detail || item.content || "");
-		const name = item.name || detail.slice(0, 30) || item.summary || "memory";
-		const summary = item.summary || detail.slice(0, 150) || name;
-		const semanticType = this.mapExtractedItemToSemanticType(item);
-		const tags = extractTags(`${name} ${summary} ${detail}`);
-		const now = new Date().toISOString();
-		const existing = semantic.find(
-			(entry) =>
-				entry.semanticType === semanticType &&
-				entry.scope?.project === project &&
-				(tagOverlap(entry.tags, tags) >= 0.72 ||
-					`${entry.name} ${entry.summary}`.trim().toLowerCase() === `${name} ${summary}`.trim().toLowerCase()),
-		);
-		if (existing) {
-			existing.name = name;
-			existing.summary = summary;
-			existing.detail = detail || existing.detail;
-			existing.tags = [...new Set(tags)];
-			existing.updatedAt = now;
-			existing.retention = this.inferSemanticRetention(item);
-			existing.stability = this.inferSemanticStability(item);
-			existing.salience = Math.max(existing.salience, this.inferSemanticImportance(item));
-			existing.importance = Math.max(existing.importance, this.inferSemanticImportance(item));
-			return;
-		}
-
-		semantic.push({
-			id: `semantic:extract:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-			kind: "semantic",
-			semanticType,
-			name,
-			summary,
-			detail,
-			accessCount: 0,
-			importance: this.inferSemanticImportance(item),
-			salience: Math.max(4, this.inferSemanticImportance(item)),
-			confidence: 0.8,
-			retention: this.inferSemanticRetention(item),
-			stability: this.inferSemanticStability(item),
-			tags,
-			evidence: [],
-			scope: { ...this.cfg.defaultScope, project },
-			createdAt: now,
-			updatedAt: now,
-			abstractionLevel: semanticType === "event" ? "instance" : "generalization",
-			structuralAnchor: this.currentStructuralAnchor(),
-		});
+		upsertSemanticFromExtractedItemFn(semantic, item, project, this.cfg.defaultScope);
 	}
 
-	private semanticKindToLegacyType(kind: SemanticMemory["semanticType"]): MemoryEntry["type"] {
-		switch (kind) {
-			case "lesson":
-				return "lesson";
-			case "preference":
-				return "preference";
-			case "decision":
-				return "decision";
-			case "event":
-				return "event";
-			case "pattern":
-				return "pattern";
-			case "struggle":
-				return "struggle";
-			default:
-				return "fact";
-		}
-	}
+	private semanticKindToLegacyType = semanticKindToLegacyTypeFn;
 
-	private semanticToRuntimeEntry(entry: SemanticMemory): MemoryEntry {
-		const type = this.semanticKindToLegacyType(entry.semanticType);
-		return {
-			id: entry.id,
-			type,
-			name: entry.name,
-			summary: entry.summary,
-			detail: entry.detail,
-			content: entry.detail || entry.summary,
-			tags: entry.tags,
-			project: entry.scope?.project || "default",
-			importance: entry.importance,
-			strength: undefined,
-			created: entry.createdAt,
-			eventTime: entry.validFrom ?? entry.createdAt,
-			lastAccessed: entry.lastAccessedAt,
-			accessCount: entry.accessCount,
-			relatedIds: [...new Set([...(entry.supersedesIds ?? []), ...(entry.conflictWithIds ?? [])])],
-			scope: entry.scope,
-			retention: entry.retention === "ambient" ? "ambient" : entry.retention === "core" ? "core" : "key-event",
-			salience: entry.salience,
-			stability: entry.stability === "volatile" ? "situational" : entry.stability === "stable" ? "stable" : "situational",
-		};
-	}
+	private semanticToRuntimeEntry = semanticToRuntimeEntryFn;
 
-	private proceduralToRuntimeEntry(entry: ProceduralMemory): MemoryEntry {
-		return {
-			id: entry.id,
-			type: "decision",
-			name: entry.name,
-			summary: entry.summary,
-			detail: [entry.contextText, entry.boundaries, entry.steps.map((step) => step.text).join("\n")].filter(Boolean).join("\n"),
-			content: entry.summary,
-			tags: entry.tags,
-			project: entry.scope?.project || "default",
-			importance: entry.importance,
-			strength: undefined,
-			created: entry.createdAt,
-			eventTime: entry.validFrom ?? entry.createdAt,
-			lastAccessed: entry.lastAccessedAt,
-			accessCount: entry.accessCount,
-			relatedIds: entry.supersedesIds,
-			scope: entry.scope,
-			retention: entry.retention === "ambient" ? "ambient" : entry.retention === "core" ? "core" : "key-event",
-			salience: entry.salience,
-			stability: entry.stability === "volatile" ? "situational" : entry.stability === "stable" ? "stable" : "situational",
-		};
-	}
+	private proceduralToRuntimeEntry = proceduralToRuntimeEntryFn;
 
 	private async buildRuntimeMemoryView(): Promise<{
 		knowledge: MemoryEntry[];
@@ -2539,235 +2120,47 @@ export class NanoMemEngine {
 	}
 
 	private getWorkArchiveReason(entry: WorkEntry): string | undefined {
+		const f = this.cfg.forgetting;
 		if (entry.archivedAt) return entry.archiveReason ?? "pre-archived";
-		if (entry.revivedAt && daysSince(entry.revivedAt) <= this.cfg.forgetting.reviveCooldownDays) return undefined;
+		if (entry.revivedAt && daysSince(entry.revivedAt) <= f.reviveCooldownDays) return undefined;
 		const anchor = entry.lastAccessed ?? entry.eventTime ?? entry.created;
 		const ageDays = daysSince(anchor);
-		if ((entry.accessCount ?? 0) <= 1 && entry.importance <= 6 && ageDays > this.cfg.forgetting.workTtlDays) {
-			return "stale-work-memory";
-		}
+		if ((entry.accessCount ?? 0) <= 1 && entry.importance <= 6 && ageDays > f.workTtlDays) return "stale-work-memory";
 		return undefined;
 	}
 
 	private getSemanticArchiveReason(entry: SemanticMemory): string | undefined {
+		const f = this.cfg.forgetting;
 		if (entry.archivedAt) return entry.archiveReason ?? "pre-archived";
-		if (entry.revivedAt && daysSince(entry.revivedAt) <= this.cfg.forgetting.reviveCooldownDays) return undefined;
+		if (entry.revivedAt && daysSince(entry.revivedAt) <= f.reviveCooldownDays) return undefined;
 		const anchor = entry.lastAccessedAt ?? entry.updatedAt ?? entry.createdAt;
 		const ageDays = daysSince(anchor);
-		if (entry.supersededById && ageDays > this.cfg.forgetting.ambientTtlDays) {
-			return "superseded-semantic-memory";
-		}
+		if (entry.supersededById && ageDays > f.ambientTtlDays) return "superseded-semantic-memory";
 		const lowSignal = (entry.accessCount ?? 0) <= 1 && entry.importance <= 6 && entry.confidence < 0.85;
-		if (entry.retention === "ambient" && lowSignal && ageDays > this.cfg.forgetting.ambientTtlDays * 2) {
-			return "stale-semantic-memory";
-		}
+		if (entry.retention === "ambient" && lowSignal && ageDays > f.ambientTtlDays * 2) return "stale-semantic-memory";
 		return undefined;
 	}
 
 	private getProceduralArchiveReason(entry: ProceduralMemory): string | undefined {
+		const f = this.cfg.forgetting;
 		if (entry.archivedAt) return entry.archiveReason ?? "pre-archived";
-		if (entry.revivedAt && daysSince(entry.revivedAt) <= this.cfg.forgetting.reviveCooldownDays) return undefined;
+		if (entry.revivedAt && daysSince(entry.revivedAt) <= f.reviveCooldownDays) return undefined;
 		const anchor = entry.lastAccessedAt ?? entry.updatedAt ?? entry.createdAt;
 		const ageDays = daysSince(anchor);
-		if ((entry.status === "superseded" || entry.status === "deprecated") && ageDays > this.cfg.forgetting.ambientTtlDays) {
-			return "stale-procedure-version";
-		}
-		if (entry.status === "draft" && (entry.accessCount ?? 0) <= 1 && entry.importance <= 6 && ageDays > this.cfg.forgetting.ambientTtlDays * 2) {
-			return "abandoned-draft-procedure";
-		}
+		if ((entry.status === "superseded" || entry.status === "deprecated") && ageDays > f.ambientTtlDays) return "stale-procedure-version";
+		if (entry.status === "draft" && (entry.accessCount ?? 0) <= 1 && entry.importance <= 6 && ageDays > f.ambientTtlDays * 2) return "abandoned-draft-procedure";
 		return undefined;
 	}
 
-	private buildProceduralChains(entries: ProceduralMemory[]): Array<{
-		rootId: string;
-		name: string;
-		status: ProceduralMemory["status"];
-		versionDepth: number;
-		ids: string[];
-	}> {
-		const byId = new Map(entries.map((entry) => [entry.id, entry]));
-		const roots = entries.filter((entry) => !entry.supersededById || !byId.has(entry.supersededById));
-		return roots
-				.map((root) => {
-				const ids = new Set<string>();
-				const stack = [root.id];
-				while (stack.length) {
-					const currentId = stack.pop();
-					if (!currentId || ids.has(currentId)) continue;
-					ids.add(currentId);
-					for (const entry of entries) {
-						if (entry.supersededById === currentId) stack.push(entry.id);
-						if (entry.supersedesIds?.includes(currentId)) stack.push(entry.id);
-					}
-				}
-				const chainEntries = [...ids].map((id) => byId.get(id)).filter((entry): entry is ProceduralMemory => Boolean(entry));
-				return {
-					rootId: root.id,
-					name: root.name,
-					status: root.status,
-					versionDepth: chainEntries.length,
-					ids: chainEntries
-						.sort((a, b) => {
-							const aVersion = a.version ?? 0;
-							const bVersion = b.version ?? 0;
-							if (aVersion !== bVersion) return bVersion - aVersion;
-							return a.updatedAt.localeCompare(b.updatedAt);
-						})
-						.map((entry) => entry.id),
-					};
-				})
-				.filter((chain) => chain.versionDepth > 1)
-			.sort((a, b) => b.versionDepth - a.versionDepth || a.name.localeCompare(b.name));
+	private buildProceduralChains = buildProceduralChainsFn;
+
+	private materializeV2Links(semantic: SemanticMemory[], procedural: ProceduralMemory[], existingLinks: MemoryLink[], now = new Date().toISOString()): MemoryLink[] {
+		return materializeV2LinksFn(semantic, procedural, existingLinks, AUTO_V2_LINK_PREFIX, now);
 	}
 
-	private materializeV2Links(
-		semantic: SemanticMemory[],
-		procedural: ProceduralMemory[],
-		existingLinks: MemoryLink[],
-		now = new Date().toISOString(),
-	): MemoryLink[] {
-		const manualLinks = existingLinks.filter((link) => !link.id.startsWith(NanoMemEngine.AUTO_V2_LINK_PREFIX));
-		const autoLinks = new Map<string, MemoryLink>();
-		const proceduralConflicts = this.detectProceduralConflicts(
-			procedural.filter((entry) => entry.status !== "deprecated" && entry.status !== "superseded"),
-		);
-		const semanticConflicts = this.detectSemanticConflicts(semantic);
+	private detectProceduralConflicts = detectProceduralConflictsFn;
 
-		const addAutoLink = (
-			fromId: string,
-			toId: string,
-			type: MemoryLink["type"],
-			weight: number,
-			evidence: MemoryLink["evidence"] = [],
-		): void => {
-			if (!fromId || !toId || fromId === toId) return;
-			const directional = type === "supersedes";
-			const [normalizedFrom, normalizedTo] = directional || fromId < toId ? [fromId, toId] : [toId, fromId];
-			const id = `${NanoMemEngine.AUTO_V2_LINK_PREFIX}${type}:${normalizedFrom}->${normalizedTo}`;
-			autoLinks.set(id, {
-				id,
-				fromId: normalizedFrom,
-				toId: normalizedTo,
-				type,
-				weight,
-				explicit: false,
-				createdAt: autoLinks.get(id)?.createdAt ?? now,
-				updatedAt: now,
-				evidence,
-			});
-		};
-
-		for (const entry of semantic) {
-			for (const supersededId of entry.supersedesIds ?? []) {
-				addAutoLink(entry.id, supersededId, "supersedes", 0.92);
-			}
-			if (entry.supersededById) {
-				addAutoLink(entry.supersededById, entry.id, "supersedes", 0.92);
-			}
-		}
-
-		for (const entry of procedural) {
-			for (const supersededId of entry.supersedesIds ?? []) {
-				addAutoLink(entry.id, supersededId, "supersedes", 0.94);
-			}
-			if (entry.supersededById) {
-				addAutoLink(entry.supersededById, entry.id, "supersedes", 0.94);
-			}
-		}
-
-		for (const conflict of semanticConflicts) {
-			addAutoLink(conflict.aId, conflict.bId, "conflicts-with", 0.88);
-		}
-
-		for (const conflict of proceduralConflicts) {
-			addAutoLink(conflict.aId, conflict.bId, "conflicts-with", Math.max(0.72, conflict.score));
-		}
-
-		return [...manualLinks, ...autoLinks.values()].sort((a, b) => a.id.localeCompare(b.id));
-	}
-
-	private detectProceduralConflicts(entries: ProceduralMemory[]): Array<{
-		aId: string;
-		bId: string;
-		aName: string;
-		bName: string;
-		score: number;
-		reason: string;
-	}> {
-		const conflicts: Array<{
-			aId: string;
-			bId: string;
-			aName: string;
-			bName: string;
-			score: number;
-			reason: string;
-		}> = [];
-		for (let i = 0; i < entries.length; i++) {
-			for (let j = i + 1; j < entries.length; j++) {
-				const a = entries[i];
-				const b = entries[j];
-				if (!a || !b || a.id === b.id) continue;
-				const tagScore = tagOverlap(a.tags ?? [], b.tags ?? []);
-				const lexicalScore = tagOverlap(
-					extractTags(`${a.name} ${a.searchText} ${a.summary}`),
-					extractTags(`${b.name} ${b.searchText} ${b.summary}`),
-				);
-				const similarity = Math.max(tagScore, lexicalScore);
-				const sameIntent =
-					a.searchText.trim().toLowerCase() === b.searchText.trim().toLowerCase() ||
-					a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
-				const boundariesDiffer =
-					(a.boundaries ?? "").trim().toLowerCase() !== (b.boundaries ?? "").trim().toLowerCase() ||
-					(a.contextText ?? "").trim().toLowerCase() !== (b.contextText ?? "").trim().toLowerCase();
-				if ((similarity >= 0.72 || sameIntent) && boundariesDiffer) {
-					conflicts.push({
-						aId: a.id,
-						bId: b.id,
-						aName: a.name,
-						bName: b.name,
-						score: Number(similarity.toFixed(3)),
-						reason: "High-overlap active procedures differ in boundaries or context.",
-					});
-				}
-			}
-		}
-		return conflicts.sort((a, b) => b.score - a.score || a.aName.localeCompare(b.aName));
-	}
-
-	private detectSemanticConflicts(entries: SemanticMemory[]): Array<{
-		aId: string;
-		bId: string;
-		aName: string;
-		bName: string;
-		reason: string;
-	}> {
-		const byId = new Map(entries.map((entry) => [entry.id, entry]));
-		const seen = new Set<string>();
-		const conflicts: Array<{
-			aId: string;
-			bId: string;
-			aName: string;
-			bName: string;
-			reason: string;
-		}> = [];
-		for (const entry of entries) {
-			for (const conflictId of entry.conflictWithIds ?? []) {
-				const other = byId.get(conflictId);
-				if (!other) continue;
-				const pairKey = [entry.id, other.id].sort().join("::");
-				if (seen.has(pairKey)) continue;
-				seen.add(pairKey);
-				conflicts.push({
-					aId: entry.id,
-					bId: other.id,
-					aName: entry.name,
-					bName: other.name,
-					reason: "Explicit semantic conflict link.",
-				});
-			}
-		}
-		return conflicts.sort((a, b) => a.aName.localeCompare(b.aName) || a.bName.localeCompare(b.bName));
-	}
+	private detectSemanticConflicts = detectSemanticConflictsFn;
 
 	private buildEmbeddingSourceItems(
 		episodes: EpisodeMemory[],
@@ -2943,87 +2336,9 @@ export class NanoMemEngine {
 		await this.rebuildV2Links();
 	}
 
-	private detectAlignmentConflicts(
-		entries: MemoryEntry[],
-	): Array<{
-		aId: string;
-		bId: string;
-		reason: string;
-		severity: number;
-		recommendation: "merge" | "demote" | "forget" | "mark-situational";
-		rationale: string;
-	}> {
-		const candidates = entries.filter(
-			(entry) =>
-				entry.stability !== "situational" &&
-				(entry.retention === "core" || entry.retention === "key-event") &&
-				!!(entry.summary || entry.detail || entry.name),
-		);
-		const conflicts: Array<{
-			aId: string;
-			bId: string;
-			reason: string;
-			severity: number;
-			recommendation: "merge" | "demote" | "forget" | "mark-situational";
-			rationale: string;
-		}> = [];
-		const seen = new Set<string>();
-		const positiveMarkers = ["prefer", "always", "use", "enable", "include", "like", "keep", "should"];
-		const negativeMarkers = ["avoid", "never", "disable", "remove", "dislike", "hate", "stop", "do not", "don't"];
-		const getText = (entry: MemoryEntry) =>
-			`${entry.name || ""} ${entry.summary || ""} ${entry.detail || ""}`.toLowerCase();
-		const polarity = (text: string): "positive" | "negative" | "neutral" => {
-			const hasPositive = positiveMarkers.some((marker) => text.includes(marker));
-			const hasNegative = negativeMarkers.some((marker) => text.includes(marker));
-			if (hasPositive && !hasNegative) return "positive";
-			if (hasNegative && !hasPositive) return "negative";
-			return "neutral";
-		};
+	private detectAlignmentConflicts = detectAlignmentConflictsFn;
 
-		for (let i = 0; i < candidates.length; i++) {
-			for (let j = i + 1; j < candidates.length; j++) {
-				const a = candidates[i]!;
-				const b = candidates[j]!;
-				if (a.id === b.id) continue;
-				const overlap = tagOverlap(a.tags, b.tags);
-				if (overlap < 0.45) continue;
-				const aPolarity = polarity(getText(a));
-				const bPolarity = polarity(getText(b));
-				if (aPolarity === "neutral" || bPolarity === "neutral" || aPolarity === bPolarity) continue;
-				const pairKey = [a.id, b.id].sort().join(":");
-				if (seen.has(pairKey)) continue;
-				seen.add(pairKey);
-				const severity = Math.min(
-					1,
-					overlap * 0.6 + ((a.salience ?? a.importance) + (b.salience ?? b.importance)) / 20 * 0.4,
-				);
-				const reason = `Potential conflict on shared context: ${aPolarity} vs ${bPolarity}`;
-				const recommendation = this.suggestConflictAction(a, b, severity);
-				const rationale = this.explainConflictAction(a, b, recommendation);
-				conflicts.push({ aId: a.id, bId: b.id, reason, severity, recommendation, rationale });
-			}
-		}
-
-		return conflicts.sort((a, b) => b.severity - a.severity);
-	}
-
-	private suggestConflictAction(
-		a: MemoryEntry,
-		b: MemoryEntry,
-		severity: number,
-	): "merge" | "demote" | "forget" | "mark-situational" {
-		const aStable = a.stability !== "situational";
-		const bStable = b.stability !== "situational";
-		const aRecent = daysSince(a.created) <= 14;
-		const bRecent = daysSince(b.created) <= 14;
-		const aLowSignal = (a.salience ?? a.importance) <= 4;
-		const bLowSignal = (b.salience ?? b.importance) <= 4;
-
-		if (aStable !== bStable) return "mark-situational";
-		if (severity >= 0.8 && (aLowSignal || bLowSignal)) return "forget";
-		if (severity >= 0.65 && (aRecent || bRecent)) return "demote";
-		return "merge";
-	}
+	private suggestConflictAction = suggestConflictActionFn;
 
 	private explainConflictAction(
 		a: MemoryEntry,
@@ -3086,215 +2401,13 @@ export class NanoMemEngine {
 		}
 	}
 
-	private buildProgressiveInjectionText(
-		active: {
-			knowledge: MemoryEntry[];
-			lessons: MemoryEntry[];
-			events: MemoryEntry[];
-			preferences: MemoryEntry[];
-			facets: MemoryEntry[];
-			episodeMemories: EpisodeMemory[];
-			episodeFacets: EpisodeFacet[];
-			semanticMemories: SemanticMemory[];
-			procedural: ProceduralMemory[];
-		},
-		cue: {
-			knowledge: MemoryEntry[];
-			lessons: MemoryEntry[];
-			events: MemoryEntry[];
-			preferences: MemoryEntry[];
-			facets: MemoryEntry[];
-			episodes: Episode[];
-			work: WorkEntry[];
-			episodeMemories: EpisodeMemory[];
-			episodeFacets: EpisodeFacet[];
-			semanticMemories: SemanticMemory[];
-			procedural: ProceduralMemory[];
-		},
-		allEntries: MemoryEntry[],
-		graphContext: GraphNeighbor[],
-		p: PromptSet,
-	): string {
-		const sections: string[] = [];
-		const proceduralSectionTitle = "Procedures";
-		const episodicSectionTitle = "Episode Threads";
-		const semanticSectionTitle = "Semantic Abstractions";
+	private buildProgressiveInjectionText = buildProgressiveInjectionText;
 
-		// ── Active tier: full detail ──
-		const activeLines: string[] = [];
-		const conversationPreferenceLines: string[] = [];
-		const keyEventLines: string[] = [];
-		const stateLines: string[] = [];
+	private isConversationPreference = isConversationPreferenceFn;
 
-		const formatActiveEntry = (e: MemoryEntry): string => {
-			const related = getGraphContextSummaries(e, allEntries, 3);
-			const suffix = related.length ? ` [→ ${related.join("; ")}]` : "";
-			return `- [ID: ${e.id}] **${e.name || "—"}**: ${e.summary || ""}\n  ${e.detail || ""}${suffix}`;
-		};
+	private selectConversationPreferences = selectConversationPreferencesFn;
 
-		const formatActiveEvent = (e: MemoryEntry): string => {
-			const related = getGraphContextSummaries(e, allEntries, 4);
-			const outcome = e.eventData?.outcome ? `\n  Outcome: ${e.eventData.outcome}` : "";
-			const suffix = related.length ? ` [→ ${related.join("; ")}]` : "";
-			return `- [ID: ${e.id}] **${e.name || "—"}**: ${e.summary || ""}\n  ${e.detail || ""}${outcome}${suffix}`;
-		};
-
-		const formatActiveFacet = (e: MemoryEntry): string => {
-			if (e.facetData?.kind === "pattern") {
-				return `- [ID: ${e.id}] **${e.name || "—"}**: When ${e.facetData.trigger} → ${e.facetData.behavior}\n  ${e.detail || ""}`;
-			}
-			if (e.facetData?.kind === "struggle") {
-				return `- [ID: ${e.id}] **${e.name || "—"}**: ${e.facetData.problem}\n  Tried: ${e.facetData.attempts.join(", ")} | Solved: ${e.facetData.solution}\n  ${e.detail || ""}`;
-			}
-			return formatActiveEntry(e);
-		};
-
-		const pushActiveEntry = (entry: MemoryEntry) => {
-			if (this.isConversationPreference(entry)) {
-				conversationPreferenceLines.push(formatActiveEntry(entry));
-				return;
-			}
-			if (entry.stability === "situational" || entry.stateData) {
-				const mood = entry.stateData?.mood ? ` (${entry.stateData.mood})` : "";
-				stateLines.push(`- [ID: ${entry.id}] **${entry.name || "Unknown"}**${mood}: ${entry.summary || ""}`);
-				return;
-			}
-			activeLines.push(formatActiveEntry(entry));
-		};
-
-		for (const e of active.lessons) pushActiveEntry(e);
-		for (const e of active.knowledge) pushActiveEntry(e);
-		for (const e of active.preferences) pushActiveEntry(e);
-		for (const e of active.facets) activeLines.push(formatActiveFacet(e));
-		for (const e of active.events) keyEventLines.push(formatActiveEvent(e));
-		const episodicLines = active.episodeMemories.map((entry) => {
-			const goal = entry.userGoal ? ` | Goal: ${entry.userGoal}` : "";
-			const outcome = entry.outcome ? ` | Outcome: ${entry.outcome}` : "";
-			return `- [ID: ${entry.id}] **${entry.title || "Episode"}**: ${entry.summary}${goal}${outcome}`;
-		});
-		const episodicFacetLines = active.episodeFacets.map((entry) => {
-			const detail = entry.anchorText ? `\n  ${entry.anchorText}` : "";
-			return `- [ID: ${entry.id}] [${entry.facetType}] **${entry.searchText}**${detail}`;
-		});
-		const semanticLines = active.semanticMemories.map((entry) => {
-			const detail = entry.detail ? `\n  ${entry.detail}` : "";
-			return `- [ID: ${entry.id}] [${entry.semanticType}] **${entry.name}**: ${entry.summary}${detail}`;
-		});
-		const proceduralLines = active.procedural.map((entry) => {
-			const steps = entry.steps.slice(0, 4).map((step, index) => `${index + 1}. ${step.text}`).join("\n  ");
-			const boundaries = entry.boundaries ? `\n  Boundaries: ${entry.boundaries}` : "";
-			return `- [ID: ${entry.id}] **${entry.name}**: ${entry.summary}\n  ${steps}${boundaries}`;
-		});
-
-		if (conversationPreferenceLines.length) {
-			sections.push(`### ${p.sectionConversationPreferences}\n${conversationPreferenceLines.join("\n")}`);
-		}
-		if (activeLines.length) {
-			sections.push(`### ${p.sectionActiveMemories}\n${activeLines.join("\n")}`);
-		}
-		if (episodicLines.length || episodicFacetLines.length) {
-			sections.push(`### ${episodicSectionTitle}\n${[...episodicLines, ...episodicFacetLines].join("\n")}`);
-		}
-		if (semanticLines.length) {
-			sections.push(`### ${semanticSectionTitle}\n${semanticLines.join("\n")}`);
-		}
-		if (proceduralLines.length) {
-			sections.push(`### ${proceduralSectionTitle}\n${proceduralLines.join("\n")}`);
-		}
-		if (keyEventLines.length) {
-			sections.push(`### ${p.sectionKeyEvents ?? "Key Events"}\n${keyEventLines.join("\n")}`);
-		}
-		if (stateLines.length) {
-			sections.push(`### ${p.sectionCurrentState ?? "Current State Signals"}\n${stateLines.join("\n")}`);
-		}
-
-		const relatedLines = graphContext.map(
-			(neighbor) =>
-				`- [${neighbor.relation}] [ID: ${neighbor.entry.id}] [${neighbor.entry.type}] **${
-					neighbor.entry.name || "Unknown"
-				}**: ${neighbor.entry.summary || ""}`,
-		);
-		if (relatedLines.length) {
-			sections.push(`### ${p.sectionRelatedContext ?? "Related Context"}\n${relatedLines.join("\n")}`);
-		}
-
-		// ── Cue tier: name + summary + id ──
-		const cueLines: string[] = [];
-
-		const formatCueEntry = (e: MemoryEntry): string =>
-			`- [ID: ${e.id}] [${e.type}] **${e.name || "—"}**: ${e.summary || ""}`;
-
-		const formatCueFacet = (e: MemoryEntry): string => {
-			if (e.facetData?.kind === "pattern") {
-				return `- [ID: ${e.id}] [pattern] **${e.name || "—"}**: When ${e.facetData.trigger} → ${e.facetData.behavior}`;
-			}
-			if (e.facetData?.kind === "struggle") {
-				return `- [ID: ${e.id}] [struggle] **${e.name || "—"}**: ${e.facetData.problem}`;
-			}
-			return formatCueEntry(e);
-		};
-
-		const formatCueEvent = (e: MemoryEntry): string =>
-			`- [ID: ${e.id}] [event] **${e.name || "—"}**: ${e.summary || ""}`;
-
-		for (const e of cue.lessons) cueLines.push(formatCueEntry(e));
-		for (const e of cue.knowledge) cueLines.push(formatCueEntry(e));
-		for (const e of cue.events) cueLines.push(formatCueEvent(e));
-		for (const e of cue.preferences) cueLines.push(formatCueEntry(e));
-		for (const e of cue.facets) cueLines.push(formatCueFacet(e));
-		for (const episode of cue.episodeMemories) {
-			cueLines.push(`- [ID: ${episode.id}] [episode] **${episode.title || "Episode"}**: ${episode.summary}`);
-		}
-		for (const facet of cue.episodeFacets) {
-			cueLines.push(`- [ID: ${facet.id}] [episode-${facet.facetType}] **${facet.searchText}**: ${facet.summary || facet.anchorText || ""}`);
-		}
-		for (const semantic of cue.semanticMemories) {
-			cueLines.push(`- [ID: ${semantic.id}] [semantic-${semantic.semanticType}] **${semantic.name}**: ${semantic.summary}`);
-		}
-		for (const procedure of cue.procedural) {
-			cueLines.push(`- [ID: ${procedure.id}] [procedural] **${procedure.name}**: ${procedure.summary}`);
-		}
-
-		// Episodes in cue layer (no ID-based recall)
-		for (const ep of cue.episodes) {
-			cueLines.push(
-				`- [${ep.date}] ${ep.project}: ${ep.summary}${ep.userGoal ? ` (Goal: ${ep.userGoal})` : ""}`,
-			);
-		}
-		// Work in cue layer
-		for (const w of cue.work) {
-			cueLines.push(`- [${w.created.slice(0, 10)}] ${w.goal}: ${w.summary}`);
-		}
-
-		if (cueLines.length) {
-			sections.push(`### ${p.sectionMemoryCues}\n*${p.memoryCueHint}*\n${cueLines.join("\n")}`);
-		}
-
-		if (!sections.length) return "";
-		const soulStyle = process.env.NANOSOUL_MEMORY_STYLE;
-		const behaviorBlock = soulStyle
-			? `${p.memoryBehavior}\n\n${soulStyle}`
-			: p.memoryBehavior;
-		return `## ${p.injectionHeader}\n\n${sections.join("\n\n")}\n\n---\n${behaviorBlock}`;
-	}
-
-	private isConversationPreference(entry: MemoryEntry): boolean {
-		if (entry.type !== "preference") return false;
-		const text = `${entry.name || ""}\n${entry.summary || ""}\n${entry.detail || ""}\n${entry.content || ""}`;
-		return NanoMemEngine.CONVERSATION_PREFERENCE_PATTERNS.some((pattern) => pattern.test(text));
-	}
-
-	private selectConversationPreferences(entries: MemoryEntry[]): MemoryEntry[] {
-		return entries
-			.filter((entry) => this.isConversationPreference(entry))
-			.filter((entry) => entry.stability !== "situational")
-			.sort((a, b) => this.rankConversationPreference(b) - this.rankConversationPreference(a))
-			.slice(0, 3);
-	}
-
-	private rankConversationPreference(entry: MemoryEntry): number {
-		return (entry.salience ?? entry.importance ?? 0) * 10 + (entry.accessCount ?? 0) * 2 - daysSince(entry.created);
-	}
+	private rankConversationPreference = rankConversationPreferenceFn;
 
 	private mergeUniqueEntries(preferred: MemoryEntry[], fallback: MemoryEntry[]): MemoryEntry[] {
 		const merged: MemoryEntry[] = [];

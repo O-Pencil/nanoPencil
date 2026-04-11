@@ -124,7 +124,16 @@ The `packages/` directory contains bundled npm packages that are compiled and in
     - [HERE]: memory barrel
 
 **Files:**
-`engine.ts`: Main NanoMemEngine class
+`engine.ts`: Main NanoMemEngine facade class (orchestrates subsystems)
+`engine-scoring-v2.ts`: V2 memory scoring and structural proximity
+`engine-injection-text.ts`: Injection text formatting, conversation preference detection
+`engine-v2-mapping.ts`: V2 type mapping and extraction-to-semantic conversion
+`engine-archive.ts`: Archive partitioning, merging, staleness detection
+`engine-links.ts`: V2 link materialization, conflict detection, procedural chains
+`engine-insights.ts`: Insights report generation (LLM + rules-based)
+`engine-episode-sync.ts`: Episode-to-V2 sync and mapping
+`engine-reinforce.ts`: Memory reinforcement and reconsolidation
+`engine-recall-select.ts`: Recall entry selection and budget allocation
 `store.ts`: JSON-based persistence
 `config.ts`: Configuration management
 `consolidation.ts`: Episode consolidation

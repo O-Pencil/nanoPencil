@@ -20,8 +20,12 @@ function getCurrentVersion() {
 
 function getLastTag() {
   try {
-    const tags = execSync('git tag --sort=-v:refname | head -1', { encoding: "utf-8" });
-    return tags.trim();
+    const tags = execSync("git tag --sort=-v:refname", { encoding: "utf-8" });
+    const first = tags
+      .trim()
+      .split("\n")
+      .filter(Boolean)[0];
+    return first ?? "v0.0.0";
   } catch {
     return "v0.0.0";
   }

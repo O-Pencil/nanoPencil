@@ -18,7 +18,9 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 ### agent-core/ — Core Agent Logic
 
 **P3 Contract (index.ts):**
-`index.ts`: UPSTREAM agent-loop.ts, agent.ts, proxy.ts; SURFACE Agent class, AgentConfig; LOCUS agent core barrel
+`index.ts`: - [WHO]: Agent class, AgentConfig
+    - [FROM]: agent-loop.ts, agent.ts, proxy.ts
+    - [HERE]: agent core barrel
 
 **Files:**
 `agent.ts`: Main agent class with message loop
@@ -31,7 +33,9 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 ### ai/ — Model APIs and Providers
 
 **P3 Contract (index.ts):**
-`index.ts`: UPSTREAM providers/*; SURFACE AI SDK exports; LOCUS AI module barrel
+`index.ts`: - [WHO]: AI SDK exports
+    - [FROM]: providers/*
+    - [HERE]: AI module barrel
 
 **Files:**
 `api-registry.ts`: API endpoint registry
@@ -80,7 +84,9 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 ### tui/ — Terminal UI Components
 
 **P3 Contract (index.ts):**
-`index.ts`: UPSTREAM components/*, tui.ts; SURFACE TUI components and TUI class; LOCUS terminal UI barrel
+`index.ts`: - [WHO]: TUI components and TUI class
+    - [FROM]: components/*, tui.ts
+    - [HERE]: terminal UI barrel
 
 **Files:**
 `tui.ts`: Main TUI orchestrator class
@@ -113,7 +119,9 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 ### mem-core/ — Persistent Memory System
 
 **P3 Contract (index.ts):**
-`index.ts`: UPSTREAM engine.ts, store.ts, extraction.ts; SURFACE NanoMemEngine, MemoryEntry types; LOCUS memory barrel
+`index.ts`: - [WHO]: NanoMemEngine, MemoryEntry types
+    - [FROM]: engine.ts, store.ts, extraction.ts
+    - [HERE]: memory barrel
 
 **Files:**
 `engine.ts`: Main NanoMemEngine class
@@ -141,7 +149,9 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 ### soul-core/ — AI Personality Evolution
 
 **P3 Contract (index.ts):**
-`index.ts`: UPSTREAM evolution.ts, manager.ts; SURFACE SoulEngine, Personality traits; LOCUS soul barrel
+`index.ts`: - [WHO]: SoulEngine, Personality traits
+    - [FROM]: evolution.ts, manager.ts
+    - [HERE]: soul barrel
 
 **Files:**
 `config.ts`: Soul configuration

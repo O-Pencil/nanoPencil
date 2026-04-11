@@ -214,6 +214,7 @@ export class ExtensionRunner {
 	private getContextUsageFn: () => ContextUsage | undefined = () => undefined;
 	private compactFn: (options?: CompactOptions) => void = () => {};
 	private getSystemPromptFn: () => string = () => "";
+	private getSoulManagerFn: () => unknown | undefined = () => undefined;
 	private getSettingsFn: () => import("../config/settings-manager.js").Settings = () => ({});
 	private newSessionHandler: NewSessionHandler = async () => ({ cancelled: false });
 	private forkHandler: ForkHandler = async () => ({ cancelled: false });
@@ -300,6 +301,7 @@ export class ExtensionRunner {
 		this.getContextUsageFn = contextActions.getContextUsage;
 		this.compactFn = contextActions.compact;
 		this.getSystemPromptFn = contextActions.getSystemPrompt;
+		this.getSoulManagerFn = contextActions.getSoulManager;
 		this.getSettingsFn = contextActions.getSettings;
 
 		// Process provider registrations queued during extension loading
@@ -560,6 +562,7 @@ export class ExtensionRunner {
 			getContextUsage: () => this.getContextUsageFn(),
 			compact: (options) => this.compactFn(options),
 			getSystemPrompt: () => this.getSystemPromptFn(),
+			getSoulManager: () => this.getSoulManagerFn(),
 			getSettings: () => this.getSettingsFn(),
 		};
 	}
@@ -790,6 +793,13 @@ export class ExtensionRunner {
 							currentSystemPrompt = result.systemPrompt;
 							systemPromptModified = true;
 						}
+						if (result.appendSystemPrompt !== undefined) {
+							currentSystemPrompt = this.appendSystemPrompt(
+								currentSystemPrompt,
+								result.appendSystemPrompt,
+							);
+							systemPromptModified = true;
+						}
 					}
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
@@ -812,6 +822,12 @@ export class ExtensionRunner {
 		}
 
 		return undefined;
+	}
+
+	private appendSystemPrompt(base: string, addition: string): string {
+		const normalized = addition.trim();
+		if (!normalized) return base;
+		return `${base}\n\n${normalized}`;
 	}
 
 	async emitResourcesDiscover(

@@ -33,6 +33,47 @@ function mcpError(...args: unknown[]): void {
   console.error(...args);
 }
 
+/** Normalize thrown values for logs (avoids "undefined" when rejections are non-Error). */
+function formatUnknownError(error: unknown): string {
+  if (error == null) return "Unknown error";
+  if (error instanceof Error) {
+    const m = error.message?.trim();
+    if (m.length > 0) return m;
+    return error.name && error.name !== "Error" ? error.name : "Error (empty message)";
+  }
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+/**
+ * Per-server startup failure: in production only emit debug-level detail (summary is in sdk.ts).
+ * In non-production, print one line with a readable message.
+ */
+function logMcpStartupFailure(
+  kind: "stdio" | "http",
+  serverId: string,
+  error: unknown,
+): void {
+  const detail = formatUnknownError(error);
+  if (!isDebugMode) {
+    mcpLog(
+      kind === "http"
+        ? `[MCP] HTTP init failed ${serverId}: ${detail}`
+        : `[MCP] stdio start failed ${serverId}: ${detail}`,
+    );
+    return;
+  }
+  if (kind === "http") {
+    console.error(`Failed to initialize HTTP MCP server ${serverId}: ${detail}`);
+  } else {
+    console.error(`Failed to start MCP server ${serverId}: ${detail}`);
+  }
+}
+
 export interface MCPServerConfig {
   /** Unique identifier for this server */
   id: string;
@@ -743,10 +784,7 @@ export class MCPClient {
         await this.loadToolsForServer(serverId);
         return true;
       } catch (error) {
-        console.error(
-          `Failed to initialize HTTP MCP server ${serverId}:`,
-          error instanceof Error ? error.message : error,
-        );
+        logMcpStartupFailure("http", serverId, error);
         return false;
       }
     }
@@ -791,10 +829,7 @@ export class MCPClient {
       }
     }
 
-    console.error(
-      `Failed to start MCP server ${serverId}:`,
-      lastError instanceof Error ? lastError.message : lastError,
-    );
+    logMcpStartupFailure("stdio", serverId, lastError);
     return false;
   }
 

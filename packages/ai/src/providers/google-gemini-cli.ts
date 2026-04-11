@@ -82,7 +82,7 @@ const GEMINI_CLI_HEADERS = {
 const DEFAULT_ANTIGRAVITY_VERSION = "1.18.3";
 
 function getAntigravityHeaders() {
-	const version = process.env.PI_AI_ANTIGRAVITY_VERSION || DEFAULT_ANTIGRAVITY_VERSION;
+	const version = process.env.NANOPENCIL_AI_ANTIGRAVITY_VERSION || DEFAULT_ANTIGRAVITY_VERSION;
 	return {
 		"User-Agent": `antigravity/${version} darwin/arm64`,
 		"X-Goog-Api-Client": "google-cloud-sdk vscode_cloudshelleditor/0.1",
@@ -928,8 +928,8 @@ export function buildRequest(
 		model: model.id,
 		request,
 		...(isAntigravity ? { requestType: "agent" } : {}),
-		userAgent: isAntigravity ? "antigravity" : "pi-coding-agent",
-		requestId: `${isAntigravity ? "agent" : "pi"}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+		userAgent: isAntigravity ? "antigravity" : "nanopencil-coding-agent",
+		requestId: `${isAntigravity ? "agent" : "nanopencil"}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
 	};
 }
 

@@ -321,7 +321,7 @@ export default async function salExtension(api: ExtensionAPI) {
 
 			const injection = buildContextInjection(resolution, snapshot);
 			if (!injection) return undefined;
-			return { systemPrompt: injection };
+			return { appendSystemPrompt: injection };
 		},
 	);
 

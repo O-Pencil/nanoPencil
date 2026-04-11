@@ -35,7 +35,7 @@ const ZHIPU_CODING_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
 export const NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER = "anthropic-custom";
 const ANTHROPIC_CUSTOM_DEFAULT_BASE_URL = "https://api.anthropic.com";
 
-/** Ollama local model provider, consistent with pi docs: baseUrl with /v1, apiKey can be any value. */
+/** Ollama local model provider, consistent with nanoPencil docs: baseUrl with /v1, apiKey can be any value. */
 export const NANOPENCIL_OLLAMA_PROVIDER = "ollama";
 const OLLAMA_BASE_URL = "http://localhost:11434/v1";
 

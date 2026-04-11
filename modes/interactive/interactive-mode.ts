@@ -705,7 +705,7 @@ export class InteractiveMode {
    * Check npm registry for a newer version.
    */
   private async checkForNewVersion(): Promise<string | undefined> {
-    if (process.env.PI_SKIP_VERSION_CHECK || process.env.PI_OFFLINE)
+    if (process.env.NANOPENCIL_SKIP_VERSION_CHECK || process.env.NANOPENCIL_OFFLINE)
       return undefined;
 
     try {
@@ -1397,6 +1397,7 @@ export class InteractiveMode {
         })();
       },
       getSystemPrompt: () => this.session.systemPrompt,
+      getSoulManager: () => this.session.soulManager,
     });
 
     // Set up the extension shortcut handler on the default editor
@@ -2511,9 +2512,9 @@ export class InteractiveMode {
     const images: ImageContent[] = [];
     const tmpDir = os.tmpdir();
 
-    // Match clipboard-pasted image paths (pi-clipboard-UUID.ext)
+    // Match clipboard-pasted image paths (nanopencil-clipboard-UUID.ext)
     const clipboardImagePattern = new RegExp(
-      `${tmpDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[/\\\\]pi-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)`,
+      `${tmpDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[/\\\\]nanopencil-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)`,
       "gi",
     );
 
@@ -2773,7 +2774,7 @@ export class InteractiveMode {
       }
       try {
         // Clear persona switch flag - interview should now run normally for subsequent messages
-        delete process.env.PI_JUST_SWITCHED_PERSONA;
+        delete process.env.NANOPENCIL_JUST_SWITCHED_PERSONA;
         await this.session.prompt(processedText, {
           images: images.length > 0 ? images : undefined,
         });
@@ -3903,7 +3904,7 @@ export class InteractiveMode {
 
     const currentText =
       this.editor.getExpandedText?.() ?? this.editor.getText();
-    const tmpFile = path.join(os.tmpdir(), `pi-editor-${Date.now()}.pi.md`);
+    const tmpFile = path.join(os.tmpdir(), `nanopencil-editor-${Date.now()}.nanopencil.md`);
 
     try {
       // Write current content to temp file
@@ -6432,7 +6433,7 @@ export class InteractiveMode {
     );
 
     // Set flag to skip interview on first message after persona switch
-    process.env.PI_JUST_SWITCHED_PERSONA = "true";
+    process.env.NANOPENCIL_JUST_SWITCHED_PERSONA = "true";
 
     await this.handleReloadCommand();
     this.showStatus(`Persona switched to: ${personaId}`);
@@ -7208,7 +7209,7 @@ export class InteractiveMode {
     const args = execArgv.slice(1);
 
     // Check if running as global CLI (nanopencil) or via node (node dist/cli.js)
-    const isGlobalCli = cmd.includes("nanopencil") || cmd.includes("pi");
+    const isGlobalCli = cmd.includes("nanopencil");
 
     if (isGlobalCli) {
       // Running as global CLI command

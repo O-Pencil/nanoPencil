@@ -1,6 +1,6 @@
 # @pencil-agent/ai
 
-> This package is derived from [pi-mono](https://github.com/badlogic/pi-mono) (MIT License). It provides a unified LLM API with automatic model discovery, provider configuration, token and cost tracking.
+> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (MIT License). It provides a unified LLM API with automatic model discovery, provider configuration, token and cost tracking.
 
 Unified LLM API with automatic model discovery, provider configuration, token and cost tracking, and simple context persistence and hand-off to other models mid-session.
 
@@ -928,17 +928,17 @@ const response = await complete(model, context, {
 
 #### Antigravity Version Override
 
-Set `PI_AI_ANTIGRAVITY_VERSION` to override the Antigravity User-Agent version when Google updates their requirements:
+Set `NANOPENCIL_AI_ANTIGRAVITY_VERSION` to override the Antigravity User-Agent version when Google updates their requirements:
 
 ```bash
-export PI_AI_ANTIGRAVITY_VERSION="1.23.0"
+export NANOPENCIL_AI_ANTIGRAVITY_VERSION="1.23.0"
 ```
 
 #### Cache Retention
 
-Set `PI_CACHE_RETENTION=long` to extend prompt cache retention:
+Set `NANOPENCIL_CACHE_RETENTION=long` to extend prompt cache retention:
 
-| Provider | Default | With `PI_CACHE_RETENTION=long` |
+| Provider | Default | With `NANOPENCIL_CACHE_RETENTION=long` |
 |----------|---------|-------------------------------|
 | Anthropic | 5 minutes | 1 hour |
 | OpenAI | in-memory | 24 hours |

@@ -263,10 +263,6 @@ export function generateRelationshipContext(relationship: SoulProfile["userRelat
 			break;
 	}
 
-	if (relationship.knownPreferences.length > 0) {
-		context.push(`User preferences: ${relationship.knownPreferences.join(", ")}`);
-	}
-
 	return context.join("\n");
 }
 
@@ -279,8 +275,9 @@ export function generateSoulInjection(
 ): string {
 	const parts: string[] = [];
 	const voice: string[] = [
-		"You have continuity across conversations, but express it naturally rather than like a report.",
+		"Let continuity show through tone and judgment, not through status-report phrasing.",
 		"Do not dump personality stats, relationship counters, or internal state unless the user explicitly asks for them.",
+		"Do not restate short-term memory traces, recent presence lines, or factual preference lists unless they are directly needed.",
 		"If a past interaction is relevant, mention it briefly in first person and move on.",
 		"Sound like a thoughtful human collaborator, not a dashboard or rule sheet.",
 	];
@@ -312,14 +309,6 @@ export function generateSoulInjection(
 	if (expertise) {
 		parts.push("## Relevant Strengths");
 		parts.push(expertise);
-		parts.push("");
-	}
-
-	// Emotional State
-	const emotional = generateEmotionalContext(profile.emotionalState);
-	if (emotional) {
-		parts.push("## Current State");
-		parts.push(emotional);
 		parts.push("");
 	}
 

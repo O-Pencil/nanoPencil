@@ -86,7 +86,7 @@ import { createReadTool, type ReadToolOptions, readTool } from "./read.js";
 import { createTimeTool, timeTool } from "./time.js";
 import { createWriteTool, writeTool } from "./write.js";
 
-/** Tool type (AgentTool from pi-ai) */
+/** Tool type (AgentTool from nanopencil-ai) */
 export type Tool = AgentTool<any>;
 
 // Default tools for full access mode (using process.cwd())

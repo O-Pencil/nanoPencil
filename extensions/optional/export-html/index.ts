@@ -323,9 +323,9 @@ export async function extExportFromFile(inputPath: string, options?: ExtExportOp
 /**
  * Extension factory function
  */
-export default async function exportHtmlExtension(pi: ExtensionAPI) {
+export default async function exportHtmlExtension(api: ExtensionAPI) {
 	// Register /export command
-	pi.registerCommand("export", {
+	api.registerCommand("export", {
 		description: "Export session to HTML file",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			// Get session manager from context

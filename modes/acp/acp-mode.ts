@@ -81,6 +81,27 @@ const ACP_MODES: SessionMode[] = [
 ];
 
 const MUTATING_TOOL_NAMES = new Set(["edit", "write", "bash"]);
+const BUILTIN_SLASH_COMMAND_NAME_SET = new Set(
+	BUILTIN_SLASH_COMMANDS.map((command) => command.name.toLowerCase()),
+);
+const ACP_SUPPORTED_BUILTIN_COMMANDS = new Set([
+	"compact",
+	"model",
+	"name",
+	"new",
+	"reload",
+	"resume",
+	"session",
+	"thinking",
+	"usage",
+]);
+const ACP_COMMAND_INPUT_HINTS = new Map<string, string>([
+	["compact", "Optional compaction instructions"],
+	["model", "provider/model or model id"],
+	["name", "New session name"],
+	["resume", "Session id or title"],
+	["thinking", "Thinking level"],
+]);
 
 /**
  * Map nanoPencil tool names to ACP tool kinds.
@@ -141,22 +162,55 @@ function toolPayloadToText(value: unknown): string {
 	return asText(value);
 }
 
-function createSlashCommandsUpdate(session: AgentSession): AvailableCommand[] {
-	const commands = session.getSlashCommands();
+type AcpSlashCommandDescriptor = {
+	name: string;
+	description?: string | null;
+};
+
+function normalizeAcpCommandName(name: string): string {
+	return name.trim().replace(/^\/+/, "");
+}
+
+function isAdvertisableAcpCommand(name: string): boolean {
+	const normalized = normalizeAcpCommandName(name).toLowerCase();
+	if (!normalized) return false;
+	if (!BUILTIN_SLASH_COMMAND_NAME_SET.has(normalized)) return true;
+	return ACP_SUPPORTED_BUILTIN_COMMANDS.has(normalized);
+}
+
+function createAvailableCommandInput(
+	name: string,
+): AvailableCommand["input"] | undefined {
+	const normalized = normalizeAcpCommandName(name).toLowerCase();
+	const hint = ACP_COMMAND_INPUT_HINTS.get(normalized);
+	if (hint) return { hint };
+	if (ACP_SUPPORTED_BUILTIN_COMMANDS.has(normalized)) return undefined;
+	return { hint: "Enter command arguments" };
+}
+
+function buildAcpAvailableCommands(
+	commands: ReadonlyArray<AcpSlashCommandDescriptor>,
+): AvailableCommand[] {
 	const seen = new Set<string>();
 
 	return commands
 		.filter((command) => {
-			const key = command.name.toLowerCase();
+			const key = normalizeAcpCommandName(command.name).toLowerCase();
+			if (!isAdvertisableAcpCommand(key)) return false;
+			if (!key) return false;
 			if (seen.has(key)) return false;
 			seen.add(key);
 			return true;
 		})
 		.map((command) => ({
-			name: `/${command.name}`,
+			name: normalizeAcpCommandName(command.name),
 			description: command.description ?? `Run /${command.name}`,
-			input: { hint: "Enter command arguments" },
+			input: createAvailableCommandInput(command.name),
 		}));
+}
+
+function createSlashCommandsUpdate(session: AgentSession): AvailableCommand[] {
+	return buildAcpAvailableCommands(session.getSlashCommands());
 }
 
 function getMessageText(message: AgentMessage): string {
@@ -730,6 +784,19 @@ class NanoPencilAgent implements acp.Agent {
 	): Promise<boolean> {
 		const trimmed = text.trim();
 		if (!trimmed.startsWith("/")) return false;
+		const commandName = normalizeAcpCommandName(trimmed.split(/\s+/, 1)[0] ?? "").toLowerCase();
+
+		if (
+			commandName &&
+			BUILTIN_SLASH_COMMAND_NAME_SET.has(commandName) &&
+			!ACP_SUPPORTED_BUILTIN_COMMANDS.has(commandName)
+		) {
+			await this.sendAssistantText(
+				sessionId,
+				`/${commandName} is not supported in ACP clients like Zed yet. Use the terminal nanoPencil UI for this command.`,
+			);
+			return true;
+		}
 
 		if (trimmed === "/new") {
 			await this.session.newSession();
@@ -1165,3 +1232,10 @@ export async function runAcpMode(session: AgentSession, options: AcpModeOptions 
 	// Keep process alive
 	return new Promise(() => {});
 }
+
+export const __testUtils = {
+	buildAcpAvailableCommands,
+	createAvailableCommandInput,
+	isAdvertisableAcpCommand,
+	normalizeAcpCommandName,
+};

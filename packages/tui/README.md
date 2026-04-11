@@ -1,6 +1,6 @@
 # @pencil-agent/tui
 
-> This package is derived from [pi-mono](https://github.com/badlogic/pi-mono) (MIT License). Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
+> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (MIT License). Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
 
 ## Features
 
@@ -754,8 +754,8 @@ npx tsx test/chat-simple.ts
 
 ### Debug logging
 
-Set `PI_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
+Set `NANOPENCIL_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
 
 ```bash
-PI_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
+NANOPENCIL_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
 ```

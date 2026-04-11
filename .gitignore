@@ -8,11 +8,14 @@ coverage/
 .env
 .env.local
 .claude/
-.pi/images/
+.nanopencil/images/
 _clipboard_*
 _paste/
 .nexus/
 _np_clipboard_image_*
+.tmp-mcp-sdk/
+origin/
+Documents/
 nanomem-insights.html
 report.html
 *.html

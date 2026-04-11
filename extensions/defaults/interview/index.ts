@@ -167,7 +167,7 @@ function isDetailedPrompt(prompt: string): boolean {
  */
 function shouldSuggestInterview(prompt: string): boolean {
 	// Skip after persona switch
-	if (process.env.PI_JUST_SWITCHED_PERSONA === "true") {
+	if (process.env.NANOPENCIL_JUST_SWITCHED_PERSONA === "true") {
 		return false;
 	}
 
@@ -463,9 +463,9 @@ const interviewToolSchema = Type.Object({
 
 type InterviewToolInput = Static<typeof interviewToolSchema>;
 
-export default async function interviewExtension(pi: ExtensionAPI) {
+export default async function interviewExtension(api: ExtensionAPI) {
 	// Register /interview command for manual clarification
-	pi.registerCommand("interview", {
+	api.registerCommand("interview", {
 		description: "Clarify an ambiguous request and inject a refined intent.",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const original = (args || "").trim() || getUserTextFromSessionManager(ctx.sessionManager) || "";
@@ -489,7 +489,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 				missingSlotsRemaining,
 			});
 
-			pi.sendMessage(
+			api.sendMessage(
 				{
 					customType: INTERVIEW_CUSTOM_TYPE,
 					content: injectionText,
@@ -508,7 +508,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 	} satisfies Omit<RegisteredCommand, "name">);
 
 	// Register interview tool for Agent to call when needed
-	pi.registerTool({
+	api.registerTool({
 		name: "interview",
 		label: "Interview Clarifier",
 		description:
@@ -626,7 +626,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 	// - ctx.ui.confirm() blocks waiting for user
 	// - These could complete AFTER the agent started, causing surprise popups
 	//
-	pi.on("before_agent_start", async (event: BeforeAgentStartEvent, _ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
+	api.on("before_agent_start", async (event: BeforeAgentStartEvent, _ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
 		const original = event.prompt?.trim();
 		if (!original) return undefined;
 
@@ -639,7 +639,7 @@ export default async function interviewExtension(pi: ExtensionAPI) {
 		// Let the Agent decide whether to call the interview tool.
 		// This is non-blocking and won't cause race conditions.
 		return {
-			systemPrompt: `
+			appendSystemPrompt: `
 [Interview Hint]
 The user's request may benefit from clarification. If the request seems ambiguous or missing critical details (goal/deliverable/constraints/acceptance criteria), consider using the 'interview' tool to interactively clarify before proceeding. If the request is already clear enough to start implementing, proceed directly without clarification.
 `.trim(),

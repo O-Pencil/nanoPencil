@@ -118,7 +118,7 @@ For NanoPencil integration:
 import nanomemExtension from '@pencil-agent/nano-mem/extension';
 
 // In NanoPencil
-pi.registerExtension(() => nanomemExtension);
+api.registerExtension(() => nanomemExtension);
 ```
 
 ## Storage Structure

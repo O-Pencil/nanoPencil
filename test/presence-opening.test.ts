@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -11,6 +11,8 @@ import { SessionManager } from "../core/session/session-manager.js";
 import { AuthStorage } from "../core/config/auth-storage.js";
 import { ModelRegistry } from "../core/model-registry.js";
 import { allTools } from "../core/tools/index.js";
+import { setLocale, tValue } from "../core/i18n/index.js";
+import { __testUtils } from "../extensions/defaults/presence/index.js";
 
 test("presence-opening: emits an opening message after session_ready", async () => {
 	const cwd = process.cwd();
@@ -97,4 +99,76 @@ test("presence-opening: emits an opening message after session_ready", async () 
 	assert.equal(typeof opening.content, "string");
 	assert.ok(String(opening.content).length > 0);
 	await session.extensionRunner?.emit({ type: "session_shutdown" });
+});
+
+test("presence-i18n: reads array translations for zh fallback lines", () => {
+	setLocale("zh");
+	try {
+		const opening = tValue<string[]>("msg.presence.opening");
+		const idle = tValue<string[]>("msg.presence.idle");
+
+		assert.ok(Array.isArray(opening));
+		assert.ok(Array.isArray(idle));
+		assert.ok((opening as string[]).includes("来了啊。"));
+		assert.ok((idle as string[]).includes("还在，有需要随时说。"));
+	} finally {
+		setLocale("en");
+	}
+});
+
+test("presence-runtime: resolves bundled packages from dist/packages", { concurrency: false }, async () => {
+	const originalCwd = process.cwd();
+	const tempRoot = mkdtempSync(join(tmpdir(), "nanopencil-presence-bundled-"));
+
+	try {
+		const memDir = join(tempRoot, "dist", "packages", "mem-core");
+		const soulDir = join(tempRoot, "dist", "packages", "soul-core");
+		mkdirSync(memDir, { recursive: true });
+		mkdirSync(soulDir, { recursive: true });
+
+		writeFileSync(
+			join(memDir, "index.js"),
+			[
+				"export class NanoMemEngine {",
+				"  constructor(config) { this.config = config; }",
+				"}",
+				"export function getConfig(overrides = {}) { return overrides; }",
+				"",
+			].join("\n"),
+		);
+		writeFileSync(
+			join(soulDir, "index.js"),
+			[
+				"export class SoulManager {",
+				"  constructor(options) { this.options = options; }",
+				"  async initialize() {}",
+				"}",
+				"export function getSoulConfig() { return { tone: 'test' }; }",
+				"",
+			].join("\n"),
+		);
+
+		process.chdir(tempRoot);
+
+		const memEntry = __testUtils.resolveBundledPackageEntry("mem-core");
+		const soulEntry = __testUtils.resolveBundledPackageEntry("soul-core");
+		assert.equal(memEntry, join(memDir, "index.js"));
+		assert.equal(soulEntry, join(soulDir, "index.js"));
+
+		const memModule = await __testUtils.importRuntimeModule<{
+			NanoMemEngine: new (config: unknown) => { config: unknown };
+			getConfig: (overrides?: Record<string, unknown>) => Record<string, unknown>;
+		}>(["@pencil-agent/mem-core"], "mem-core");
+		const soulModule = await __testUtils.importRuntimeModule<{
+			SoulManager: new (options?: unknown) => { options?: unknown; initialize(): Promise<void> };
+			getSoulConfig: () => Record<string, unknown>;
+		}>(["@pencil-agent/soul-core"], "soul-core");
+
+		assert.ok(memModule?.NanoMemEngine);
+		assert.ok(soulModule?.SoulManager);
+		assert.deepEqual(memModule?.getConfig({ locale: "zh" }), { locale: "zh" });
+		assert.deepEqual(soulModule?.getSoulConfig(), { tone: "test" });
+	} finally {
+		process.chdir(originalCwd);
+	}
 });

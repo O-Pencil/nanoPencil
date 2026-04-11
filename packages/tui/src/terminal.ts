@@ -66,7 +66,7 @@ export class ProcessTerminal implements Terminal {
 	private _kittyProtocolActive = false;
 	private stdinBuffer?: StdinBuffer;
 	private stdinDataHandler?: (data: string) => void;
-	private writeLogPath = process.env.PI_TUI_WRITE_LOG || "";
+	private writeLogPath = process.env.NANOPENCIL_TUI_WRITE_LOG || "";
 
 	get kittyProtocolActive(): boolean {
 		return this._kittyProtocolActive;

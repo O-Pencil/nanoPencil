@@ -34,18 +34,18 @@ function notify(bus: EventBus, message: string, type: "info" | "warning" | "erro
 }
 
 function publishLoopUpdate(
-	pi: ExtensionAPI,
+	api: ExtensionAPI,
 	bus: EventBus,
 	message: string,
 	type: "info" | "warning" | "error" = "info",
 	options: { quiet?: boolean } = {},
 ): void {
-	pi.appendEntry(LOOP_CUSTOM_TYPE, { message, level: type, timestamp: Date.now() });
+	api.appendEntry(LOOP_CUSTOM_TYPE, { message, level: type, timestamp: Date.now() });
 	// Quiet loops still record errors and terminal events to the UI; routine
 	// info ticks are recorded only via appendEntry above.
 	if (options.quiet && type === "info") return;
 	notify(bus, message, type);
-	pi.sendMessage({
+	api.sendMessage({
 		customType: LOOP_CUSTOM_TYPE,
 		content: message,
 		display: true,
@@ -146,9 +146,9 @@ function getLastAssistantMessage(messages: AgentMessage[]): AgentMessage | undef
 	return undefined;
 }
 
-function maybeDispatchScheduledTask(pi: ExtensionAPI, bus: EventBus): void {
+function maybeDispatchScheduledTask(api: ExtensionAPI, bus: EventBus): void {
 	const scheduler = getScheduler(bus);
-	if (!pi.isIdle()) return;
+	if (!api.isIdle()) return;
 
 	const dueTask = scheduler.nextDue();
 	if (!dueTask) return;
@@ -156,7 +156,7 @@ function maybeDispatchScheduledTask(pi: ExtensionAPI, bus: EventBus): void {
 	const task = scheduler.markDispatched(dueTask.id);
 	const scheduledInput = task.input.trim();
 	publishLoopUpdate(
-		pi,
+		api,
 		bus,
 		`[Loop] Triggering ${refLabel(task)} (${task.intervalLabel}): ${summarizeLoopInput(scheduledInput)}`,
 		"info",
@@ -164,50 +164,50 @@ function maybeDispatchScheduledTask(pi: ExtensionAPI, bus: EventBus): void {
 	);
 
 	if (task.kind === "command") {
-		void pi.executeCommand(scheduledInput).then((handled) => {
+		void api.executeCommand(scheduledInput).then((handled) => {
 			if (!handled) {
 				scheduler.markSettled(task.id, "Unknown slash command.");
-				publishLoopUpdate(pi, bus, `[Loop] Failed to run ${refLabel(task)}: unknown slash command.`, "error");
+				publishLoopUpdate(api, bus, `[Loop] Failed to run ${refLabel(task)}: unknown slash command.`, "error");
 				return;
 			}
 
-			if (pi.isIdle()) {
+			if (api.isIdle()) {
 				scheduler.markSettled(task.id);
-				maybeAutoCancel(pi, bus, task.id);
+				maybeAutoCancel(api, bus, task.id);
 			}
 		});
 		return;
 	}
 
-	pi.sendUserMessage(scheduledInput, { deliverAs: "followUp" });
+	api.sendUserMessage(scheduledInput, { deliverAs: "followUp" });
 }
 
-function maybeAutoCancel(pi: ExtensionAPI, bus: EventBus, id: string): void {
+function maybeAutoCancel(api: ExtensionAPI, bus: EventBus, id: string): void {
 	const scheduler = getScheduler(bus);
 	if (!scheduler.hasReachedMaxRuns(id)) return;
 	const task = scheduler.cancel(id);
 	if (!task) return;
 	publishLoopUpdate(
-		pi,
+		api,
 		bus,
 		`[Loop] ${refLabel(task)} hit its max runs (${task.maxRuns}); auto-cancelled.`,
 		"info",
 	);
 }
 
-function ensureSchedulerTicker(pi: ExtensionAPI, bus: EventBus): void {
+function ensureSchedulerTicker(api: ExtensionAPI, bus: EventBus): void {
 	if (schedulerTimerByBus.has(bus)) return;
 	const timer = setInterval(() => {
-		maybeDispatchScheduledTask(pi, bus);
+		maybeDispatchScheduledTask(api, bus);
 	}, SCHEDULER_TICK_MS);
 	schedulerTimerByBus.set(bus, timer);
 }
 
-export default async function loopExtension(pi: ExtensionAPI) {
-	const bus = pi.events;
+export default async function loopExtension(api: ExtensionAPI) {
+	const bus = api.events;
 	getScheduler(bus);
 
-	pi.registerMessageRenderer(LOOP_CUSTOM_TYPE, (message, _options, theme) => {
+	api.registerMessageRenderer(LOOP_CUSTOM_TYPE, (message, _options, theme) => {
 		const text =
 			typeof message.content === "string"
 				? message.content
@@ -231,11 +231,11 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		return container;
 	});
 
-	pi.on("session_start", () => {
-		ensureSchedulerTicker(pi, bus);
+	api.on("session_start", () => {
+		ensureSchedulerTicker(api, bus);
 	});
 
-	pi.on("session_shutdown", () => {
+	api.on("session_shutdown", () => {
 		const timer = schedulerTimerByBus.get(bus);
 		if (timer) clearInterval(timer);
 		schedulerByBus.delete(bus);
@@ -243,7 +243,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		notifyByBus.delete(bus);
 	});
 
-	pi.on("agent_end", (event) => {
+	api.on("agent_end", (event) => {
 		const scheduler = getScheduler(bus);
 		const pendingLoopTask = scheduler.getPendingTask();
 		if (!pendingLoopTask) return;
@@ -251,8 +251,8 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		const assistantText = extractAssistantText(getLastAssistantMessage(event.messages));
 		const snippet = assistantText.replace(/\s+/g, " ").trim() || undefined;
 		scheduler.markSettled(pendingLoopTask.id, undefined, snippet);
-		maybeAutoCancel(pi, bus, pendingLoopTask.id);
-		maybeDispatchScheduledTask(pi, bus);
+		maybeAutoCancel(api, bus, pendingLoopTask.id);
+		maybeDispatchScheduledTask(api, bus);
 	});
 
 	const handleLoopCommand = async (args: string, ctx: ExtensionCommandContext) => {
@@ -264,29 +264,29 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		const parsed = parseSchedulerCommand(args);
 
 		if (parsed.type === "help") {
-			publishLoopUpdate(pi, bus, buildSchedulerHelp(parsed.reason), "warning");
+			publishLoopUpdate(api, bus, buildSchedulerHelp(parsed.reason), "warning");
 			return;
 		}
 
 		if (parsed.type === "list") {
-			publishLoopUpdate(pi, bus, formatScheduledList(scheduler.list()), "info");
+			publishLoopUpdate(api, bus, formatScheduledList(scheduler.list()), "info");
 			return;
 		}
 
 		if (parsed.type === "status") {
 			const task = scheduler.resolve(parsed.ref);
 			if (!task) {
-				publishLoopUpdate(pi, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
+				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
 			}
-			publishLoopUpdate(pi, bus, formatScheduledTask(task), "info");
+			publishLoopUpdate(api, bus, formatScheduledTask(task), "info");
 			return;
 		}
 
 		if (parsed.type === "clear") {
 			const cleared = scheduler.clear();
 			publishLoopUpdate(
-				pi,
+				api,
 				bus,
 				cleared === 0 ? "[Loop] No scheduled tasks were active." : `[Loop] Cleared ${cleared} scheduled task${cleared === 1 ? "" : "s"}.`,
 				"info",
@@ -297,7 +297,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		if (parsed.type === "cancel") {
 			const removed = scheduler.cancel(parsed.ref);
 			publishLoopUpdate(
-				pi,
+				api,
 				bus,
 				removed ? `[Loop] Cancelled ${refLabel(removed)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
 				removed ? "info" : "warning",
@@ -308,7 +308,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		if (parsed.type === "pause") {
 			const paused = scheduler.pause(parsed.ref);
 			publishLoopUpdate(
-				pi,
+				api,
 				bus,
 				paused ? `[Loop] Paused ${refLabel(paused)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
 				paused ? "info" : "warning",
@@ -319,7 +319,7 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		if (parsed.type === "resume") {
 			const resumed = scheduler.resume(parsed.ref);
 			publishLoopUpdate(
-				pi,
+				api,
 				bus,
 				resumed ? `[Loop] Resumed ${refLabel(resumed)}; next run in ${formatRelative(resumed.intervalMs)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
 				resumed ? "info" : "warning",
@@ -330,11 +330,11 @@ export default async function loopExtension(pi: ExtensionAPI) {
 		if (parsed.type === "run") {
 			const triggered = scheduler.forceDue(parsed.ref);
 			if (!triggered) {
-				publishLoopUpdate(pi, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
+				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
 			}
-			publishLoopUpdate(pi, bus, `[Loop] Forcing ${refLabel(triggered)} to run now.`, "info");
-			maybeDispatchScheduledTask(pi, bus);
+			publishLoopUpdate(api, bus, `[Loop] Forcing ${refLabel(triggered)} to run now.`, "info");
+			maybeDispatchScheduledTask(api, bus);
 			return;
 		}
 
@@ -348,15 +348,15 @@ export default async function loopExtension(pi: ExtensionAPI) {
 				maxRuns: parsed.maxRuns,
 				quiet: parsed.quiet,
 			});
-			publishLoopUpdate(pi, bus, formatScheduledTask(task), "info");
-			maybeDispatchScheduledTask(pi, bus);
+			publishLoopUpdate(api, bus, formatScheduledTask(task), "info");
+			maybeDispatchScheduledTask(api, bus);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			publishLoopUpdate(pi, bus, `[Loop] ${message}`, "error");
+			publishLoopUpdate(api, bus, `[Loop] ${message}`, "error");
 		}
 	};
 
-	pi.registerCommand("loop", {
+	api.registerCommand("loop", {
 		description: "Schedule a recurring prompt or slash command for this session.",
 		handler: handleLoopCommand,
 	});

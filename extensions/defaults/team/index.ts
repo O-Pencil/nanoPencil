@@ -33,16 +33,16 @@ function getRuntime(): TeamRuntime {
 	return runtime;
 }
 
-export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
+export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 	const teamRuntime = getRuntime();
 	await teamRuntime.load();
 
-	pi.on("session_shutdown", async () => {
+	api.on("session_shutdown", async () => {
 		await teamRuntime.dispose();
 	});
 
 	// Register message renderer
-	pi.registerMessageRenderer(TEAM_MESSAGE_TYPE, (message, _options, theme) => {
+	api.registerMessageRenderer(TEAM_MESSAGE_TYPE, (message, _options, theme) => {
 		const text =
 			typeof message.content === "string"
 				? message.content
@@ -73,7 +73,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 	] as const;
 
 	for (const commandName of commandNames) {
-		pi.registerCommand(commandName, {
+		api.registerCommand(commandName, {
 			description: getCommandDescription(commandName),
 			handler: async (args: string, ctx) => {
 				const parsed = parseTeamCommand(commandName, args);
@@ -85,7 +85,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 
 				switch (parsed.command) {
 					case "help": {
-						pi.sendMessage({
+						api.sendMessage({
 							customType: TEAM_MESSAGE_TYPE,
 							content: buildTeamHelp(),
 							display: true,
@@ -96,7 +96,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 					case "list": {
 						const teammates = teamRuntime.getAllTeammates();
 						const lines = formatTeammateList(teammates);
-						pi.sendMessage({
+						api.sendMessage({
 							customType: TEAM_MESSAGE_TYPE,
 							content: lines.join("\n"),
 							display: true,
@@ -110,7 +110,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 							return;
 						}
 
-						pi.sendMessage({
+						api.sendMessage({
 							customType: TEAM_MESSAGE_TYPE,
 							content: `Spawning ${parsed.role} teammate${parsed.name ? ` named "${parsed.name}"` : ""}...`,
 							display: true,
@@ -132,7 +132,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 								...(teammate.worktreePath ? [`  Worktree: ${teammate.worktreePath}`] : []),
 							];
 
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: lines.join("\n"),
 								display: true,
@@ -152,7 +152,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 
 						const model = (ctx as any).model;
 
-						pi.sendMessage({
+						api.sendMessage({
 							customType: TEAM_MESSAGE_TYPE,
 							content: `Sending message to ${parsed.target}...`,
 							display: true,
@@ -167,7 +167,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 									"",
 									result.response,
 								];
-								pi.sendMessage({
+								api.sendMessage({
 									customType: TEAM_MESSAGE_TYPE,
 									content: lines.join("\n"),
 									display: true,
@@ -193,7 +193,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 								return;
 							}
 							const lines = formatTeammateStatus(teammate);
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: lines.join("\n"),
 								display: true,
@@ -201,7 +201,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 						} else {
 							const teammates = teamRuntime.getAllTeammates();
 							const lines = formatTeammateList(teammates);
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: lines.join("\n"),
 								display: true,
@@ -218,7 +218,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 
 						const success = await teamRuntime.stop(parsed.target);
 						if (success) {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: `Stopped ${parsed.target}'s current turn.`,
 								display: true,
@@ -237,7 +237,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 
 						const success = await teamRuntime.terminate(parsed.target);
 						if (success) {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: `Terminated teammate "${parsed.target}".`,
 								display: true,
@@ -260,7 +260,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 							break;
 						}
 						if (result.pending) {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content:
 									`Mode change for ${parsed.target} → ${parsed.mode} requires approval.\n` +
@@ -268,7 +268,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 								display: true,
 							});
 						} else {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: `Changed ${parsed.target}'s mode to "${parsed.mode}".`,
 								display: true,
@@ -282,7 +282,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 							// No id → list pending requests for convenience.
 							const pending = teamRuntime.getPermissionStore().listPending();
 							if (pending.length === 0) {
-								pi.sendMessage({
+								api.sendMessage({
 									customType: TEAM_MESSAGE_TYPE,
 									content: "No pending permission requests.",
 									display: true,
@@ -296,7 +296,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 									lines.push(`    detail:   ${req.detail}`);
 								}
 								lines.push("", "Approve with: /team:approve <id>");
-								pi.sendMessage({
+								api.sendMessage({
 									customType: TEAM_MESSAGE_TYPE,
 									content: lines.join("\n"),
 									display: true,
@@ -307,7 +307,7 @@ export default async function teamExtension(pi: ExtensionAPI): Promise<void> {
 
 						const ok = teamRuntime.approvePermission(parsed.requestId);
 						if (ok) {
-							pi.sendMessage({
+							api.sendMessage({
 								customType: TEAM_MESSAGE_TYPE,
 								content: `Approved request ${parsed.requestId}.`,
 								display: true,

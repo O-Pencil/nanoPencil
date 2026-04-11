@@ -41,13 +41,13 @@ import { transformMessages } from "./transform-messages.js";
 
 /**
  * Resolve cache retention preference.
- * Defaults to "short" and uses PI_CACHE_RETENTION for backward compatibility.
+ * Defaults to "short" and uses NANOPENCIL_CACHE_RETENTION for backward compatibility.
  */
 function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
 	if (cacheRetention) {
 		return cacheRetention;
 	}
-	if (typeof process !== "undefined" && process.env.PI_CACHE_RETENTION === "long") {
+	if (typeof process !== "undefined" && process.env.NANOPENCIL_CACHE_RETENTION === "long") {
 		return "long";
 	}
 	return "short";
@@ -73,7 +73,7 @@ const claudeCodeVersion = "2.1.62";
 
 // Claude Code 2.x tool names (canonical casing)
 // Source: https://cchistory.mariozechner.at/data/prompts-2.1.11.md
-// To update: https://github.com/badlogic/cchistory
+// To update: https://github.com/O-Pencil/cchistory
 const claudeCodeTools = [
 	"Read",
 	"Write",

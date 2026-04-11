@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/runtime/sdk.ts
  * [HERE]: core/timings.ts - central timing instrumentation
  */
-const ENABLED = process.env.PI_TIMING === "1";
+const ENABLED = process.env.NANOPENCIL_TIMING === "1";
 const timings: Array<{ label: string; ms: number }> = [];
 let lastTime = Date.now();
 

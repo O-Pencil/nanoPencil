@@ -109,7 +109,7 @@ Extensions can:
 - `mcp-guidance.ts` - MCP usage guidance
 
 **Session Management** (`core/session/session-manager.ts`):
-- Persists conversation history to `.pi/session/*.jsonl`
+- Persists conversation history to `.nanopencil/session/*.jsonl`
 - Handles session forking, branching, switching
 - Session migration between versions
 
@@ -125,7 +125,7 @@ Extensions can:
 - Supports custom provider registration
 
 **Settings Manager** (`core/config/settings-manager.ts`):
-- Two-tier settings: global (`~/.nanopencil/agent/settings.json`) + project-local (`.pi/settings.json`)
+- Two-tier settings: global (`~/.nanopencil/agent/settings.json`) + project-local (`.nanopencil/settings.json`)
 - Project settings override global settings
 
 **Resource Loader** (`core/config/resource-loader.ts`):

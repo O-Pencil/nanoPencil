@@ -352,6 +352,7 @@ export class AgentSession {
   private _cwd: string;
   private _extensionRunnerRef?: { current?: ExtensionRunner };
   private _soulManager?: any; // SoulManager from nanosoul
+  private _lastSoulInjection?: string;
   private _initialActiveToolNames?: string[];
   private _baseToolsOverride?: Record<string, AgentTool>;
   private _extensionUIContext?: ExtensionUIContext;
@@ -665,12 +666,19 @@ export class AgentSession {
           this._cwd,
         );
         const context = toSoulContext(project, tags, complexity, toolUsage);
-        void this._soulManager
-          .recordInteraction(context, outcome, "turn")
-          .then(() =>
-            this._soulManager!.updateExpertise(project, tags, outcome === "success"),
-          )
-          .catch(() => {});
+        const expertiseDomain = tags[0] || project;
+        void (async () => {
+          try {
+            await this._soulManager.recordInteraction(context, outcome, "turn");
+            await this._soulManager.updateExpertise(
+              expertiseDomain,
+              tags,
+              outcome === "success",
+            );
+          } catch {
+            // Keep Soul failures non-blocking for the main session lifecycle.
+          }
+        })();
       }
     }
 
@@ -863,6 +871,11 @@ export class AgentSession {
     return this.agent.state.systemPrompt;
   }
 
+  /** Shared Soul manager used by this session, if Soul is enabled. */
+  get soulManager(): unknown | undefined {
+    return this._soulManager;
+  }
+
   /** Current retry attempt (0 if not retrying) */
   get retryAttempt(): number {
     return this._retryAttempt;
@@ -968,7 +981,10 @@ export class AgentSession {
     return this._resourceLoader.getPrompts().prompts;
   }
 
-  private _rebuildSystemPrompt(toolNames: string[]): string {
+  private _rebuildSystemPrompt(
+    toolNames: string[],
+    options?: { soulInjection?: string },
+  ): string {
     const validToolNames = toolNames.filter((name) =>
       this._baseToolRegistry.has(name),
     );
@@ -983,28 +999,7 @@ export class AgentSession {
     const loadedContextFiles =
       this._resourceLoader.getAgentsFiles().agentsFiles;
 
-    // Generate Soul injection if available
-    let soulInjection: string | undefined;
-    if (this._soulManager) {
-      try {
-        const project = this._cwd.split(/[/\\]/).pop() || "unknown";
-        const { tags, complexity, toolUsage } = extractSessionContext(
-          this.state.messages as Array<{ role: string; content: any }>,
-          this._cwd,
-        );
-        soulInjection = this._soulManager.generateInjection(
-          toSoulContext(project, tags, complexity, toolUsage),
-        );
-
-        // Bridge Soul memory expression style to NanoMem via env var
-        const memDirective = this._soulManager.generateMemoryExpressionDirective?.();
-        if (memDirective) {
-          process.env.NANOSOUL_MEMORY_STYLE = memDirective;
-        }
-      } catch (error) {
-        console.warn("Failed to generate Soul injection:", error);
-      }
-    }
+    const soulInjection = options?.soulInjection ?? this._lastSoulInjection;
 
     return buildSystemPrompt({
       cwd: this._cwd,
@@ -1017,13 +1012,45 @@ export class AgentSession {
     });
   }
 
+  private _getActiveBaseToolNames(): string[] {
+    return this.getActiveToolNames().filter((name) =>
+      this._baseToolRegistry.has(name),
+    );
+  }
+
+  private async _generateSoulInjection(): Promise<string | undefined> {
+    if (!this._soulManager) {
+      this._lastSoulInjection = undefined;
+      return undefined;
+    }
+
+    try {
+      const project = this._cwd.split(/[/\\]/).pop() || "unknown";
+      const { tags, complexity, toolUsage } = extractSessionContext(
+        this.state.messages as Array<{ role: string; content: any }>,
+        this._cwd,
+      );
+      const injection = await this._soulManager.generateInjection(
+        toSoulContext(project, tags, complexity, toolUsage),
+      );
+      this._lastSoulInjection =
+        typeof injection === "string" && injection.trim().length > 0
+          ? injection
+          : undefined;
+      return this._lastSoulInjection;
+    } catch (error) {
+      console.warn("Failed to generate Soul injection:", error);
+      return this._lastSoulInjection;
+    }
+  }
+
   // =========================================================================
   // Prompting
   // =========================================================================
 
   /**
    * Send a prompt to the agent.
-   * - Handles extension commands (registered via pi.registerCommand) immediately, even during streaming
+   * - Handles extension commands (registered via api.registerCommand) immediately, even during streaming
    * - Expands file-based prompt templates by default
    * - During streaming, queues via steer() or followUp() based on streamingBehavior option
    * - Validates model and API key before sending (when not streaming)
@@ -1142,10 +1169,11 @@ export class AgentSession {
     }
     this._pendingNextTurnMessages = [];
 
-    const activeBaseToolNames = this.getActiveToolNames().filter((name) =>
-      this._baseToolRegistry.has(name),
-    );
-    this._baseSystemPrompt = this._rebuildSystemPrompt(activeBaseToolNames);
+    const activeBaseToolNames = this._getActiveBaseToolNames();
+    const soulInjection = await this._generateSoulInjection();
+    this._baseSystemPrompt = this._rebuildSystemPrompt(activeBaseToolNames, {
+      soulInjection,
+    });
 
     // Emit before_agent_start extension event
     if (this._extensionRunner) {
@@ -2517,6 +2545,7 @@ export class AgentSession {
           })();
         },
         getSystemPrompt: () => this.systemPrompt,
+        getSoulManager: () => this._soulManager,
       },
     );
   }
@@ -2668,6 +2697,7 @@ export class AgentSession {
     if (this._soulManagerFactory) {
       try {
         this._soulManager = await this._soulManagerFactory();
+        this._lastSoulInjection = undefined;
       } catch (error) {
         console.warn("Failed to refresh Soul manager:", error);
         // Keep previous _soulManager on failure.

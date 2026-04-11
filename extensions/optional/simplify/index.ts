@@ -496,8 +496,8 @@ async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandCo
 // Extension Entry Point
 // =============================================================================
 
-export default function simplifyExtension(pi: ExtensionAPI) {
-	pi.registerCommand("simplify", {
+export default function simplifyExtension(api: ExtensionAPI) {
+	api.registerCommand("simplify", {
 		description: "Simplify code to reduce cognitive load (Claude Code style)",
 		getArgumentCompletions: (prefix) => {
 			// Could add file completions here
@@ -527,7 +527,7 @@ export default function simplifyExtension(pi: ExtensionAPI) {
 	});
 
 	// Also register a shortcut for quick access
-	pi.registerShortcut("ctrl+shift+s", {
+	api.registerShortcut("ctrl+shift+s", {
 		description: "Simplify changed files",
 		handler: async (ctx) => {
 			const cmdCtx = ctx as ExtensionCommandContext;

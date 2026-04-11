@@ -27,17 +27,17 @@ const TOOLS_DIR = getBinDir();
 // Cache for tool availability checks to avoid repeated filesystem checks
 const toolCheckCache = new Map<string, string | null>();
 
-const DEFAULT_NETWORK_TIMEOUT_MS = 120000; /** Timeout for tools download (API + file). Default 120s (2 minutes). Override with PI_TOOLS_DOWNLOAD_TIMEOUT_MS (e.g. 300000 for very slow networks). */
-/** Timeout for tools download (API + file). Override with PI_TOOLS_DOWNLOAD_TIMEOUT_MS (e.g. 120000 for very slow networks). */
+const DEFAULT_NETWORK_TIMEOUT_MS = 120000; /** Timeout for tools download (API + file). Default 120s (2 minutes). Override with NANOPENCIL_TOOLS_DOWNLOAD_TIMEOUT_MS (e.g. 300000 for very slow networks). */
+/** Timeout for tools download (API + file). Override with NANOPENCIL_TOOLS_DOWNLOAD_TIMEOUT_MS (e.g. 120000 for very slow networks). */
 function getNetworkTimeoutMs(): number {
-  const env = process.env.PI_TOOLS_DOWNLOAD_TIMEOUT_MS;
+  const env = process.env.NANOPENCIL_TOOLS_DOWNLOAD_TIMEOUT_MS;
   if (env === undefined || env === "") return DEFAULT_NETWORK_TIMEOUT_MS;
   const n = Number.parseInt(env, 10);
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_NETWORK_TIMEOUT_MS;
 }
 
 function isOfflineModeEnabled(): boolean {
-  const value = process.env.PI_OFFLINE;
+  const value = process.env.NANOPENCIL_OFFLINE;
   if (!value) return false;
   return (
     value === "1" ||

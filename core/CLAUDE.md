@@ -24,156 +24,140 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 ### Internationalization (`core/i18n/`)
 
-`index.ts`: i18n core - locale management, translation function `t()`, P3: SURFACE `i18n`, `t()`, `setLocale()`, `getLocale()`, `AVAILABLE_LOCALES`
-
-`slash-commands.ts`: English translations for slash command descriptions, P3: SURFACE `slashCommands`
-
-`slash-commands.zh.ts`: Chinese translations for slash command descriptions
-
-`messages.ts`: English translations for general UI messages, P3: SURFACE `messages`
-
-`messages.zh.ts`: Chinese translations for general UI messages
-
-`themes.ts`: English translations for theme names
-
-`themes.zh.ts`: Chinese translations for theme names
-
-### Runtime Layer (`core/runtime/`)
-
-`agent-session.ts`: Central session manager — wraps Agent, manages lifecycle, coordinates compaction, emits events, P3: UPSTREAM agent-core/Agent; SURFACE createAgentSession(), AgentSession class; LOCUS runtime orchestration hub
-
-`sdk.ts`: Programmatic API factory for embedding nanoPencil, creates all services with DI, P3: UPSTREAM all core config modules; SURFACE createAgentSession(options); LOCUS SDK entry point
-
-`event-bus.ts`: Typed event emission system for extension hooks, P3: SURFACE EventEmitter with typed events; LOCUS cross-cutting concern
+`index.ts`: i18n core - locale management, translation function `t()`
 
 ### Tools Layer (`core/tools/`)
 
-`index.ts`: Tool registry and orchestrator, loads built-in tools and extension tools, P3: UPSTREAM bash.ts, read.ts, etc.; SURFACE ToolExecutor, tool registry
+`index.ts`: Tool registry and orchestrator, loads built-in tools and extension tools, - [WHO]: ToolExecutor, tool registry
 
-`bash.ts`: Shell command execution with timeout and streaming, P3: SURFACE BashTool, executeBash(); LOCUS system interaction boundary
+`bash.ts`: Shell command execution with timeout and streaming
 
-`read.ts`: File reading with truncation and line range support, P3: SURFACE ReadTool; LOCUS filesystem read
+`edit.ts`: Line-based file editing via diff application
 
-`edit.ts`: Line-based file editing via diff application, P3: SURFACE EditTool; LOCUS filesystem mutation
+`write.ts`: File writing (create or overwrite)
 
-`write.ts`: File writing (create or overwrite), P3: SURFACE WriteTool; LOCUS filesystem creation
+`grep.ts`: Content search via ripgrep integration
 
-`grep.ts`: Content search via ripgrep integration, P3: SURFACE GrepTool; LOCUS content discovery
+`find.ts`: File pattern matching via glob
 
-`find.ts`: File pattern matching via glob, P3: SURFACE FindTool; LOCUS file discovery
+`ls.ts`: Directory listing with metadata
 
-`ls.ts`: Directory listing with metadata, P3: SURFACE LsTool; LOCUS filesystem listing
+`source.ts`: Source code analysis and context extraction
 
-`source.ts`: Source code analysis and context extraction, P3: SURFACE SourceTool; LOCUS code intelligence
+`path-utils.ts`: Path manipulation utilities
 
-`path-utils.ts`: Path manipulation utilities, P3: SURFACE path utilities; LOCUS shared helper
+`truncate.ts`: Output truncation for large results
 
-`truncate.ts`: Output truncation for large results, P3: SURFACE truncate(); LOCUS response formatting
-
-`orchestrator.ts`: Tool execution ordering and dependency resolution, P3: UPSTREAM individual tools; LOCUS tool coordination
+`orchestrator.ts`: Tool execution ordering and dependency resolution
 
 ### Extension System (`core/extensions/`)
 
-`loader.ts`: Discovers extensions from npm packages, local paths, workspace config, P3: SURFACE ExtensionLoader; LOCUS extension discovery
+`loader.ts`: Discovers extensions from npm packages, local paths, workspace config
 
-`runner.ts`: Manages extension lifecycle, event emission, tool wrapping, P3: UPSTREAM loader.ts; SURFACE ExtensionRunner; LOCUS extension orchestration
+`runner.ts`: Manages extension lifecycle, event emission, tool wrapping, - [WHO]: ExtensionRunner
+- [FROM]: loader.ts
+- [TO]: (check imports)
+- [HERE]: extension orchestration
+`wrapper.ts`: Wraps user tools with extension before/after hooks
 
-`wrapper.ts`: Wraps user tools with extension before/after hooks, P3: SURFACE ToolWrapper; LOCUS tool middleware
-
-`types.ts`: All extension-related TypeScript types and interfaces, P3: SURFACE ExtensionContext, Extension, HookEvent types; LOCUS extension API definition
+`types.ts`: All extension-related TypeScript types and interfaces
 
 `index.ts`: Barrel exports for extension system
 
 ### MCP Integration (`core/mcp/`)
 
-`mcp-client.ts`: MCP protocol client implementation, handles JSON-RPC communication, P3: SURFACE McpClient; LOCUS MCP transport
+`mcp-client.ts`: MCP protocol client implementation, handles JSON-RPC communication
 
-`mcp-config.ts`: MCP server configuration management, P3: SURFACE McpConfig, loadMcpConfig(); LOCUS MCP configuration
+`mcp-config.ts`: MCP server configuration management
 
-`mcp-adapter.ts`: Adapts MCP tools to nanoPencil tool format, P3: UPSTREAM mcp-client.ts; SURFACE McpToolAdapter; LOCUS protocol bridge
-
-`mcp-guidance.ts`: MCP usage guidance and error handling, P3: SURFACE McpGuidance; LOCUS user experience
+`mcp-adapter.ts`: Adapts MCP tools to nanoPencil tool format, - [WHO]: McpToolAdapter
+- [FROM]: mcp-client.ts
+- [TO]: (check imports)
+- [HERE]: protocol bridge
+`mcp-guidance.ts`: MCP usage guidance and error handling
 
 `index.ts`: Barrel exports for MCP module
 
-`figma-auth.ts`: Figma OAuth integration for MCP servers, P3: SURFACE FigmaAuth; LOCUS OAuth handling
+`figma-auth.ts`: Figma OAuth integration for MCP servers
 
 ### SubAgent Runtime (`core/sub-agent/`)
 
 `sub-agent-types.ts`: Core SubAgent interfaces — SubAgentSpec, SubAgentHandle, SubAgentResult, SubAgentBackend; consumed by backend and runtime
-`sub-agent-backend.ts`: InProcessSubAgentBackend — wraps createAgentSession() with AbortSignal forwarding and optional timeout; P3: UPSTREAM runtime/sdk.ts; SURFACE InProcessSubAgentBackend
-`sub-agent-runtime.ts`: SubAgentRuntime class — active agent registry, spawn/abortAll/terminateAll, default global instance; P3: SURFACE SubAgentRuntime, subAgentRuntime
+`sub-agent-backend.ts`: InProcessSubAgentBackend — wraps createAgentSession() with AbortSignal forwarding and optional timeout
+`sub-agent-runtime.ts`: SubAgentRuntime class — active agent registry, spawn/abortAll/terminateAll, default global instance
 `index.ts`: Barrel exports for sub-agent module
 
 ### Workspace Management (`core/workspace/`)
 
-`worktree-manager.ts`: WorktreeManager — createTempWorkspace, createGitWorktree, detectChanges, generatePatch, dispose/disposeAll; default global instance; P3: UPSTREAM node:fs, node:child_process; SURFACE WorktreeManager, worktreeManager, WorkspacePath
+`worktree-manager.ts`: WorktreeManager — createTempWorkspace, createGitWorktree, detectChanges, generatePatch, dispose/disposeAll; default global instance; - [WHO]: WorktreeManager, worktreeManager, WorkspacePath
 `index.ts`: Barrel exports for workspace module
 
 ### Session Management (`core/session/`)
 
-`session-manager.ts`: Session persistence to JSONL, handles forking, branching, switching, P3: SURFACE SessionManager; LOCUS state persistence
+`session-manager.ts`: Session persistence to JSONL, handles forking, branching, switching
 
-### Compaction (`core/session/compaction/`)
+`branch-summarization.ts`: Branch summary generation for forked sessions
 
-`compaction.ts`: Main compaction logic for context window management, P3: SURFACE CompactionController; LOCUS context optimization
+`compaction-coordinator.ts`: Coordinates compaction operations
 
-`branch-summarization.ts`: Branch summary generation for forked sessions, P3: UPSTREAM ai provider; LOCUS branch intelligence
-
-`compaction-coordinator.ts`: Coordinates compaction operations, P3: UPSTREAM compaction.ts, session-manager.ts; LOCUS compaction orchestration
-
-`utils.ts`: Token estimation and text processing helpers, P3: SURFACE tokenEstimate(); LOCUS shared utility
+`utils.ts`: Token estimation and text processing helpers
 
 `index.ts`: Barrel exports for compaction module
 
 ### Model Management (`core/model/`)
 
-`index.ts`: Model registry facade, P3: UPSTREAM model-registry.ts, model-resolver.ts; SURFACE ModelRegistry; LOCUS model abstraction
+`index.ts`: Model registry facade, - [WHO]: ModelRegistry
+- [FROM]: model-registry.ts, model-resolver.ts
+- [TO]: (check imports)
+- [HERE]: model abstraction
+`switcher.ts`: Runtime model switching logic, - [WHO]: ModelSwitcher
+- [FROM]: index.ts
+- [TO]: (check imports)
+- [HERE]: model transitions
+`model-registry.ts`: Manages model definitions, handles API key resolution, appendOpenRouterModel writes custom OpenRouter ids to models.json
 
-`switcher.ts`: Runtime model switching logic, P3: UPSTREAM index.ts; SURFACE ModelSwitcher; LOCUS model transitions
-
-`model-registry.ts`: Manages model definitions, handles API key resolution, appendOpenRouterModel writes custom OpenRouter ids to models.json, P3: SURFACE ModelRegistry; LOCUS model catalog
-
-`model-resolver.ts`: Resolves model IDs to provider configurations, P3: SURFACE resolveModel(); LOCUS model resolution
+`model-resolver.ts`: Resolves model IDs to provider configurations
 
 ### Configuration (`core/config/`)
 
-`settings-manager.ts`: Two-tier settings (global + project-local), merge logic, P3: SURFACE SettingsManager; LOCUS configuration aggregation
+`settings-manager.ts`: Two-tier settings (global + project-local), merge logic
 
-`resource-loader.ts`: Discovers and loads extensions, skills, prompts, themes, P3: SURFACE ResourceLoader; LOCUS resource discovery
+`resource-loader.ts`: Discovers and loads extensions, skills, prompts, themes
 
-`auth-storage.ts`: Secure API key storage and retrieval, P3: SURFACE AuthStorage; LOCUS credential management
+`auth-storage.ts`: Secure API key storage and retrieval
 
-`resolve-config-value.ts`: Config value resolution with precedence, P3: SURFACE resolveConfigValue(); LOCUS config utilities
+`resolve-config-value.ts`: Config value resolution with precedence
 
 ### Prompt Engineering (`core/prompt/`)
 
-`system-prompt.ts`: System prompt builder with memory injection, P3: SURFACE buildSystemPrompt(); LOCUS prompt construction
+`system-prompt.ts`: System prompt builder with memory injection
 
-`prompt-templates.ts`: Template library for various prompt types, P3: SURFACE PromptTemplate; LOCUS template management
+`prompt-templates.ts`: Template library for various prompt types
 
 ### Other Modules
 
-`defaults.ts`: Default configuration values, P3: SURFACE defaultConfig; LOCUS configuration baseline
+`defaults.ts`: Default configuration values
 
-`diagnostics.ts`: Health checks and system diagnostics, P3: SURFACE runDiagnostics(); LOCUS system health
+`diagnostics.ts`: Health checks and system diagnostics
 
-`keybindings.ts`: Keybinding definitions for TUI, P3: SURFACE KeyBinding[]; LOCUS input handling
+`keybindings.ts`: Keybinding definitions for TUI
 
-`messages.ts`: Message handling and formatting, P3: SURFACE Message types; LOCUS communication
+`messages.ts`: Message handling and formatting
 
-`skills.ts`: Skill definitions and registry, P3: SURFACE Skill types; LOCUS capability registry
+`skills.ts`: Skill definitions and registry
 
-`slash-commands.ts`: Built-in slash command implementations, P3: SURFACE SlashCommand[]; LOCUS command interface
+`slash-commands.ts`: Built-in slash command implementations
 
-`bash-executor.ts`: Shared bash execution logic, P3: UPSTREAM tools/bash.ts; LOCUS bash abstraction
+`bash-executor.ts`: Shared bash execution logic
 
-`custom-providers.ts`: Custom provider registration, P3: SURFACE registerCustomProvider(); LOCUS provider extension
+`custom-providers.ts`: Custom provider registration
 
-`footer-data-provider.ts`: Footer information for TUI, P3: SURFACE FooterData; LOCUS UI data
+`footer-data-provider.ts`: Footer information for TUI
 
-`mcp-manager.ts`: MCP server lifecycle management, P3: UPSTREAM mcp/; SURFACE McpManager; LOCUS MCP orchestration
-
+`mcp-manager.ts`: MCP server lifecycle management, - [WHO]: McpManager
+- [FROM]: mcp/
+- [TO]: (check imports)
+- [HERE]: MCP orchestration
 `persona/`: Persona management
 
 `export-html/`: HTML export functionality with templates

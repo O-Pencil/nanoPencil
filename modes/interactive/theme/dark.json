@@ -73,7 +73,7 @@
 		"thinkingXhigh": "#d183e8",
 		"bashMode": "green",
 		"userLabel": "accent",
-		"assistantLabel": "muted"
+		"assistantLabel": "gray"
 	},
 	"export": {
 		"pageBg": "#18181e",

@@ -127,6 +127,7 @@ import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
 import { BuddyPetComponent, type BuddyState } from "./components/buddy/pet-sprites.js";
+import { EditorBuddyLayout } from "./components/editor-buddy-layout.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
 import { PencilLoader } from "./components/pencil-loader.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
@@ -232,6 +233,9 @@ export class InteractiveMode {
   private startupToolsPrewarmed = false;
   private editorContainer: Container;
   private footer: FooterComponent;
+  private buddyPet: BuddyPetComponent | null = null;
+  private buddyPetSpecies: number | null = null;
+  private buddyPetResetTimer: ReturnType<typeof setTimeout> | undefined;
   private footerDataProvider: FooterDataProvider;
   private keybindings: KeybindingsManager;
   private version: string;
@@ -309,6 +313,9 @@ export class InteractiveMode {
   >();
   private widgetContainerAbove!: Container;
   private widgetContainerBelow!: Container;
+  /** Pet column next to the input (right side, Claude Code–style). */
+  private buddySlot!: Container;
+  private editorBuddyLayout!: EditorBuddyLayout;
 
   // Custom footer from extension (undefined = use built-in footer)
   private customFooter: (Component & { dispose?(): void }) | undefined =
@@ -375,11 +382,17 @@ export class InteractiveMode {
     this.editor = this.defaultEditor;
     this.editorContainer = new Container();
     this.attachmentsContainer = new Container();
+    this.buddySlot = new Container();
+    this.editorBuddyLayout = new EditorBuddyLayout(
+      () => this.editor as Component,
+      this.buddySlot,
+    );
     this.editorContainer.addChild(this.attachmentsContainer);
-    this.editorContainer.addChild(this.editor as Component);
+    this.editorContainer.addChild(this.editorBuddyLayout);
     this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
     this.footer.setAutoCompactEnabled(session.autoCompactionEnabled);
+    this.syncBuddyPet();
 
     // Load hide thinking block setting
     this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
@@ -1594,6 +1607,76 @@ export class InteractiveMode {
     }
   }
 
+  private clearBuddyPetResetTimer(): void {
+    if (this.buddyPetResetTimer) {
+      clearTimeout(this.buddyPetResetTimer);
+      this.buddyPetResetTimer = undefined;
+    }
+  }
+
+  private syncBuddyPet(): void {
+    const enabled = this.settingsManager.getBuddyEnabled();
+    const species = this.settingsManager.getBuddySpecies();
+
+    if (!enabled) {
+      this.clearBuddyPetResetTimer();
+      this.buddyPet?.dispose();
+      this.buddyPet = null;
+      this.buddyPetSpecies = null;
+      this.buddySlot.clear();
+      this.renderWidgets();
+      return;
+    }
+
+    if (!this.buddyPet || this.buddyPetSpecies !== species) {
+      this.clearBuddyPetResetTimer();
+      this.buddyPet?.dispose();
+      this.buddyPet = new BuddyPetComponent(this.ui, species);
+      this.buddyPetSpecies = species;
+      this.buddyPet.setState("idle");
+      this.buddyPet.setSpeechBubble("");
+    }
+
+    this.buddySlot.clear();
+    this.buddySlot.addChild(this.buddyPet);
+    this.renderWidgets();
+  }
+
+  /**
+   * Restore attachments bar (if any) + editor row with optional buddy column.
+   */
+  private remountEditorShell(): void {
+    this.editorContainer.clear();
+    if (this.attachments.length > 0 && this.attachmentsContainer) {
+      this.editorContainer.addChild(this.attachmentsContainer);
+    }
+    this.editorContainer.addChild(this.editorBuddyLayout);
+  }
+
+  private setBuddyPetState(
+    state: BuddyState,
+    speechBubble = "",
+    options?: { resetTo?: BuddyState; afterMs?: number },
+  ): void {
+    if (!this.buddyPet) return;
+
+    this.clearBuddyPetResetTimer();
+    this.buddyPet.setState(state);
+    this.buddyPet.setSpeechBubble(speechBubble);
+
+    if (options?.resetTo) {
+      this.buddyPetResetTimer = setTimeout(() => {
+        if (!this.buddyPet) return;
+        this.buddyPet.setState(options.resetTo ?? "idle");
+        this.buddyPet.setSpeechBubble("");
+        this.buddyPetResetTimer = undefined;
+        this.ui.requestRender();
+      }, options.afterMs ?? 1500);
+    }
+
+    this.ui.requestRender();
+  }
+
   /**
    * Set a custom footer component, or restore the built-in footer.
    */
@@ -1993,7 +2076,7 @@ export class InteractiveMode {
       this.editor = this.defaultEditor;
     }
 
-    this.editorContainer.addChild(this.editor as Component);
+    this.remountEditorShell();
     this.ui.setFocus(this.editor as Component);
     this.ui.requestRender();
   }
@@ -2034,9 +2117,8 @@ export class InteractiveMode {
       return;
     }
 
-    const editorComponent = this.editor as Component;
-    if (this.editorContainer.children.includes(editorComponent)) {
-      this.ui.setFocus(editorComponent);
+    if (this.editorContainer.children.includes(this.editorBuddyLayout)) {
+      this.ui.setFocus(this.editor as Component);
     }
   }
 
@@ -2055,8 +2137,7 @@ export class InteractiveMode {
       this.extensionEditor = undefined;
     }
 
-    this.editorContainer.clear();
-    this.editorContainer.addChild(this.editor);
+    this.remountEditorShell();
 
     if (restoreEditorFocus) {
       this.restoreEditorFocusIfPossible();
@@ -2073,8 +2154,7 @@ export class InteractiveMode {
     selector.dispose();
 
     if (this.editorContainer.children.includes(selector)) {
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
     }
 
     if (restoreEditorFocus) {
@@ -2092,8 +2172,7 @@ export class InteractiveMode {
     input.dispose();
 
     if (this.editorContainer.children.includes(input)) {
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
     }
 
     if (restoreEditorFocus) {
@@ -2110,8 +2189,7 @@ export class InteractiveMode {
     this.extensionEditor = undefined;
 
     if (this.editorContainer.children.includes(extensionEditor)) {
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
     }
 
     if (restoreEditorFocus) {
@@ -2139,8 +2217,7 @@ export class InteractiveMode {
     const isOverlay = options?.overlay ?? false;
 
     const restoreEditor = () => {
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
       this.editor.setText(savedText);
       this.ui.setFocus(this.editor);
       this.ui.requestRender();
@@ -2385,7 +2462,7 @@ export class InteractiveMode {
     // Ensure attachmentsContainer is placed before the editor in the layout
     if (!this.editorContainer.children.includes(this.attachmentsContainer)) {
       const editorIdx = this.editorContainer.children.indexOf(
-        this.editor as Component,
+        this.editorBuddyLayout,
       );
       if (editorIdx >= 0) {
         this.editorContainer.children.splice(
@@ -3083,6 +3160,7 @@ export class InteractiveMode {
           this.defaultWorkingMessage,
         );
         this.statusContainer.addChild(this.loadingAnimation);
+        this.setBuddyPetState("working", "Working...");
         // Apply any pending working message queued before loader existed
         if (this.pendingWorkingMessage !== undefined) {
           if (this.pendingWorkingMessage) {
@@ -3261,6 +3339,10 @@ export class InteractiveMode {
           this.streamingMessage = undefined;
         }
         this.pendingTools.clear();
+        this.setBuddyPetState("happy", "Done!", {
+          resetTo: "idle",
+          afterMs: 1800,
+        });
 
         await this.checkShutdownRequested();
 
@@ -3984,6 +4066,10 @@ export class InteractiveMode {
     this.chatContainer.addChild(
       new Text(theme.fg("error", `Error: ${errorMessage}`), 1, 0),
     );
+    this.setBuddyPetState("error", "Oops...", {
+      resetTo: "idle",
+      afterMs: 2200,
+    });
     this.ui.requestRender();
   }
 
@@ -3992,6 +4078,10 @@ export class InteractiveMode {
     this.chatContainer.addChild(
       new Text(theme.fg("warning", `Warning: ${warningMessage}`), 1, 0),
     );
+    this.setBuddyPetState("error", "Careful.", {
+      resetTo: "idle",
+      afterMs: 1800,
+    });
     this.ui.requestRender();
   }
 
@@ -4233,8 +4323,7 @@ export class InteractiveMode {
     create: (done: () => void) => { component: Component; focus: Component },
   ): void {
     const done = () => {
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
       this.ui.setFocus(this.editor);
     };
     const { component, focus } = create(done);
@@ -4270,6 +4359,8 @@ export class InteractiveMode {
           quietStartup: this.settingsManager.getQuietStartup(),
           clearOnShrink: this.settingsManager.getClearOnShrink(),
           showTokenStats: this.settingsManager.getShowTokenStats(),
+          buddyEnabled: this.settingsManager.getBuddyEnabled(),
+          buddySpecies: this.settingsManager.getBuddySpecies(),
           showWorkingTrace: this.settingsManager.getShowWorkingTrace(),
           showMemoryTrace: this.settingsManager.getShowMemoryTrace(),
           presenceEnabled: this.settingsManager.getPresenceEnabled(),
@@ -4387,6 +4478,14 @@ export class InteractiveMode {
             this.settingsManager.setShowTokenStats(enabled);
             this.footer.setShowTokenStats(enabled);
             this.ui.requestRender();
+          },
+          onBuddyEnabledChange: (enabled) => {
+            this.settingsManager.setBuddyEnabled(enabled);
+            this.syncBuddyPet();
+          },
+          onBuddySpeciesChange: (species) => {
+            this.settingsManager.setBuddySpecies(species);
+            this.syncBuddyPet();
           },
           onPresenceEnabledChange: (enabled) => {
             this.settingsManager.setPresenceEnabled(enabled);
@@ -5347,8 +5446,7 @@ export class InteractiveMode {
 
     // Restore editor helper
     const restoreEditor = () => {
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
       this.ui.setFocus(this.editor);
       this.ui.requestRender();
     };
@@ -5450,11 +5548,10 @@ export class InteractiveMode {
     this.ui.setFocus(loader);
     this.ui.requestRender();
 
-    const dismissLoader = (editor: Component) => {
+    const dismissLoader = (_editor: Component) => {
       loader.dispose();
-      this.editorContainer.clear();
-      this.editorContainer.addChild(editor);
-      this.ui.setFocus(editor);
+      this.remountEditorShell();
+      this.ui.setFocus(this.editor);
       this.ui.requestRender();
     };
 
@@ -5562,8 +5659,7 @@ export class InteractiveMode {
 
     const restoreEditor = () => {
       loader.dispose();
-      this.editorContainer.clear();
-      this.editorContainer.addChild(this.editor);
+      this.remountEditorShell();
       this.ui.setFocus(this.editor);
       try {
         fs.unlinkSync(tmpFile);
@@ -6294,6 +6390,9 @@ export class InteractiveMode {
   }
 
   stop(): void {
+    this.clearBuddyPetResetTimer();
+    this.buddyPet?.dispose();
+    this.buddyPet = null;
     if (this.loadingAnimation) {
       (this.loadingAnimation as PencilLoader).stop();
       this.loadingAnimation = undefined;

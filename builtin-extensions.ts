@@ -96,6 +96,9 @@ export function getBuiltinExtensionPaths(): string[] {
 				if (existsSync(candidate)) paths.push(candidate);
 			}
 		}
+		// 4) Development mode: local workspace source file
+		const memCoreTs = join(__dirname, "packages", "mem-core", "src", "extension.ts");
+		if (existsSync(memCoreTs)) paths.push(memCoreTs);
 	}
 
 	// === Simplify extension (optional source, compiled to dist/extensions/optional/simplify) ===

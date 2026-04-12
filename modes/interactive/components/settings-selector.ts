@@ -18,6 +18,7 @@ import {
 	Text,
 } from "@pencil-agent/tui";
 import { getSelectListTheme, getSettingsListTheme, theme } from "../theme/theme.js";
+import { ALL_SPRITES } from "./buddy/pet-sprites.js";
 import { DynamicBorder } from "./dynamic-border.js";
 
 const THINKING_DESCRIPTIONS: Record<ThinkingLevel, string> = {
@@ -51,6 +52,8 @@ export interface SettingsConfig {
 	quietStartup: boolean;
 	clearOnShrink: boolean;
 	showTokenStats: boolean;
+	buddyEnabled: boolean;
+	buddySpecies: number;
 	showWorkingTrace: boolean;
 	showMemoryTrace: boolean;
 	presenceEnabled: boolean;
@@ -77,6 +80,8 @@ export interface SettingsCallbacks {
 	onQuietStartupChange: (enabled: boolean) => void;
 	onClearOnShrinkChange: (enabled: boolean) => void;
 	onShowTokenStatsChange: (enabled: boolean) => void;
+	onBuddyEnabledChange: (enabled: boolean) => void;
+	onBuddySpeciesChange: (species: number) => void;
 	onShowWorkingTraceChange: (enabled: boolean) => void;
 	onShowMemoryTraceChange: (enabled: boolean) => void;
 	onPresenceEnabledChange: (enabled: boolean) => void;
@@ -370,9 +375,39 @@ export class SettingsSelectorComponent extends Container {
 			values: ["true", "false"],
 		});
 
-		// Presence toggle (insert after show-token-stats)
 		const tokenStatsIndex = items.findIndex((item) => item.id === "show-token-stats");
 		items.splice(tokenStatsIndex + 1, 0, {
+			id: "buddy-enabled",
+			label: "Buddy pet",
+			description: "Show an animated terminal pet above the footer",
+			currentValue: config.buddyEnabled ? "true" : "false",
+			values: ["true", "false"],
+		});
+		items.splice(tokenStatsIndex + 2, 0, {
+			id: "buddy-species",
+			label: "Cat style",
+			description: "Pick from several small ASCII cats with occasional idle blinks",
+			currentValue: String(config.buddySpecies),
+			submenu: (currentValue, done) =>
+				new SelectSubmenu(
+					"Cat style",
+					"Pick a small terminal cat",
+					ALL_SPRITES.map((sprite, index) => ({
+						value: String(index),
+						label: sprite.name,
+					})),
+					currentValue,
+					(value) => {
+						callbacks.onBuddySpeciesChange(parseInt(value, 10));
+						done(value);
+					},
+					() => done(),
+				),
+		});
+
+		// Presence toggle (insert after show-token-stats)
+		const buddySpeciesIndex = items.findIndex((item) => item.id === "buddy-species");
+		items.splice(buddySpeciesIndex + 1, 0, {
 			id: "presence-enabled",
 			label: "Presence greeting",
 			description: "Show AI-generated greeting and idle messages based on memory context",
@@ -445,6 +480,12 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "show-token-stats":
 						callbacks.onShowTokenStatsChange(newValue === "true");
+						break;
+					case "buddy-enabled":
+						callbacks.onBuddyEnabledChange(newValue === "true");
+						break;
+					case "buddy-species":
+						callbacks.onBuddySpeciesChange(parseInt(newValue, 10));
 						break;
 					case "presence-enabled":
 						callbacks.onPresenceEnabledChange(newValue === "true");

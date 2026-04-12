@@ -2,7 +2,7 @@
  * [WHO]: BuddyPetComponent, BuddySpecies, BuddyState, SpriteData
  * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts, interactive-mode.ts
- * [HERE]: modes/interactive/components/buddy/buddy-pet.ts - terminal pet display component
+ * [HERE]: modes/interactive/components/buddy/pet-sprites.ts
  */
 
 import { type Component, type TUI } from "@pencil-agent/tui";
@@ -19,450 +19,197 @@ export interface SpriteData {
 	states: Record<BuddyState, string[][]>;
 }
 
-const CAT_SPRITE: SpriteData = {
-	name: "Cat",
-	states: {
-		idle: [
-			[
-				"   /|/|   ",
-				"  ( @ @)  ",
-				"   ) ^    ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-			[
-				"   /|/|   ",
-				"  ( - -)  ",
-				"   ) ^    ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-		],
-		happy: [
-			[
-				"   /|/|   ",
-				"  (^ ^ ^) ",
-				"   ) ~    ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-			[
-				"   /|/|   ",
-				"  (^o^ ^) ",
-				"   ) ~    ",
-				"  / |||\\  ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-		],
-		working: [
-			[
-				"   /|/|   ",
-				"  ( o.o)  ",
-				"   )_|_   ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-			[
-				"   /|/|   ",
-				"  (O  o)  ",
-				"   )_|_   ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-		],
-		sleeping: [
-			[
-				"   /|/|   ",
-				"  (-  -)zz",
-				"   ) ~    ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-			[
-				"   /|/|   ",
-				"  (-  -)ZZ",
-				"   ) ~    ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-		],
-		error: [
-			[
-				"   /|/|   ",
-				"  (x  x)  ",
-				"   )___   ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-			[
-				"   /|/|   ",
-				"  (X  X)  ",
-				"   )___   ",
-				"  / |||   ",
-				" /  )|||_ ",
-				"(_______)  ",
-			],
-		],
-		eating: [
-			[
-				"   /|/|   ",
-				"  (o  o)  ",
-				"   )_~    ",
-				"  / |||   ",
-				" /  )|||~ ",
-				"(_______)  ",
-			],
-			[
-				"   /|/|   ",
-				"  (.  .)  ",
-				"   )_~    ",
-				"  / |||   ",
-				" /  )|||~ ",
-				"(_______)  ",
-			],
-		],
-	},
-};
+type FramePair = [string[], string[]];
 
-const DUCK_SPRITE: SpriteData = {
-	name: "Duck",
-	states: {
-		idle: [
-			[
-				"    __    ",
-				"  <(o )___",
-				"   ( ._> /",
-				"    `---' ",
-			],
-			[
-				"    __    ",
-				"  <(o )___",
-				"   ( ._> /",
-				"    `---' ",
-			],
-		],
-		happy: [
-			[
-				"    __    ",
-				"  <(^o^)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-			[
-				"    __    ",
-				"  <(^o^)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-		],
-		working: [
-			[
-				"    __    ",
-				"  <(o.O)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-			[
-				"    __    ",
-				"  <(O.o)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-		],
-		sleeping: [
-			[
-				"    __    ",
-				"  <(- -)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-			[
-				"    __    ",
-				"  <(- -)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-		],
-		error: [
-			[
-				"    __    ",
-				"  <(x x)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-			[
-				"    __    ",
-				"  <(X X)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-		],
-		eating: [
-			[
-				"    __    ",
-				"  <(o o)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-			[
-				"    __    ",
-				"  <(. .)__",
-				"   ( ._> /",
-				"    `---' ",
-			],
-		],
-	},
-};
+function spriteFromStateFrames(name: string, states: Record<BuddyState, FramePair>): SpriteData {
+	return { name, states };
+}
 
-const GHOST_SPRITE: SpriteData = {
-	name: "Ghost",
-	states: {
-		idle: [
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (o o)  |",
-				"|   | ^ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (- -)  |",
-				"|   | ^ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-		],
-		happy: [
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (^_^)  |",
-				"|   | ~ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (^o^)  |",
-				"|   | ~ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-		],
-		working: [
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (O.o)  |",
-				"|   |_|_|  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (o.O)  |",
-				"|   |_|_|  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-		],
-		sleeping: [
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (- -)zz|",
-				"|   | ~ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (- -)ZZ|",
-				"|   | ~ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-		],
-		error: [
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (x x)  |",
-				"|   |___|  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (X X)  |",
-				"|   |___|  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-		],
-		eating: [
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (o o)  |",
-				"|   |_~ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-			[
-				"  .-''''-.  ",
-				" /   _   \\ ",
-				"|   (. .)  |",
-				"|   |_~ |  |",
-				" \\  \\_/  / ",
-				"  `'---'`  ",
-			],
-		],
-	},
-};
+const SITTING_CAT_SPRITE = spriteFromStateFrames("Mochi", {
+	idle: [
+		["      /|/|", "     ( @ @)", "      ) ^", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     ( - -)", "      ) ^", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	happy: [
+		["      /|/|", "     (^ ^ )", "      ) ~", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     (^o^)", "      ) ~", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	working: [
+		["      /|/|", "     ( o.o)", "      )_|_", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     ( o.O)", "      )_|_", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	sleeping: [
+		["      /|/|", "     (- -)zz", "      ) ~", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     (- -)ZZ", "      ) ~", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	error: [
+		["      /|/|", "     ( x x)", "      )___", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     ( X X)", "      )___", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	eating: [
+		["      /|/|", "     ( o o)", "      )_~", "     / |||", "    / )|||~", "   (_______)"],
+		["      /|/|", "     (. .)", "      )_~", "     / |||", "    / )|||~", "   (_______)"],
+	],
+});
 
-const DRAGON_SPRITE: SpriteData = {
-	name: "Dragon",
-	states: {
-		idle: [
-			[
-				"    /\\_/\\    ",
-				"   ( o.o )   ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-			[
-				"    /\\_/\\    ",
-				"   ( -.- )   ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-		],
-		happy: [
-			[
-				"    /\\_/\\    ",
-				"   (^o^ )   ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-			[
-				"    /\\_/\\    ",
-				"   (^ ^ )~  ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-		],
-		working: [
-			[
-				"    /\\_/\\    ",
-				"   (O.O )   ",
-				"  /  >|<  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-			[
-				"    /\\_/\\    ",
-				"   (o.O )   ",
-				"  /  >|<  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-		],
-		sleeping: [
-			[
-				"    /\\_/\\    ",
-				"   (- - )zz ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-			[
-				"    /\\_/\\    ",
-				"   (- - )ZZ ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-		],
-		error: [
-			[
-				"    /\\_/\\    ",
-				"   (X.X )   ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-			[
-				"    /\\_/\\    ",
-				"   (x.x )   ",
-				"  /  > <  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-		],
-		eating: [
-			[
-				"    /\\_/\\    ",
-				"   (o.o )~  ",
-				"  /  >|~  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-			[
-				"    /\\_/\\    ",
-				"   (.o )~   ",
-				"  /  >|~  \\  ",
-				" / /|   |\\ \\ ",
-				"(_)|   |(_)  ",
-				"   \"'   '\"   ",
-			],
-		],
-	},
-};
+const SIDE_CAT_SPRITE = spriteFromStateFrames("Pip", {
+	idle: [
+		["             /|_", "            /  ,\\", "         .-'   _,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   _,'", "   hjw  / _   |", "       /  _)  |", "   ,=='`.____)_)"],
+	],
+	happy: [
+		["             /|_", "            /  ,\\", "         .-'   ^,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   ~,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	working: [
+		["             /|_", "            /  ,\\", "         .-'   _,'", "   hjw  / _   |", "       /  _)  |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   _,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	sleeping: [
+		["             /|_", "            /  ,\\", "         .-'   z,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   Z,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	error: [
+		["             /|_", "            /  ,\\", "         .-'   x,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   X,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	eating: [
+		["             /|_", "            /  ,\\", "         .-'   ~,'", "   hjw  / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   ~,'", "   hjw  / _   |", "       /  _)  |", "   ,=='`.____)_)"],
+	],
+});
 
-export const ALL_SPRITES: SpriteData[] = [CAT_SPRITE, DUCK_SPRITE, GHOST_SPRITE, DRAGON_SPRITE];
+const LOUNGING_CAT_SPRITE = spriteFromStateFrames("Nori", {
+	idle: [
+		["    |\\/| ---- _", "   =(--)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(- -)=____ \\", "   c___ (______/"],
+	],
+	happy: [
+		["    |\\/| ---- _", "   =(^ ^)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(^o^)=_____ \\", "   c___ (______/"],
+	],
+	working: [
+		["    |\\/| ---- _", "   =(o.O)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(o.o)=_____ \\", "   c___ (______/"],
+	],
+	sleeping: [
+		["    |\\/| ---- _", "   =(- -)=zz___ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(- -)=ZZ___ \\", "   c___ (______/"],
+	],
+	error: [
+		["    |\\/| ---- _", "   =(x x)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(X X)=_____ \\", "   c___ (______/"],
+	],
+	eating: [
+		["    |\\/| ---- _", "   =(o o)=_____ \\", "   c___~(_____/"],
+		["    |\\/| ---- _", "   =(. .)=_____ \\", "   c___~(_____/"],
+	],
+});
+
+const SITTING_KITTEN_SPRITE = spriteFromStateFrames("Boba", {
+	idle: [
+		["      /|/|", "     ( o o)", "      ) ^", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     ( - -)", "      ) ^", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	happy: [
+		["      /|/|", "     (^ ^ )", "      ) ~", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     (^o^)", "      ) ~", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	working: [
+		["      /|/|", "     ( o.o)", "      )_|_", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     ( o.O)", "      )_|_", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	sleeping: [
+		["      /|/|", "     (- -)zz", "      ) ^", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     (- -)ZZ", "      ) ^", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	error: [
+		["      /|/|", "     ( x x)", "      )___", "     / |||", "    / )|||_", "   (_______)"],
+		["      /|/|", "     ( X X)", "      )___", "     / |||", "    / )|||_", "   (_______)"],
+	],
+	eating: [
+		["      /|/|", "     ( o o)", "      )_~", "     / |||", "    / )|||~", "   (_______)"],
+		["      /|/|", "     (. .)", "      )_~", "     / |||", "    / )|||~", "   (_______)"],
+	],
+});
+
+const SIDE_KITTEN_SPRITE = spriteFromStateFrames("Miso", {
+	idle: [
+		["             /|_", "            /  ,\\", "         .-'   _,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   _,'", "        / _   |", "       /  _)  |", "   ,=='`.____)_)"],
+	],
+	happy: [
+		["             /|_", "            /  ,\\", "         .-'   ^,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   ~,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	working: [
+		["             /|_", "            /  ,\\", "         .-'   _,'", "        / _   |", "       /  _)  |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   _,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	sleeping: [
+		["             /|_", "            /  ,\\", "         .-'   z,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   Z,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	error: [
+		["             /|_", "            /  ,\\", "         .-'   x,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   X,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+	],
+	eating: [
+		["             /|_", "            /  ,\\", "         .-'   ~,'", "        / _   |", "       /   )_ |", "   ,=='`.____)_)"],
+		["             /|_", "            /  ,\\", "         .-'   ~,'", "        / _   |", "       /  _)  |", "   ,=='`.____)_)"],
+	],
+});
+
+const LOUNGING_KITTEN_SPRITE = spriteFromStateFrames("Bean", {
+	idle: [
+		["    |\\/| ---- _", "   =(oo)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(- -)=_____ \\", "   c___ (______/"],
+	],
+	happy: [
+		["    |\\/| ---- _", "   =(^ ^)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(^o^)=_____ \\", "   c___ (______/"],
+	],
+	working: [
+		["    |\\/| ---- _", "   =(o.O)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(o.o)=_____ \\", "   c___ (______/"],
+	],
+	sleeping: [
+		["    |\\/| ---- _", "   =(- -)=zz___ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(- -)=ZZ___ \\", "   c___ (______/"],
+	],
+	error: [
+		["    |\\/| ---- _", "   =(x x)=_____ \\", "   c___ (______/"],
+		["    |\\/| ---- _", "   =(X X)=_____ \\", "   c___ (______/"],
+	],
+	eating: [
+		["    |\\/| ---- _", "   =(o o)=_____ \\", "   c___~(_____/"],
+		["    |\\/| ---- _", "   =(. .)=_____ \\", "   c___~(_____/"],
+	],
+});
+
+export const ALL_SPRITES: SpriteData[] = [
+	SITTING_CAT_SPRITE,
+	SIDE_CAT_SPRITE,
+	LOUNGING_CAT_SPRITE,
+	SITTING_KITTEN_SPRITE,
+	SIDE_KITTEN_SPRITE,
+	LOUNGING_KITTEN_SPRITE,
+];
 
 // ============================================================================
 // Buddy Pet Component
 // ============================================================================
+
+const IDLE_BLINK_INTERVAL_MS = 6800;
+const IDLE_BLINK_DURATION_MS = 180;
 
 export class BuddyPetComponent implements Component {
 	private tui: TUI;
 	private sprite: SpriteData;
 	private state: BuddyState = "idle";
 	private currentFrame = 0;
-	private interval: ReturnType<typeof setInterval> | undefined;
+	private blinkInterval: ReturnType<typeof setInterval> | undefined;
+	private blinkResetTimer: ReturnType<typeof setTimeout> | undefined;
 	private name: string;
 	private speechBubble = "";
 
@@ -476,7 +223,9 @@ export class BuddyPetComponent implements Component {
 	setState(state: BuddyState): void {
 		if (this.state !== state) {
 			this.state = state;
+			this.clearBlinkResetTimer();
 			this.currentFrame = 0;
+			this.tui.requestRender();
 		}
 	}
 
@@ -485,14 +234,32 @@ export class BuddyPetComponent implements Component {
 		this.tui.requestRender();
 	}
 
+	private clearBlinkResetTimer(): void {
+		if (this.blinkResetTimer) {
+			clearTimeout(this.blinkResetTimer);
+			this.blinkResetTimer = undefined;
+		}
+	}
+
 	private startAnimation(): void {
 		const tick = () => {
-			const frames = this.sprite.states[this.state];
-			if (!frames || frames.length === 0) return;
-			this.currentFrame = (this.currentFrame + 1) % frames.length;
+			if (this.state !== "idle" || this.currentFrame !== 0) {
+				return;
+			}
+			const frames = this.sprite.states.idle;
+			if (!frames || frames.length < 2) {
+				return;
+			}
+			this.currentFrame = 1;
 			this.tui.requestRender();
+			this.clearBlinkResetTimer();
+			this.blinkResetTimer = setTimeout(() => {
+				this.currentFrame = 0;
+				this.blinkResetTimer = undefined;
+				this.tui.requestRender();
+			}, IDLE_BLINK_DURATION_MS);
 		};
-		this.interval = setInterval(tick, 800);
+		this.blinkInterval = setInterval(tick, IDLE_BLINK_INTERVAL_MS);
 	}
 
 	invalidate(): void {
@@ -505,21 +272,21 @@ export class BuddyPetComponent implements Component {
 
 		const frame = frames[this.currentFrame % frames.length];
 
-		// Render sprite with accent color
 		const lines: string[] = [];
 		for (const line of frame) {
 			lines.push(theme.fg("accent", line));
 		}
 
-		// Add name label
 		const nameLine = theme.fg("dim", this.name);
 		lines.push(nameLine);
 
-		// Add speech bubble if present
 		if (this.speechBubble) {
 			const bubbleWidth = Math.min(this.speechBubble.length + 4, width);
 			const top = theme.fg("muted", " " + "_".repeat(bubbleWidth - 2) + " ");
-			const mid = theme.fg("muted", "< ") + theme.fg("text", this.speechBubble.slice(0, bubbleWidth - 4)) + theme.fg("muted", " >");
+			const mid =
+				theme.fg("muted", "< ") +
+				theme.fg("text", this.speechBubble.slice(0, bubbleWidth - 4)) +
+				theme.fg("muted", " >");
 			const bot = theme.fg("muted", " " + "-".repeat(bubbleWidth - 2) + " ");
 			lines.push(top, mid, bot);
 		}
@@ -528,9 +295,10 @@ export class BuddyPetComponent implements Component {
 	}
 
 	dispose(): void {
-		if (this.interval) {
-			clearInterval(this.interval);
-			this.interval = undefined;
+		this.clearBlinkResetTimer();
+		if (this.blinkInterval) {
+			clearInterval(this.blinkInterval);
+			this.blinkInterval = undefined;
 		}
 	}
 }

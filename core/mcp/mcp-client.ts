@@ -318,6 +318,31 @@ export class MCPClient {
   }
 
   private attachStdoutParser(serverId: string, runtime: ServerRuntime): void {
+    const rejectPending = (reason: Error): void => {
+      if (this.serverRuntimes.get(serverId) !== runtime) {
+        return;
+      }
+      for (const pending of runtime.pendingRequests.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(reason);
+      }
+      runtime.pendingRequests.clear();
+      this.serverRuntimes.delete(serverId);
+    };
+
+    // Broken pipe when the child exits before we finish initialize — prevents unhandled "error" on stdin.
+    runtime.process.stdin.on("error", (err) => {
+      const code = (err as NodeJS.ErrnoException).code;
+      const detail =
+        code === "EPIPE"
+          ? "process exited before MCP handshake (check command and npm package name)"
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      mcpLog(`[MCP:${serverId}] stdin: ${detail}`);
+      rejectPending(new Error(`MCP server ${serverId} stdin closed: ${detail}`));
+    });
+
     runtime.process.stdout.on("data", (chunk: Buffer) => {
       runtime.buffer = Buffer.concat([runtime.buffer, chunk]);
       this.processStdoutBuffer(serverId, runtime);
@@ -334,24 +359,17 @@ export class MCPClient {
     });
 
     runtime.process.on("exit", (code, signal) => {
+      if (this.serverRuntimes.get(serverId) !== runtime) {
+        return;
+      }
       const message = `[MCP:debug] Server exited: code=${code ?? "null"}, signal=${signal ?? "null"}`;
       mcpLog(message);
-      for (const pending of runtime.pendingRequests.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(new Error(message));
-      }
-      runtime.pendingRequests.clear();
-      this.serverRuntimes.delete(serverId);
+      rejectPending(new Error(message));
     });
 
     runtime.process.on("error", (err) => {
       const message = `MCP server ${serverId} process error: ${err instanceof Error ? err.message : String(err)}`;
-      for (const pending of runtime.pendingRequests.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(new Error(message));
-      }
-      runtime.pendingRequests.clear();
-      this.serverRuntimes.delete(serverId);
+      rejectPending(new Error(message));
     });
   }
 

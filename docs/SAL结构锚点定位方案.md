@@ -1,6 +1,6 @@
-# SAL Structural Anchor Localization
+﻿# SAL Structural Anchor Localization
 
-> P1.5 | Parent: `CLAUDE.md`
+> P1.5 | Parent: `AGENT.md`
 > Type: Technical Proposal
 > Status: Proposed
 > Scope: DIP x NanoMem x Localization
@@ -495,7 +495,7 @@ Localization quality degrades proportionally to DIP coverage gaps:
 
 | Coverage Level | Requirement |
 |----------------|-------------|
-| Module (P2) | P2 CLAUDE.md exists, member list complete |
+| Module (P2) | P2 AGENT.md exists, member list complete |
 | Files in target module | ≥ 90% of `.ts` files have P3 headers |
 | P3 fields | `WHO`, `FROM`, `TO`, `HERE` all non-empty |
 
@@ -521,7 +521,7 @@ Invalidation triggers:
 |-------|----------------|
 | New file added to a module | Regenerate module-level nodes |
 | P3 header edited | Regenerate affected file node and neighbor edges |
-| P2 CLAUDE.md updated | Regenerate module node and all child edges |
+| P2 AGENT.md updated | Regenerate module node and all child edges |
 | File deleted | Remove node; mark anchors pointing to it as stale |
 | Module moved or renamed | Regenerate full terrain graph |
 

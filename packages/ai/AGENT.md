@@ -1,6 +1,6 @@
-# packages/ai/
+﻿# packages/ai/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 config-path.ts: getDebugLogPath, debug log file path resolution, respects NANOPENCIL_CODING_AGENT_DIR override
@@ -47,4 +47,4 @@ utils/oauth/pkce.ts: generatePKCE, PKCE utilities using Web Crypto API (Node.js 
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

@@ -1,4 +1,4 @@
-# Simplify 扩展
+﻿# Simplify 扩展
 
 > Claude Code `/simplify` 风格的代码简化工具
 
@@ -22,7 +22,7 @@ Simplify 是一个可选扩展，提供代码简化和重构能力。它通过 A
 ┌─────────────────────────────────────────────────────────────┐
 │  感知层                                                        │
 │  • 扫描 Git Diff（staged + unstaged）                        │
-│  • 读取项目规范（CLAUDE.md, AGENTS.md, .cursor/rules）       │
+│  • 读取项目规范（AGENT.md, AGENTS.md, .cursor/rules）       │
 │  • 分析代码结构                                                │
 ├─────────────────────────────────────────────────────────────┤
 │  决策层                                                        │
@@ -151,7 +151,7 @@ for (const n of nums) { sum += n; }
            ↓
 2. 扫描 Git Diff（staged + unstaged）
            ↓
-3. 加载项目规范（CLAUDE.md 等）
+3. 加载项目规范（AGENT.md 等）
            ↓
 4. 对每个文件调用 LLM 分析
            ↓
@@ -240,7 +240,7 @@ for (const n of nums) { sum += n; }
 
 按优先级读取：
 
-1. `CLAUDE.md`
+1. `AGENT.md`
 2. `AGENTS.md`
 3. `.cursor/rules`
 4. `.github/copilot-instructions.md`

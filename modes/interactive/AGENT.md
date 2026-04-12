@@ -1,6 +1,6 @@
-# modes/interactive/
+﻿# modes/interactive/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 interactive-mode.ts: TUI orchestration hub, coordinates AgentSession with terminal UI, handles input/output loop
@@ -49,4 +49,4 @@ components/settings-selector.ts: Settings UI, thinking level/transport selection
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

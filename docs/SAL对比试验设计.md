@@ -1,6 +1,6 @@
-# SAL Comparative Experiment Design
+﻿# SAL Comparative Experiment Design
 
-> P1.5 | Parent: `CLAUDE.md`
+> P1.5 | Parent: `AGENT.md`
 > Type: Experiment Design
 > Status: Proposed
 > Scope: SAL on/off comparison inside the same repository

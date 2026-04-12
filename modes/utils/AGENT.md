@@ -1,6 +1,6 @@
-# modes/utils/
+﻿# modes/utils/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 clipboard-native.ts: Native clipboard for images, ClipboardModule with hasImage/getImageBinary
@@ -11,4 +11,4 @@ image-resize.ts: Image resizing for terminal display, maxWidth/maxHeight/maxByte
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

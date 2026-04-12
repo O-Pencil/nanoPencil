@@ -1,6 +1,6 @@
-# core/i18n/ — Internationalization Module
+﻿# core/i18n/ — Internationalization Module
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 ---
 

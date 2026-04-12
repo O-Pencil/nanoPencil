@@ -1,6 +1,6 @@
-# core/mcp/
+﻿# core/mcp/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 mcp-config.ts: MCPConfig interface, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers(), MCP server configuration management, key invariant: configs stored in ~/.nanopencil/agent/mcp.json
@@ -12,4 +12,4 @@ index.ts: MCP module barrel exports, re-exports MCPClient, createMCPTool, loadMC
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

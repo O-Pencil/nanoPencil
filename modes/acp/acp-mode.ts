@@ -213,6 +213,17 @@ function createSlashCommandsUpdate(session: AgentSession): AvailableCommand[] {
 	return buildAcpAvailableCommands(session.getSlashCommands());
 }
 
+function deferAcpNotification(task: () => Promise<void> | void): void {
+	queueMicrotask(() => {
+		void Promise.resolve()
+			.then(task)
+			.catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				process.stderr.write(`[acp_session_bootstrap_error] ${message}\n`);
+			});
+	});
+}
+
 function getMessageText(message: AgentMessage): string {
 	if (!("content" in message) || !Array.isArray(message.content)) {
 		return "";
@@ -405,8 +416,7 @@ class NanoPencilAgent implements acp.Agent {
 		this.currentSessionId = sessionId;
 
 		await this.applySessionMode(state);
-		await this.emitSessionMetadata(state);
-		await this.emitAvailableCommands(sessionId);
+		this.scheduleSessionBootstrap(sessionId);
 
 		return {
 			sessionId,
@@ -444,9 +454,7 @@ class NanoPencilAgent implements acp.Agent {
 		this.currentSessionId = params.sessionId;
 
 		await this.applySessionMode(state);
-		await this.emitSessionMetadata(state);
-		await this.emitAvailableCommands(params.sessionId);
-		await this.replayHistory(params.sessionId);
+		this.scheduleSessionBootstrap(params.sessionId, { replayHistory: true });
 
 		return {
 			models: this.buildModelState(),
@@ -721,6 +729,21 @@ class NanoPencilAgent implements acp.Agent {
 				title: state.title ?? null,
 				updatedAt: new Date().toISOString(),
 			},
+		});
+	}
+
+	private scheduleSessionBootstrap(
+		sessionId: string,
+		options: { replayHistory?: boolean } = {},
+	): void {
+		deferAcpNotification(async () => {
+			const state = this.sessions.get(sessionId);
+			if (!state) return;
+			await this.emitSessionMetadata(state);
+			await this.emitAvailableCommands(sessionId);
+			if (options.replayHistory) {
+				await this.replayHistory(sessionId);
+			}
 		});
 	}
 
@@ -1236,6 +1259,7 @@ export async function runAcpMode(session: AgentSession, options: AcpModeOptions 
 export const __testUtils = {
 	buildAcpAvailableCommands,
 	createAvailableCommandInput,
+	deferAcpNotification,
 	isAdvertisableAcpCommand,
 	normalizeAcpCommandName,
 };

@@ -591,7 +591,7 @@ export class ToolExecutionComponent extends Container {
 			const offset = this.args?.offset;
 			const limit = this.args?.limit;
 
-			let pathDisplay = path === null ? invalidArg : path ? theme.fg("accent", path) : theme.fg("toolOutput", "...");
+			let pathDisplay = path === null ? invalidArg : path ? theme.fg("accent", theme.underline(path)) : theme.fg("toolOutput", "...");
 			if (offset !== undefined || limit !== undefined) {
 				const startLine = offset ?? 1;
 				const endLine = limit !== undefined ? startLine + limit - 1 : "";
@@ -653,7 +653,7 @@ export class ToolExecutionComponent extends Container {
 			text =
 				theme.fg("toolTitle", theme.bold("write")) +
 				" " +
-				(path === null ? invalidArg : path ? theme.fg("accent", path) : theme.fg("toolOutput", "..."));
+				(path === null ? invalidArg : path ? theme.fg("accent", theme.underline(path)) : theme.fg("toolOutput", "..."));
 
 			if (fileContent === null) {
 				text += `\n\n${theme.fg("error", "[invalid content arg - expected string]")}`;
@@ -708,7 +708,7 @@ export class ToolExecutionComponent extends Container {
 			const path = rawPath !== null ? shortenPath(rawPath) : null;
 
 			// Build path display, appending :line if we have diff info
-			let pathDisplay = path === null ? invalidArg : path ? theme.fg("accent", path) : theme.fg("toolOutput", "...");
+			let pathDisplay = path === null ? invalidArg : path ? theme.fg("accent", theme.underline(path)) : theme.fg("toolOutput", "...");
 			const firstChangedLine =
 				(this.editDiffPreview && "firstChangedLine" in this.editDiffPreview
 					? this.editDiffPreview.firstChangedLine
@@ -744,7 +744,7 @@ export class ToolExecutionComponent extends Container {
 			const path = rawPath !== null ? shortenPath(rawPath || ".") : null;
 			const limit = this.args?.limit;
 
-			text = `${theme.fg("toolTitle", theme.bold("ls"))} ${path === null ? invalidArg : theme.fg("accent", path)}`;
+			text = `${theme.fg("toolTitle", theme.bold("ls"))} ${path === null ? invalidArg : theme.fg("accent", theme.underline(path))}`;
 			if (limit !== undefined) {
 				text += theme.fg("toolOutput", ` (limit ${limit})`);
 			}

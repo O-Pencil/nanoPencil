@@ -1,6 +1,6 @@
-# extensions/ — Built-in Extensions Module
+﻿# extensions/ — Built-in Extensions Module
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 ---
 

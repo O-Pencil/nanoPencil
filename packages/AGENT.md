@@ -1,6 +1,6 @@
 # packages/ — Bundled Packages Module
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 ---
 
@@ -153,7 +153,7 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 `types.ts`: All memory type definitions
 `update.ts`: Memory update operations
 
-**Note:** Has its own `CLAUDE.md` for detailed documentation
+**Note:** Has its own `AGENT.md` for detailed documentation
 
 ### soul-core/ — AI Personality Evolution
 

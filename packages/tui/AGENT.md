@@ -1,6 +1,6 @@
 # packages/tui/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 stdin-buffer.ts: StdinBuffer class, stdin buffering for escape sequences, accumulates partial input chunks
@@ -31,4 +31,4 @@ components/select-list.ts: SelectItem, SelectListTheme, SelectList class, select
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

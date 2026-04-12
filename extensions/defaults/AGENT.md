@@ -1,6 +1,6 @@
-# extensions/defaults/
+﻿# extensions/defaults/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 link-world/index.ts: Internet access extension, provides internet-search Skill after setup
@@ -28,7 +28,7 @@ loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSche
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
 sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage and /sal:status commands, before_agent_start/tool_execution_start/agent_end hooks; runtime no-op when --nosal is set
-sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 CLAUDE.md and P3 file headers
+sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 AGENT.md and P3 file headers
 sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights
 sal/weights.ts: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights() reads sal-config.json from workspace or .memory-experiments/sal/
 sal/README.md: SAL extension usage, sidecar output layout, weights override, pluggability contract
@@ -44,4 +44,4 @@ team/TESTING.md: Manual & smoke-test guide for Phase B AgentTeam
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

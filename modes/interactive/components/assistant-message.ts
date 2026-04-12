@@ -60,6 +60,7 @@ export class AssistantMessageComponent extends Container {
 
 		if (hasVisibleContent) {
 			this.contentContainer.addChild(new Spacer(1));
+			this.contentContainer.addChild(new Text(theme.fg("assistantLabel", "◆ " + theme.bold("Assistant")), 1, 0));
 		}
 
 		// Render content in order
@@ -68,7 +69,9 @@ export class AssistantMessageComponent extends Container {
 			if (content.type === "text" && content.text.trim()) {
 				// Assistant text messages with no background - trim the text
 				// Set paddingY=0 to avoid extra spacing before tool executions
-				this.contentContainer.addChild(new Markdown(content.text.trim(), 1, 0, this.markdownTheme));
+				this.contentContainer.addChild(new Markdown(content.text.trim(), 1, 0, this.markdownTheme, {
+					bgColor: (text: string) => theme.bg("assistantMessageBg", text),
+				}));
 			} else if (content.type === "thinking" && content.thinking.trim()) {
 				// Add spacing only when another visible assistant content block follows.
 				// This avoids a superfluous blank line before separately-rendered tool execution blocks.
@@ -84,6 +87,8 @@ export class AssistantMessageComponent extends Container {
 					}
 				} else {
 					// Thinking traces in thinkingText color, italic
+					const thinkingLines = content.thinking.trim().split("\n").length;
+					this.contentContainer.addChild(new Text(theme.fg("thinkingText", theme.italic("Thinking... (" + thinkingLines + " lines)")), 1, 0));
 					this.contentContainer.addChild(
 						new Markdown(content.thinking.trim(), 1, 0, this.markdownTheme, {
 							color: (text: string) => theme.fg("thinkingText", text),

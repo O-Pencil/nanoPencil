@@ -8098,7 +8098,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 196608,
-			maxTokens: 196608,
+			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.7": {
 			id: "minimax/minimax-m2.7",
@@ -8111,11 +8111,11 @@ export const MODELS = {
 			cost: {
 				input: 0.3,
 				output: 1.2,
-				cacheRead: 0.06,
+				cacheRead: 0.059,
 				cacheWrite: 0,
 			},
 			contextWindow: 204800,
-			maxTokens: 131072,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
 			id: "mistralai/codestral-2508",
@@ -9526,7 +9526,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
-			maxTokens: 131072,
+			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-oss-safeguard-20b": {
 			id: "openai/gpt-oss-safeguard-20b",

@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENT.md
 
 > P1 | Root Project Charter & Navigation Map
 
@@ -145,7 +145,7 @@ You are the executor of DIP, bound by verifiable isomorphism constraints.
 Global topology, stack overview, global patterns
 
 ### P2 — Module Maps
-**File**: `{module}/CLAUDE.md`
+**File**: `{module}/AGENT.md`
 **Content**: Member list (files, responsibilities, technical points, key parameters or invariants)
 **Format**:
 ```
@@ -173,14 +173,14 @@ Global topology, stack overview, global patterns
 ```markdown
 # {module}/
 
-> P2 | Parent: {parent path}/CLAUDE.md
+> P2 | Parent: {parent path}/AGENT.md
 
 Member List
 {file}.{ext}: {responsibility}, {technical points}, {key parameters or invariants}
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md
 ```
 
 ---
@@ -215,7 +215,7 @@ Rule: Members complete, one item per line, parent links valid, precise terms fir
 ```
 Before working in a directory
     ↓
-Read CLAUDE.md at that level → load if exists; if not, mark for creation and minimally complete
+Read AGENT.md at that level → load if exists; if not, mark for creation and minimally complete
     ↓
 Read target file P3 header → understand contract if exists; if missing, complete P3 first before implementation
     ↓
@@ -313,7 +313,7 @@ Maintain P1/P2/P3 completeness and WORKFLOW closure; reject "only modify code, d
 
 ```
 nanoPencil/
-|---- CLAUDE.md              # THIS FILE - P1 navigation map
+|---- AGENT.md              # THIS FILE - P1 navigation map
 |---- AGENTS.md              # Claude Code specific guidance
 |---- .PENCIL.md             # Product personality charter
 |
@@ -493,14 +493,14 @@ Types: `feat`, `fix`, `docs`, `refactor`, `perf`, `chore`, `style`
 
 ### P1 — Root
 
-- [P1: This File](./CLAUDE.md)
+- [P1: This File](./AGENT.md)
 
 ### P2 — Module Maps
 
-- [P2: core/](./core/CLAUDE.md) — Core functionality, runtime, tools
-- [P2: modes/](./modes/CLAUDE.md) — Interactive, print, RPC modes
-- [P2: extensions/](./extensions/CLAUDE.md) — Built-in extensions
-- [P2: packages/](./packages/CLAUDE.md) — Bundled npm packages
+- [P2: core/](./core/AGENT.md) — Core functionality, runtime, tools
+- [P2: modes/](./modes/AGENT.md) — Interactive, print, RPC modes
+- [P2: extensions/](./extensions/AGENT.md) — Built-in extensions
+- [P2: packages/](./packages/AGENT.md) — Bundled npm packages
 
 ### P3 — File Contracts
 
@@ -521,9 +521,9 @@ Add P3 headers following this pattern:
 
 - [AGENTS.md](./AGENTS.md) — @o-pencil-agent / contributor guidance
 - [.PENCIL.md](./.PENCIL.md) — Product personality charter
-- [packages/mem-core/CLAUDE.md](./packages/mem-core/CLAUDE.md) — Memory system
+- [packages/mem-core/AGENT.md](./packages/mem-core/AGENT.md) — Memory system
 - [docs/](./docs/) — Documentation directory
 
 ---
 
-**Covenant**: Maintain map-terrain isomorphism. Keep the CLAUDE.md aligned with actual structure, or the structure will drift.
+**Covenant**: Maintain map-terrain isomorphism. Keep the AGENT.md aligned with actual structure, or the structure will drift.

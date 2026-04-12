@@ -242,7 +242,7 @@ Each code file has a P3 format DIP header for quick relevance assessment:
 
 ## pencil.md Project Initialization Protocol
 
-When first operating files in a project, check if \`pencil.md\` (or \`CLAUDE.md\`) exists in root:
+When first operating files in a project, check if \`pencil.md\` (or \`AGENT.md\`, legacy \`CLAUDE.md\`) exists in root:
 
 **If not exists**:
 1. Suggest user create \`pencil.md\`

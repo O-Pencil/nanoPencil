@@ -1,6 +1,6 @@
-# core/utils/
+﻿# core/utils/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 sleep.ts: sleep() function, sleep helper that respects abort signal, no external dependencies
@@ -10,4 +10,4 @@ logger.ts: AgentLogger interface, createLogger(), noopLogger, structured JSON lo
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

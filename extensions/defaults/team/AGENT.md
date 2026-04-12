@@ -1,6 +1,6 @@
-# extensions/defaults/team/
+﻿# extensions/defaults/team/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 - index.ts: AgentTeam extension entry, /team:/team:spawn/:send/:status/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer
@@ -15,7 +15,7 @@ Member List
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md
 
 ---
 

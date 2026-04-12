@@ -1,6 +1,6 @@
-# core/export-html/
+﻿# core/export-html/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 tool-renderer.ts: ToolHtmlRendererDeps interface, ToolHtmlRenderer interface, renderToolToHtml(), renders tool calls and results to HTML, consumes ansi-to-html for output formatting
@@ -9,4 +9,4 @@ index.ts: ToolHtmlRenderer interface, exportSessionToHtml(), HTML export functio
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

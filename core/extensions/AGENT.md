@@ -1,6 +1,6 @@
-# core/extensions/
+﻿# core/extensions/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 index.ts: Extension system public API, re-exports from loader.ts, runner.ts, types.ts, wrapper.ts, consumed by SDK and extensions themselves
@@ -11,4 +11,4 @@ runner.ts: ExtensionRunner class, extension execution and lifecycle management, 
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

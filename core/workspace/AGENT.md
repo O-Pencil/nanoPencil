@@ -1,6 +1,6 @@
-# core/workspace/
+﻿# core/workspace/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 index.ts: Barrel exports — WorktreeManager, worktreeManager singleton, WorkspacePath type
@@ -8,4 +8,4 @@ worktree-manager.ts: WorktreeManager class — createTempWorkspace(seedFiles, pr
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file on changes and verify against parent core/CLAUDE.md
+[COVENANT]: Update this file on changes and verify against parent core/AGENT.md

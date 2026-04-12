@@ -66,7 +66,8 @@ function resolvePromptInput(input: string | undefined, description: string): str
 }
 
 function loadContextFileFromDir(dir: string): { path: string; content: string } | null {
-	const candidates = ["AGENTS.md", "CLAUDE.md"];
+	// AGENT.md is canonical; CLAUDE.md still loaded for legacy workspaces.
+	const candidates = ["AGENTS.md", "AGENT.md", "CLAUDE.md"];
 	for (const filename of candidates) {
 		const filePath = join(dir, filename);
 		if (existsSync(filePath)) {
@@ -139,7 +140,7 @@ function loadProjectContextFiles(
 
 	contextFiles.push(...ancestorContextFiles);
 
-	// Project-specific context: .PENCIL.md in project root only (AGENTS.md/CLAUDE.md unchanged)
+	// Project-specific context: .PENCIL.md in project root only (AGENTS.md/AGENT.md unchanged)
 	const pencilPath = join(resolvedCwd, ".PENCIL.md");
 	if (!seenPaths.has(pencilPath) && existsSync(pencilPath)) {
 		try {

@@ -68,7 +68,7 @@ function getFileDiff(cwd: string, file: string): string {
 // =============================================================================
 
 function loadProjectRules(cwd: string): string {
-	const ruleFiles = ["CLAUDE.md", "AGENTS.md", ".cursor/rules", ".github/copilot-instructions.md"];
+	const ruleFiles = ["AGENT.md", "CLAUDE.md", "AGENTS.md", ".cursor/rules", ".github/copilot-instructions.md"];
 	const rules: string[] = [];
 
 	for (const file of ruleFiles) {

@@ -1,6 +1,6 @@
-# packages/agent-core/
+﻿# packages/agent-core/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 agent.ts: Agent class and AgentOptions, main agent with message loop, coordinates with agent-loop for execution
@@ -11,4 +11,4 @@ types.ts: AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, Age
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

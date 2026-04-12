@@ -1,6 +1,6 @@
-# core/tools/
+﻿# core/tools/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 read.ts: ReadTool, readTool, createReadTool, ReadToolInput, filesystem read boundary with truncation and line range support, consumed by orchestrator
@@ -20,4 +20,4 @@ time.ts: TimeTool, timeTool, createTimeTool, current time tool with timezone/loc
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

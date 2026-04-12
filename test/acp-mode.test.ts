@@ -27,3 +27,17 @@ test("acp available commands: normalizes slash-prefixed names", () => {
 	assert.equal(__testUtils.isAdvertisableAcpCommand("/resume"), true);
 	assert.equal(__testUtils.isAdvertisableAcpCommand("/settings"), false);
 });
+
+test("acp bootstrap updates are deferred until after the current turn", async () => {
+	const events: string[] = [];
+
+	__testUtils.deferAcpNotification(() => {
+		events.push("deferred");
+	});
+	events.push("sync");
+
+	assert.equal(events.join(","), "sync");
+	await Promise.resolve();
+	await Promise.resolve();
+	assert.equal(events.join(","), "sync,deferred");
+});

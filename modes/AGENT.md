@@ -1,6 +1,6 @@
-# modes/ — Run Modes Module
+﻿# modes/ — Run Modes Module
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 ---
 

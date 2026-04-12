@@ -1,6 +1,6 @@
-# modes/rpc/
+﻿# modes/rpc/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 rpc-mode.ts: IDE integration via JSON-RPC over stdin/stdout, ExtensionUIContext implementation
@@ -9,4 +9,4 @@ rpc-types.ts: RPC protocol type definitions, RpcCommand/RpcResponse/RpcSessionSt
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

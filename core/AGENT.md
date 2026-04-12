@@ -1,6 +1,6 @@
-# core/ — Core Functionality Module
+﻿# core/ — Core Functionality Module
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 ---
 

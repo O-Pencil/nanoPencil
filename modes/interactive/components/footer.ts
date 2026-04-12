@@ -153,10 +153,20 @@ export class FooterComponent implements Component {
 		const autoIndicator = this.autoCompactEnabled ? " (auto)" : "";
 		// Use contextUsage.tokens (current context size) when available; totalUsed is cumulative consumption
 		const contextTokens = contextUsage?.tokens ?? null;
-		const contextPercentDisplay =
+		
+			// Build progress bar for context usage (only on wide terminals)
+			let contextBar = "";
+			if (width > 80 && contextPercentValue > 0 && contextPercent !== "?") {
+				const barWidth = 12;
+				const filled = Math.round((contextPercentValue / 100) * barWidth);
+				const empty = barWidth - filled;
+				const fillColor = contextPercentValue > 90 ? "error" : contextPercentValue > 70 ? "warning" : "success";
+				contextBar = theme.fg("dim", "[") + theme.fg(fillColor, "█".repeat(filled)) + theme.fg("dim", "░".repeat(empty)) + theme.fg("dim", "] ");
+			}
+			const contextPercentDisplay =
 			contextPercent === "?" || contextTokens === null
-				? `?/${formatTokens(contextWindow)}${autoIndicator}`
-				: `${contextPercent}% ${formatTokens(contextTokens ?? 0)}/${formatTokens(contextWindow)}${autoIndicator}`;
+				? `${contextBar}?/${formatTokens(contextWindow)}${autoIndicator}`
+				: `${contextBar}${contextPercent}% ${formatTokens(contextTokens ?? 0)}/${formatTokens(contextWindow)}${autoIndicator}`;
 		if (contextPercentValue > 90) {
 			contextPercentStr = theme.fg("error", contextPercentDisplay);
 		} else {

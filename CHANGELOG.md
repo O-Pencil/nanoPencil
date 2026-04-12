@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs(test): add SAL experiment template
-- docs(dip): migrate CLAUDE.md files to WHO/FROM/TO/HERE format
+- docs(dip): migrate AGENT.md files to WHO/FROM/TO/HERE format
 - docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
 - docs(changelog): add v1.11.39 release notes
 - docs(memory): add cognitive map and SAL experiment drafts
@@ -133,7 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs(test): add SAL experiment template
-- docs(dip): migrate CLAUDE.md files to WHO/FROM/TO/HERE format
+- docs(dip): migrate AGENT.md files to WHO/FROM/TO/HERE format
 - docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
 - docs(changelog): add v1.11.39 release notes
 - docs(memory): add cognitive map and SAL experiment drafts
@@ -145,8 +145,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(team): restructure SubAgent and AgentTeam as two-phase plan
 - docs(team): add agent team refactor plan
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 - docs(prompt): refine project assistant charter @o-pencil-agent
 - docs(agents): require English for code strings and commits
 
@@ -277,7 +277,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs(test): add SAL experiment template
-- docs(dip): migrate CLAUDE.md files to WHO/FROM/TO/HERE format
+- docs(dip): migrate AGENT.md files to WHO/FROM/TO/HERE format
 - docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
 - docs(changelog): add v1.11.39 release notes
 - docs(memory): add cognitive map and SAL experiment drafts
@@ -289,8 +289,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(team): restructure SubAgent and AgentTeam as two-phase plan
 - docs(team): add agent team refactor plan
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 - docs(prompt): refine project assistant charter @o-pencil-agent
 - docs(agents): require English for code strings and commits
 
@@ -406,8 +406,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(team): restructure SubAgent and AgentTeam as two-phase plan
 - docs(team): add agent team refactor plan
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore(release): v1.11.39
@@ -626,8 +626,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore: release v1.11.34
@@ -685,8 +685,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore: release v1.11.34
@@ -744,8 +744,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore: release v1.11.34
@@ -803,8 +803,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore: release v1.11.34
@@ -862,8 +862,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore: run changelog before build in prepublishOnly
@@ -917,8 +917,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(interview): stabilize trigger and clarification flow
 
 ### Documentation
-- docs(claude): expand CLAUDE.md with cognitive architecture and quality metrics
-- docs(dip): add P3 file headers and layered CLAUDE.md navigation
+- docs(claude): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
 
 ### Maintenance
 - chore(ai): update model definitions

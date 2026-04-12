@@ -214,7 +214,7 @@ Sessions are stored as JSONL (newline-delimited JSON) with entry types:
 
 ### Messages and Context
 - System prompt built from `buildSystemPrompt()` (`core/prompt/system-prompt.ts`)
-- Context files loaded from `.pencil-context.md`, `.PENCIL.md`, `CLAUDE.md`, `AGENTS.md`
+- Context files loaded from `.pencil-context.md`, `.PENCIL.md`, `AGENT.md`, `AGENTS.md`
 - Skills loaded as `<skill name="..." location="...">` blocks in user messages
 
 ### Code Comments and User-Facing Strings

@@ -3,7 +3,10 @@
 	"title": "NanoPencil Theme",
 	"description": "Theme schema for NanoPencil",
 	"type": "object",
-	"required": ["name", "colors"],
+	"required": [
+		"name",
+		"colors"
+	],
 	"properties": {
 		"$schema": {
 			"type": "string",
@@ -46,9 +49,13 @@
 				"dim",
 				"text",
 				"thinkingText",
+				"userLabel",
+				"assistantLabel",
 				"selectedBg",
 				"userMessageBg",
 				"userMessageText",
+				"assistantMessageBg",
+				"assistantMessageText",
 				"customMessageBg",
 				"customMessageText",
 				"customMessageLabel",
@@ -131,6 +138,14 @@
 				"thinkingText": {
 					"$ref": "#/$defs/colorValue",
 					"description": "Thinking block text color"
+				},
+				"userLabel": {
+					"$ref": "#/$defs/colorValue",
+					"description": "User role label color"
+				},
+				"assistantLabel": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Assistant role label color"
 				},
 				"selectedBg": {
 					"$ref": "#/$defs/colorValue",
@@ -291,6 +306,14 @@
 				"bashMode": {
 					"$ref": "#/$defs/colorValue",
 					"description": "Editor border color in bash mode"
+				},
+				"assistantMessageBg": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Assistant message background"
+				},
+				"assistantMessageText": {
+					"$ref": "#/$defs/colorValue",
+					"description": "Assistant message text color"
 				}
 			},
 			"additionalProperties": false

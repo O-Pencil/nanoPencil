@@ -1,6 +1,6 @@
 # packages/soul-core/
 
-> P2 | Parent: ../CLAUDE.md
+> P2 | Parent: ../AGENT.md
 
 Member List
 manager.ts: SoulManager class, unified Soul management API, composes all Soul modules (store, evolution, injection)
@@ -13,4 +13,4 @@ injection.ts: generatePersonalityDirective, generateValueGuidance, generateCogni
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 
-[COVENANT]: Update this file header on changes and verify against parent CLAUDE.md
+[COVENANT]: Update this file header on changes and verify against parent AGENT.md

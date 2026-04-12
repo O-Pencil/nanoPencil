@@ -169,6 +169,7 @@ export class RetryCoordinator {
 	/** Abort in-progress retry. */
 	abort(): void {
 		this._retryAbortController?.abort();
+		this._retryAttempt = 0;
 		this._resolveRetry();
 	}
 

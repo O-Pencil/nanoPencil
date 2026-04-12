@@ -1286,7 +1286,6 @@ export class InteractiveMode {
 
           // Render any messages added via setup, or show empty session
           this.renderInitialMessages();
-          this.ui.requestRender();
 
           return { cancelled: false };
         },
@@ -3774,6 +3773,11 @@ export class InteractiveMode {
         compactionCount === 1 ? "1 time" : `${compactionCount} times`;
       this.showStatus(`Session compacted ${times}`);
     }
+
+    // Force full re-render to reset viewport state after rebuilding chat.
+    // Without this, maxLinesRendered retains the old value and the viewport
+    // may point past the actual content end after compaction or session switch.
+    this.ui.requestRender(true);
   }
 
   async getUserInput(): Promise<string> {
@@ -3789,6 +3793,20 @@ export class InteractiveMode {
     this.chatContainer.clear();
     const context = this.sessionManager.buildSessionContext();
     this.renderSessionContext(context);
+    // Re-add optimistic user messages not yet persisted to session.
+    // Cleared by chatContainer.clear() above but absent from buildSessionContext().
+    for (const msg of this.optimisticUserMessages) {
+      this.addMessageToChat({
+        role: "user",
+        content: [{ type: "text", text: msg.text }],
+        timestamp: Date.now(),
+      } as AgentMessage);
+    }
+    // Force full re-render to reset maxLinesRendered, which tracks the
+    // terminal working area. After a clear+rebuild, content may be shorter
+    // than the previous working area, causing the viewport to point past
+    // the actual content end.
+    this.ui.requestRender(true);
   }
 
   // =========================================================================

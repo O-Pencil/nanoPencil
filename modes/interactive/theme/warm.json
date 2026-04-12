@@ -35,8 +35,6 @@
     "selectedBg": "selectedBg",
     "userMessageBg": "userMsgBg",
     "userMessageText": "warmLight",
-    "assistantMessageBg": "#242018",
-    "assistantMessageText": "",
     "customMessageBg": "customMsgBg",
     "customMessageText": "",
     "customMessageLabel": "#b8956b",
@@ -73,9 +71,7 @@
     "thinkingMedium": "warmBrown",
     "thinkingHigh": "#b294bb",
     "thinkingXhigh": "#d183e8",
-    "bashMode": "green",
-    "userLabel": "accent",
-    "assistantLabel": "gray"
+    "bashMode": "green"
   },
   "export": {
     "pageBg": "#1a1814",

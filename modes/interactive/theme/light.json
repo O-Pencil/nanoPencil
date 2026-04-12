@@ -29,11 +29,10 @@
 		"dim": "dimGray",
 		"text": "",
 		"thinkingText": "mediumGray",
+
 		"selectedBg": "selectedBg",
 		"userMessageBg": "userMsgBg",
 		"userMessageText": "",
-		"assistantMessageBg": "#f0f0f0",
-		"assistantMessageText": "",
 		"customMessageBg": "customMsgBg",
 		"customMessageText": "",
 		"customMessageLabel": "#7e57c2",
@@ -42,6 +41,7 @@
 		"toolErrorBg": "toolErrorBg",
 		"toolTitle": "",
 		"toolOutput": "mediumGray",
+
 		"mdHeading": "yellow",
 		"mdLink": "blue",
 		"mdLinkUrl": "dimGray",
@@ -52,9 +52,11 @@
 		"mdQuoteBorder": "mediumGray",
 		"mdHr": "mediumGray",
 		"mdListBullet": "green",
+
 		"toolDiffAdded": "green",
 		"toolDiffRemoved": "red",
 		"toolDiffContext": "mediumGray",
+
 		"syntaxComment": "#008000",
 		"syntaxKeyword": "#0000FF",
 		"syntaxFunction": "#795E26",
@@ -64,15 +66,15 @@
 		"syntaxType": "#267F99",
 		"syntaxOperator": "#000000",
 		"syntaxPunctuation": "#000000",
+
 		"thinkingOff": "lightGray",
 		"thinkingMinimal": "#767676",
 		"thinkingLow": "blue",
 		"thinkingMedium": "teal",
 		"thinkingHigh": "#875f87",
 		"thinkingXhigh": "#8b008b",
-		"bashMode": "green",
-		"userLabel": "teal",
-		"assistantLabel": "mediumGray"
+
+		"bashMode": "green"
 	},
 	"export": {
 		"pageBg": "#f8f8f8",

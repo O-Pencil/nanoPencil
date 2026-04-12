@@ -42,15 +42,10 @@ const ThemeJsonSchema = Type.Object({
 		dim: ColorValueSchema,
 		text: ColorValueSchema,
 		thinkingText: ColorValueSchema,
-		// Role labels (2 colors)
-		userLabel: ColorValueSchema,
-		assistantLabel: ColorValueSchema,
 		// Backgrounds & Content Text (11 colors)
 		selectedBg: ColorValueSchema,
 		userMessageBg: ColorValueSchema,
 		userMessageText: ColorValueSchema,
-		assistantMessageBg: ColorValueSchema,
-		assistantMessageText: ColorValueSchema,
 		customMessageBg: ColorValueSchema,
 		customMessageText: ColorValueSchema,
 		customMessageLabel: ColorValueSchema,
@@ -119,9 +114,6 @@ export type ThemeColor =
 	| "dim"
 	| "text"
 	| "thinkingText"
-	| "userLabel"
-	| "assistantLabel"
-	| "assistantMessageText"
 	| "userMessageText"
 	| "customMessageText"
 	| "customMessageLabel"
@@ -163,8 +155,7 @@ export type ThemeBg =
 	| "customMessageBg"
 	| "toolPendingBg"
 	| "toolSuccessBg"
-	| "toolErrorBg"
-	| "assistantMessageBg";
+	| "toolErrorBg";
 
 type ColorMode = "truecolor" | "256color";
 
@@ -597,7 +588,6 @@ function createTheme(themeJson: ThemeJson, mode?: ColorMode, sourcePath?: string
 	const bgColorKeys: Set<string> = new Set([
 		"selectedBg",
 		"userMessageBg",
-		"assistantMessageBg",
 		"customMessageBg",
 		"toolPendingBg",
 		"toolSuccessBg",

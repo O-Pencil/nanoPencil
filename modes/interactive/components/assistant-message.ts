@@ -6,7 +6,7 @@
  */
 
 import type { AssistantMessage } from "@pencil-agent/ai";
-import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
+import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 
 /**
@@ -58,47 +58,32 @@ export class AssistantMessageComponent extends Container {
 			(c) => (c.type === "text" && c.text.trim()) || (c.type === "thinking" && c.thinking.trim()),
 		);
 
-		let addedAssistantLabelForText = false;
-		let seenThinking = false;
+		if (hasVisibleContent) {
+			this.contentContainer.addChild(new Spacer(1));
+		}
 
 		// Render content in order
 		for (let i = 0; i < message.content.length; i++) {
 			const content = message.content[i];
 			if (content.type === "text" && content.text.trim()) {
-				if (!addedAssistantLabelForText) {
-					// Top spacing before first text when this message did not start with thinking.
-					if (!seenThinking) {
-						this.contentContainer.addChild(new Spacer(1));
-					}
-					addedAssistantLabelForText = true;
-				}
-				const textBox = new Box(1, 1, (text: string) =>
-					theme.bg("assistantMessageBg", text),
-				);
-				textBox.addChild(
-					new Markdown(content.text.trim(), 0, 0, this.markdownTheme, {
-						color: (text: string) => theme.fg("assistantMessageText", text),
-					}),
-				);
-				this.contentContainer.addChild(textBox);
+				// Assistant text messages with no background - trim the text
+				// Set paddingY=0 to avoid extra spacing before tool executions
+				this.contentContainer.addChild(new Markdown(content.text.trim(), 1, 0, this.markdownTheme));
 			} else if (content.type === "thinking" && content.thinking.trim()) {
-				seenThinking = true;
 				// Add spacing only when another visible assistant content block follows.
 				// This avoids a superfluous blank line before separately-rendered tool execution blocks.
 				const hasVisibleContentAfter = message.content
 					.slice(i + 1)
 					.some((c) => (c.type === "text" && c.text.trim()) || (c.type === "thinking" && c.thinking.trim()));
 
-				this.contentContainer.addChild(new Spacer(1));
-				const thinkingLabel = new Text(theme.italic(theme.fg("thinkingText", "I'm thinking...")), 1, 0);
-
 				if (this.hideThinkingBlock) {
-					this.contentContainer.addChild(thinkingLabel);
+					// Show static "Thinking..." label when hidden
+					this.contentContainer.addChild(new Text(theme.italic(theme.fg("thinkingText", "Thinking...")), 1, 0));
 					if (hasVisibleContentAfter) {
 						this.contentContainer.addChild(new Spacer(1));
 					}
 				} else {
-					this.contentContainer.addChild(thinkingLabel);
+					// Thinking traces in thinkingText color, italic
 					this.contentContainer.addChild(
 						new Markdown(content.thinking.trim(), 1, 0, this.markdownTheme, {
 							color: (text: string) => theme.fg("thinkingText", text),

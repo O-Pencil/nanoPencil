@@ -64,8 +64,6 @@ export class ProcessTerminal implements Terminal {
 	private inputHandler?: (data: string) => void;
 	private resizeHandler?: () => void;
 	private _kittyProtocolActive = false;
-	private cursorVisible = true;
-	private cursorStyleConfigured = false;
 	private stdinBuffer?: StdinBuffer;
 	private stdinDataHandler?: (data: string) => void;
 	private writeLogPath = process.env.NANOPENCIL_TUI_WRITE_LOG || "";
@@ -77,8 +75,6 @@ export class ProcessTerminal implements Terminal {
 	start(onInput: (data: string) => void, onResize: () => void): void {
 		this.inputHandler = onInput;
 		this.resizeHandler = onResize;
-		this.cursorVisible = true;
-		this.cursorStyleConfigured = false;
 
 		// Save previous state and enable raw mode
 		this.wasRaw = process.stdin.isRaw || false;
@@ -311,27 +307,11 @@ export class ProcessTerminal implements Terminal {
 	}
 
 	hideCursor(): void {
-		if (!this.cursorVisible) {
-			return;
-		}
 		process.stdout.write("\x1b[?25l");
-		this.cursorVisible = false;
 	}
 
 	showCursor(): void {
-		let buffer = "";
-		if (!this.cursorStyleConfigured) {
-			// Use a steady bar cursor to avoid terminal-side blinking in the TUI editor.
-			buffer += "\x1b[?12l\x1b[6 q";
-			this.cursorStyleConfigured = true;
-		}
-		if (!this.cursorVisible) {
-			buffer += "\x1b[?25h";
-			this.cursorVisible = true;
-		}
-		if (buffer) {
-			process.stdout.write(buffer);
-		}
+		process.stdout.write("\x1b[?25h");
 	}
 
 	clearLine(): void {

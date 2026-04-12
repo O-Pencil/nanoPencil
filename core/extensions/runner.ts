@@ -224,7 +224,8 @@ export class ExtensionRunner {
 	private shutdownHandler: ShutdownHandler = () => {};
 	private shortcutDiagnostics: ResourceDiagnostic[] = [];
 	private commandDiagnostics: ResourceDiagnostic[] = [];
-	private readonly beforeAgentStartTimeoutMs = 1500;
+	private _beforeAgentStartTimeoutMs: number | undefined = 1500;
+	private get beforeAgentStartTimeoutMs(): number { return this._beforeAgentStartTimeoutMs ?? 1500; }
 	private readonly beforeAgentStartTimeoutSentinel = Symbol("before_agent_start_timeout");
 	private beforeAgentStartTimeoutLastReported = new Map<string, number>();
 
@@ -450,6 +451,22 @@ export class ExtensionRunner {
 	emitError(error: ExtensionError): void {
 		for (const listener of this.errorListeners) {
 			listener(error);
+		}
+	}
+
+	/** Set the timeout for before_agent_start extension hooks (default: 1500ms). */
+	setBeforeAgentStartTimeout(ms: number): void {
+		this._beforeAgentStartTimeoutMs = ms;
+	}
+
+	/** Clean up all handlers, listeners, and diagnostics. Call on session shutdown. */
+	dispose(): void {
+		this.errorListeners.clear();
+		this.beforeAgentStartTimeoutLastReported.clear();
+		this.shortcutDiagnostics = [];
+		this.commandDiagnostics = [];
+		for (const ext of this.extensions) {
+			ext.handlers.clear();
 		}
 	}
 

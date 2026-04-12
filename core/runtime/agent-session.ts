@@ -847,6 +847,7 @@ export class AgentSession {
    */
   dispose(): void {
     this._disconnectFromAgent();
+    this._extensionRunner?.dispose();
     this._eventListeners = [];
   }
 

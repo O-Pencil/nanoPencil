@@ -856,7 +856,6 @@ export class TUI extends Container {
 		if (this.stopped) return;
 		const width = this.terminal.columns;
 		const height = this.terminal.rows;
-		let viewportTop = Math.max(0, this.maxLinesRendered - height);
 		let prevViewportTop = this.previousViewportTop;
 		let hardwareCursorRow = this.hardwareCursorRow;
 		const computeLineDiff = (targetRow: number): number => {
@@ -872,6 +871,8 @@ export class TUI extends Container {
 		if (this.overlayStack.length > 0) {
 			newLines = this.compositeOverlays(newLines, width, height);
 		}
+		const nextWorkingHeight = Math.max(this.maxLinesRendered, newLines.length);
+		let viewportTop = Math.max(0, nextWorkingHeight - height);
 
 		// Extract cursor position before applying line resets (marker must be found first)
 		const cursorPos = this.extractCursorPosition(newLines, height);
@@ -901,7 +902,13 @@ export class TUI extends Container {
 				this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
 			}
 			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
-			this.positionHardwareCursor(cursorPos, newLines.length);
+			this.positionHardwareCursor(
+				cursorPos,
+				newLines.length,
+				prevViewportTop,
+				this.previousViewportTop,
+				height,
+			);
 			this.previousLines = newLines;
 			this.previousWidth = width;
 		};
@@ -963,7 +970,13 @@ export class TUI extends Container {
 
 		// No changes - but still need to update hardware cursor position if it moved
 		if (firstChanged === -1) {
-			this.positionHardwareCursor(cursorPos, newLines.length);
+			this.positionHardwareCursor(
+				cursorPos,
+				newLines.length,
+				prevViewportTop,
+				this.previousViewportTop,
+				height,
+			);
 			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
 			return;
 		}
@@ -1000,7 +1013,13 @@ export class TUI extends Container {
 				this.cursorRow = targetRow;
 				this.hardwareCursorRow = targetRow;
 			}
-			this.positionHardwareCursor(cursorPos, newLines.length);
+			this.positionHardwareCursor(
+				cursorPos,
+				newLines.length,
+				prevViewportTop,
+				this.previousViewportTop,
+				height,
+			);
 			this.previousLines = newLines;
 			this.previousWidth = width;
 			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
@@ -1147,7 +1166,13 @@ export class TUI extends Container {
 		this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
 
 		// Position hardware cursor for IME
-		this.positionHardwareCursor(cursorPos, newLines.length);
+		this.positionHardwareCursor(
+			cursorPos,
+			newLines.length,
+			prevViewportTop,
+			this.previousViewportTop,
+			height,
+		);
 
 		this.previousLines = newLines;
 		this.previousWidth = width;
@@ -1158,7 +1183,13 @@ export class TUI extends Container {
 	 * @param cursorPos The cursor position extracted from rendered output, or null
 	 * @param totalLines Total number of rendered lines
 	 */
-	private positionHardwareCursor(cursorPos: { row: number; col: number } | null, totalLines: number): void {
+	private positionHardwareCursor(
+		cursorPos: { row: number; col: number } | null,
+		totalLines: number,
+		previousViewportTop: number,
+		currentViewportTop: number,
+		terminalHeight: number,
+	): void {
 		if (!cursorPos || totalLines <= 0) {
 			this.terminal.hideCursor();
 			return;
@@ -1167,9 +1198,17 @@ export class TUI extends Container {
 		// Clamp cursor position to valid range
 		const targetRow = Math.max(0, Math.min(cursorPos.row, totalLines - 1));
 		const targetCol = Math.max(0, cursorPos.col);
+		const targetScreenRow = Math.max(
+			0,
+			Math.min(targetRow - currentViewportTop, terminalHeight - 1),
+		);
+		const currentScreenRow = Math.max(
+			0,
+			Math.min(this.hardwareCursorRow - previousViewportTop, terminalHeight - 1),
+		);
 
 		// Move cursor from current position to target
-		const rowDelta = targetRow - this.hardwareCursorRow;
+		const rowDelta = targetScreenRow - currentScreenRow;
 		let buffer = "";
 		if (rowDelta > 0) {
 			buffer += `\x1b[${rowDelta}B`; // Move down

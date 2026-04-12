@@ -21,5 +21,8 @@ report.html
 *.html
 config/
 
+# Local SAL / memory experiment artifacts
+.memory-experiments/
+
 # Internal docs (Chinese development documentation)
 docs/

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.44] - 2026-04-12
+
+### Fixed
+- fix(tui): disable synchronized output on Warp terminal
+- fix(tui): revert beautification changes causing display bugs, add rebuild safeguards
+
+### Maintenance
+- chore(ai): remove canvas devDependency for Windows installs
+- chore(release): 1.11.43
+
+
 ## [1.11.42] - 2026-04-12
 
 ### Fixed

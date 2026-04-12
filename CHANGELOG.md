@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.42] - 2026-04-12
+
+### Fixed
+- fix(session): persist user-only turns before any assistant reply so TUI rebuilds and packaged releases keep the latest user message visible
+
 ## [1.11.41] - 2026-04-12
 
 ### Added

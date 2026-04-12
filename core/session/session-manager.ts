@@ -818,14 +818,9 @@ export class SessionManager {
 	_persist(entry: SessionEntry): void {
 		if (!this.persist || !this.sessionFile) return;
 
-		const hasAssistant = this.fileEntries.some((e) => e.type === "message" && e.message.role === "assistant");
-		if (!hasAssistant) {
-			// Mark as not flushed so when assistant arrives, all entries get written
-			this.flushed = false;
-			return;
-		}
-
 		if (!this.flushed) {
+			// Flush the whole in-memory session on first write so the latest user turn
+			// survives any UI/session rebuild even before an assistant reply arrives.
 			for (const e of this.fileEntries) {
 				appendFileSync(this.sessionFile, `${JSON.stringify(e)}\n`);
 			}

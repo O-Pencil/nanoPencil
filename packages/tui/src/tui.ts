@@ -65,6 +65,16 @@ export function isFocusable(component: Component | null): component is Component
 	return component !== null && "focused" in component;
 }
 
+function shouldUseSynchronizedOutput(): boolean {
+	if (process.env.NANOPENCIL_SYNC_OUTPUT === "0") {
+		return false;
+	}
+	const termProgram = process.env.TERM_PROGRAM?.toLowerCase() || "";
+	// Warp has shown intermittent delayed/hidden frame presentation with our
+	// diff renderer, so prefer plain writes there until its TUI path is stable.
+	return termProgram !== "warpterminal";
+}
+
 /**
  * Cursor position marker - APC (Application Program Command) sequence.
  * This is a zero-width escape sequence that terminals ignore.
@@ -225,6 +235,7 @@ export class TUI extends Container {
 	private previousViewportTop = 0; // Track previous viewport top for resize-aware cursor moves
 	private fullRedrawCount = 0;
 	private stopped = false;
+	private synchronizedOutputEnabled = shouldUseSynchronizedOutput();
 
 	// Overlay stack for modal components rendered on top of base content
 	private overlayStack: {
@@ -270,6 +281,13 @@ export class TUI extends Container {
 	 */
 	setClearOnShrink(enabled: boolean): void {
 		this.clearOnShrink = enabled;
+	}
+
+	private wrapRenderBuffer(buffer: string): string {
+		if (!this.synchronizedOutputEnabled) {
+			return buffer;
+		}
+		return `\x1b[?2026h${buffer}\x1b[?2026l`;
 	}
 
 	setFocus(component: Component | null): void {
@@ -884,14 +902,13 @@ export class TUI extends Container {
 		// Helper to clear scrollback and viewport and render all new lines
 		const fullRender = (clear: boolean): void => {
 			this.fullRedrawCount += 1;
-			let buffer = "\x1b[?2026h"; // Begin synchronized output
+			let buffer = "";
 			if (clear) buffer += "\x1b[3J\x1b[2J\x1b[H"; // Clear scrollback, screen, and home
 			for (let i = 0; i < newLines.length; i++) {
 				if (i > 0) buffer += "\r\n";
 				buffer += newLines[i];
 			}
-			buffer += "\x1b[?2026l"; // End synchronized output
-			this.terminal.write(buffer);
+			this.terminal.write(this.wrapRenderBuffer(buffer));
 			this.cursorRow = Math.max(0, newLines.length - 1);
 			this.hardwareCursorRow = this.cursorRow;
 			// Reset max lines when clearing, otherwise track growth
@@ -971,7 +988,7 @@ export class TUI extends Container {
 		// All changes are in deleted lines (nothing to render, just clear)
 		if (firstChanged >= newLines.length) {
 			if (this.previousLines.length > newLines.length) {
-				let buffer = "\x1b[?2026h";
+				let buffer = "";
 				// Move to end of new content (clamp to 0 for empty content)
 				const targetRow = Math.max(0, newLines.length - 1);
 				const lineDiff = computeLineDiff(targetRow);
@@ -995,8 +1012,7 @@ export class TUI extends Container {
 				if (extraLines > 0) {
 					buffer += `\x1b[${extraLines}A`;
 				}
-				buffer += "\x1b[?2026l";
-				this.terminal.write(buffer);
+				this.terminal.write(this.wrapRenderBuffer(buffer));
 				this.cursorRow = targetRow;
 				this.hardwareCursorRow = targetRow;
 			}
@@ -1019,7 +1035,7 @@ export class TUI extends Container {
 
 		// Render from first changed line to end
 		// Build buffer with all updates wrapped in synchronized output
-		let buffer = "\x1b[?2026h"; // Begin synchronized output
+		let buffer = "";
 		const prevViewportBottom = prevViewportTop + height - 1;
 		const moveTargetRow = appendStart ? firstChanged - 1 : firstChanged;
 		if (moveTargetRow > prevViewportBottom) {
@@ -1103,8 +1119,6 @@ export class TUI extends Container {
 			buffer += `\x1b[${extraLines}A`;
 		}
 
-		buffer += "\x1b[?2026l"; // End synchronized output
-
 		if (process.env.NANOPENCIL_TUI_DEBUG === "1") {
 			const debugDir = "/tmp/tui";
 			fs.mkdirSync(debugDir, { recursive: true });
@@ -1135,7 +1149,7 @@ export class TUI extends Container {
 		}
 
 		// Write entire buffer at once
-		this.terminal.write(buffer);
+		this.terminal.write(this.wrapRenderBuffer(buffer));
 
 		// Track cursor position for next render
 		// cursorRow tracks end of content (for viewport calculation)

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 import type { Terminal as XtermTerminalType } from "@xterm/headless";
 import { type Component, TUI } from "../src/tui.js";
+import type { Terminal } from "../src/terminal.js";
 import { VirtualTerminal } from "./virtual-terminal.js";
 
 class TestComponent implements Component {
@@ -10,6 +11,36 @@ class TestComponent implements Component {
 		return this.lines;
 	}
 	invalidate(): void {}
+}
+
+class RecordingTerminal implements Terminal {
+	public writes = "";
+	start(_onInput: (data: string) => void, _onResize: () => void): void {}
+	stop(): void {}
+	async drainInput(): Promise<void> {}
+	write(data: string): void {
+		this.writes += data;
+	}
+	get columns(): number {
+		return 80;
+	}
+	get rows(): number {
+		return 24;
+	}
+	get kittyProtocolActive(): boolean {
+		return true;
+	}
+	moveBy(_lines: number): void {}
+	hideCursor(): void {}
+	showCursor(): void {}
+	clearLine(): void {}
+	clearFromCursor(): void {}
+	clearScreen(): void {}
+	setTitle(_title: string): void {}
+}
+
+async function flushRender(): Promise<void> {
+	await new Promise((resolve) => setImmediate(resolve));
 }
 
 function getCellItalic(terminal: VirtualTerminal, row: number, col: number): number {
@@ -43,6 +74,48 @@ describe("TUI resize handling", () => {
 		assert.ok(tui.fullRedraws > initialRedraws, "Width change should trigger full redraw");
 
 		tui.stop();
+	});
+});
+
+describe("TUI synchronized output compatibility", () => {
+	it("disables synchronized output in Warp", async () => {
+		const previousTermProgram = process.env.TERM_PROGRAM;
+		process.env.TERM_PROGRAM = "WarpTerminal";
+		try {
+			const terminal = new RecordingTerminal();
+			const tui = new TUI(terminal);
+			const component = new TestComponent();
+			component.lines = ["Hello from Warp"];
+			tui.addChild(component);
+			tui.requestRender(true);
+			await flushRender();
+
+			assert.ok(!terminal.writes.includes("\x1b[?2026h"));
+			assert.ok(!terminal.writes.includes("\x1b[?2026l"));
+		} finally {
+			if (previousTermProgram === undefined) delete process.env.TERM_PROGRAM;
+			else process.env.TERM_PROGRAM = previousTermProgram;
+		}
+	});
+
+	it("keeps synchronized output in other terminals", async () => {
+		const previousTermProgram = process.env.TERM_PROGRAM;
+		process.env.TERM_PROGRAM = "WezTerm";
+		try {
+			const terminal = new RecordingTerminal();
+			const tui = new TUI(terminal);
+			const component = new TestComponent();
+			component.lines = ["Hello from WezTerm"];
+			tui.addChild(component);
+			tui.requestRender(true);
+			await flushRender();
+
+			assert.ok(terminal.writes.includes("\x1b[?2026h"));
+			assert.ok(terminal.writes.includes("\x1b[?2026l"));
+		} finally {
+			if (previousTermProgram === undefined) delete process.env.TERM_PROGRAM;
+			else process.env.TERM_PROGRAM = previousTermProgram;
+		}
 	});
 });
 

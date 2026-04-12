@@ -26,6 +26,7 @@ const TOOLS_DIR = getBinDir();
 
 // Cache for tool availability checks to avoid repeated filesystem checks
 const toolCheckCache = new Map<string, string | null>();
+const toolEnsureInFlight = new Map<string, Promise<string | undefined>>();
 
 const DEFAULT_NETWORK_TIMEOUT_MS = 120000; /** Timeout for tools download (API + file). Default 120s (2 minutes). Override with NANOPENCIL_TOOLS_DOWNLOAD_TIMEOUT_MS (e.g. 300000 for very slow networks). */
 /** Timeout for tools download (API + file). Override with NANOPENCIL_TOOLS_DOWNLOAD_TIMEOUT_MS (e.g. 120000 for very slow networks). */
@@ -141,6 +142,10 @@ export function getToolPath(tool: "fd" | "rg"): string | null {
   // Cache the negative result
   toolCheckCache.set(tool, null);
   return null;
+}
+
+export function hasTool(tool: "fd" | "rg"): boolean {
+  return getToolPath(tool) !== null;
 }
 
 // Fetch latest release version from GitHub
@@ -323,6 +328,11 @@ export async function ensureTool(
     return existingPath;
   }
 
+  const inFlight = toolEnsureInFlight.get(tool);
+  if (inFlight) {
+    return inFlight;
+  }
+
   const config = TOOLS[tool];
   if (!config) return undefined;
 
@@ -356,24 +366,35 @@ export async function ensureTool(
     console.log(chalk.dim(`${config.name} not found. Downloading...`));
   }
 
-  try {
-    const path = await downloadTool(tool);
-    // Update cache after successful download
-    toolCheckCache.set(tool, path);
-    if (!silent) {
-      console.log(chalk.dim(`${config.name} installed to ${path}`));
+  const ensurePromise = (async () => {
+    try {
+      const path = await downloadTool(tool);
+      // Update cache after successful download
+      toolCheckCache.set(tool, path);
+      if (!silent) {
+        console.log(chalk.dim(`${config.name} installed to ${path}`));
+      }
+      return path;
+    } catch (e) {
+      if (!silent) {
+        console.log(
+          chalk.yellow(
+            `Failed to download ${config.name}: ${e instanceof Error ? e.message : e}`,
+          ),
+        );
+      }
+      return undefined;
+    } finally {
+      toolEnsureInFlight.delete(tool);
     }
-    return path;
-  } catch (e) {
-    if (!silent) {
-      console.log(
-        chalk.yellow(
-          `Failed to download ${config.name}: ${e instanceof Error ? e.message : e}`,
-        ),
-      );
-    }
-    return undefined;
-  }
+  })();
+
+  toolEnsureInFlight.set(tool, ensurePromise);
+  return ensurePromise;
+}
+
+export function prewarmTool(tool: "fd" | "rg"): void {
+  void ensureTool(tool, true);
 }
 
 /**
@@ -381,6 +402,7 @@ export async function ensureTool(
  */
 export function clearToolCheckCache(): void {
   toolCheckCache.clear();
+  toolEnsureInFlight.clear();
 }
 
 /**
@@ -388,10 +410,12 @@ export function clearToolCheckCache(): void {
  */
 export function getToolCheckCacheStats(): {
   size: number;
+  inFlight: string[];
   entries: Array<{ tool: string; path: string | null }>;
 } {
   return {
     size: toolCheckCache.size,
+    inFlight: Array.from(toolEnsureInFlight.keys()),
     entries: Array.from(toolCheckCache.entries()).map(([tool, path]) => ({
       tool,
       path,

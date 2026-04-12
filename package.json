@@ -21,24 +21,25 @@
     "dist/**/*.css",
     "docs",
     "LICENSE",
-    "README.md",
-    "node_modules/zod"
+    "README.md"
   ],
   "scripts": {
     "dev": "tsx cli.ts",
-    "build": "npm run clean:dist && npm run build:deps && tsc && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages",
+    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages",
+    "build:release": "npm run generate-models --prefix packages/ai && npm run build",
     "build:deps": "npm run build --prefix packages/ai && npm run build --prefix packages/agent-core && npm run build --prefix packages/tui",
     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "copy:theme:json": "node -e \"const fs=require('fs');const p=require('path');const d='dist/modes/interactive/theme';if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});fs.readdirSync('modes/interactive/theme').forEach(f=>{if(f.endsWith('.json'))fs.copyFileSync(p.join('modes/interactive/theme',f),p.join(d,f))})\"",
     "copy:assets": "node scripts/copy-assets.js",
     "bundle:packages": "node scripts/bundle-deps.js",
+    "update-models": "npm run generate-models --prefix packages/ai",
     "watch": "tsc --watch",
     "test:subagent": "node --test --import tsx test/subagent-parser.test.ts test/worktree-manager.test.ts test/bash-sandbox.test.ts",
     "test:team": "node --test --import tsx test/team-parser.test.ts test/team-runtime.test.ts",
     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
     "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
-    "prepublishOnly": "npm run changelog && npm run build",
+    "prepublishOnly": "npm run changelog && npm run build:release",
     "changelog": "node scripts/generate-changelog.js",
     "release": "npm run changelog && npm version patch && npm publish"
   },
@@ -67,29 +68,40 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.16.1",
+    "@anthropic-ai/sdk": "^0.73.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.983.0",
+    "@google/genai": "^1.40.0",
+    "@mistralai/mistralai": "1.10.0",
     "@mariozechner/clipboard": "^0.3.2",
     "@mariozechner/jiti": "^2.6.2",
     "@silvia-odwyer/photon-node": "^0.3.4",
+    "@sinclair/typebox": "^0.34.41",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "chalk": "^5.5.0",
     "cli-highlight": "^2.1.11",
     "diff": "^8.0.2",
     "extract-zip": "^2.0.1",
     "file-type": "^21.1.1",
+    "get-east-asian-width": "^1.3.0",
     "glob": "^13.0.1",
     "hosted-git-info": "^9.0.2",
     "ignore": "^7.0.5",
     "marked": "^15.0.12",
+    "mime-types": "^3.0.1",
     "minimatch": "^10.1.1",
+    "openai": "6.10.0",
+    "partial-json": "^0.1.7",
     "proper-lockfile": "^4.1.2",
+    "proxy-agent": "^6.5.0",
+    "undici": "^7.19.1",
     "yaml": "^2.8.2",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.24.6"
   },
-  "bundledDependencies": [
-    "@pencil-agent/agent-core",
-    "@pencil-agent/ai",
-    "@pencil-agent/tui",
-    "zod"
-  ],
+  "optionalDependencies": {
+    "koffi": "^2.9.0"
+  },
   "devDependencies": {
     "@types/hosted-git-info": "^3.0.5",
     "@types/node": "^22.15.0",
@@ -110,11 +122,5 @@
     "type": "git",
     "url": "git@github.com:O-Pencil/nanoPencil.git"
   },
-  "homepage": "https://github.com/O-Pencil/nanoPencil",
-  "bundleDependencies": [
-    "@pencil-agent/agent-core",
-    "@pencil-agent/ai",
-    "@pencil-agent/tui",
-    "zod"
-  ]
+  "homepage": "https://github.com/O-Pencil/nanoPencil"
 }

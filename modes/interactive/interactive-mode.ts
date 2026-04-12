@@ -112,7 +112,12 @@ import {
   extensionForImageMimeType,
   readClipboardImage,
 } from "../utils/clipboard-image.js";
-import { ensureTool } from "../../core/utils/tools-manager.js";
+import {
+  ensureTool,
+  getToolPath,
+  prewarmTool,
+} from "../../core/utils/tools-manager.js";
+import { printTimings, time } from "../../core/timings.js";
 import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
 import { formatDimensionNote, resizeImage } from "../utils/image-resize.js";
 import { ArminComponent } from "./components/armin.js";
@@ -121,6 +126,7 @@ import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
+import { BuddyPetComponent, type BuddyState } from "./components/buddy/pet-sprites.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
 import { PencilLoader } from "./components/pencil-loader.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
@@ -223,6 +229,7 @@ export class InteractiveMode {
   private editor: EditorComponent;
   private autocompleteProvider: CombinedAutocompleteProvider | undefined;
   private fdPath: string | undefined;
+  private startupToolsPrewarmed = false;
   private editorContainer: Container;
   private footer: FooterComponent;
   private footerDataProvider: FooterDataProvider;
@@ -485,18 +492,35 @@ export class InteractiveMode {
     }
   }
 
+  private prewarmStartupTools(): void {
+    if (this.startupToolsPrewarmed) return;
+    this.startupToolsPrewarmed = true;
+
+    time("interactive.tools.prewarm.start");
+    prewarmTool("fd");
+    prewarmTool("rg");
+
+    void Promise.all([ensureTool("fd", true), ensureTool("rg", true)])
+      .then(([fdPath]) => {
+        const resolvedFdPath = fdPath ?? getToolPath("fd") ?? undefined;
+        if (!resolvedFdPath || resolvedFdPath === this.fdPath) return;
+        this.fdPath = resolvedFdPath;
+        this.setupAutocomplete(this.fdPath);
+      })
+      .finally(() => {
+        time("interactive.tools.prewarm.end");
+      });
+  }
+
   async init(): Promise<void> {
     if (this.isInitialized) return;
+    time("interactive.init.start");
 
     // Clean up stale clipboard image files from previous sessions
     this.cleanupStaleClipboardFiles();
 
     // Do not show changelog on startup; version check will prompt to update CLI when newer version exists
-
-    // Ensure fd and rg are available (downloads if missing, adds to PATH via getBinDir)
-    // Both are needed: fd for autocomplete, rg for grep tool and bash commands
-    const [fdPath] = await Promise.all([ensureTool("fd"), ensureTool("rg")]);
-    this.fdPath = fdPath;
+    this.fdPath = getToolPath("fd") ?? undefined;
 
     // Add header container as first child
     this.ui.addChild(this.headerContainer);
@@ -581,7 +605,9 @@ export class InteractiveMode {
 
     // Start the UI
     this.ui.start();
+    time("interactive.ui.start");
     this.isInitialized = true;
+    this.prewarmStartupTools();
 
     // Set terminal title
     this.updateTerminalTitle();
@@ -606,6 +632,8 @@ export class InteractiveMode {
 
     // Initialize available provider count for footer display
     await this.updateAvailableProviderCount();
+    time("interactive.firstInput.ready");
+    printTimings();
   }
 
   /**

@@ -15,11 +15,12 @@
 	"scripts": {
 		"clean": "node -e \"require('fs').rmSync('./dist',{recursive:true,force:true})\"",
 		"generate-models": "npx tsx scripts/generate-models.ts",
-		"build": "npm run generate-models && npx tsc -p tsconfig.build.json",
+		"build": "npx tsc -p tsconfig.build.json",
+		"build:with-models": "npm run generate-models && npm run build",
 		"dev": "npx tsc -p tsconfig.build.json --watch --preserveWatchOutput",
 		"dev:tsc": "npx tsc -p tsconfig.build.json --watch --preserveWatchOutput",
 		"test": "vitest --run",
-		"prepublishOnly": "npm run clean && npm run build"
+		"prepublishOnly": "npm run clean && npm run build:with-models"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.73.0",

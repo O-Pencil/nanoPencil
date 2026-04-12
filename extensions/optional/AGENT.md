@@ -4,7 +4,7 @@
 
 Member List
 export-html/index.ts: HTML export extension, exportSessionToHtml/exportFromFile, /export command
-simplify/index.ts: Simplification extension, Claude Code /simplify style refactoring tool
+simplify/index.ts: Simplification extension, /simplify style refactoring tool
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 

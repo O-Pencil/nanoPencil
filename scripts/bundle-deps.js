@@ -4,19 +4,59 @@ import { execSync } from "node:child_process";
 
 // Packages to bundle to dist/packages/
 const PACKAGES_TO_BUNDLE = ["mem-core", "soul-core"];
+// Packages to vendor into dist/node_modules/@pencil-agent/
+const PACKAGES_TO_VENDOR = ["ai", "agent-core", "tui"];
 
 function bundleDependencies() {
   const distDir = path.join(process.cwd(), "dist");
   const packagesDir = path.join(process.cwd(), "packages");
 
-  // Legacy copy target; zod is now shipped via package.json bundledDependencies (root node_modules/zod).
+  // Recreate the vendored runtime package tree under dist/node_modules on every build.
   const staleDistNm = path.join(distDir, "node_modules");
   if (fs.existsSync(staleDistNm)) {
-    console.log("🧹 Removing stale dist/node_modules (zod is bundled at package root)...\n");
+    console.log("🧹 Removing stale dist/node_modules...\n");
     fs.rmSync(staleDistNm, { recursive: true, force: true });
   }
 
   console.log("📦 Bundling packages...\n");
+
+  // Vendor runtime workspace packages so published dist/* files can resolve
+  // bare imports like "@pencil-agent/ai" without bundling their full dependency trees.
+  for (const pkg of PACKAGES_TO_VENDOR) {
+    const srcDir = path.join(packagesDir, pkg);
+    const destDir = path.join(distDir, "node_modules", "@pencil-agent", pkg);
+
+    if (!fs.existsSync(srcDir)) {
+      console.warn(`⚠️  Package ${pkg} not found in ${srcDir}, skipping...`);
+      continue;
+    }
+
+    const fromDir = fs.existsSync(path.join(srcDir, "dist"))
+      ? path.join(srcDir, "dist")
+      : srcDir;
+
+    console.log(`Vendoring ${pkg} runtime package...`);
+    console.log(`  📋 Copying from ${fromDir} to ${destDir}...`);
+    copyDirectory(fromDir, destDir);
+
+    const bundledPkgJson = {
+      name: `@pencil-agent/${pkg}`,
+      version: "1.0.0",
+      private: true,
+      type: "module",
+      main: "./index.js",
+      types: "./index.d.ts",
+      exports: {
+        ".": "./index.js",
+      },
+    };
+    fs.writeFileSync(
+      path.join(destDir, "package.json"),
+      JSON.stringify(bundledPkgJson, null, 2),
+    );
+
+    console.log(`  ✅ Vendored ${pkg}\n`);
+  }
 
   // First, bundle mem-core and soul-core to dist/packages/
   for (const pkg of PACKAGES_TO_BUNDLE) {

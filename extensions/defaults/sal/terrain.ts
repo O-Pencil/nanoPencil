@@ -68,6 +68,16 @@ const IGNORED_DIRS = new Set([
 
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".cts"]);
 
+/** P2 module map files: prefer AGENT.md; CLAUDE.md supported for legacy trees. */
+const DIP_MODULE_MAP_FILENAMES = ["AGENT.md", "CLAUDE.md"] as const;
+
+function dipModuleMapFileName(rel: string): (typeof DIP_MODULE_MAP_FILENAMES)[number] | undefined {
+	for (const name of DIP_MODULE_MAP_FILENAMES) {
+		if (rel === name || rel.endsWith(`/${name}`)) return name;
+	}
+	return undefined;
+}
+
 function toPosix(p: string): string {
 	return p.split(sep).join("/");
 }
@@ -93,7 +103,7 @@ function walk(root: string): { files: WalkEntry[]; dirs: WalkEntry[] } {
 		}
 		for (const entry of entries) {
 			if (entry.name.startsWith(".") && entry.name !== ".") {
-				// allow .pencil-style files via CLAUDE.md, but skip dot dirs by default
+				// allow .pencil-style files via AGENT.md, but skip dot dirs by default
 				if (entry.isDirectory() && IGNORED_DIRS.has(entry.name)) continue;
 				if (entry.isDirectory()) continue;
 			}
@@ -194,10 +204,11 @@ export function buildTerrainIndex(workspaceRoot: string): TerrainSnapshot {
 	const moduleNodes = new Map<string, TerrainNode>();
 	const fileNodes: TerrainNode[] = [];
 
-	// Pass 1: P2 module nodes from CLAUDE.md files
+	// Pass 1: P2 module nodes from AGENT.md (or legacy CLAUDE.md) files
 	for (const f of files) {
-		if (!f.rel.endsWith("/CLAUDE.md") && f.rel !== "CLAUDE.md") continue;
-		const modulePath = f.rel === "CLAUDE.md" ? "" : f.rel.slice(0, -"/CLAUDE.md".length);
+		const dipName = dipModuleMapFileName(f.rel);
+		if (!dipName) continue;
+		const modulePath = f.rel === dipName ? "" : f.rel.slice(0, f.rel.length - dipName.length - 1);
 		let p2Summary: string | undefined;
 		try {
 			const content = readFileSync(f.abs, "utf-8");
@@ -314,7 +325,7 @@ export function checkDipCoverage(snapshot: TerrainSnapshot, modules: string[]): 
 
 /**
  * Determine whether the snapshot is stale relative to current DIP files.
- * Returns true when any CLAUDE.md or source file mtime exceeds snapshot.generatedAt.
+ * Returns true when any AGENT.md (or legacy CLAUDE.md) or source file mtime exceeds snapshot.generatedAt.
  */
 export function isSnapshotStale(snapshot: TerrainSnapshot): boolean {
 	const stack: string[] = [snapshot.workspaceRoot];
@@ -336,10 +347,10 @@ export function isSnapshotStale(snapshot: TerrainSnapshot): boolean {
 			}
 			if (!entry.isFile()) continue;
 			const abs = join(current, entry.name);
-			const isClaudeMd = entry.name === "CLAUDE.md";
+			const isDipModuleMap = (DIP_MODULE_MAP_FILENAMES as readonly string[]).includes(entry.name);
 			const dotIdx = entry.name.lastIndexOf(".");
 			const ext = dotIdx >= 0 ? entry.name.slice(dotIdx) : "";
-			if (!isClaudeMd && !SOURCE_EXTS.has(ext)) continue;
+			if (!isDipModuleMap && !SOURCE_EXTS.has(ext)) continue;
 			try {
 				const st = statSync(abs);
 				if (st.mtimeMs > snapshot.generatedAt) return true;

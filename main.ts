@@ -27,7 +27,7 @@ import { DefaultResourceLoader } from "./core/config/resource-loader.js";
 import { type CreateAgentSessionOptions, createAgentSession } from "./core/runtime/sdk.js";
 import { SessionManager } from "./core/session/session-manager.js";
 import { SettingsManager } from "./core/config/settings-manager.js";
-import { printTimings, time } from "./core/timings.js";
+import { time } from "./core/timings.js";
 import { allTools } from "./core/tools/index.js";
 import { runMigrations, showDeprecationWarnings } from "./migrations.js";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
@@ -909,7 +909,6 @@ export async function main(args: string[]) {
 			console.log(chalk.dim(`Model scope: ${modelList} ${chalk.gray("(Ctrl+P to cycle)")}`));
 		}
 
-		printTimings();
 		const mode = new InteractiveMode(session, {
 			migratedProviders,
 			modelFallbackMessage,

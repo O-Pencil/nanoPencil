@@ -11,6 +11,7 @@ export { AssistantMessageComponent } from "./assistant-message.js";
 export { promptForApiKey } from "./apikey-input.js";
 export { BashExecutionComponent } from "./bash-execution.js";
 export { BorderedLoader } from "./bordered-loader.js";
+export { BuddyPetComponent, ALL_SPRITES, type BuddyState, type SpriteData } from "./buddy/pet-sprites.js";
 export { BranchSummaryMessageComponent } from "./branch-summary-message.js";
 export { CompactionSummaryMessageComponent } from "./compaction-summary-message.js";
 export { CustomEditor } from "./custom-editor.js";

@@ -314,7 +314,7 @@ Maintain P1/P2/P3 completeness and WORKFLOW closure; reject "only modify code, d
 ```
 nanoPencil/
 |---- AGENT.md              # THIS FILE - P1 navigation map
-|---- AGENTS.md              # Claude Code specific guidance
+|---- AGENTS.md              # @o-pencil-agent / contributor guidance
 |---- .PENCIL.md             # Product personality charter
 |
 |---- cli.ts                 # CLI entry point

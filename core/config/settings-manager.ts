@@ -33,6 +33,8 @@ export interface TerminalSettings {
 	showTokenStats?: boolean; // default: true (show token usage in footer)
 	showWorkingTrace?: boolean; // default: false (show tool and coding execution steps in chat)
 	showMemoryTrace?: boolean; // default: false (show NanoMem search/recall/alignment traces in chat)
+	buddyEnabled?: boolean; // default: false (enable buddy pet display)
+	buddySpecies?: number; // default: 0 (species index)
 }
 
 export interface ImageSettings {
@@ -834,6 +836,31 @@ export class SettingsManager {
 		this.save();
 	}
 
+	getBuddyEnabled(): boolean {
+		return this.settings.terminal?.buddyEnabled ?? false;
+	}
+
+	setBuddyEnabled(enabled: boolean): void {
+		if (!this.globalSettings.terminal) {
+			this.globalSettings.terminal = {};
+		}
+		this.globalSettings.terminal.buddyEnabled = enabled;
+		this.markModified("terminal", "buddyEnabled");
+		this.save();
+	}
+
+	getBuddySpecies(): number {
+		return this.settings.terminal?.buddySpecies ?? 0;
+	}
+
+	setBuddySpecies(species: number): void {
+		if (!this.globalSettings.terminal) {
+			this.globalSettings.terminal = {};
+		}
+		this.globalSettings.terminal.buddySpecies = species;
+		this.markModified("terminal", "buddySpecies");
+		this.save();
+	}
 	getClearOnShrink(): boolean {
 		// Settings takes precedence, then env var, then default false
 		if (this.settings.terminal?.clearOnShrink !== undefined) {

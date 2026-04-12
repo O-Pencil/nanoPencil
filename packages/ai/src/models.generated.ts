@@ -8111,11 +8111,11 @@ export const MODELS = {
 			cost: {
 				input: 0.3,
 				output: 1.2,
-				cacheRead: 0.059,
+				cacheRead: 0.06,
 				cacheWrite: 0,
 			},
 			contextWindow: 204800,
-			maxTokens: 4096,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
 			id: "mistralai/codestral-2508",

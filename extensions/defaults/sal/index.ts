@@ -28,6 +28,7 @@ import { loadSalWeights, SAL_DEFAULT_WEIGHTS, type SalWeights } from "./weights.
 
 const NOSAL_FLAG = "nosal";
 const SAL_REBUILD_FLAG = "sal-rebuild-terrain";
+const EXPERIMENT_ID_FLAG = "experiment-id";
 const SAL_CONTEXT_BUDGET_TOKENS = 800;
 const APPROX_TOKENS_PER_CHAR = 0.25;
 
@@ -45,7 +46,22 @@ interface SalRuntime {
 	weights: SalWeights;
 	weightsSource: string;
 	turn: TurnState;
-	sidecarDir: string;
+}
+
+export function normalizeExperimentId(value: unknown): string | undefined {
+	if (typeof value !== "string") return undefined;
+	const trimmed = value.trim();
+	if (!trimmed) return undefined;
+	const normalized = trimmed.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+	return normalized || "run";
+}
+
+export function resolveSalSidecarDir(workspaceRoot: string, experimentId?: unknown): string {
+	const normalizedExperimentId = normalizeExperimentId(experimentId);
+	if (normalizedExperimentId) {
+		return join(workspaceRoot, ".memory-experiments", "runs", normalizedExperimentId, "sal", "anchors");
+	}
+	return join(workspaceRoot, ".memory-experiments", "sal", "anchors");
 }
 
 interface SalBridgeAnchor {
@@ -165,22 +181,29 @@ function buildContextInjection(resolution: AnchorResolution, snapshot: TerrainSn
 	return truncateForBudget(parts, SAL_CONTEXT_BUDGET_TOKENS);
 }
 
-function ensureSidecarDir(runtime: SalRuntime): void {
-	if (!existsSync(runtime.sidecarDir)) {
+function ensureSidecarDir(sidecarDir: string): void {
+	if (!existsSync(sidecarDir)) {
 		try {
-			mkdirSync(runtime.sidecarDir, { recursive: true });
+			mkdirSync(sidecarDir, { recursive: true });
 		} catch {
 			// non-fatal
 		}
 	}
 }
 
-function persistTurnRecord(runtime: SalRuntime, taskRes: AnchorResolution | undefined, actionRes: AnchorResolution): void {
-	ensureSidecarDir(runtime);
+function persistTurnRecord(
+	runtime: SalRuntime,
+	sidecarDir: string,
+	experimentId: string | undefined,
+	taskRes: AnchorResolution | undefined,
+	actionRes: AnchorResolution,
+): void {
+	ensureSidecarDir(sidecarDir);
 	const ts = new Date().toISOString().replace(/[:.]/g, "-");
-	const filePath = join(runtime.sidecarDir, `turn-${ts}.json`);
+	const filePath = join(sidecarDir, `turn-${ts}.json`);
 	const record = {
 		generatedAt: new Date().toISOString(),
+		experimentId,
 		workspaceRoot: runtime.workspaceRoot,
 		weightsSource: runtime.weightsSource,
 		prompt: runtime.turn.prompt?.slice(0, 500),
@@ -227,9 +250,12 @@ export default async function salExtension(api: ExtensionAPI) {
 		description: "Force SAL terrain index rebuild on next localization pass",
 		default: false,
 	});
+	api.registerFlag(EXPERIMENT_ID_FLAG, {
+		type: "string",
+		description: "Experiment run id used to export SAL anchors into a run-local directory",
+	});
 
 	const workspaceRoot = api.cwd;
-	const sidecarDir = join(workspaceRoot, ".memory-experiments", "sal", "anchors");
 	const weightsDirCandidates = [workspaceRoot, join(workspaceRoot, ".memory-experiments", "sal")];
 	const { weights, source: weightsSource } = loadSalWeights(weightsDirCandidates);
 
@@ -239,10 +265,11 @@ export default async function salExtension(api: ExtensionAPI) {
 		weights,
 		weightsSource,
 		turn: { touchedFiles: new Set<string>() },
-		sidecarDir,
 	};
 
 	const isEnabled = (): boolean => !api.getFlag(NOSAL_FLAG);
+	const getExperimentId = (): string | undefined => normalizeExperimentId(api.getFlag(EXPERIMENT_ID_FLAG));
+	const getSidecarDir = (): string => resolveSalSidecarDir(workspaceRoot, getExperimentId());
 
 	api.registerCommand("sal:coverage", {
 		description: "Report DIP P3 coverage for SAL prerequisite gating. Usage: /sal:coverage [module1 module2 ...]",
@@ -272,10 +299,11 @@ export default async function salExtension(api: ExtensionAPI) {
 				"[SAL Status]",
 				`  SAL: ${flagOn ? "ON (default)" : "OFF (--nosal)"}`,
 				`  workspaceRoot: ${runtime.workspaceRoot}`,
+				`  experimentId: ${getExperimentId() ?? "(none)"}`,
 				`  weightsSource: ${runtime.weightsSource}`,
 				`  snapshotGeneratedAt: ${snapshot ? new Date(snapshot.generatedAt).toISOString() : "(not built)"}`,
 				`  nodes: ${snapshot?.nodes.length ?? 0}`,
-				`  sidecarDir: ${runtime.sidecarDir}`,
+				`  sidecarDir: ${getSidecarDir()}`,
 			];
 			ctx.ui.notify(lines.join("\n"), "info");
 		},
@@ -335,11 +363,12 @@ export default async function salExtension(api: ExtensionAPI) {
 		if (!isEnabled()) return;
 		const snapshot = runtime.snapshot;
 		if (!snapshot) return;
+		const experimentId = getExperimentId();
 		const actionRes = locateAction({
 			touchedFiles: Array.from(runtime.turn.touchedFiles),
 			snapshot,
 		});
-		persistTurnRecord(runtime, runtime.turn.taskResolution, actionRes);
+		persistTurnRecord(runtime, getSidecarDir(), experimentId, runtime.turn.taskResolution, actionRes);
 		runtime.turn = { touchedFiles: new Set<string>() };
 	});
 }

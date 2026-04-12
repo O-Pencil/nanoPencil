@@ -54,12 +54,12 @@ Now make the same image-input behavior consistent for clipboard paste and drag-d
 
 ## Experiment Layout
 
-Create isolated memory directories for each variant.
+Create one run-local directory and keep both variants inside it.
 
 ```bash
-mkdir -p .memory-experiments/control/run-001
-mkdir -p .memory-experiments/sal/run-001
-mkdir -p .memory-experiments/notes
+mkdir -p .memory-experiments/runs/run-001/control/memory
+mkdir -p .memory-experiments/runs/run-001/sal/memory
+mkdir -p .memory-experiments/runs/run-001/sal/anchors
 ```
 
 ## Model Placeholder
@@ -79,7 +79,7 @@ Examples:
 Round 1:
 
 ```bash
-NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/control/run-001 \
+NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/runs/run-001/control/memory \
 pencil <MODEL_ARGS> --nosal
 ```
 
@@ -88,7 +88,7 @@ Submit Round 1 prompt, complete the task, then save the result summary.
 Round 2:
 
 ```bash
-NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/control/run-001 \
+NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/runs/run-001/control/memory \
 pencil <MODEL_ARGS> --nosal
 ```
 
@@ -99,15 +99,15 @@ Submit Round 2 prompt in a fresh session.
 Round 1:
 
 ```bash
-NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/sal/run-001 \
-pencil <MODEL_ARGS>
+NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/runs/run-001/sal/memory \
+pencil <MODEL_ARGS> --experiment-id run-001
 ```
 
 Round 2:
 
 ```bash
-NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/sal/run-001 \
-pencil <MODEL_ARGS>
+NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/runs/run-001/sal/memory \
+pencil <MODEL_ARGS> --experiment-id run-001
 ```
 
 ## Required Artifacts
@@ -125,7 +125,13 @@ Also save the memory directories as-is.
 
 For SAL runs, also keep:
 
-- `.memory-experiments/sal/anchors/turn-*.json` if present
+- `.memory-experiments/runs/run-001/sal/anchors/turn-*.json`
+
+After both variants finish, generate normalized reports:
+
+```bash
+npm run experiment:sal:report -- --run-dir .memory-experiments/runs/run-001
+```
 
 ## Manual Scorecard
 

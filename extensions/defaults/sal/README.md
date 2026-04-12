@@ -35,7 +35,28 @@ When enabled, every turn writes a JSON record to:
 <workspace>/.memory-experiments/sal/anchors/turn-<timestamp>.json
 ```
 
+If `--experiment-id <run-id>` is provided, SAL exports anchors into a run-local directory instead:
+
+```
+<workspace>/.memory-experiments/runs/<run-id>/sal/anchors/turn-<timestamp>.json
+```
+
 Each record contains the task anchor, top candidates, evidence reasons, the action anchor inferred from tool touches, and the touched file list. These are the comparable artifacts for the SAL A/B experiment.
+
+## Current evaluation workflow
+
+The current experiment workflow is intentionally lightweight:
+
+1. run control and SAL against isolated memory directories
+2. provide `--experiment-id <run-id>` for the SAL run if you want run-local anchor export
+3. collect artifacts under `.memory-experiments/runs/<run-id>/`
+4. generate reports offline with:
+
+```bash
+npm run experiment:sal:report -- --run-dir .memory-experiments/runs/<run-id>
+```
+
+This workflow reads experiment artifacts and does not change normal product behavior.
 
 ## Tunable weights
 

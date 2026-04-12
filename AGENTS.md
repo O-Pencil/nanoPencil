@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance for **@o-pencil-agent** tooling and contributors when working in this repository.
 
 ## Project Overview
 

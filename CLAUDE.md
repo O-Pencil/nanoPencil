@@ -519,7 +519,7 @@ Add P3 headers following this pattern:
 
 ### Related Documentation
 
-- [AGENTS.md](./AGENTS.md) — Claude Code specific guidance
+- [AGENTS.md](./AGENTS.md) — @o-pencil-agent / contributor guidance
 - [.PENCIL.md](./.PENCIL.md) — Product personality charter
 - [packages/mem-core/CLAUDE.md](./packages/mem-core/CLAUDE.md) — Memory system
 - [docs/](./docs/) — Documentation directory

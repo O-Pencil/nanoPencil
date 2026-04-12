@@ -163,6 +163,7 @@ import { ToolExecutionComponent } from "./components/tool-execution.js";
 import { TreeSelectorComponent } from "./components/tree-selector.js";
 import { UserMessageComponent } from "./components/user-message.js";
 import { UserMessageSelectorComponent } from "./components/user-message-selector.js";
+import { RawText } from "./components/raw-text.js";
 import {
   getAvailableThemes,
   getAvailableThemesWithPaths,
@@ -2955,6 +2956,11 @@ export class InteractiveMode {
     }
     if (text === "/copy") {
       this.handleCopyCommand();
+      clear();
+      return true;
+    }
+    if (text === "/status") {
+      await this.handleStatusCommand();
       clear();
       return true;
     }
@@ -5758,6 +5764,141 @@ export class InteractiveMode {
     } catch (error) {
       this.showError(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  /**
+   * Handle /status command - show agent status card (Codex-style)
+   */
+  private async handleStatusCommand(): Promise<void> {
+    const state = this.session.state;
+    const sessionMgr = this.sessionManager;
+
+    // Helper to pad a line to fit within the card width
+    const padLine = (text: string, cardWidth: number): string => {
+      // Calculate padding needed (account for │ borders on both sides)
+      const contentWidth = cardWidth - 2;
+      const textLen = visibleWidth(text);
+      const pad = Math.max(0, contentWidth - textLen);
+      return text + " ".repeat(pad);
+    };
+
+    // Build status card lines
+    const lines: string[] = [];
+    const width = Math.min(this.ui.terminal.columns || 80, 73);
+
+    // Top border with title
+    const titleLeft = `  >_ NanoPencil (v${this.version})  `;
+    const titlePad = Math.max(0, width - titleLeft.length - 1);
+    lines.push(theme.fg("border", `╭${"─".repeat(Math.max(1, width - 2))}╮`));
+    lines.push(theme.fg("border", `│`) + theme.bold(titleLeft) + " ".repeat(titlePad) + theme.fg("border", `│`));
+    lines.push(theme.fg("border", `│`) + " ".repeat(Math.max(1, width - 2)) + theme.fg("border", `│`));
+
+    // Model info
+    const modelId = state.model?.id || "no-model";
+    const thinkingLevel = state.thinkingLevel || "off";
+    const reasoning = state.model?.reasoning ? `reasoning ${thinkingLevel}` : "";
+    const modelLine = `  Model:                ${modelId}${reasoning ? ` (${reasoning})` : ""}`;
+    lines.push(theme.fg("border", `│`) + padLine(modelLine, width) + theme.fg("border", `│`));
+
+    // Directory (with git branch if available)
+    let cwd = this.session.cwd;
+    const home = process.env.HOME || process.env.USERPROFILE;
+    if (home && cwd.startsWith(home)) {
+      cwd = `~${cwd.slice(home.length)}`;
+    }
+    const branch = this.footerDataProvider.getGitBranch();
+    const dirLine = `  Directory:            ${cwd}${branch ? ` (${branch})` : ""}`;
+    lines.push(theme.fg("border", `│`) + padLine(dirLine, width) + theme.fg("border", `│`));
+
+    // AGENTS.md check
+    const agentsMdPath = path.join(this.session.cwd, "AGENTS.md");
+    const agentsMdExists = fs.existsSync(agentsMdPath);
+    const agentsMdLine = `  AGENTS.md:            ${agentsMdExists ? "AGENTS.md" : "not found"}`;
+    lines.push(theme.fg("border", `│`) + padLine(agentsMdLine, width) + theme.fg("border", `│`));
+
+    // Session info
+    const sessionId = sessionMgr.getSessionId();
+    const sessionName = sessionMgr.getSessionName();
+    const sessionLine = `  Session:              ${sessionName || sessionId.slice(0, 8)}...`;
+    lines.push(theme.fg("border", `│`) + padLine(sessionLine, width) + theme.fg("border", `│`));
+
+    // Account info (from auth storage)
+    const authStorage = this.session.modelRegistry.authStorage;
+    const providers = authStorage.list();
+    let accountInfo = "Not logged in";
+    if (providers.length > 0) {
+      const loggedProviders = providers.map((p) => {
+        const cred = authStorage.get(p);
+        if (cred?.type === "oauth") {
+          return `${p} (OAuth)`;
+        }
+        return `${p} (API key)`;
+      });
+      accountInfo = loggedProviders.join(", ");
+    }
+    const accountLine = `  Account:              ${accountInfo}`;
+    lines.push(theme.fg("border", `│`) + padLine(accountLine, width) + theme.fg("border", `│`));
+
+    lines.push(theme.fg("border", `│`) + " ".repeat(Math.max(1, width - 2)) + theme.fg("border", `│`));
+
+    // Token usage summary (similar to footer)
+    let totalInput = 0;
+    let totalOutput = 0;
+    let totalCost = 0;
+    let requestCount = 0;
+
+    for (const entry of sessionMgr.getBranch()) {
+      if (entry.type === "message" && entry.message.role === "assistant") {
+        totalInput += entry.message.usage.input;
+        totalOutput += entry.message.usage.output;
+        totalCost += entry.message.usage.cost.total;
+        requestCount++;
+      }
+    }
+
+    const fmt = (n: number) => n.toLocaleString();
+    const fmtCost = (n: number) => `$${n.toFixed(4)}`;
+
+    // Usage stats
+    lines.push(theme.fg("border", `│`) + theme.bold(theme.fg("accent", "  ═══ Session Usage ═══")) + " ".repeat(Math.max(1, width - 23)) + theme.fg("border", `│`));
+    lines.push(theme.fg("border", `│`) + " ".repeat(Math.max(1, width - 2)) + theme.fg("border", `│`));
+
+    const requestsLine = `  Requests:             ${requestCount}`;
+    lines.push(theme.fg("border", `│`) + padLine(requestsLine, width) + theme.fg("border", `│`));
+
+    const inputLine = `  Input tokens:         ${fmt(totalInput)}`;
+    lines.push(theme.fg("border", `│`) + padLine(inputLine, width) + theme.fg("border", `│`));
+
+    const outputLine = `  Output tokens:        ${fmt(totalOutput)}`;
+    lines.push(theme.fg("border", `│`) + padLine(outputLine, width) + theme.fg("border", `│`));
+
+    const costLine = `  Cost:                 ${fmtCost(totalCost)}`;
+    lines.push(theme.fg("border", `│`) + padLine(costLine, width) + theme.fg("border", `│`));
+
+    // Context usage with progress bar
+    const contextUsage = this.session.getContextUsage();
+    const contextWindow = contextUsage?.contextWindow ?? state.model?.contextWindow ?? 0;
+    const contextPercent = contextUsage?.percent ?? 0;
+    const contextTokens = contextUsage?.tokens ?? 0;
+
+    // Progress bar (12 chars wide)
+    const barWidth = 12;
+    const filled = Math.round((contextPercent / 100) * barWidth);
+    const empty = barWidth - filled;
+    const fillColor = contextPercent > 90 ? "error" : contextPercent > 70 ? "warning" : "success";
+    const bar = theme.fg("dim", "[") + theme.fg(fillColor, "█".repeat(filled)) + theme.fg("dim", "░".repeat(empty)) + theme.fg("dim", "]");
+
+    const contextLine = `  Context:              ${bar} ${contextPercent.toFixed(1)}% (${fmt(contextTokens)}/${fmt(contextWindow)})`;
+    lines.push(theme.fg("border", `│`) + padLine(contextLine, width) + theme.fg("border", `│`));
+
+    // Bottom border
+    lines.push(theme.fg("border", `╰${"─".repeat(Math.max(1, width - 2))}╯`));
+
+    // Display in chat - use RawText to preserve our pre-formatted ANSI card layout
+    this.chatContainer.addChild(new Spacer(1));
+    this.chatContainer.addChild(new RawText(lines.join("\n")));
+
+    this.ui.requestRender();
   }
 
   /**

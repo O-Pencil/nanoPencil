@@ -61,3 +61,4 @@ export {
   truncateToVisualLines,
   type VisualTruncateResult,
 } from "./visual-truncate.js";
+export { RawText } from "./raw-text.js";

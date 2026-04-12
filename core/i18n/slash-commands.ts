@@ -20,6 +20,7 @@ export const slashCommands = {
 	copy: "Copy last agent message to clipboard",
 	name: "Set session display name",
 	session: "Show session info and stats",
+	status: "Show agent status card (model, directory, session, usage)",
 	usage: "Show token usage and cost stats",
 	changelog: "Show changelog entries",
 	hotkeys: "Show all keyboard shortcuts",

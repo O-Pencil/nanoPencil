@@ -20,6 +20,7 @@ export const slashCommands = {
 	copy: "复制上一条 AI 消息到剪贴板",
 	name: "设置会话显示名称",
 	session: "显示会话信息和统计",
+	status: "显示代理状态卡片（模型、目录、会话、用量）",
 	usage: "显示 token 使用量和费用统计",
 	changelog: "显示更新日志条目",
 	hotkeys: "显示所有键盘快捷键",

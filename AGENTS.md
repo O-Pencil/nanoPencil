@@ -1,17 +1,199 @@
 # AGENTS.md
 
+> P1 | Root Project Charter & Navigation Map
+
 This file provides guidance for **@o-pencil-agent** tooling and contributors when working in this repository.
+
+---
 
 ## Project Overview
 
-**nanoPencil** (formerly nano-pencil) is a terminal-based AI coding agent. It provides an interactive TUI for conversational coding with AI models (Anthropic, OpenAI, Gemini, Alibaba DashScope, Ollama, etc.). The agent can read, write, edit files, execute bash commands, and manage session state.
+**nanoPencil** (formerly nano-pencil) is a terminal-native AI coding agent with persistent memory and evolving AI personality. Built with TypeScript, it provides an interactive TUI for conversational coding with multi-model support (Anthropic, OpenAI, Gemini, Alibaba DashScope, Ollama).
 
-The project is built with TypeScript and depends on several `@pencil-agent/*` packages:
+**Core Pillars:**
+- Terminal First - No Electron, no browser, pure terminal
+- Privacy First - Local storage, no telemetry
+- Extensible - Plugin system for tools, themes, and behaviors
+- Fast - Sub-second startup, instant response
+
+**Dependencies** (`@pencil-agent/*` packages):
 - `@pencil-agent/agent-core` - Core Agent logic
 - `@pencil-agent/ai` - Model APIs and types
 - `@pencil-agent/tui` - Terminal UI components
 
-## Build and Run Commands
+---
+
+## Identity
+
+Grounded in auditable engineering discipline: conclusions must be actionable, verifiable, and maintainable; reject vague or unverified assertions. Default to thorough reasoning and evidence chains; AI enhances delivery and decision quality, not a substitute for user judgment.
+
+---
+
+## Cognitive Architecture
+
+**Phenomenon Layer**: Observable manifestations - error symptoms, logs, and reproduction paths
+
+**Essence Layer**: Structural causality - root causes, coupling, violated invariants, and design principles
+
+**Philosophy Layer**: Normative propositions - design principles and trade-offs that hold long-term
+
+**Thinking Path**: Avoid slogan-style assertions.
+**Output**: Design rationale (why the solution is superior under constraints) and reusable decision templates for the team.
+
+---
+
+## Cognitive Mission
+
+**Progressive Sequence**:
+1. **How to fix** (how to repair)
+2. **Why it breaks** (why it fails)
+3. **How to design it right** (how to design correctly under constraints)
+
+**Goal**: Users not only eliminate defects but can articulate the failure mechanism and prevent similar issues proactively.
+
+---
+
+## Role Trinity
+
+| Layer | Responsibility | Action |
+|-------|---------------|--------|
+| **Phenomenon** | Emergency response | Stanch bleeding, locate, provide minimal change set |
+| **Essence** | Forensic analysis | Causal chains, dependency graphs, invariant checks |
+| **Philosophy** | Standards review | Principle consistency, long-term costs, interface evolution strategy |
+
+Single responses must complete the "evidence -> conclusion -> actionable next step" loop.
+
+---
+
+## Philosophy / Good Taste
+
+**Principle**: Prefer eliminating special cases through structure rather than stacking conditional branches. Boundaries should be absorbed into normal models.
+
+**Constraint**:
+- Branch explosion is a design signal
+- Continuously compress branches using data structures and invariants
+
+**Anti-pattern**: Using conditional branches for edge cases instead of type systems
+
+---
+
+## Quality Metrics
+
+| Metric | Limit |
+|--------|-------|
+| Single file lines | ~800 max (split or justify exceptions) |
+| Single directory files | ~8 max (split into subdirectories if exceeded) |
+| Core orientation | Branches that can be deleted beat branches that can be written correctly |
+| Document isomorphism | Breaking document isomorphism equals introducing unverifiable technical debt |
+
+---
+
+## Code Smells
+
+| Smell | Description |
+|-------|-------------|
+| **Rigidity** | Small changes cause widespread ripple effects |
+| **Redundancy** | Same decision rules repeated in multiple places |
+| **Circular Dependencies** | Modules cannot establish directed acyclic dependency direction |
+| **Fragility** | Unrelated areas fail due to local modifications |
+| **Opacity** | Intent and invariants cannot be quickly read from code |
+| **Data Clumps** | Data that always appears together should be aggregated into types or module boundaries |
+| **Unnecessary Complexity** | Abstraction layers and concepts exceed problem requirements |
+| **Premature Abstraction** | When recognizing above smells, ask whether to optimize and provide actionable improvement suggestions (with risk explanation) |
+
+---
+
+## Architecture Topology
+
+```
+|---------------------------------------------------------------|
+|                    ENTRY POINTS                               |
+|  cli.ts -> main.ts -> Mode Selection (interactive/print/rpc) |
+|---------------------------------------------------------------|
+                              |
+                              v
+|---------------------------------------------------------------|
+|                    CORE LAYER                                 |
+|  |-------------------|  |-------------------|  |-------------|
+|  | AgentSession      |  | ModelRegistry    |  | SessionMgr  |
+|  | - Runtime         |  | - Providers      |  | - Persist   |
+|  | - Tools           |  | - Auth           |  | - Branching |
+|  |-------------------|  |-------------------|  |-------------|
+|  |-------------------|  |-------------------|  |-------------|
+|  | Extensions        |  | MCP Manager       |  | SettingsMgr|
+|  | - Loader          |  | - Client          |  | - Global+Loc|
+|  | - Runner          |  | - Config          |  |             |
+|  |-------------------|  |-------------------|  |-------------|
+|---------------------------------------------------------------|
+                              |
+                              v
+|---------------------------------------------------------------|
+|                    TOOL LAYER                                 |
+|  bash | read | edit | write | grep | find | ls | source      |
+|---------------------------------------------------------------|
+                              |
+                              v
+|---------------------------------------------------------------|
+|                    INTERFACE LAYER                            |
+|  |-------------------|  |-------------------|  |-------------|
+|  | Interactive       |  | Print             |  | RPC         |
+|  | (TUI Mode)        |  | Mode              |  | (IDE Integ) |
+|  |-------------------|  |-------------------|  |-------------|
+|---------------------------------------------------------------|
+```
+
+---
+
+## Directory Structure
+
+```
+nanoPencil/
+├── AGENTS.md              # THIS FILE - P1 navigation map
+├── .PENCIL.md             # Product personality charter
+│
+├── cli.ts                 # CLI entry point
+├── main.ts                # Main CLI handler
+├── config.ts              # Config discovery & loading
+├── index.ts               # Package exports
+│
+├── core/                  # Core functionality
+│   ├── runtime/           # Agent runtime & SDK
+│   ├── extensions/        # Extension system
+│   ├── tools/             # Built-in tools
+│   ├── mcp/               # MCP protocol integration
+│   ├── session/           # Session management
+│   ├── model/             # Model management
+│   ├── config/            # Configuration
+│   ├── prompt/            # Prompt engineering
+│   ├── export-html/       # HTML export
+│   └── utils/             # Utilities
+│
+├── modes/                 # Run modes
+│   ├── interactive/       # TUI mode
+│   ├── print/             # Print mode
+│   ├── rpc/               # RPC mode
+│   └── acp/               # ACP mode
+│
+├── extensions/            # Built-in extensions
+│   ├── defaults/          # Auto-loaded extensions
+│   └── optional/          # Opt-in extensions
+│
+├── packages/              # Bundled npm packages
+│   ├── agent-core/        # Core Agent logic
+│   ├── ai/                # Model APIs & providers
+│   ├── tui/               # Terminal UI components
+│   ├── mem-core/          # Persistent memory system
+│   └── soul-core/         # AI personality engine
+│
+├── utils/                 # Shared utilities
+├── cli/                   # CLI helpers
+├── scripts/               # Build scripts
+└── docs/                  # Documentation
+```
+
+---
+
+## Build & Run Commands
 
 ```bash
 # Install dependencies
@@ -20,62 +202,60 @@ npm install
 # Bundle local packages (mem-core, soul-core)
 node scripts/bundle-deps.js
 
-# Build the project
+# Build (TypeScript compile + resource copy)
 npm run build
 
-# Run directly with tsx (development)
+# Development (direct execution)
 npx tsx cli.ts [args...]
 
-# Run in production mode
+# Production
 node dist/cli.js [args...]
 
-# Run with package manager scripts
+# Alternative
 npm start -- [args...]
 ```
 
-## Architecture Overview
+---
 
-### Entry Points
+## Key Abstractions
 
-1. **cli.ts** - CLI entry point, sets `process.title = "nanopencil"` and calls `main()`
-2. **main.ts** - Main CLI handler that:
-   - Parses arguments with extension flag discovery
-   - Loads resources (extensions, skills, prompts, themes)
-   - Creates ModelRegistry and AuthStorage
-   - Creates AgentSession via SDK
-   - Delegates to appropriate mode (interactive/print/rpc)
+### AgentSession (`core/runtime/agent-session.ts`)
 
-### Core Abstractions
-
-**AgentSession** (`core/runtime/agent-session.ts`) - Central session lifecycle manager shared across all modes:
-- Wraps the core `Agent` from `@pencil-agent/agent-core`
-- Manages session persistence via `SessionManager`
+Central session lifecycle manager shared across all modes:
+- Wraps core `Agent` from `@pencil-agent/agent-core`
+- Manages session persistence via SessionManager
 - Handles model switching, thinking level changes
 - Manages tool execution and bash commands
 - Coordinates compaction (context window management)
 - Emits events for extensions to hook into
 
-**SDK** (`core/runtime/sdk.ts`) - Programmatic usage factory:
-- Takes `CreateAgentSessionOptions` for full customization
-- Creates/uses AuthStorage, ModelRegistry, SettingsManager, SessionManager
-- Loads resources via ResourceLoader (extensions, skills, themes)
-- Returns AgentSession + extension loading results
+### SDK (`core/runtime/sdk.ts`)
+
+Programmatic usage factory for embedding nanoPencil:
+```typescript
+const { session } = await createAgentSession(options);
+```
 
 ### Three Run Modes
 
-1. **InteractiveMode** (`modes/interactive/interactive-mode.ts`) - TUI interface using `@pencil-agent/tui`
-2. **runPrintMode()** (`modes/print/print-mode.ts`) - stdout/stdin streaming for scripting
-3. **runRpcMode()** (`modes/rpc/rpc-mode.ts`) - JSON-RPC over stdin for IDE integration
+| Mode | File | Use Case |
+|------|------|----------|
+| Interactive | `modes/interactive/interactive-mode.ts` | TUI interface |
+| Print | `modes/print/print-mode.ts` | stdout/stdin streaming |
+| RPC | `modes/rpc/rpc-mode.ts` | IDE integration |
 
-All modes use the same AgentSession core, just different I/O layers.
+---
 
-### Key Subsystems
+## Key Subsystems
 
-**Extension System** (`core/extensions/`):
-- `loader.ts` - Discovers extensions from npm packages, local paths
-- `runner.ts` - Manages extension lifecycle, event emission, tool wrapping
-- `wrapper.ts` - Wraps user tools with extension before/after hooks
-- `types.ts` - All extension-related TypeScript types
+### Extension System (`core/extensions/`)
+
+| File | Purpose |
+|------|---------|
+| `loader.ts` | Discovers extensions from npm packages, local paths |
+| `runner.ts` | Manages extension lifecycle, event emission, tool wrapping |
+| `wrapper.ts` | Wraps user tools with extension before/after hooks |
+| `types.ts` | All extension-related TypeScript types |
 
 Extensions can:
 - Register custom tools, slash commands, keybindings
@@ -83,149 +263,115 @@ Extensions can:
 - Add UI components (dialogs, selectors, widgets)
 - Modify prompts and context
 
-**Built-in Extensions** (`extensions/defaults/`):
-- `interview/index.ts` - Interview extension for requirement clarification
-- `loop/index.ts` - `/loop` timed prompt tasks (session-scoped scheduler)
-- `link-world/index.ts` - Internet access extension (agent-reach)
-- `mcp/index.ts` - MCP (Model Context Protocol) integration
-- `security-audit/index.ts` - Security audit extension
-- `soul/index.ts` - AI personality evolution extension
+### Built-in Extensions (`extensions/defaults/`)
 
-**Tools** (`core/tools/`):
-- `bash.ts` - Shell command execution
-- `read.ts` - File reading with truncation options
-- `edit.ts` - File editing (line-based replacements)
-- `write.ts` - File writing (overwrite or create)
-- `grep.ts` - Content search via ripgrep
-- `find.ts` - File pattern matching
-- `ls.ts` - Directory listing
-- `source.ts` - Source code analysis
-- `truncate.ts` - Output truncation helpers
+| Extension | Purpose |
+|-----------|---------|
+| `interview` | Requirement clarification through guided Q&A |
+| `loop` | `/loop` session-scoped scheduled prompts |
+| `link-world` | Internet access via agent-reach |
+| `mcp` | MCP protocol support |
+| `security-audit` | Security vulnerability detection |
+| `soul` | AI personality evolution and memory |
 
-**MCP Integration** (`core/mcp/`):
-- `mcp-client.ts` - MCP protocol client implementation
-- `mcp-config.ts` - MCP server configuration management
-- `mcp-adapter.ts` - MCP tools adapter
-- `mcp-guidance.ts` - MCP usage guidance
+### Tools (`core/tools/`)
 
-**Session Management** (`core/session/session-manager.ts`):
+| Tool | File | Purpose |
+|------|------|---------|
+| bash | `bash.ts` | Shell command execution |
+| read | `read.ts` | File reading with truncation options |
+| edit | `edit.ts` | File editing (line-based replacements) |
+| write | `write.ts` | File writing (overwrite or create) |
+| grep | `grep.ts` | Content search via ripgrep |
+| find | `find.ts` | File pattern matching |
+| ls | `ls.ts` | Directory listing |
+| source | `source.ts` | Source code analysis |
+
+### MCP Integration (`core/mcp/`)
+
+| File | Purpose |
+|------|---------|
+| `mcp-client.ts` | MCP protocol client implementation |
+| `mcp-config.ts` | MCP server configuration management |
+| `mcp-adapter.ts` | MCP tools adapter |
+| `mcp-guidance.ts` | MCP usage guidance |
+
+### Session Management (`core/session/`)
+
 - Persists conversation history to `.nanopencil/session/*.jsonl`
 - Handles session forking, branching, switching
 - Session migration between versions
 
-**Compaction** (`core/session/compaction/`):
-- `compaction.ts` - Main compaction logic for context window management
-- `branch-summarization.ts` - Branch summary generation for forked sessions
-- `compaction-coordinator.ts` - Coordinates compaction operations
-- `utils.ts` - Token estimation helpers
+### Compaction (`core/session/compaction/`)
 
-**Model Registry** (`core/model-registry.ts`):
-- Manages model definitions from `~/.nanopencil/agent/models.json`
-- Handles API key resolution via AuthStorage
-- Supports custom provider registration
+| File | Purpose |
+|------|---------|
+| `compaction.ts` | Main compaction logic for context window management |
+| `branch-summarization.ts` | Branch summary generation for forked sessions |
+| `compaction-coordinator.ts` | Coordinates compaction operations |
+| `utils.ts` | Token estimation helpers |
 
-**Settings Manager** (`core/config/settings-manager.ts`):
-- Two-tier settings: global (`~/.nanopencil/agent/settings.json`) + project-local (`.nanopencil/settings.json`)
-- Project settings override global settings
+---
 
-**Resource Loader** (`core/config/resource-loader.ts`):
-- Discovers and loads extensions, skills, prompt templates, themes, context files
-- Merges global, project-local, and runtime-specified paths
+## Configuration Paths
 
-### Configuration Paths
+| Path | Purpose |
+|------|---------|
+| `~/.nanopencil/agent/` | Global config root |
+| `~/.nanopencil/agent/models.json` | Model definitions |
+| `~/.nanopencil/agent/auth.json` | API keys & OAuth |
+| `~/.nanopencil/agent/settings.json` | User preferences |
+| `~/.nanopencil/agent/sessions/` | Conversation history |
+| `~/.nanopencil/agent/extensions/` | User extensions |
+| `NANOPENCIL_CODING_AGENT_DIR` | Override config root |
 
-- **Config dir**: `~/.nanopencil/agent/` (or via `NANOPENCIL_CODING_AGENT_DIR` env)
-- **models.json**: Model definitions and provider configs
-- **auth.json**: API keys and OAuth credentials
-- **settings.json**: User preferences
-- **sessions/**: Conversation history
-- **extensions/**: User-installed extensions
-- **skills/**: User-defined skills
-- **themes/**: Custom themes
+---
 
-### Local Packages
-
-The project includes bundled packages in `packages/`:
-- **agent-core** (`packages/agent-core/`) - Core Agent logic
-- **ai** (`packages/ai/`) - Model APIs and types (includes generated models)
-- **tui** (`packages/tui/`) - Terminal UI components
-- **mem-core** (`packages/mem-core/`) - Persistent memory system
-- **soul-core** (`packages/soul-core/`) - AI personality evolution engine
-
-### Default Extensions
-
-Built-in extensions are automatically loaded unless disabled:
-- **interview** - Requirement clarification through guided Q&A
-- **loop** - `/loop` session-scoped scheduled prompts (timed follow-up)
-- **link-world** - Internet access via agent-reach (Twitter, YouTube, Bilibili, etc.)
-- **mcp** - MCP protocol support (requires `enable-mcp` flag)
-- **security-audit** - Security vulnerability detection
-- **soul** - AI personality evolution and memory
-
-### UI Components
-
-Interactive mode components (`modes/interactive/components/`):
-- Reusable UI widgets built on `@pencil-agent/tui`
-- Message renderers for assistant, user, bash, tools
-- Selectors for models, sessions, settings
-- Dialogs for login, OAuth, configuration
-
-### Slash Commands
+## Slash Commands
 
 Built-in commands (`core/slash-commands.ts`):
-- `/model` - Select model
-- `/thinking` - Set thinking level
-- `/clear` - Clear conversation
-- `/fork` - Fork session
-- `/switch` - Switch session
-- `/tree` - Show session tree
-- `/compact` - Manual compaction
-- `/export` - Export to HTML
-- `/share` - Share session
-- `/login` - Configure API keys
-- `/settings` - Open settings
-- `/link-world` - Install internet access extension
 
-## Important Implementation Notes
+| Command | Purpose |
+|---------|---------|
+| `/model` | Select model |
+| `/thinking` | Set thinking level |
+| `/clear` | Clear conversation |
+| `/fork` | Fork session |
+| `/switch` | Switch session |
+| `/tree` | Show session tree |
+| `/compact` | Manual compaction |
+| `/export` | Export to HTML |
+| `/share` | Share session |
+| `/login` | Configure API keys |
+| `/settings` | Open settings |
+| `/link-world` | Install internet access extension |
 
-### Tool Implementation
-When implementing tools:
+---
+
+## Code Standards
+
+### Language Policy
+
+**Source code and user-facing strings**: English only
+- TypeScript comments
+- Error messages
+- TUI/CLI labels
+- Embedded prompts
+
+**Documentation**: English (end-user docs may be bilingual)
+
+**Commit messages**: English, conventional format
+
+### Tool Implementation Rules
+
 - Use the Read tool instead of `cat` bash command
 - Use the Edit tool for file modifications (not sed/awk)
 - Use the Bash tool for terminal operations
 - Never use `git add -A` - only add specific files you modified
 
-### Extension Development
-Extensions receive `ExtensionContext` with:
-- `cwd` - Working directory
-- `agentDir` - Global config directory
-- `sessionManager` - Session persistence
-- `settingsManager` - User settings
-- `modelRegistry` - Model discovery
-- Custom tools, slash commands, keybindings can be registered
-
-### Session Persistence
-Sessions are stored as JSONL (newline-delimited JSON) with entry types:
-- `file` - File reads/writes
-- `custom` - Custom messages
-- `model_change` - Model switches
-- `thinking_level_change` - Thinking level changes
-- `compaction` - Summaries
-
-### Messages and Context
-- System prompt built from `buildSystemPrompt()` (`core/prompt/system-prompt.ts`)
-- Context files loaded from `.pencil-context.md`, `.PENCIL.md`, `AGENT.md`, `AGENTS.md`
-- Skills loaded as `<skill name="..." location="...">` blocks in user messages
-
-### Code Comments and User-Facing Strings
-
-- **English only**: All comments and all string literals meant for humans (errors, logs, TUI/CLI labels, prompts embedded in code, etc.) must be written in **English**. Do not add or keep Chinese or other non-English text inside source files.
-- **Docs outside code**: End-user documentation may stay bilingual (e.g. `README_CN.md`); this rule applies to **repository source** (TypeScript/JavaScript, config that ships as part of the product, etc.).
-- **Commit messages** must be written in **English** as specified below.
+---
 
 ## Commit Message Convention
-
-Write commit messages in **English**, using this shape:
 
 ```
 <type>(<optional scope>): <short summary>
@@ -235,15 +381,22 @@ Write commit messages in **English**, using this shape:
 
 ### Types
 
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation only
-- `refactor`: Code change that neither fixes a bug nor adds a feature
-- `perf`: Performance improvement
-- `chore`: Build, tooling, dependencies, etc.
-- `style`: Formatting only (no behavior change)
+| Type | Description |
+|------|-------------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `perf` | Performance improvement |
+| `chore` | Build, tooling, dependencies, etc. |
+| `style` | Formatting only (no behavior change) |
 
-### Examples
+### Rules
+
+- **No `Co-Authored-By:`**: Do not add any `Co-Authored-By:` trailer to commit messages
+- Keep the subject line concise; use the body for bullets or context when needed
+
+### Example
 
 ```
 feat(interview): reduce interview trigger frequency
@@ -252,57 +405,138 @@ feat(interview): reduce interview trigger frequency
 - Trigger only on vague or very short prompts
 - Skip interview after persona switch
 - Improve interview progress visibility
-
-fix: correct version comparison false-positive update prompt
-
-Do not include any Co-Authored-By: lines.
 ```
-
-### Rules
-
-- **No `Co-Authored-By:`**: Do not add any `Co-Authored-By:` trailer to commit messages.
-- Keep the subject line concise; use the body for bullets or context when needed.
 
 ---
 
 ## Release Process
 
-### 发布流程
-
-项目使用手动触发发布流程：
-
 ```bash
-# 1. 确保所有更改已提交并推送
+# 1. Ensure all changes committed and pushed
 git status
 git push
 
-# 2. 运行发布命令（自动生成 changelog + 升级版本号 + 发布 npm）
+# 2. Run release (auto changelog + version bump + npm publish)
 npm run release
 
-# 或手动指定版本类型
+# Or manually specify version type
 npm version patch    # 1.11.2 -> 1.11.3
-npm version minor   # 1.11.2 -> 1.12.0
-npm version major   # 1.11.2 -> 2.0.0
+npm version minor    # 1.11.2 -> 1.12.0
+npm version major    # 1.11.2 -> 2.0.0
 ```
 
-### Changelog 生成
+### Changelog Generation
 
-- 使用 `scripts/generate-changelog.js` 自动生成
-- 基于 git commit 历史，按类型分类
-- 格式参考 [Keep a Changelog](https://keepachangelog.com/)
-- 每次发布自动在 CHANGELOG.md 顶部插入新版本记录
+- Uses `scripts/generate-changelog.js`
+- Based on git commit history, categorized by type
+- Follows [Keep a Changelog](https://keepachangelog.com/)
+- Auto-inserts new version at top of CHANGELOG.md
 
-### 版本号规范
+### Version Numbering (SemVer)
 
-遵循 Semantic Versioning：
-- `patch`: bug 修复
-- `minor`: 新功能（向后兼容）
-- `major`: 破坏性变更
+| Type | Description |
+|------|-------------|
+| `patch` | Bug fixes |
+| `minor` | New features (backward compatible) |
+| `major` | Breaking changes |
 
-### 发布检查清单
+### Release Checklist
 
-- [ ] 所有功能已完成并测试
-- [ ] CHANGELOG.md 已更新
-- [ ] 版本号已升级
-- [ ] 代码已推送到远程仓库
-- [ ] npm publish 成功
+- [ ] All features completed and tested
+- [ ] CHANGELOG.md updated
+- [ ] Version number bumped
+- [ ] Code pushed to remote
+- [ ] npm publish successful
+
+---
+
+## DIP Protocol (Dual-phase Isomorphic Documentation)
+
+Code phase and Document phase must be structurally consistent and mutually verifiable.
+
+**Map and terrain must be isomorphic**: Code changes must be traceable and verifiable in docs; vice versa.
+
+### Progressive Disclosure
+
+P3 headers serve as **context budget gatekeepers**:
+
+| Without P3 | With P3 |
+|------------|---------|
+| Read entire file to understand relevance | Read 4 lines, decide instantly |
+| O(n) per file | O(1) per file |
+| Context explosion in large projects | Exponential context savings |
+
+**The Rule**: After reading a P3 header, if the file is not relevant to your current task, **stop reading immediately**.
+
+### The Four Questions (P3 Header)
+
+| Field | Question | Example |
+|-------|----------|---------|
+| **WHO** | What does this file provide? | `Provides buildSystemPrompt(), BuildSystemPromptOptions` |
+| **FROM** | What does this file depend on? | `Depends on config, skills, tools` |
+| **TO** | Who uses this file? | `Consumed by agent runtime, SDK` |
+| **HERE** | Where is this file? | `core/prompt/system-prompt.ts - prompt building` |
+
+### P3 Template
+
+```typescript
+/**
+ * [WHO]: Provides {exported functions/components/types/constants}
+ * [FROM]: Depends on {module/package/file} for {specific capability}
+ * [TO]: Consumed by {adjacent modules or downstream consumers}
+ * [HERE]: {file path} within {module}; relationship with neighbors
+ */
+```
+
+### Architecture Layers
+
+| Layer | File | Content |
+|-------|------|---------|
+| **P1** | `AGENTS.md` (this file) | Global topology, stack overview, patterns |
+| **P2** | `{module}/AGENT.md` | Member list, responsibilities, key parameters |
+| **P3** | Each source file header | Individual file contracts |
+
+### FORBIDDEN
+
+#### Blocking Level (Must stop and fix document isomorphism first)
+
+| Code | Description |
+|------|-------------|
+| FATAL-001 | Orphaned code change: modifies implementation without verifying/updating doc-side mapping |
+| FATAL-002 | Skip P3: discovered missing P3 but continues stacking implementation |
+| FATAL-003 | Delete file without updating P2: member list inconsistent with actual file set |
+| FATAL-004 | New module without P2: module boundary invisible in docs |
+
+#### High Priority (Must fix within this session)
+
+| Code | Description |
+|------|-------------|
+| SEVERE-001 | P3 misaligned: header inconsistent with import/export/responsibility |
+| SEVERE-002 | P2 missing items: source files not in member list |
+| SEVERE-003 | P1 out of sync: global topology inconsistent with repository reality |
+| SEVERE-004 | Parent links broken |
+
+---
+
+## DIP Navigation
+
+### P1 - Root
+
+- [P1: This File](./AGENTS.md)
+
+### P2 - Module Maps
+
+- [P2: core/](./core/AGENT.md) - Core functionality, runtime, tools
+- [P2: modes/](./modes/AGENT.md) - Interactive, print, RPC modes
+- [P2: extensions/](./extensions/AGENT.md) - Built-in extensions
+- [P2: packages/](./packages/AGENT.md) - Bundled npm packages
+
+### Related Documentation
+
+- [.PENCIL.md](./.PENCIL.md) - Product personality charter
+- [packages/mem-core/AGENT.md](./packages/mem-core/AGENT.md) - Memory system
+- [docs/](./docs/) - Documentation directory
+
+---
+
+**Covenant**: Maintain map-terrain isomorphism. Keep this file aligned with actual structure, or the structure will drift.

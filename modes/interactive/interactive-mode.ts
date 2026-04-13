@@ -70,6 +70,7 @@ import {
   type AgentSessionEvent,
   CycleModelError,
   parseSkillBlock,
+  type PromptOptions,
 } from "../../core/runtime/agent-session.js";
 import type { CompactionResult } from "../../core/session/compaction/index.js";
 import type {
@@ -2690,7 +2691,7 @@ export class InteractiveMode {
 
         // Also process the remaining text as user message
         if (remainingText) {
-          await this.session.prompt(remainingText);
+          await this.promptAfterRender(remainingText);
         }
         return;
       }
@@ -2752,7 +2753,7 @@ export class InteractiveMode {
         if (this.isExtensionCommand(text)) {
           this.editor.addToHistory?.(text);
           this.editor.setText("");
-          await this.session.prompt(text);
+          await this.promptAfterRender(text);
         } else {
           this.queueCompactionMessage(text, "steer");
         }
@@ -2803,7 +2804,7 @@ export class InteractiveMode {
             .join(" ");
           steerPromptText = refs + "  " + steerPromptText;
         }
-        await this.session.prompt(steerPromptText, {
+        await this.promptAfterRender(steerPromptText, {
           streamingBehavior: "steer",
           images: steerImages.length > 0 ? steerImages : undefined,
         });
@@ -2880,7 +2881,7 @@ export class InteractiveMode {
       try {
         // Clear persona switch flag - interview should now run normally for subsequent messages
         delete process.env.NANOPENCIL_JUST_SWITCHED_PERSONA;
-        await this.session.prompt(processedText, {
+        await this.promptAfterRender(processedText, {
           images: images.length > 0 ? images : undefined,
         });
       } catch (error: unknown) {
@@ -3900,7 +3901,7 @@ export class InteractiveMode {
       if (this.isExtensionCommand(text)) {
         this.editor.addToHistory?.(text);
         this.editor.setText("");
-        await this.session.prompt(text);
+        await this.promptAfterRender(text);
       } else {
         this.queueCompactionMessage(text, "followUp");
       }
@@ -3912,7 +3913,7 @@ export class InteractiveMode {
     if (this.session.isStreaming) {
       this.editor.addToHistory?.(text);
       this.editor.setText("");
-      await this.session.prompt(text, { streamingBehavior: "followUp" });
+      await this.promptAfterRender(text, { streamingBehavior: "followUp" });
       this.updatePendingMessagesDisplay();
       this.ui.requestRender();
     }
@@ -3931,6 +3932,21 @@ export class InteractiveMode {
         `Restored ${restored} queued message${restored > 1 ? "s" : ""} to editor`,
       );
     }
+  }
+
+  private async promptAfterRender(
+    text: string,
+    options?: PromptOptions,
+  ): Promise<void> {
+    const renderAwareUi = this.ui as TUI & {
+      awaitRender?: () => Promise<void>;
+    };
+    if (typeof renderAwareUi.awaitRender === "function") {
+      await renderAwareUi.awaitRender();
+    } else {
+      await new Promise<void>((resolve) => process.nextTick(resolve));
+    }
+    await this.session.prompt(text, options);
   }
 
   private updateEditorBorderColor(): void {
@@ -4270,7 +4286,7 @@ export class InteractiveMode {
         // When retry is pending, queue messages for the retry turn
         for (const message of queuedMessages) {
           if (this.isExtensionCommand(message.text)) {
-            await this.session.prompt(message.text);
+            await this.promptAfterRender(message.text);
           } else if (message.mode === "followUp") {
             await this.session.followUp(message.text);
           } else {
@@ -4288,7 +4304,7 @@ export class InteractiveMode {
       if (firstPromptIndex === -1) {
         // All extension commands - execute them all
         for (const message of queuedMessages) {
-          await this.session.prompt(message.text);
+          await this.promptAfterRender(message.text);
         }
         return;
       }
@@ -4299,12 +4315,12 @@ export class InteractiveMode {
       const rest = queuedMessages.slice(firstPromptIndex + 1);
 
       for (const message of preCommands) {
-        await this.session.prompt(message.text);
+        await this.promptAfterRender(message.text);
       }
 
       // Send first prompt (starts streaming)
-      const promptPromise = this.session
-        .prompt(firstPrompt.text)
+      const promptPromise = this
+        .promptAfterRender(firstPrompt.text)
         .catch((error) => {
           restoreQueue(error);
         });
@@ -4312,7 +4328,7 @@ export class InteractiveMode {
       // Queue remaining messages
       for (const message of rest) {
         if (this.isExtensionCommand(message.text)) {
-          await this.session.prompt(message.text);
+          await this.promptAfterRender(message.text);
         } else if (message.mode === "followUp") {
           await this.session.followUp(message.text);
         } else {

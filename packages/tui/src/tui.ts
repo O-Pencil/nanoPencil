@@ -225,6 +225,7 @@ export class TUI extends Container {
 	/** Global callback for debug key (Shift+Ctrl+D). Called before input is forwarded to focused component. */
 	public onDebug?: () => void;
 	private renderRequested = false;
+	private renderWaiters: Array<() => void> = [];
 	private cursorRow = 0; // Logical cursor row (end of rendered content)
 	private hardwareCursorRow = 0; // Actual terminal cursor row (may differ due to IME positioning)
 	private inputBuffer = ""; // Buffer for parsing terminal responses
@@ -458,8 +459,24 @@ export class TUI extends Container {
 		if (this.renderRequested) return;
 		this.renderRequested = true;
 		process.nextTick(() => {
+			const waiters = this.renderWaiters.splice(0);
 			this.renderRequested = false;
-			this.doRender();
+			try {
+				this.doRender();
+			} finally {
+				for (const resolve of waiters) {
+					resolve();
+				}
+			}
+		});
+	}
+
+	async awaitRender(): Promise<void> {
+		if (!this.renderRequested) {
+			return;
+		}
+		await new Promise<void>((resolve) => {
+			this.renderWaiters.push(resolve);
 		});
 	}
 

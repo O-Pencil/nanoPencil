@@ -4645,10 +4645,37 @@ export class InteractiveMode {
 
   private async handleProviderCredentialsCommand(): Promise<void> {
     const currentModel = this.session.model;
+
+    // No model selected — let user pick a provider first
     if (!currentModel) {
-      this.showError(
-        "No model selected. Please select a model first using /model",
-      );
+      this.session.modelRegistry.refresh();
+      const allModels = this.session.modelRegistry.getAll();
+      const providers = [...new Set(allModels.map((m) => m.provider))].sort();
+      if (providers.length === 0) {
+        this.showStatus("No providers available");
+        return;
+      }
+      this.showSelector((done) => {
+        const selector = new ProviderSelectorComponent(
+          providers,
+          undefined,
+          (provider) => {
+            done();
+            void (async () => {
+              await this.promptForProviderApiKey(provider, {
+                title: `Set API key for ${provider}`,
+              });
+              this.session.modelRegistry.refresh();
+              this.showModelSelector(undefined, provider);
+            })();
+          },
+          () => {
+            done();
+            this.ui.requestRender();
+          },
+        );
+        return { component: selector, focus: selector.getSelectList() };
+      });
       return;
     }
 
@@ -4674,11 +4701,19 @@ export class InteractiveMode {
   private async ensureProviderConfiguredForSelection(
     model: Model<any>,
   ): Promise<boolean> {
-    if (!isCustomProtocolProvider(model.provider)) {
-      return true;
+    if (isCustomProtocolProvider(model.provider)) {
+      return this.configureCustomProtocolProvider(model.provider);
     }
 
-    return this.configureCustomProtocolProvider(model.provider);
+    // For standard providers: prompt for API key if none is stored and provider doesn't use OAuth
+    const hasKey = await this.session.modelRegistry.getApiKey(model);
+    if (!hasKey && !this.session.modelRegistry.isUsingOAuth(model)) {
+      return this.promptForProviderApiKey(model.provider, {
+        title: `API key for ${model.provider}`,
+      });
+    }
+
+    return true;
   }
 
   private async configureCustomProtocolProvider(

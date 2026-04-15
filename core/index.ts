@@ -27,6 +27,18 @@ export {
   type EventBusController,
 } from "./runtime/event-bus.js";
 
+// SDK wrapper and logger
+export {
+  PencilAgent,
+  quickAgent,
+  type PencilAgentOptions,
+} from "./runtime/pencil-agent.js";
+export {
+  type SDKLogger,
+  silentLogger,
+  defaultLogger,
+} from "./runtime/sdk.js";
+
 // Extensions system
 export {
   type AgentEndEvent,

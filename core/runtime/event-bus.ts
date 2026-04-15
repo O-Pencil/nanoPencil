@@ -26,7 +26,8 @@ export function createEventBus(): EventBusController {
 				try {
 					await handler(data);
 				} catch (err) {
-					console.error(`Event handler error (${channel}):`, err);
+					// Emit internal error event for user subscription
+					emitter.emit("eventbus:handler-error", { channel, error: err });
 				}
 			};
 			emitter.on(channel, safeHandler);

@@ -53,6 +53,17 @@ export {
 	shouldCompact,
 } from "./core/session/compaction/index.js";
 export { createEventBus, type EventBus, type EventBusController } from "./core/runtime/event-bus.js";
+// SDK wrapper and logger
+export {
+	PencilAgent,
+	quickAgent,
+	type PencilAgentOptions,
+} from "./core/runtime/pencil-agent.js";
+export {
+	type SDKLogger,
+	silentLogger,
+	defaultLogger,
+} from "./core/runtime/sdk.js";
 // Extension system
 export type {
 	AgentEndEvent,

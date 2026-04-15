@@ -61,6 +61,38 @@ import {
   writeTool,
 } from "../tools/index.js";
 
+// ============================================================================
+// Logger Interface (for SDK users)
+// ============================================================================
+
+/**
+ * Custom logger interface for SDK users.
+ * Replace console.error/warn/info with user-provided handlers.
+ */
+export interface SDKLogger {
+  error(message: string, ...args: any[]): void;
+  warn(message: string, ...args: any[]): void;
+  info(message: string, ...args: any[]): void;
+}
+
+/**
+ * Silent logger - suppresses all output
+ */
+export const silentLogger: SDKLogger = {
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+};
+
+/**
+ * Default logger - uses console
+ */
+export const defaultLogger: SDKLogger = {
+  error: (msg, ...args) => console.error(msg, ...args),
+  warn: (msg, ...args) => console.warn(msg, ...args),
+  info: (msg, ...args) => console.log(msg, ...args),
+};
+
 export interface CreateAgentSessionOptions {
   /** Working directory for project-local discovery. Default: process.cwd() */
   cwd?: string;
@@ -99,6 +131,12 @@ export interface CreateAgentSessionOptions {
 
   /** External abort signal for stopping the session (e.g., from SubAgent runtime) */
   signal?: AbortSignal;
+
+  /** Suppress all console output. Default: false */
+  silent?: boolean;
+
+  /** Custom logger for SDK output. Default: console */
+  logger?: SDKLogger;
 }
 
 /** Result from createAgentSession */
@@ -203,6 +241,9 @@ export async function createAgentSession(
   const isProductionLike =
     process.env.NODE_ENV === "production" ||
     (process.env.NODE_ENV !== "development" && isProductionBuild);
+
+  // Setup logger
+  const logger = options.silent ? silentLogger : (options.logger ?? defaultLogger);
 
   const cwd = options.cwd ?? process.cwd();
   const agentDir = options.agentDir ?? getDefaultAgentDir();
@@ -431,10 +472,10 @@ export async function createAgentSession(
         const started = mcpStatus.startedServers;
         const failed = mcpStatus.failedServers;
         if (started.length > 0) {
-          console.error(`MCP: ${started.length} server(s) ready (${started.join(", ")})`);
+          logger.info(`MCP: ${started.length} server(s) ready (${started.join(", ")})`);
         }
         if (failed.length > 0) {
-          console.error(`MCP: ${failed.length} failed (${failed.join(", ")})`);
+          logger.warn(`MCP: ${failed.length} failed (${failed.join(", ")})`);
         }
       } else {
         // Dev mode: detailed info
@@ -443,13 +484,13 @@ export async function createAgentSession(
             mcpStatus.failedServers.length > 0
               ? ` failed=${mcpStatus.failedServers.join(",")}`
               : "";
-          console.warn(
+          logger.warn(
             `MCP enabled but no tools loaded (enabled=${mcpStatus.enabledServers.length}, started=${mcpStatus.startedServers.length}, tools=0).${failed}`,
           );
         } else {
-          console.error(`MCP tools loaded: ${mcpStatus.toolCount}`);
+          logger.info(`MCP tools loaded: ${mcpStatus.toolCount}`);
           if (mcpStatus.failedServers.length > 0) {
-            console.warn(
+            logger.warn(
               `MCP: ${mcpStatus.failedServers.length} server(s) failed to start (${mcpStatus.failedServers.join(", ")}); tools from other servers are still available.`,
             );
           }
@@ -457,7 +498,7 @@ export async function createAgentSession(
       }
       process.once("exit", () => currentMcpManager?.dispose());
     } catch (error) {
-      console.warn(`Failed to initialize MCP: ${error}`);
+      logger.warn(`Failed to initialize MCP: ${error}`);
     }
 
     mcpToolsFactory = async () => {
@@ -486,12 +527,12 @@ export async function createAgentSession(
         await soulMgr.initialize();
         time("soul.initialize");
       } else {
-        console.warn(
+        logger.warn(
           "Soul not available (nanosoul package not installed). Skipping...",
         );
       }
     } catch (error) {
-      console.warn(`Failed to initialize Soul: ${error}`);
+      logger.warn(`Failed to initialize Soul: ${error}`);
     }
 
     soulManagerFactory = async () => {
@@ -502,7 +543,7 @@ export async function createAgentSession(
         time("soul.initialize");
         return mgr;
       } catch (error) {
-        console.warn(`Failed to refresh Soul: ${error}`);
+        logger.warn(`Failed to refresh Soul: ${error}`);
         return null;
       }
     };

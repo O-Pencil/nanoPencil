@@ -178,6 +178,11 @@ export type AgentSessionEvent =
       success: boolean;
       attempt: number;
       finalError?: string;
+    }
+  | {
+      type: "sdk:error";
+      source: "soul" | "mcp" | "eventbus";
+      error: unknown;
     };
 
 /** Listener function for agent session events */
@@ -1042,7 +1047,7 @@ export class AgentSession {
           : undefined;
       return this._lastSoulInjection;
     } catch (error) {
-      console.warn("Failed to generate Soul injection:", error);
+      this._emit({ type: "sdk:error", source: "soul", error });
       return this._lastSoulInjection;
     }
   }
@@ -2690,7 +2695,7 @@ export class AgentSession {
         const nextMcpTools = await this._mcpToolsFactory();
         this._customTools = [...this._staticCustomTools, ...nextMcpTools];
       } catch (error) {
-        console.warn("Failed to refresh MCP tools:", error);
+        this._emit({ type: "sdk:error", source: "mcp", error });
         // Keep previous tools on failure.
         this._customTools = [...this._staticCustomTools, ...this._customTools.filter((t) =>
           // Heuristic: MCP tools are prefixed with mcp_ in current codebase.
@@ -2704,7 +2709,7 @@ export class AgentSession {
         this._soulManager = await this._soulManagerFactory();
         this._lastSoulInjection = undefined;
       } catch (error) {
-        console.warn("Failed to refresh Soul manager:", error);
+        this._emit({ type: "sdk:error", source: "soul", error });
         // Keep previous _soulManager on failure.
       }
     }

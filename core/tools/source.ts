@@ -41,7 +41,7 @@ export class ToolSourceRegistry {
 	 */
 	register(source: ToolSource): void {
 		if (this.sources.has(source.id)) {
-			console.warn(`[ToolSourceRegistry] Source ${source.id} already registered, skipping`);
+			// Skip duplicate registration silently
 			return;
 		}
 		this.sources.set(source.id, source);
@@ -89,9 +89,8 @@ export class ToolSourceRegistry {
 			try {
 				const tools = await source.load();
 				allTools.push(...tools);
-				console.log(`[ToolSourceRegistry] Loaded ${tools.length} tools from ${source.id}`);
 			} catch (error) {
-				console.warn(`[ToolSourceRegistry] Failed to load tools from ${source.id}:`, error);
+				// Skip failed source, continue with others
 			}
 		}
 
@@ -106,7 +105,7 @@ export class ToolSourceRegistry {
 			try {
 				await source.unload();
 			} catch (error) {
-				console.warn(`[ToolSourceRegistry] Failed to unload ${source.id}:`, error);
+				// Skip failed unload
 			}
 		}
 	}

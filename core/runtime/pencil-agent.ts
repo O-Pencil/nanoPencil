@@ -248,12 +248,12 @@ export class PencilAgent {
   // ============================================================================
   
   /**
-   * Reset the session (clear history).
+   * Reset the session (clear conversation history, start a new session).
    */
-  reset(): void {
+  async reset(): Promise<void> {
     this.ensureInit();
     this.collectedText = '';
-    this.logger.info('Session reset requested');
+    await this.session!.newSession();
   }
   
   /**

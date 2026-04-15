@@ -287,7 +287,6 @@ function ensureSidecarDir(runtime: SalRuntime): void {
 }
 
 function persistTurnRecord(runtime: SalRuntime, taskRes: AnchorResolution | undefined, actionRes: AnchorResolution): void {
-	if (runtime.evalEnabled) return;
 	ensureSidecarDir(runtime);
 	const ts = new Date().toISOString().replace(/[:.]/g, "-");
 	const filePath = join(runtime.sidecarDir, `turn-${ts}.json`);
@@ -374,8 +373,9 @@ export default async function salExtension(api: ExtensionAPI) {
 
 	const credentials = resolveEvalCredentials(workspaceRoot);
 	const evalEnabledByEnv = process.env[EVAL_ENABLED_ENV];
-	const evalEnabled = evalEnabledByEnv ? isTruthy(evalEnabledByEnv) : true;
-	const evalEnabledByCreds = credentials?.enabled ?? true;
+	// Eval is opt-in: only active when explicitly enabled via env or credentials file.
+	const evalEnabled = evalEnabledByEnv ? isTruthy(evalEnabledByEnv) : false;
+	const evalEnabledByCreds = credentials?.enabled ?? false;
 	const evalEndpoint = process.env[EVAL_ENDPOINT_ENV] ?? credentials?.insforge_url ?? credentials?.endpoint;
 	const evalRunId =
 		process.env[EVAL_RUN_ID_ENV] ??
@@ -632,10 +632,6 @@ export default async function salExtension(api: ExtensionAPI) {
 }
 
 export { SAL_DEFAULT_WEIGHTS, normalizeExperimentId, resolveSalSidecarDir };
-
-
-
-
 
 
 

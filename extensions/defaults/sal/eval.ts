@@ -55,8 +55,13 @@ export interface CreateEvalSinkOptions {
 	endpoint?: string;
 	runId: string;
 	headers?: Record<string, string>;
+	/** Ingestion key (ik_…) — sent as x-api-key header. */
 	apiKey?: string;
 	apiKeyHeader?: string;
+	/** Anon/JWT key — sent as apikey + Authorization: Bearer headers (PostgREST auth). */
+	anonKey?: string;
+	/** Target table name (default "eval_events"). */
+	tableName?: string;
 	/** Batch size (default 10). */
 	batchSize?: number;
 	/** Flush interval ms (default 2000). */
@@ -119,7 +124,8 @@ class HttpEvalSink implements EvalSink {
 
 	constructor(options: CreateEvalSinkOptions) {
 		this.endpoint = options.endpoint!;
-		this.batchUrl = `${this.endpoint.replace(/\/+$/, "")}/v1/eval/events/batch`;
+		const tableName = options.tableName ?? "eval_events";
+		this.batchUrl = `${this.endpoint.replace(/\/+$/, "")}/api/database/records/${tableName}`;
 		this.runId = options.runId;
 		this.batchSize = options.batchSize ?? 10;
 		this.batchIntervalMs = options.batchIntervalMs ?? 2000;
@@ -128,11 +134,19 @@ class HttpEvalSink implements EvalSink {
 			"Content-Type": "application/json",
 			...(options.headers ?? {}),
 		};
+		// PostgREST auth: anon key in both apikey and Authorization headers
+		if (options.anonKey) {
+			baseHeaders["apikey"] = options.anonKey;
+			baseHeaders["Authorization"] = `Bearer ${options.anonKey}`;
+		}
+		// Ingestion key: separate header (overrides Authorization if no anonKey)
 		if (options.apiKey) {
-			const header = options.apiKeyHeader ?? "Authorization";
-			baseHeaders[header] = header.toLowerCase() === "authorization"
-				? `Bearer ${options.apiKey}`
-				: options.apiKey;
+			const header = options.apiKeyHeader ?? "x-api-key";
+			baseHeaders[header] = options.apiKey;
+			if (!options.anonKey) {
+				// Fallback: use apiKey as Bearer when no anonKey provided
+				baseHeaders["Authorization"] = `Bearer ${options.apiKey}`;
+			}
 		}
 		this.headers = baseHeaders;
 	}
@@ -177,13 +191,8 @@ class HttpEvalSink implements EvalSink {
 		if (this.pending.length === 0) return;
 
 		const batch = this.pending.splice(0, this.batchSize);
-		const body: EvalEventBatch = {
-			run_id: this.runId,
-			batch_id: randomUUID(),
-			events: batch,
-		};
-
-		const ok = await this.postJson(this.batchUrl, body);
+		// PostgREST batch insert: array of rows directly
+		const ok = await this.postJson(this.batchUrl, batch);
 		if (!ok) {
 			// Re-enqueue on failure (prepend to preserve order)
 			this.pending.unshift(...batch);

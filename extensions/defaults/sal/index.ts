@@ -75,6 +75,7 @@ interface SalRuntime {
 	evalSink: EvalSink;
 	evalEndpoint?: string;
 	evalApiKey?: string;
+	evalAnonKey?: string;
 	evalApiKeyHeader?: string;
 	evalHeaders: Record<string, string>;
 	evalEnabled: boolean;
@@ -107,6 +108,7 @@ interface EvalCredentials {
 	insforge_url?: string;
 	endpoint?: string;
 	api_key?: string;
+	anon_key?: string;
 	api_key_header?: string;
 	headers?: Record<string, string>;
 	enabled?: boolean;
@@ -159,6 +161,7 @@ function readCredentialsFromFile(filePath: string): EvalCredentials | undefined 
 				endpoint: entry.endpoint ?? entry.insforge_url,
 				insforge_url: entry.insforge_url ?? entry.endpoint,
 				api_key: entry.api_key ?? entry.apiKey,
+				anon_key: (entry as any).anon_key,
 				api_key_header: entry.api_key_header,
 				headers: entry.headers,
 				enabled: entry.enabled,
@@ -417,6 +420,7 @@ export default async function salExtension(api: ExtensionAPI) {
 			? (evalVariantEnv as EvalVariant)
 			: undefined;
 	const evalApiKey = process.env[EVAL_API_KEY_ENV] ?? credentials?.api_key;
+	const evalAnonKey = process.env["NANOPENCIL_EVAL_ANON_KEY"] ?? credentials?.anon_key;
 	const evalApiKeyHeader = process.env[EVAL_API_KEY_HEADER_ENV] ?? credentials?.api_key_header;
 	const evalHeaders = {
 		...(credentials?.headers ?? {}),
@@ -440,6 +444,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		runId: evalRunId,
 		headers: evalHeaders,
 		apiKey: evalApiKey,
+		anonKey: evalAnonKey,
 		apiKeyHeader: evalApiKeyHeader,
 	});
 
@@ -452,6 +457,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		evalSink,
 		evalEndpoint,
 		evalApiKey,
+		evalAnonKey,
 		evalApiKeyHeader,
 		evalHeaders,
 		evalEnabled: evalSink.enabled,
@@ -487,23 +493,28 @@ export default async function salExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("sal:setup", {
-		description: "Configure SAL eval credentials. Usage: /sal:setup <endpoint> <api_key>",
+		description: "Configure SAL eval credentials. Usage: /sal:setup <endpoint> <api_key> [anon_key]",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
-			const parts = (args ?? "").trim().split(/\s+/);
-			if (parts.length < 2 || !parts[0] || !parts[1]) {
-				ctx.ui.notify("[SAL Setup] Usage: /sal:setup <endpoint> <api_key>", "error");
+			const trimmed = (args ?? "").trim();
+			const firstSpace = trimmed.indexOf(" ");
+			const secondSpace = firstSpace >= 0 ? trimmed.indexOf(" ", firstSpace + 1) : -1;
+			const endpoint = firstSpace >= 0 ? trimmed.slice(0, firstSpace) : trimmed;
+			const apiKey = firstSpace >= 0
+				? (secondSpace > 0 ? trimmed.slice(firstSpace + 1, secondSpace) : trimmed.slice(firstSpace + 1))
+				: "";
+			const anonKey = secondSpace > 0 ? trimmed.slice(secondSpace + 1).trim() : undefined;
+
+			if (!endpoint || !apiKey) {
+				ctx.ui.notify("[SAL Setup] Usage: /sal:setup <endpoint> <api_key> [anon_key]", "error");
 				return;
 			}
-			const [endpoint, apiKey] = parts;
 			const credDir = join(homedir(), ".memory-experiments");
 			const credPath = join(credDir, "credentials.json");
 			try {
 				if (!existsSync(credDir)) mkdirSync(credDir, { recursive: true });
-				writeFileSync(
-					credPath,
-					JSON.stringify({ endpoint, api_key: apiKey, enabled: true }, null, 2),
-					"utf-8",
-				);
+				const creds: Record<string, unknown> = { endpoint, api_key: apiKey, enabled: true };
+				if (anonKey) creds.anon_key = anonKey;
+				writeFileSync(credPath, JSON.stringify(creds, null, 2), "utf-8");
 			} catch (err) {
 				ctx.ui.notify(`[SAL Setup] Failed to write credentials: ${(err as Error).message}`, "error");
 				return;
@@ -511,12 +522,14 @@ export default async function salExtension(api: ExtensionAPI) {
 			// Activate sink immediately without restart
 			runtime.evalEndpoint = endpoint;
 			runtime.evalApiKey = apiKey;
+			runtime.evalAnonKey = anonKey;
 			const newSink = createEvalSink({
 				enabled: true,
 				endpoint,
 				runId: runtime.evalRunId,
 				headers: runtime.evalHeaders,
 				apiKey,
+				anonKey,
 				apiKeyHeader: runtime.evalApiKeyHeader,
 			});
 			runtime.evalSink = newSink;

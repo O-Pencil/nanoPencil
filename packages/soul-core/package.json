@@ -17,8 +17,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "npx tsc",
-    "watch": "npx tsc --watch",
+    "build": "node ../../node_modules/typescript/bin/tsc",
+    "watch": "node ../../node_modules/typescript/bin/tsc --watch",
     "dev": "tsx src/index.ts",
     "prepublishOnly": "npm run build"
   },

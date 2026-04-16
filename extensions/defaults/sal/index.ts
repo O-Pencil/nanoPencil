@@ -89,6 +89,18 @@ interface SalRuntime {
 }
 
 
+interface EvalCredentialEntry {
+	id: string;
+	name?: string;
+	enabled?: boolean;
+	apiKey?: string;
+	api_key?: string;
+	endpoint?: string;
+	insforge_url?: string;
+	api_key_header?: string;
+	headers?: Record<string, string>;
+}
+
 interface EvalCredentials {
 	insforge_url?: string;
 	endpoint?: string;
@@ -128,15 +140,33 @@ function resolveCredentialsFileCandidates(workspaceRoot: string): string[] {
 	return [envPath, workspacePath, userPath].filter((path): path is string => Boolean(path));
 }
 
-function readCredentialsFromFile(path: string): EvalCredentials | undefined {
+function readCredentialsFromFile(filePath: string): EvalCredentials | undefined {
 	try {
-		if (!existsSync(path)) return undefined;
-		const raw = readFileSync(path, "utf-8");
+		if (!existsSync(filePath)) return undefined;
+		const raw = readFileSync(filePath, "utf-8");
 		const parsed = JSON.parse(raw);
 		if (!parsed || typeof parsed !== "object") return undefined;
+
+		// Format 1: { credentials: [{ id, apiKey, endpoint, ... }] }
+		if (Array.isArray(parsed.credentials)) {
+			const entry = parsed.credentials.find(
+				(e: EvalCredentialEntry) => e.id === "insforge" && e.enabled !== false,
+			) as EvalCredentialEntry | undefined;
+			if (!entry) return undefined;
+			return {
+				endpoint: entry.endpoint ?? entry.insforge_url,
+				insforge_url: entry.insforge_url ?? entry.endpoint,
+				api_key: entry.api_key ?? entry.apiKey,
+				api_key_header: entry.api_key_header,
+				headers: entry.headers,
+				enabled: entry.enabled,
+			};
+		}
+
+		// Format 2: flat EvalCredentials at top level
 		return parsed as EvalCredentials;
 	} catch (err) {
-		console.error(`[sal][eval] failed to read credentials file ${path}:`, (err as Error).message);
+		console.error(`[sal][eval] failed to read credentials file ${filePath}:`, (err as Error).message);
 		return undefined;
 	}
 }
@@ -233,6 +263,47 @@ function extractToolFilePaths(toolName: string, args: unknown, workspaceRoot: st
 		for (const f of found) {
 			const rel = workspaceRelativePath(workspaceRoot, f);
 			if (rel) out.push(rel);
+		}
+	}
+	return out;
+}
+
+// Max bytes kept from any single string field in tool_args (≈2 KB)
+const TOOL_ARG_STRING_LIMIT = 2048;
+
+/**
+ * Sanitize tool_args for eval telemetry: truncate large string fields
+ * (file content, edit diffs, command output) to keep payloads under InsForge limits.
+ */
+function sanitizeToolArgs(toolName: string, args: unknown): Record<string, unknown> {
+	if (!args || typeof args !== "object") return {};
+	const src = args as Record<string, unknown>;
+	const out: Record<string, unknown> = {};
+
+	// Fields that carry bulk content — truncate aggressively
+	const contentFields = new Set([
+		"content", "old_string", "new_string", "oldStr", "newStr",
+		"old", "new", "diff", "patch", "output", "stdout", "stderr",
+	]);
+	// Fields that are paths or identifiers — keep as-is (small)
+	const metaFields = new Set([
+		"file_path", "path", "paths", "command", "pattern", "query",
+		"replace_all", "name", "type", "glob", "regex",
+	]);
+
+	for (const [key, value] of Object.entries(src)) {
+		if (contentFields.has(key) && typeof value === "string") {
+			// Truncate large content, append byte count
+			const truncated = value.length > TOOL_ARG_STRING_LIMIT;
+			out[key] = truncated
+				? `${value.slice(0, TOOL_ARG_STRING_LIMIT)}…[${value.length} bytes]`
+				: value;
+		} else if (metaFields.has(key)) {
+			out[key] = value;
+		} else if (typeof value === "string" && value.length > TOOL_ARG_STRING_LIMIT) {
+			out[key] = `${value.slice(0, TOOL_ARG_STRING_LIMIT)}…[${value.length} bytes]`;
+		} else {
+			out[key] = value;
 		}
 	}
 	return out;
@@ -555,7 +626,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		await emitEval(runtime, "tool_call", isEnabled(), {
 			turn_id: runtime.turn.turnId,
 			tool_name: event.toolName,
-			tool_args: event.args ?? {},
+			tool_args: sanitizeToolArgs(event.toolName, event.args),
 			call_id: event.toolCallId,
 			touched_files: paths,
 		});

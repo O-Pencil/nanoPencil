@@ -31,6 +31,7 @@ sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-r
 sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 CLAUDE.md and P3 file headers
 sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights
 sal/weights.ts: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights() reads sal-config.json from workspace or .memory-experiments/sal/
+sal/eval.ts: Batched eval event sink for InsForge, EvalEventEnvelope/EvalEventBatch types, HttpEvalSink with batching/retry, createEvalEvent/createEvalSink factories; no internal project deps, uses only node:http/https/crypto
 sal/README.md: SAL extension usage, sidecar output layout, weights override, pluggability contract
 team/index.ts: AgentTeam extension entry, /team:/team:spawn/:send/:status/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer
 team/team-types.ts: TeammateRole/TeammateMode/TeammateStatus/TeammateIdentity/TeammateMessage/PersistedTeammate/TeamSpawnSpec/TeamSendResult types

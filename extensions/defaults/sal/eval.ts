@@ -1,13 +1,14 @@
 /**
- * [WHO]: Provides EvalSink, EvalVariant, createEvalEvent, createEvalSink
- * [FROM]: Depends on node:https for HTTP POST; no internal project deps
+ * [WHO]: Provides EvalSink, EvalVariant, EvalEvent, EvalEventEnvelope, createEvalEvent, createEvalSink
+ * [FROM]: Depends on node:https, node:http, node:url, node:crypto for HTTP POST + UUID; no internal project deps
  * [TO]: Consumed by extensions/defaults/sal/index.ts for experiment telemetry
- * [HERE]: extensions/defaults/sal/eval.ts - lightweight eval event sink for SAL A/B experiments
+ * [HERE]: extensions/defaults/sal/eval.ts - batched eval event sink for InsForge evaluation platform
  */
 
 import { request } from "node:https";
 import { request as httpRequest } from "node:http";
 import { URL } from "node:url";
+import { randomUUID } from "node:crypto";
 
 // ============================================================================
 // Types
@@ -25,24 +26,33 @@ export type EvalEventType =
 	| "tool_call"
 	| "tool_result";
 
-export interface EvalEvent {
-	event_type: EvalEventType;
+/** Wire format matching InsForge EvalEventEnvelope schema. */
+export interface EvalEventEnvelope {
 	run_id: string;
+	event_id: string;
+	event_type: EvalEventType;
 	variant: EvalVariant;
-	timestamp: string;
+	ts: string;
 	payload: Record<string, unknown>;
-	metadata: Record<string, unknown>;
+	metadata?: Record<string, unknown>;
+}
+
+/** Batch format matching InsForge EvalEventBatch schema. */
+export interface EvalEventBatch {
+	run_id: string;
+	batch_id: string;
+	events: EvalEventEnvelope[];
 }
 
 export interface EvalSink {
 	readonly enabled: boolean;
-	sendEvent(event: EvalEvent): Promise<void>;
+	sendEvent(event: EvalEventEnvelope): Promise<void>;
 	flush(): Promise<void>;
 	close(): Promise<void>;
 }
 
 // ============================================================================
-// Factory
+// Factory helpers
 // ============================================================================
 
 export interface CreateEvalSinkOptions {
@@ -52,6 +62,10 @@ export interface CreateEvalSinkOptions {
 	headers?: Record<string, string>;
 	apiKey?: string;
 	apiKeyHeader?: string;
+	/** Batch size (default 10). */
+	batchSize?: number;
+	/** Flush interval ms (default 2000). */
+	batchIntervalMs?: number;
 }
 
 export function createEvalEvent(
@@ -60,19 +74,19 @@ export function createEvalEvent(
 	variant: EvalVariant,
 	payload: Record<string, unknown>,
 	metadata: Record<string, unknown> = {},
-): EvalEvent {
+): EvalEventEnvelope {
 	return {
-		event_type: eventType,
 		run_id: runId,
+		event_id: randomUUID(),
+		event_type: eventType,
 		variant,
-		timestamp: new Date().toISOString(),
+		ts: new Date().toISOString(),
 		payload,
 		metadata,
 	};
 }
 
 export function createEvalSink(options: CreateEvalSinkOptions): EvalSink {
-	// Noop sink: disabled or no endpoint
 	if (!options.enabled || !options.endpoint) {
 		return noopSink;
 	}
@@ -92,19 +106,29 @@ const noopSink: EvalSink = {
 };
 
 // ============================================================================
-// HTTP Sink
+// HTTP Batch Sink
 // ============================================================================
 
 class HttpEvalSink implements EvalSink {
 	readonly enabled = true;
 
 	private endpoint: string;
+	private batchUrl: string;
 	private headers: Record<string, string>;
-	private queue: EvalEvent[] = [];
-	private flushPromise: Promise<void> | null = null;
+	private pending: EvalEventEnvelope[] = [];
+	private runId: string;
+	private batchSize: number;
+	private batchIntervalMs: number;
+	private flushTimer: ReturnType<typeof setTimeout> | undefined;
+	private closed = false;
 
 	constructor(options: CreateEvalSinkOptions) {
 		this.endpoint = options.endpoint!;
+		this.batchUrl = `${this.endpoint.replace(/\/+$/, "")}/v1/eval/events/batch`;
+		this.runId = options.runId;
+		this.batchSize = options.batchSize ?? 10;
+		this.batchIntervalMs = options.batchIntervalMs ?? 2000;
+
 		const baseHeaders: Record<string, string> = {
 			"Content-Type": "application/json",
 			...(options.headers ?? {}),
@@ -118,48 +142,77 @@ class HttpEvalSink implements EvalSink {
 		this.headers = baseHeaders;
 	}
 
-	async sendEvent(event: EvalEvent): Promise<void> {
-		// Fire-and-forget with error swallowing — never block the agent
-		this.postJson(event).catch(() => {
-			// Enqueue for flush retry on transient errors
-			this.queue.push(event);
-		});
+	async sendEvent(event: EvalEventEnvelope): Promise<void> {
+		if (this.closed) return;
+		this.pending.push(event);
+
+		if (this.pending.length >= this.batchSize) {
+			await this.flushPending();
+			return;
+		}
+		this.scheduleFlush();
 	}
 
 	async flush(): Promise<void> {
-		if (this.flushPromise) return this.flushPromise;
-		this.flushPromise = this.drainQueue();
-		await this.flushPromise;
-		this.flushPromise = null;
+		if (this.flushTimer) {
+			clearTimeout(this.flushTimer);
+			this.flushTimer = undefined;
+		}
+		while (this.pending.length > 0) {
+			const before = this.pending.length;
+			await this.flushPending();
+			if (this.pending.length >= before) break;
+		}
 	}
 
 	async close(): Promise<void> {
+		this.closed = true;
 		await this.flush();
 	}
 
-	private async drainQueue(): Promise<void> {
-		const pending = this.queue.splice(0);
-		await Promise.allSettled(pending.map((ev) => this.postJson(ev)));
+	private scheduleFlush(): void {
+		if (this.flushTimer) return;
+		this.flushTimer = setTimeout(() => {
+			this.flushTimer = undefined;
+			this.flushPending().catch(() => {});
+		}, this.batchIntervalMs);
 	}
 
-	private postJson(body: unknown): Promise<void> {
+	private async flushPending(): Promise<void> {
+		if (this.pending.length === 0) return;
+
+		const batch = this.pending.splice(0, this.batchSize);
+		const body: EvalEventBatch = {
+			run_id: this.runId,
+			batch_id: randomUUID(),
+			events: batch,
+		};
+
+		const ok = await this.postJson(this.batchUrl, body);
+		if (!ok) {
+			// Re-enqueue on failure (prepend to preserve order)
+			this.pending.unshift(...batch);
+		}
+	}
+
+	private postJson(url: string, body: unknown): Promise<boolean> {
 		return new Promise((resolve) => {
 			const payload = JSON.stringify(body);
-			let url: URL;
+			let parsed: URL;
 			try {
-				url = new URL(this.endpoint);
+				parsed = new URL(url);
 			} catch {
-				resolve();
+				resolve(false);
 				return;
 			}
-			const isHttps = url.protocol === "https:";
+			const isHttps = parsed.protocol === "https:";
 			const requestFn = isHttps ? request : httpRequest;
-			const port = url.port ? Number(url.port) : (isHttps ? 443 : 80);
+			const port = parsed.port ? Number(parsed.port) : (isHttps ? 443 : 80);
 			const req = requestFn(
 				{
-					hostname: url.hostname,
+					hostname: parsed.hostname,
 					port,
-					path: url.pathname + url.search,
+					path: parsed.pathname + parsed.search,
 					method: "POST",
 					headers: {
 						...this.headers,
@@ -168,13 +221,12 @@ class HttpEvalSink implements EvalSink {
 					timeout: 5000,
 				},
 				(res) => {
-					// Drain response body to free socket
 					res.resume();
-					res.on("end", resolve);
+					res.on("end", () => resolve(res.statusCode !== undefined && res.statusCode < 300));
 				},
 			);
-			req.on("error", () => resolve());
-			req.on("timeout", () => { req.destroy(); resolve(); });
+			req.on("error", () => resolve(false));
+			req.on("timeout", () => { req.destroy(); resolve(false); });
 			req.write(payload);
 			req.end();
 		});

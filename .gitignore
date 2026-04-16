@@ -24,5 +24,8 @@ config/
 # Local SAL / memory experiment artifacts
 .memory-experiments/
 
+# MCP server configs (may contain API keys)
+.mcp.json
+
 # Internal docs (Chinese development documentation)
 docs/

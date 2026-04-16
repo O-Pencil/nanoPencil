@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.44] - 2026-04-16
+
+### Added
+- feat(sal): streamline eval to run_start/turn_anchor/run_end + /sal:setup command
+- feat(sdk): add PencilAgent wrapper + SDKLogger interface + console cleanup
+- feat(interactive): add /status command for agent status card
+
+### Fixed
+- fix(sal): add allowSelfSigned option for private CA endpoints
+- fix(sal): adapt eval sink to InsForge PostgREST API (/api/database/records/eval_events)
+- fix(sal): surface HTTP errors in eval sink + connectivity probe on /sal:setup
+- fix(sal): batch eval events for InsForge, sanitize tool_args, fix credentials reading
+- fix(interactive): unblock new users with no API key configured
+- fix(sal): add missing eval.ts, make eval opt-in, restore sidecar writes, fix PencilAgent.reset()
+- fix(interactive): flush user messages before prompt start
+
+### Changed
+- refactor(sal): decouple SAL+InsForge via turn-context bus and pluggable eval adapters
+- refactor(sal): InsForge-native eval sink with typed table routing
+
+### Documentation
+- docs: merge AGENT.md into AGENTS.md, remove duplicate file
+
+### Maintenance
+- chore: update gitignore for AI agent configs and fix monorepo build scripts
+- chore: gitignore .mcp.json (may contain API keys)
+
+
 ## [1.11.44] - 2026-04-12
 
 ### Fixed

@@ -1,8 +1,8 @@
 /**
- * [WHO]: Provides EvalSink, EvalVariant, EvalEvent, EvalEventEnvelope, createEvalEvent, createEvalSink
- * [FROM]: Depends on node:https, node:http, node:url, node:crypto for HTTP POST + UUID; no internal project deps
+ * [WHO]: Provides EvalSink, EvalVariant, EvalEventEnvelope, createEvalEvent, createEvalSink
+ * [FROM]: Depends on node:https, node:http, node:url, node:crypto; no internal project deps
  * [TO]: Consumed by extensions/defaults/sal/index.ts for experiment telemetry
- * [HERE]: extensions/defaults/sal/eval.ts - batched eval event sink for InsForge; EvalEventType: run_start | run_end | turn_anchor
+ * [HERE]: extensions/defaults/sal/eval.ts - InsForge-native eval sink; routes run_start→eval_runs, turn_anchor→eval_turns+eval_sal_anchors, run_end→PATCH eval_runs
  */
 
 import { request } from "node:https";
@@ -21,7 +21,7 @@ export type EvalEventType =
 	| "run_end"
 	| "turn_anchor";
 
-/** Wire format matching InsForge EvalEventEnvelope schema. */
+/** Wire format for eval events passed between index.ts and the sink. */
 export interface EvalEventEnvelope {
 	run_id: string;
 	event_id: string;
@@ -32,13 +32,6 @@ export interface EvalEventEnvelope {
 	metadata?: Record<string, unknown>;
 }
 
-/** Batch format matching InsForge EvalEventBatch schema. */
-export interface EvalEventBatch {
-	run_id: string;
-	batch_id: string;
-	events: EvalEventEnvelope[];
-}
-
 export interface EvalSink {
 	readonly enabled: boolean;
 	sendEvent(event: EvalEventEnvelope): Promise<void>;
@@ -47,7 +40,7 @@ export interface EvalSink {
 }
 
 // ============================================================================
-// Factory helpers
+// Factory
 // ============================================================================
 
 export interface CreateEvalSinkOptions {
@@ -58,14 +51,10 @@ export interface CreateEvalSinkOptions {
 	/** Ingestion key (ik_…) — sent as x-api-key header. */
 	apiKey?: string;
 	apiKeyHeader?: string;
-	/** Anon/JWT key — sent as apikey + Authorization: Bearer headers (PostgREST auth). */
+	/** Anon/JWT key — PostgREST auth: sent as apikey + Authorization: Bearer. */
 	anonKey?: string;
-	/** Target table name (default "eval_events"). */
-	tableName?: string;
-	/** Skip TLS certificate verification (for self-signed / private CA endpoints). */
+	/** Skip TLS certificate verification (self-signed / private CA). */
 	allowSelfSigned?: boolean;
-	/** Batch size (default 10). */
-	batchSize?: number;
 	/** Flush interval ms (default 2000). */
 	batchIntervalMs?: number;
 }
@@ -92,8 +81,7 @@ export function createEvalSink(options: CreateEvalSinkOptions): EvalSink {
 	if (!options.enabled || !options.endpoint) {
 		return noopSink;
 	}
-
-	return new HttpEvalSink(options);
+	return new InsForgeEvalSink(options);
 }
 
 // ============================================================================
@@ -108,64 +96,52 @@ const noopSink: EvalSink = {
 };
 
 // ============================================================================
-// HTTP Batch Sink
+// InsForge Sink — routes events to dedicated tables
+//
+// eval_runs       ← run_start (INSERT), run_end (PATCH)
+// eval_turns      ← turn_anchor (INSERT)
+// eval_sal_anchors← turn_anchor × 2: anchor_type "task" + "action"
 // ============================================================================
 
-class HttpEvalSink implements EvalSink {
+class InsForgeEvalSink implements EvalSink {
 	readonly enabled = true;
 
-	private endpoint: string;
-	private batchUrl: string;
+	private base: string;
 	private headers: Record<string, string>;
 	private allowSelfSigned: boolean;
-	private pending: EvalEventEnvelope[] = [];
-	private runId: string;
-	private batchSize: number;
 	private batchIntervalMs: number;
+	private pending: EvalEventEnvelope[] = [];
 	private flushTimer: ReturnType<typeof setTimeout> | undefined;
 	private closed = false;
 
 	constructor(options: CreateEvalSinkOptions) {
-		this.endpoint = options.endpoint!;
-		const tableName = options.tableName ?? "eval_events";
-		this.batchUrl = `${this.endpoint.replace(/\/+$/, "")}/api/database/records/${tableName}`;
-		this.runId = options.runId;
-		this.batchSize = options.batchSize ?? 10;
+		this.base = options.endpoint!.replace(/\/+$/, "");
 		this.batchIntervalMs = options.batchIntervalMs ?? 2000;
-
-		const baseHeaders: Record<string, string> = {
-			"Content-Type": "application/json",
-			...(options.headers ?? {}),
-		};
-		// PostgREST auth: anon key in both apikey and Authorization headers
-		if (options.anonKey) {
-			baseHeaders["apikey"] = options.anonKey;
-			baseHeaders["Authorization"] = `Bearer ${options.anonKey}`;
-		}
-		// Ingestion key: separate header (overrides Authorization if no anonKey)
-		if (options.apiKey) {
-			const header = options.apiKeyHeader ?? "x-api-key";
-			baseHeaders[header] = options.apiKey;
-			if (!options.anonKey) {
-				// Fallback: use apiKey as Bearer when no anonKey provided
-				baseHeaders["Authorization"] = `Bearer ${options.apiKey}`;
-			}
-		}
-		this.headers = baseHeaders;
 		this.allowSelfSigned = options.allowSelfSigned ?? false;
 		if (this.allowSelfSigned) {
 			console.warn("[sal][eval] TLS certificate verification disabled (allowSelfSigned=true)");
 		}
+
+		const h: Record<string, string> = {
+			"Content-Type": "application/json",
+			...(options.headers ?? {}),
+		};
+		if (options.anonKey) {
+			h["apikey"] = options.anonKey;
+			h["Authorization"] = `Bearer ${options.anonKey}`;
+		}
+		if (options.apiKey) {
+			h[options.apiKeyHeader ?? "x-api-key"] = options.apiKey;
+			if (!options.anonKey) {
+				h["Authorization"] = `Bearer ${options.apiKey}`;
+			}
+		}
+		this.headers = h;
 	}
 
 	async sendEvent(event: EvalEventEnvelope): Promise<void> {
 		if (this.closed) return;
 		this.pending.push(event);
-
-		if (this.pending.length >= this.batchSize) {
-			await this.flushPending();
-			return;
-		}
 		this.scheduleFlush();
 	}
 
@@ -174,10 +150,9 @@ class HttpEvalSink implements EvalSink {
 			clearTimeout(this.flushTimer);
 			this.flushTimer = undefined;
 		}
-		while (this.pending.length > 0) {
-			const before = this.pending.length;
-			await this.flushPending();
-			if (this.pending.length >= before) break;
+		const toFlush = this.pending.splice(0);
+		for (const event of toFlush) {
+			await this.routeEvent(event);
 		}
 	}
 
@@ -190,30 +165,137 @@ class HttpEvalSink implements EvalSink {
 		if (this.flushTimer) return;
 		this.flushTimer = setTimeout(() => {
 			this.flushTimer = undefined;
-			this.flushPending().catch(() => {});
+			const toFlush = this.pending.splice(0);
+			Promise.all(toFlush.map((e) => this.routeEvent(e))).catch(() => {});
 		}, this.batchIntervalMs);
 	}
 
-	private async flushPending(): Promise<void> {
-		if (this.pending.length === 0) return;
+	// ------------------------------------------------------------------
+	// Routing
+	// ------------------------------------------------------------------
 
-		const batch = this.pending.splice(0, this.batchSize);
-		// PostgREST batch insert: array of rows directly
-		const ok = await this.postJson(this.batchUrl, batch);
-		if (!ok) {
-			// Re-enqueue on failure (prepend to preserve order)
-			this.pending.unshift(...batch);
+	private async routeEvent(event: EvalEventEnvelope): Promise<void> {
+		try {
+			switch (event.event_type) {
+				case "run_start":   await this.handleRunStart(event); break;
+				case "turn_anchor": await this.handleTurnAnchor(event); break;
+				case "run_end":     await this.handleRunEnd(event); break;
+			}
+		} catch (err) {
+			console.error(`[sal][eval] route ${event.event_type} failed:`, (err as Error).message);
 		}
 	}
 
-	private postJson(url: string, body: unknown): Promise<boolean> {
+	// INSERT into eval_runs
+	private async handleRunStart(ev: EvalEventEnvelope): Promise<void> {
+		const p = ev.payload;
+		await this.postJson(`${this.base}/api/database/records/eval_runs`, [{
+			run_id:        ev.run_id,
+			variant:       ev.variant,
+			status:        "running",
+			task_description: strOrNull(p.task_description),
+			task_file:     strOrNull(p.task_file),
+			model:         strOrNull(p.model),
+			thinking:      p.thinking === true,
+			commit_hash:   strOrNull(p.commit, "unknown"),
+			branch_name:   strOrNull(p.branch, "unknown"),
+			workspace_root: strOrNull(p.workspace_root),
+			started_at:    ev.ts,
+		}], { prefer: "resolution=ignore-duplicates" });
+	}
+
+	// INSERT into eval_turns + eval_sal_anchors (task + action)
+	private async handleTurnAnchor(ev: EvalEventEnvelope): Promise<void> {
+		const p = ev.payload;
+		const turnId    = p.turn_id as number;
+		const durationMs = p.duration_ms as number | undefined;
+		const endedAt   = ev.ts;
+		const startedAt = durationMs != null
+			? new Date(new Date(ev.ts).getTime() - durationMs).toISOString()
+			: ev.ts;
+
+		await this.postJson(`${this.base}/api/database/records/eval_turns`, [{
+			run_id:                   ev.run_id,
+			turn_id:                  turnId,
+			event_id:                 ev.event_id,
+			user_prompt:              strOrNull(p.prompt_summary),
+			duration_ms:              durationMs ?? null,
+			started_at:               startedAt,
+			ended_at:                 endedAt,
+		}], { prefer: "resolution=ignore-duplicates" });
+
+		// Task anchor
+		const taskAnchor = p.task_anchor as Record<string, unknown> | null;
+		if (taskAnchor) {
+			await this.postJson(`${this.base}/api/database/records/eval_sal_anchors`, [{
+				run_id:             ev.run_id,
+				turn_id:            turnId,
+				event_id:           `${ev.event_id}-task`,
+				anchor_type:        "task",
+				module_path:        strOrNull(taskAnchor.modulePath),
+				file_path:          strOrNull(taskAnchor.filePath),
+				confidence:         numOrNull(taskAnchor.confidence),
+				candidates:         p.task_candidates ?? null,
+				recorded_at:        ev.ts,
+			}], { prefer: "resolution=ignore-duplicates" });
+		}
+
+		// Action anchor
+		const actionAnchor = p.action_anchor as Record<string, unknown> | null;
+		await this.postJson(`${this.base}/api/database/records/eval_sal_anchors`, [{
+			run_id:             ev.run_id,
+			turn_id:            turnId,
+			event_id:           `${ev.event_id}-action`,
+			anchor_type:        "action",
+			module_path:        strOrNull(actionAnchor?.modulePath),
+			file_path:          strOrNull(actionAnchor?.filePath),
+			confidence:         numOrNull(actionAnchor?.confidence),
+			touched_files:      p.action_files ?? null,
+			recorded_at:        ev.ts,
+		}], { prefer: "resolution=ignore-duplicates" });
+	}
+
+	// PATCH eval_runs — set status + final stats
+	private async handleRunEnd(ev: EvalEventEnvelope): Promise<void> {
+		const p = ev.payload;
+		await this.patchJson(
+			`${this.base}/api/database/records/eval_runs?run_id=eq.${ev.run_id}`,
+			{
+				status:           strOrNull(p.status) ?? "success",
+				turn_count:       numOrNull(p.turn_count),
+				total_duration_ms: numOrNull(p.total_duration_ms),
+				ended_at:         ev.ts,
+			},
+		);
+	}
+
+	// ------------------------------------------------------------------
+	// HTTP helpers
+	// ------------------------------------------------------------------
+
+	private postJson(url: string, body: unknown, extra?: { prefer?: string }): Promise<boolean> {
+		const extraHeaders: Record<string, string> = {};
+		if (extra?.prefer) extraHeaders["Prefer"] = extra.prefer;
+		return this.httpJson("POST", url, body, extraHeaders);
+	}
+
+	private patchJson(url: string, body: unknown): Promise<boolean> {
+		return this.httpJson("PATCH", url, body, {});
+	}
+
+	private httpJson(
+		method: string,
+		url: string,
+		body: unknown,
+		extraHeaders: Record<string, string>,
+	): Promise<boolean> {
 		return new Promise((resolve) => {
 			const payload = JSON.stringify(body);
 			let parsed: URL;
 			try {
 				parsed = new URL(url);
 			} catch {
-				console.error(`[sal][eval] invalid endpoint URL: ${url}`);
+				console.error(`[sal][eval] invalid URL: ${url}`);
 				resolve(false);
 				return;
 			}
@@ -225,9 +307,10 @@ class HttpEvalSink implements EvalSink {
 					hostname: parsed.hostname,
 					port,
 					path: parsed.pathname + parsed.search,
-					method: "POST",
+					method,
 					headers: {
 						...this.headers,
+						...extraHeaders,
 						"Content-Length": Buffer.byteLength(payload),
 					},
 					timeout: 5000,
@@ -241,7 +324,7 @@ class HttpEvalSink implements EvalSink {
 						const ok = res.statusCode !== undefined && res.statusCode < 300;
 						if (!ok) {
 							console.error(
-								`[sal][eval] HTTP ${res.statusCode} from ${parsed.hostname}${parsed.pathname} — ${rawBody.slice(0, 200)}`,
+								`[sal][eval] HTTP ${res.statusCode} ${method} ${parsed.pathname} — ${rawBody.slice(0, 300)}`,
 							);
 						}
 						resolve(ok);
@@ -253,7 +336,7 @@ class HttpEvalSink implements EvalSink {
 				resolve(false);
 			});
 			req.on("timeout", () => {
-				console.error(`[sal][eval] timeout posting to ${parsed.hostname}`);
+				console.error(`[sal][eval] timeout ${method} ${parsed.pathname}`);
 				req.destroy();
 				resolve(false);
 			});
@@ -261,4 +344,19 @@ class HttpEvalSink implements EvalSink {
 			req.end();
 		});
 	}
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function strOrNull(v: unknown, skipValue?: string): string | null {
+	if (v == null || v === "" || v === skipValue) return null;
+	return String(v);
+}
+
+function numOrNull(v: unknown): number | null {
+	if (v == null) return null;
+	const n = Number(v);
+	return isNaN(n) ? null : n;
 }

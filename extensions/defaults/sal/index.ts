@@ -112,6 +112,7 @@ interface EvalCredentials {
 	api_key_header?: string;
 	headers?: Record<string, string>;
 	enabled?: boolean;
+	allow_self_signed?: boolean;
 }
 function isTruthy(value: string | undefined): boolean {
 	if (!value) return false;
@@ -438,6 +439,10 @@ export default async function salExtension(api: ExtensionAPI) {
 		console.error("[sal][eval] enabled but no endpoint found in env or credentials. Using noop sink.");
 	}
 
+	const evalAllowSelfSigned =
+		isTruthy(process.env["NANOPENCIL_EVAL_ALLOW_SELF_SIGNED"]) ||
+		(credentials?.allow_self_signed ?? false);
+
 	const evalSink = createEvalSink({
 		enabled: evalCollectionEnabled && !!evalEndpoint,
 		endpoint: evalEndpoint,
@@ -446,6 +451,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		apiKey: evalApiKey,
 		anonKey: evalAnonKey,
 		apiKeyHeader: evalApiKeyHeader,
+		allowSelfSigned: evalAllowSelfSigned,
 	});
 
 	const runtime: SalRuntime = {
@@ -512,7 +518,12 @@ export default async function salExtension(api: ExtensionAPI) {
 			const credPath = join(credDir, "credentials.json");
 			try {
 				if (!existsSync(credDir)) mkdirSync(credDir, { recursive: true });
-				const creds: Record<string, unknown> = { endpoint, api_key: apiKey, enabled: true };
+				const creds: Record<string, unknown> = {
+					endpoint,
+					api_key: apiKey,
+					enabled: true,
+					allow_self_signed: true,  // InsForge may use private CA; skip TLS verification
+				};
 				if (anonKey) creds.anon_key = anonKey;
 				writeFileSync(credPath, JSON.stringify(creds, null, 2), "utf-8");
 			} catch (err) {
@@ -531,6 +542,7 @@ export default async function salExtension(api: ExtensionAPI) {
 				apiKey,
 				anonKey,
 				apiKeyHeader: runtime.evalApiKeyHeader,
+				allowSelfSigned: true,
 			});
 			runtime.evalSink = newSink;
 			runtime.evalEnabled = true;

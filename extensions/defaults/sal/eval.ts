@@ -62,6 +62,8 @@ export interface CreateEvalSinkOptions {
 	anonKey?: string;
 	/** Target table name (default "eval_events"). */
 	tableName?: string;
+	/** Skip TLS certificate verification (for self-signed / private CA endpoints). */
+	allowSelfSigned?: boolean;
 	/** Batch size (default 10). */
 	batchSize?: number;
 	/** Flush interval ms (default 2000). */
@@ -115,6 +117,7 @@ class HttpEvalSink implements EvalSink {
 	private endpoint: string;
 	private batchUrl: string;
 	private headers: Record<string, string>;
+	private allowSelfSigned: boolean;
 	private pending: EvalEventEnvelope[] = [];
 	private runId: string;
 	private batchSize: number;
@@ -149,6 +152,10 @@ class HttpEvalSink implements EvalSink {
 			}
 		}
 		this.headers = baseHeaders;
+		this.allowSelfSigned = options.allowSelfSigned ?? false;
+		if (this.allowSelfSigned) {
+			console.warn("[sal][eval] TLS certificate verification disabled (allowSelfSigned=true)");
+		}
 	}
 
 	async sendEvent(event: EvalEventEnvelope): Promise<void> {
@@ -224,6 +231,7 @@ class HttpEvalSink implements EvalSink {
 						"Content-Length": Buffer.byteLength(payload),
 					},
 					timeout: 5000,
+					...(isHttps && this.allowSelfSigned ? { rejectUnauthorized: false } : {}),
 				},
 				(res) => {
 					let rawBody = "";

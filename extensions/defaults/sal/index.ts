@@ -521,8 +521,26 @@ export default async function salExtension(api: ExtensionAPI) {
 			});
 			runtime.evalSink = newSink;
 			runtime.evalEnabled = true;
+
+			// Connectivity check: send a probe event and flush immediately
+			ctx.ui.notify("[SAL Setup] Testing connectivity…", "info");
+			const probeEvent = createEvalEvent("run_start", runtime.evalRunId, "sal", {
+				_probe: true,
+				workspace_root: runtime.workspaceRoot,
+				model: "unknown",
+				thinking: false,
+				commit: "unknown",
+				branch: "unknown",
+			}, runtime.evalMetadata);
+			await newSink.sendEvent(probeEvent);
+			await newSink.flush();
+			// Mark run as started so we don't re-emit run_start on next turn
+			runtime.evalRunStarted = true;
+
 			ctx.ui.notify(
-				`[SAL Setup] Credentials saved to ${credPath}\nEval collection active for this session.\nrun_id: ${runtime.evalRunId}`,
+				`[SAL Setup] Credentials saved to ${credPath}\n` +
+				`Eval collection active. run_id: ${runtime.evalRunId}\n` +
+				`Check terminal output for any HTTP errors from the probe request.`,
 				"info",
 			);
 		},

@@ -197,6 +197,7 @@ class HttpEvalSink implements EvalSink {
 			try {
 				parsed = new URL(url);
 			} catch {
+				console.error(`[sal][eval] invalid endpoint URL: ${url}`);
 				resolve(false);
 				return;
 			}
@@ -216,12 +217,29 @@ class HttpEvalSink implements EvalSink {
 					timeout: 5000,
 				},
 				(res) => {
-					res.resume();
-					res.on("end", () => resolve(res.statusCode !== undefined && res.statusCode < 300));
+					let rawBody = "";
+					res.setEncoding("utf-8");
+					res.on("data", (chunk) => { rawBody += chunk; });
+					res.on("end", () => {
+						const ok = res.statusCode !== undefined && res.statusCode < 300;
+						if (!ok) {
+							console.error(
+								`[sal][eval] HTTP ${res.statusCode} from ${parsed.hostname}${parsed.pathname} — ${rawBody.slice(0, 200)}`,
+							);
+						}
+						resolve(ok);
+					});
 				},
 			);
-			req.on("error", () => resolve(false));
-			req.on("timeout", () => { req.destroy(); resolve(false); });
+			req.on("error", (err) => {
+				console.error(`[sal][eval] network error → ${parsed.hostname}: ${err.message}`);
+				resolve(false);
+			});
+			req.on("timeout", () => {
+				console.error(`[sal][eval] timeout posting to ${parsed.hostname}`);
+				req.destroy();
+				resolve(false);
+			});
 			req.write(payload);
 			req.end();
 		});

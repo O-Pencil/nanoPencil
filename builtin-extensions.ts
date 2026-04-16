@@ -67,11 +67,12 @@ function findPackageRoot(startDir: string): string | null {
 export function getBuiltinExtensionPaths(): string[] {
 	const paths: string[] = [];
 
-	// === SAL extension (Structural Anchor Localization, default-on) ===
-	// MUST load before NanoMem so SAL sets globalThis.__salAnchor
-	// before mem-core reads it during before_agent_start scoring.
-	// Pluggable: when --nosal is set, the extension is a runtime no-op.
-	// Deleting this directory + this block must leave the system fully functional.
+	// === SAL extension (Structural Anchor Localization, default-on, experimental) ===
+	// Loaded ahead of NanoMem because turn-context producers must publish before
+	// turn-context consumers read. SAL is a producer of structuralAnchor; NanoMem
+	// is a consumer. Both speak only to core/runtime/turn-context — neither names
+	// the other. Deleting this directory + this block leaves the system fully
+	// functional (NanoMem's structural boost just becomes a no-op).
 	if (existsSync(BUNDLED_SAL_EXTENSION)) {
 		paths.push(BUNDLED_SAL_EXTENSION);
 	} else {

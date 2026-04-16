@@ -1,11 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { NanoMemEngine } from "../src/engine.js";
+import { TURN_CONTEXT_GLOBAL_KEY } from "../src/turn-context.js";
 import type { BaseMemoryV2 } from "../src/types-v2.js";
 
-test("sal bridge: currentStructuralAnchor reads only the selected anchor", () => {
+// These tests verify that mem-core reads structural anchors from the generic
+// turn-context bus. Any extension (SAL, or a future locator) may be the producer.
+// mem-core itself names no producer.
+
+function setAnchor(value: { modulePath?: string; filePath?: string; candidatePaths?: string[] } | undefined): void {
+	(globalThis as any)[TURN_CONTEXT_GLOBAL_KEY] = { structuralAnchor: value };
+}
+
+function clearAnchor(): void {
+	(globalThis as any)[TURN_CONTEXT_GLOBAL_KEY] = {};
+}
+
+test("turn-context bus: currentStructuralAnchor reads only the selected anchor", () => {
 	const engine = new NanoMemEngine({ structuralWeight: 0.15 });
-	(globalThis as any).__salAnchor = {
+	setAnchor({
 		modulePath: "core/runtime",
 		filePath: "core/runtime/agent-session.ts",
 		candidatePaths: [
@@ -14,7 +27,7 @@ test("sal bridge: currentStructuralAnchor reads only the selected anchor", () =>
 			"core/session",
 			"core/session/session-manager.ts",
 		],
-	};
+	});
 
 	try {
 		assert.deepEqual((engine as any).currentStructuralAnchor(), {
@@ -22,11 +35,11 @@ test("sal bridge: currentStructuralAnchor reads only the selected anchor", () =>
 			filePath: "core/runtime/agent-session.ts",
 		});
 	} finally {
-		(globalThis as any).__salAnchor = undefined;
+		clearAnchor();
 	}
 });
 
-test("sal bridge: computeStructuralBoost uses candidatePaths for structural overlap", () => {
+test("turn-context bus: computeStructuralBoost uses candidatePaths for structural overlap", () => {
 	const engine = new NanoMemEngine({ structuralWeight: 0.15 });
 	const entry: BaseMemoryV2 = {
 		id: "sem:test",
@@ -55,15 +68,15 @@ test("sal bridge: computeStructuralBoost uses candidatePaths for structural over
 		],
 	};
 
-	(globalThis as any).__salAnchor = {
+	setAnchor({
 		modulePath: "core/runtime",
 		filePath: "core/runtime/agent-session.ts",
 		candidatePaths: ["core/runtime", "core/runtime/agent-session.ts"],
-	};
+	});
 
 	try {
 		assert.equal((engine as any).computeStructuralBoost(entry), 1);
 	} finally {
-		(globalThis as any).__salAnchor = undefined;
+		clearAnchor();
 	}
 });

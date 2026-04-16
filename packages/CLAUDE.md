@@ -150,6 +150,7 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 `linking.ts`: Memory relationship discovery
 `privacy.ts`: Privacy controls and PII filtering
 `scoring.ts`: Retrieval scoring algorithms
+`turn-context.ts`: Read-only mirror of host's per-turn hint bus (TURN_CONTEXT_GLOBAL_KEY shared with core/runtime/turn-context.ts); engine-scoring-v2 consumes structuralAnchor for SAL boost without depending on the SAL extension
 `types.ts`: All memory type definitions
 `update.ts`: Memory update operations
 

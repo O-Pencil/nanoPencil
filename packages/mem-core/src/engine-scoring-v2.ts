@@ -1,18 +1,17 @@
 /**
  * [WHO]: Provides currentStructuralAnchor, computeStructuralBoost, scoreEpisodeMemory, scoreEpisodeFacet, scoreV2SemanticMemory, scoreProceduralMemory
- * [FROM]: Depends on ./scoring.js for daysSince, extractTags, tagOverlap; ./types-v2.js for V2 memory types
+ * [FROM]: Depends on ./scoring.js for daysSince, extractTags, tagOverlap; ./types-v2.js for V2 memory types; ./turn-context.js for the generic per-turn hint bus
  * [TO]: Consumed by engine.ts, engine-recall-select.ts, engine-episode-sync.ts, engine-v2-mapping.ts
- * [HERE]: packages/mem-core/src/engine-scoring-v2.ts - V2 memory scoring and structural proximity computation
+ * [HERE]: packages/mem-core/src/engine-scoring-v2.ts - V2 memory scoring and structural proximity computation; reads structural anchors from any extension that publishes to the turn-context bus
  */
 
 import { daysSince, extractTags, tagOverlap } from "./scoring.js";
+import { getTurnContext } from "./turn-context.js";
 import type { BaseMemoryV2, EpisodeFacet, EpisodeMemory, ProceduralMemory, SemanticMemory } from "./types-v2.js";
 
-/** Read current SAL anchor and return a structuralAnchor value (or undefined when SAL is absent). */
+/** Read the current structural anchor (or undefined when no producer has published one). */
 export function currentStructuralAnchor(): { modulePath?: string; filePath?: string } | undefined {
-	const anchor = (globalThis as any).__salAnchor as
-		| { modulePath?: string; filePath?: string; candidatePaths?: string[] }
-		| undefined;
+	const anchor = getTurnContext("structuralAnchor");
 	if (!anchor || (!anchor.modulePath && !anchor.filePath)) return undefined;
 	return {
 		modulePath: anchor.modulePath,
@@ -21,14 +20,12 @@ export function currentStructuralAnchor(): { modulePath?: string; filePath?: str
 }
 
 /**
- * Compute structural proximity boost from SAL anchor paths.
- * Reads globalThis.__salAnchor (set by SAL extension before_agent_start).
- * Returns 0 when SAL is absent or no file overlap found.
+ * Compute structural proximity boost from the active turn's structural anchor.
+ * Reads from the generic turn-context bus; returns 0 when no anchor has been
+ * published or when no overlap with the entry's paths is found. Producer-agnostic.
  */
 export function computeStructuralBoost(entry: BaseMemoryV2): number {
-	const anchor = (globalThis as any).__salAnchor as
-		| { modulePath?: string; filePath?: string; candidatePaths?: string[] }
-		| undefined;
+	const anchor = getTurnContext("structuralAnchor");
 	const anchorPaths = anchor?.candidatePaths;
 	if (!anchorPaths || anchorPaths.length === 0) return 0;
 

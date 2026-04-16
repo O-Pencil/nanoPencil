@@ -265,3 +265,4 @@ nanomem insights [--output <path>]  # Generate HTML report
 - `extension.ts` - NanoPencil extension adapter
 - `insights-html.ts` - HTML report generation
 - `cli.ts` - Standalone CLI tool
+- `turn-context.ts` - Read-only mirror of host's per-turn hint bus (TURN_CONTEXT_GLOBAL_KEY/getTurnContext); engine-scoring-v2 reads `structuralAnchor` here for SAL boost without taking a hard dep on the SAL extension

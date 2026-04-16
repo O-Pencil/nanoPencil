@@ -1,109 +1,19 @@
 /**
- * [WHO]: Provides EvalSink, EvalVariant, EvalEventEnvelope, createEvalEvent, createEvalSink
- * [FROM]: Depends on node:https, node:http, node:url, node:crypto; no internal project deps
- * [TO]: Consumed by extensions/defaults/sal/index.ts for experiment telemetry
- * [HERE]: extensions/defaults/sal/eval.ts - InsForge-native eval sink; routes run_start→eval_runs, turn_anchor→eval_turns+eval_sal_anchors, run_end→PATCH eval_runs
+ * [WHO]: Provides InsForgeEvalSink (PostgREST-backed adapter)
+ * [FROM]: Depends on node:https, node:http, node:url; ./types.js for EvalSink/EvalEventEnvelope/CreateEvalSinkOptions
+ * [TO]: Constructed by eval/index.ts factory when adapter resolves to "insforge"
+ * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates), turn_anchor→eval_turns + eval_sal_anchors×2, run_end→eval_runs PATCH
+ *
+ * Pluggable: nothing in this file may be imported from outside the eval/ directory.
+ * To add a new backend, write a sibling file with the same EvalSink interface.
  */
 
 import { request } from "node:https";
 import { request as httpRequest } from "node:http";
 import { URL } from "node:url";
-import { randomUUID } from "node:crypto";
+import type { CreateEvalSinkOptions, EvalEventEnvelope, EvalSink } from "./types.js";
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export type EvalVariant = "sal" | "control" | "baseline";
-
-export type EvalEventType =
-	| "run_start"
-	| "run_end"
-	| "turn_anchor";
-
-/** Wire format for eval events passed between index.ts and the sink. */
-export interface EvalEventEnvelope {
-	run_id: string;
-	event_id: string;
-	event_type: EvalEventType;
-	variant: EvalVariant;
-	ts: string;
-	payload: Record<string, unknown>;
-	metadata?: Record<string, unknown>;
-}
-
-export interface EvalSink {
-	readonly enabled: boolean;
-	sendEvent(event: EvalEventEnvelope): Promise<void>;
-	flush(): Promise<void>;
-	close(): Promise<void>;
-}
-
-// ============================================================================
-// Factory
-// ============================================================================
-
-export interface CreateEvalSinkOptions {
-	enabled: boolean;
-	endpoint?: string;
-	runId: string;
-	headers?: Record<string, string>;
-	/** Ingestion key (ik_…) — sent as x-api-key header. */
-	apiKey?: string;
-	apiKeyHeader?: string;
-	/** Anon/JWT key — PostgREST auth: sent as apikey + Authorization: Bearer. */
-	anonKey?: string;
-	/** Skip TLS certificate verification (self-signed / private CA). */
-	allowSelfSigned?: boolean;
-	/** Flush interval ms (default 2000). */
-	batchIntervalMs?: number;
-}
-
-export function createEvalEvent(
-	eventType: EvalEventType,
-	runId: string,
-	variant: EvalVariant,
-	payload: Record<string, unknown>,
-	metadata: Record<string, unknown> = {},
-): EvalEventEnvelope {
-	return {
-		run_id: runId,
-		event_id: randomUUID(),
-		event_type: eventType,
-		variant,
-		ts: new Date().toISOString(),
-		payload,
-		metadata,
-	};
-}
-
-export function createEvalSink(options: CreateEvalSinkOptions): EvalSink {
-	if (!options.enabled || !options.endpoint) {
-		return noopSink;
-	}
-	return new InsForgeEvalSink(options);
-}
-
-// ============================================================================
-// Noop Sink
-// ============================================================================
-
-const noopSink: EvalSink = {
-	enabled: false,
-	sendEvent: async () => {},
-	flush: async () => {},
-	close: async () => {},
-};
-
-// ============================================================================
-// InsForge Sink — routes events to dedicated tables
-//
-// eval_runs       ← run_start (INSERT), run_end (PATCH)
-// eval_turns      ← turn_anchor (INSERT)
-// eval_sal_anchors← turn_anchor × 2: anchor_type "task" + "action"
-// ============================================================================
-
-class InsForgeEvalSink implements EvalSink {
+export class InsForgeEvalSink implements EvalSink {
 	readonly enabled = true;
 
 	private base: string;
@@ -186,7 +96,7 @@ class InsForgeEvalSink implements EvalSink {
 		}
 	}
 
-	// INSERT into eval_runs
+	// INSERT into eval_runs (merge-duplicates so a later run_start can update model)
 	private async handleRunStart(ev: EvalEventEnvelope): Promise<void> {
 		const p = ev.payload;
 		await this.postJson(`${this.base}/api/database/records/eval_runs`, [{
@@ -201,7 +111,7 @@ class InsForgeEvalSink implements EvalSink {
 			branch_name:   strOrNull(p.branch, "unknown"),
 			workspace_root: strOrNull(p.workspace_root),
 			started_at:    ev.ts,
-		}], { prefer: "resolution=ignore-duplicates" });
+		}], { prefer: "resolution=merge-duplicates" });
 	}
 
 	// INSERT into eval_turns + eval_sal_anchors (task + action)
@@ -224,7 +134,6 @@ class InsForgeEvalSink implements EvalSink {
 			ended_at:                 endedAt,
 		}], { prefer: "resolution=ignore-duplicates" });
 
-		// Task anchor
 		const taskAnchor = p.task_anchor as Record<string, unknown> | null;
 		if (taskAnchor) {
 			await this.postJson(`${this.base}/api/database/records/eval_sal_anchors`, [{
@@ -240,7 +149,6 @@ class InsForgeEvalSink implements EvalSink {
 			}], { prefer: "resolution=ignore-duplicates" });
 		}
 
-		// Action anchor
 		const actionAnchor = p.action_anchor as Record<string, unknown> | null;
 		await this.postJson(`${this.base}/api/database/records/eval_sal_anchors`, [{
 			run_id:             ev.run_id,
@@ -346,9 +254,9 @@ class InsForgeEvalSink implements EvalSink {
 	}
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
+// ----------------------------------------------------------------------------
+// Local helpers
+// ----------------------------------------------------------------------------
 
 function strOrNull(v: unknown, skipValue?: string): string | null {
 	if (v == null || v === "" || v === skipValue) return null;

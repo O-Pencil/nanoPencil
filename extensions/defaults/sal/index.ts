@@ -1,6 +1,6 @@
 /**
  * [WHO]: SAL extension entry - enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; runtime no-op when --nosal is set
- * [FROM]: Depends on core/extensions/types.ts, extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval.ts (HttpEvalSink)
+ * [FROM]: Depends on core/extensions/types.ts, core/runtime/turn-context.ts (publishes structuralAnchor), extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval/index.ts (pluggable adapters)
  * [TO]: Loaded by builtin-extensions.ts as a default extension entry point
  * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension; emits run_start/turn_anchor/run_end eval events; /sal:setup writes ~/.memory-experiments/credentials.json
  */
@@ -11,9 +11,10 @@ import { isAbsolute, join, relative } from "node:path";
 import {
 	createEvalEvent,
 	createEvalSink,
+	type EvalAdapterId,
 	type EvalSink,
 	type EvalVariant,
-} from "./eval.js";
+} from "./eval/index.js";
 import type {
 	AgentEndEvent,
 	BeforeAgentStartEvent,
@@ -23,14 +24,8 @@ import type {
 	ExtensionContext,
 	ToolExecutionStartEvent,
 } from "../../../core/extensions/types.js";
+import { setTurnContext } from "../../../core/runtime/turn-context.js";
 import { locateAction, locateTask, type AnchorResolution } from "./anchors.js";
-
-// Local type for bridge anchor (passed via globalThis for eval tracking)
-interface SalBridgeAnchor {
-	modulePath?: string;
-	filePath?: string;
-	candidatePaths: string[];
-}
 
 import {
 	buildTerrainIndex,
@@ -73,6 +68,7 @@ interface SalRuntime {
 	turn: TurnState;
 	sidecarDir: string;
 	evalSink: EvalSink;
+	evalAdapter?: EvalAdapterId;
 	evalEndpoint?: string;
 	evalApiKey?: string;
 	evalAnonKey?: string;
@@ -113,6 +109,8 @@ interface EvalCredentials {
 	headers?: Record<string, string>;
 	enabled?: boolean;
 	allow_self_signed?: boolean;
+	/** Adapter selector. When omitted, inferred from endpoint scheme (http→insforge, file/path→jsonl). */
+	adapter?: EvalAdapterId;
 }
 function isTruthy(value: string | undefined): boolean {
 	if (!value) return false;
@@ -423,6 +421,11 @@ export default async function salExtension(api: ExtensionAPI) {
 	const evalApiKey = process.env[EVAL_API_KEY_ENV] ?? credentials?.api_key;
 	const evalAnonKey = process.env["NANOPENCIL_EVAL_ANON_KEY"] ?? credentials?.anon_key;
 	const evalApiKeyHeader = process.env[EVAL_API_KEY_HEADER_ENV] ?? credentials?.api_key_header;
+	const evalAdapterEnv = process.env["NANOPENCIL_EVAL_ADAPTER"];
+	const evalAdapter: EvalAdapterId | undefined =
+		(evalAdapterEnv === "insforge" || evalAdapterEnv === "jsonl" || evalAdapterEnv === "noop")
+			? evalAdapterEnv
+			: credentials?.adapter;
 	const evalHeaders = {
 		...(credentials?.headers ?? {}),
 		...parseHeadersJson(process.env[EVAL_HEADERS_JSON_ENV]),
@@ -445,6 +448,7 @@ export default async function salExtension(api: ExtensionAPI) {
 
 	const evalSink = createEvalSink({
 		enabled: evalCollectionEnabled && !!evalEndpoint,
+		adapter: evalAdapter,
 		endpoint: evalEndpoint,
 		runId: evalRunId,
 		headers: evalHeaders,
@@ -461,6 +465,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		turn: { turnId: 0, startedAtMs: Date.now(), touchedFiles: new Set<string>() },
 		sidecarDir,
 		evalSink,
+		evalAdapter,
 		evalEndpoint,
 		evalApiKey,
 		evalAnonKey,
@@ -499,56 +504,75 @@ export default async function salExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("sal:setup", {
-		description: "Configure SAL eval credentials. Usage: /sal:setup <endpoint> <api_key> [anon_key]",
+		description:
+			"Configure SAL eval credentials. " +
+			"Usage: /sal:setup <endpoint> [api_key] [anon_key]  — adapter inferred from endpoint scheme " +
+			"(http/https → InsForge backend; file path or file:// → local JSONL log).",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
-			const trimmed = (args ?? "").trim();
-			const firstSpace = trimmed.indexOf(" ");
-			const secondSpace = firstSpace >= 0 ? trimmed.indexOf(" ", firstSpace + 1) : -1;
-			const endpoint = firstSpace >= 0 ? trimmed.slice(0, firstSpace) : trimmed;
-			const apiKey = firstSpace >= 0
-				? (secondSpace > 0 ? trimmed.slice(firstSpace + 1, secondSpace) : trimmed.slice(firstSpace + 1))
-				: "";
-			const anonKey = secondSpace > 0 ? trimmed.slice(secondSpace + 1).trim() : undefined;
+			const tokens = (args ?? "").trim().split(/\s+/).filter((t) => t.length > 0);
+			const endpoint = tokens[0];
+			const apiKey = tokens[1];
+			const anonKey = tokens[2];
 
-			if (!endpoint || !apiKey) {
-				ctx.ui.notify("[SAL Setup] Usage: /sal:setup <endpoint> <api_key> [anon_key]", "error");
+			if (!endpoint) {
+				ctx.ui.notify(
+					"[SAL Setup] Usage: /sal:setup <endpoint> [api_key] [anon_key]\n" +
+					"  - InsForge: /sal:setup https://app.region.insforge.app ik_xxx [anon_jwt]\n" +
+					"  - Local JSONL: /sal:setup /path/to/eval-events.jsonl",
+					"error",
+				);
 				return;
 			}
+
+			// Infer adapter from endpoint scheme; jsonl needs no api_key
+			const inferredAdapter: EvalAdapterId =
+				/^https?:\/\//i.test(endpoint) ? "insforge"
+				: (endpoint.startsWith("file://") || endpoint.startsWith("/") || endpoint.startsWith("./") || endpoint.startsWith("../")) ? "jsonl"
+				: "insforge";
+
+			if (inferredAdapter === "insforge" && !apiKey) {
+				ctx.ui.notify("[SAL Setup] InsForge adapter requires <api_key>", "error");
+				return;
+			}
+
 			const credDir = join(homedir(), ".memory-experiments");
 			const credPath = join(credDir, "credentials.json");
 			try {
 				if (!existsSync(credDir)) mkdirSync(credDir, { recursive: true });
 				const creds: Record<string, unknown> = {
+					adapter: inferredAdapter,
 					endpoint,
-					api_key: apiKey,
 					enabled: true,
-					allow_self_signed: true,  // InsForge may use private CA; skip TLS verification
 				};
+				if (apiKey) creds.api_key = apiKey;
 				if (anonKey) creds.anon_key = anonKey;
+				if (inferredAdapter === "insforge") creds.allow_self_signed = true;
 				writeFileSync(credPath, JSON.stringify(creds, null, 2), "utf-8");
 			} catch (err) {
 				ctx.ui.notify(`[SAL Setup] Failed to write credentials: ${(err as Error).message}`, "error");
 				return;
 			}
 			// Activate sink immediately without restart
+			runtime.evalAdapter = inferredAdapter;
 			runtime.evalEndpoint = endpoint;
 			runtime.evalApiKey = apiKey;
 			runtime.evalAnonKey = anonKey;
 			const newSink = createEvalSink({
 				enabled: true,
+				adapter: inferredAdapter,
 				endpoint,
 				runId: runtime.evalRunId,
 				headers: runtime.evalHeaders,
 				apiKey,
 				anonKey,
 				apiKeyHeader: runtime.evalApiKeyHeader,
-				allowSelfSigned: true,
+				allowSelfSigned: inferredAdapter === "insforge",
 			});
 			runtime.evalSink = newSink;
 			runtime.evalEnabled = true;
 
 			// Connectivity check: send a probe event and flush immediately
-			ctx.ui.notify("[SAL Setup] Testing connectivity…", "info");
+			ctx.ui.notify(`[SAL Setup] Testing ${inferredAdapter} sink…`, "info");
 			const probeEvent = createEvalEvent("run_start", runtime.evalRunId, "sal", {
 				_probe: true,
 				workspace_root: runtime.workspaceRoot,
@@ -559,8 +583,9 @@ export default async function salExtension(api: ExtensionAPI) {
 			}, runtime.evalMetadata);
 			await newSink.sendEvent(probeEvent);
 			await newSink.flush();
-			// Mark run as started so we don't re-emit run_start on next turn
-			runtime.evalRunStarted = true;
+			// Do NOT set evalRunStarted=true here — let before_agent_start emit the real
+			// run_start with the actual model name, which will upsert (merge-duplicates)
+			// and overwrite the probe's model=unknown placeholder.
 
 			ctx.ui.notify(
 				`[SAL Setup] Credentials saved to ${credPath}\n` +
@@ -583,6 +608,7 @@ export default async function salExtension(api: ExtensionAPI) {
 				"[SAL Status]",
 				`  SAL: ${flagOn ? "ON (default)" : "OFF (--nosal)"}`,
 				`  eval: ${runtime.evalEnabled ? "ON" : "OFF"}`,
+				`  adapter: ${runtime.evalAdapter ?? "(inferred at sink creation)"}`,
 				`  endpoint: ${endpointDisplay}`,
 				`  run_id: ${runtime.evalRunId}`,
 				`  workspaceRoot: ${runtime.workspaceRoot}`,
@@ -598,7 +624,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	api.on(
 		"before_agent_start",
 		async (event: BeforeAgentStartEvent, ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
-			(globalThis as any).__salAnchor = undefined;
+			setTurnContext("structuralAnchor", undefined);
 
 			runtime.turnCounter += 1;
 			runtime.turn = {
@@ -641,12 +667,11 @@ export default async function salExtension(api: ExtensionAPI) {
 				.slice(0, 4)
 				.flatMap((c) => [c.anchor.modulePath, c.anchor.filePath].filter(Boolean) as string[]);
 			if (selectedAnchor || candidatePaths.length > 0) {
-				const bridgeAnchor: SalBridgeAnchor = {
+				setTurnContext("structuralAnchor", {
 					modulePath: selectedAnchor?.modulePath,
 					filePath: selectedAnchor?.filePath,
 					candidatePaths,
-				};
-				(globalThis as any).__salAnchor = bridgeAnchor;
+				});
 			}
 
 			const injection = buildContextInjection(resolution, snapshot);

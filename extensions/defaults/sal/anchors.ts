@@ -1,5 +1,5 @@
 /**
- * [WHO]: StructuralAnchor, AnchorResolution, locateTask(), locateAction(), scoreCandidate()
+ * [WHO]: StructuralAnchor, AnchorResolution, locateTask(), locateAction(), scoreNode()
  * [FROM]: Depends on extensions/defaults/sal/terrain.ts, extensions/defaults/sal/weights.ts
  * [TO]: Consumed by extensions/defaults/sal/index.ts
  * [HERE]: extensions/defaults/sal/anchors.ts - evidence-driven anchor inference and scoring
@@ -67,11 +67,23 @@ const STOPWORDS = new Set([
 	"it",
 ]);
 
+// CJK Unified Ideographs block (basic): U+4E00–U+9FFF
+const CJK_RE = /[\u4e00-\u9fff]+/g;
+
 function tokenize(text: string): string[] {
-	return text
+	const ascii = text
 		.toLowerCase()
 		.split(/[^a-z0-9]+/)
 		.filter((t) => t.length > 2 && !STOPWORDS.has(t));
+	// Also extract CJK bigrams so Chinese prompts can score against Chinese P2 summaries
+	const cjkBigrams: string[] = [];
+	for (const block of text.match(CJK_RE) ?? []) {
+		for (let i = 0; i < block.length - 1; i++) {
+			cjkBigrams.push(block.slice(i, i + 2));
+		}
+		if (block.length === 1) cjkBigrams.push(block);
+	}
+	return [...ascii, ...cjkBigrams];
 }
 
 function normalizeRel(workspaceRoot: string, p: string): string {

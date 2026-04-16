@@ -27,11 +27,15 @@ loop/scheduler-controller.ts: SchedulerController - in-memory recurring task sto
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
-sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; /sal:setup writes ~/.memory-experiments/credentials.json; emits run_start/turn_anchor/run_end eval events; runtime no-op when --nosal is set
+sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; /sal:setup writes ~/.memory-experiments/credentials.json with adapter inference (insforge/jsonl/noop); publishes structuralAnchor via core/runtime/turn-context (no SAL-specific globals); emits run_start/turn_anchor/run_end eval events through pluggable EvalSink; runtime no-op when --nosal is set
 sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 CLAUDE.md and P3 file headers
-sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights
+sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights, CJK bigram tokenization
 sal/weights.ts: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights() reads sal-config.json from workspace or .memory-experiments/sal/
-sal/eval.ts: Batched eval event sink for InsForge, EvalEventType (run_start/run_end/turn_anchor), EvalEventEnvelope/EvalEventBatch types, HttpEvalSink with batching/retry, createEvalEvent/createEvalSink factories; no internal project deps, uses only node:http/https/crypto
+sal/eval/index.ts: createEvalSink() factory + barrel re-exports; adapter selection via options.adapter or endpoint scheme inference (http(s)→insforge, file://|/|./|../→jsonl, missing→noop); ONLY entry point SAL imports from
+sal/eval/types.ts: EvalSink interface, EvalEventEnvelope/EvalEventType (run_start/run_end/turn_anchor), EvalAdapterId ("insforge"|"jsonl"|"noop"), CreateEvalSinkOptions, createEvalEvent factory; zero-dependency type surface
+sal/eval/noop-sink.ts: noopSink — silent EvalSink used when eval disabled or no adapter configured
+sal/eval/insforge-sink.ts: InsForgeEvalSink — PostgREST adapter, routes run_start→eval_runs INSERT (merge-duplicates), turn_anchor→eval_turns + eval_sal_anchors×2, run_end→eval_runs PATCH; allowSelfSigned TLS option, batching with default 2000ms interval
+sal/eval/jsonl-sink.ts: JsonlEvalSink — append-only filesystem adapter, one JSON object per line, accepts file:// URLs or plain paths, auto-creates parent dir, batched writes
 sal/README.md: SAL extension usage, sidecar output layout, weights override, pluggability contract
 team/index.ts: AgentTeam extension entry, /team:/team:spawn/:send/:status/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer
 team/team-types.ts: TeammateRole/TeammateMode/TeammateStatus/TeammateIdentity/TeammateMessage/PersistedTeammate/TeamSpawnSpec/TeamSendResult types

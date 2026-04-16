@@ -1,8 +1,8 @@
 /**
- * [WHO]: SAL extension entry - enabled by default, registers --nosal flag, /sal:coverage command, lifecycle hooks
- * [FROM]: Depends on core/extensions/types.ts, extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval sink in this extension
+ * [WHO]: SAL extension entry - enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; runtime no-op when --nosal is set
+ * [FROM]: Depends on core/extensions/types.ts, extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval.ts (HttpEvalSink)
  * [TO]: Loaded by builtin-extensions.ts as a default extension entry point
- * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension
+ * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension; emits run_start/turn_anchor/run_end eval events; /sal:setup writes ~/.memory-experiments/credentials.json
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -21,7 +21,6 @@ import type {
 	ExtensionAPI,
 	ExtensionCommandContext,
 	ExtensionContext,
-	ToolExecutionEndEvent,
 	ToolExecutionStartEvent,
 } from "../../../core/extensions/types.js";
 import { locateAction, locateTask, type AnchorResolution } from "./anchors.js";
@@ -62,7 +61,6 @@ interface TurnState {
 	startedAtMs: number;
 	taskResolution?: AnchorResolution;
 	touchedFiles: Set<string>;
-	toolsCalled: Set<string>;
 	prompt?: string;
 }
 
@@ -75,6 +73,10 @@ interface SalRuntime {
 	turn: TurnState;
 	sidecarDir: string;
 	evalSink: EvalSink;
+	evalEndpoint?: string;
+	evalApiKey?: string;
+	evalApiKeyHeader?: string;
+	evalHeaders: Record<string, string>;
 	evalEnabled: boolean;
 	evalRunId: string;
 	evalVariantOverride?: EvalVariant;
@@ -268,46 +270,6 @@ function extractToolFilePaths(toolName: string, args: unknown, workspaceRoot: st
 	return out;
 }
 
-// Max bytes kept from any single string field in tool_args (≈2 KB)
-const TOOL_ARG_STRING_LIMIT = 2048;
-
-/**
- * Sanitize tool_args for eval telemetry: truncate large string fields
- * (file content, edit diffs, command output) to keep payloads under InsForge limits.
- */
-function sanitizeToolArgs(toolName: string, args: unknown): Record<string, unknown> {
-	if (!args || typeof args !== "object") return {};
-	const src = args as Record<string, unknown>;
-	const out: Record<string, unknown> = {};
-
-	// Fields that carry bulk content — truncate aggressively
-	const contentFields = new Set([
-		"content", "old_string", "new_string", "oldStr", "newStr",
-		"old", "new", "diff", "patch", "output", "stdout", "stderr",
-	]);
-	// Fields that are paths or identifiers — keep as-is (small)
-	const metaFields = new Set([
-		"file_path", "path", "paths", "command", "pattern", "query",
-		"replace_all", "name", "type", "glob", "regex",
-	]);
-
-	for (const [key, value] of Object.entries(src)) {
-		if (contentFields.has(key) && typeof value === "string") {
-			// Truncate large content, append byte count
-			const truncated = value.length > TOOL_ARG_STRING_LIMIT;
-			out[key] = truncated
-				? `${value.slice(0, TOOL_ARG_STRING_LIMIT)}…[${value.length} bytes]`
-				: value;
-		} else if (metaFields.has(key)) {
-			out[key] = value;
-		} else if (typeof value === "string" && value.length > TOOL_ARG_STRING_LIMIT) {
-			out[key] = `${value.slice(0, TOOL_ARG_STRING_LIMIT)}…[${value.length} bytes]`;
-		} else {
-			out[key] = value;
-		}
-	}
-	return out;
-}
 
 function buildContextInjection(resolution: AnchorResolution, snapshot: TerrainSnapshot): string | undefined {
 	if (!resolution.selected || resolution.candidates.length === 0) return undefined;
@@ -443,10 +405,8 @@ export default async function salExtension(api: ExtensionAPI) {
 	const { weights, source: weightsSource } = loadSalWeights(weightsDirCandidates);
 
 	const credentials = resolveEvalCredentials(workspaceRoot);
-	const evalEnabledByEnv = process.env[EVAL_ENABLED_ENV];
-	// Eval is opt-in: only active when explicitly enabled via env or credentials file.
-	const evalEnabled = evalEnabledByEnv ? isTruthy(evalEnabledByEnv) : false;
-	const evalEnabledByCreds = credentials?.enabled ?? false;
+	const evalEnabledByEnvRaw = process.env[EVAL_ENABLED_ENV];
+	const evalEnabledByEnv = evalEnabledByEnvRaw !== undefined ? isTruthy(evalEnabledByEnvRaw) : undefined;
 	const evalEndpoint = process.env[EVAL_ENDPOINT_ENV] ?? credentials?.insforge_url ?? credentials?.endpoint;
 	const evalRunId =
 		process.env[EVAL_RUN_ID_ENV] ??
@@ -462,14 +422,20 @@ export default async function salExtension(api: ExtensionAPI) {
 		...(credentials?.headers ?? {}),
 		...parseHeadersJson(process.env[EVAL_HEADERS_JSON_ENV]),
 	};
-	const evalCollectionEnabled = evalEnabled && evalEnabledByCreds;
+
+	// Activation: credentials with endpoint+api_key auto-enable (unless explicitly disabled).
+	// Env var NANOPENCIL_EVAL_ENABLED can override either direction.
+	const credHasConfig = !!(credentials?.endpoint ?? credentials?.insforge_url) && !!credentials?.api_key;
+	const evalEnabledByCreds = credHasConfig && credentials?.enabled !== false;
+	const evalCollectionEnabled =
+		evalEnabledByEnv === false ? false : evalEnabledByCreds || evalEnabledByEnv === true;
 
 	if (evalCollectionEnabled && !evalEndpoint) {
-		console.error(`[sal][eval] enabled but no endpoint found in env or credentials. Using noop sink.`);
+		console.error("[sal][eval] enabled but no endpoint found in env or credentials. Using noop sink.");
 	}
 
 	const evalSink = createEvalSink({
-		enabled: evalCollectionEnabled,
+		enabled: evalCollectionEnabled && !!evalEndpoint,
 		endpoint: evalEndpoint,
 		runId: evalRunId,
 		headers: evalHeaders,
@@ -481,9 +447,13 @@ export default async function salExtension(api: ExtensionAPI) {
 		workspaceRoot,
 		weights,
 		weightsSource,
-		turn: { turnId: 0, startedAtMs: Date.now(), touchedFiles: new Set<string>(), toolsCalled: new Set<string>() },
+		turn: { turnId: 0, startedAtMs: Date.now(), touchedFiles: new Set<string>() },
 		sidecarDir,
 		evalSink,
+		evalEndpoint,
+		evalApiKey,
+		evalApiKeyHeader,
+		evalHeaders,
 		evalEnabled: evalSink.enabled,
 		evalRunId,
 		evalVariantOverride,
@@ -513,10 +483,48 @@ export default async function salExtension(api: ExtensionAPI) {
 				display: true,
 				details: { modules, weightsSource: runtime.weightsSource },
 			});
-			await emitEval(runtime, "sal_coverage_check", isEnabled(), {
-				modules_checked: modules,
-				report,
+		},
+	});
+
+	api.registerCommand("sal:setup", {
+		description: "Configure SAL eval credentials. Usage: /sal:setup <endpoint> <api_key>",
+		handler: async (args: string, ctx: ExtensionCommandContext) => {
+			const parts = (args ?? "").trim().split(/\s+/);
+			if (parts.length < 2 || !parts[0] || !parts[1]) {
+				ctx.ui.notify("[SAL Setup] Usage: /sal:setup <endpoint> <api_key>", "error");
+				return;
+			}
+			const [endpoint, apiKey] = parts;
+			const credDir = join(homedir(), ".memory-experiments");
+			const credPath = join(credDir, "credentials.json");
+			try {
+				if (!existsSync(credDir)) mkdirSync(credDir, { recursive: true });
+				writeFileSync(
+					credPath,
+					JSON.stringify({ endpoint, api_key: apiKey, enabled: true }, null, 2),
+					"utf-8",
+				);
+			} catch (err) {
+				ctx.ui.notify(`[SAL Setup] Failed to write credentials: ${(err as Error).message}`, "error");
+				return;
+			}
+			// Activate sink immediately without restart
+			runtime.evalEndpoint = endpoint;
+			runtime.evalApiKey = apiKey;
+			const newSink = createEvalSink({
+				enabled: true,
+				endpoint,
+				runId: runtime.evalRunId,
+				headers: runtime.evalHeaders,
+				apiKey,
+				apiKeyHeader: runtime.evalApiKeyHeader,
 			});
+			runtime.evalSink = newSink;
+			runtime.evalEnabled = true;
+			ctx.ui.notify(
+				`[SAL Setup] Credentials saved to ${credPath}\nEval collection active for this session.\nrun_id: ${runtime.evalRunId}`,
+				"info",
+			);
 		},
 	});
 
@@ -525,11 +533,15 @@ export default async function salExtension(api: ExtensionAPI) {
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			const flagOn = isEnabled();
 			const snapshot = runtime.snapshot;
+			const endpointDisplay = runtime.evalEndpoint
+				? runtime.evalEndpoint.replace(/^(https?:\/\/[^/]{0,20}).*/, "$1…")
+				: "(not configured — use /sal:setup <endpoint> <api_key>)";
 			const lines = [
 				"[SAL Status]",
 				`  SAL: ${flagOn ? "ON (default)" : "OFF (--nosal)"}`,
 				`  eval: ${runtime.evalEnabled ? "ON" : "OFF"}`,
-				`  evalRunId: ${runtime.evalRunId}`,
+				`  endpoint: ${endpointDisplay}`,
+				`  run_id: ${runtime.evalRunId}`,
 				`  workspaceRoot: ${runtime.workspaceRoot}`,
 				`  weightsSource: ${runtime.weightsSource}`,
 				`  snapshotGeneratedAt: ${snapshot ? new Date(snapshot.generatedAt).toISOString() : "(not built)"}`,
@@ -550,7 +562,6 @@ export default async function salExtension(api: ExtensionAPI) {
 				turnId: runtime.turnCounter,
 				startedAtMs: Date.now(),
 				touchedFiles: new Set<string>(),
-				toolsCalled: new Set<string>(),
 				prompt: event.prompt,
 			};
 
@@ -567,12 +578,6 @@ export default async function salExtension(api: ExtensionAPI) {
 					workspace_root: runtime.workspaceRoot,
 				});
 			}
-
-			await emitEval(runtime, "turn_start", isEnabled(), {
-				turn_id: runtime.turn.turnId,
-				user_prompt: (event.prompt ?? "").slice(0, 2000),
-				prompt_truncated: (event.prompt ?? "").length > 2000,
-			});
 
 			if (!isEnabled()) return undefined;
 
@@ -601,15 +606,6 @@ export default async function salExtension(api: ExtensionAPI) {
 				(globalThis as any).__salAnchor = bridgeAnchor;
 			}
 
-			await emitEval(runtime, "sal_anchor", true, {
-				turn_id: runtime.turn.turnId,
-				anchor_type: "task",
-				anchor: resolution.selected,
-				candidates: resolution.candidates.slice(0, 5),
-				touched_files: Array.from(runtime.turn.touchedFiles),
-				unresolved_signals: resolution.unresolvedSignals,
-			});
-
 			const injection = buildContextInjection(resolution, snapshot);
 			if (!injection) return undefined;
 			return { appendSystemPrompt: injection };
@@ -617,76 +613,50 @@ export default async function salExtension(api: ExtensionAPI) {
 	);
 
 	api.on("tool_execution_start", async (event: ToolExecutionStartEvent, _ctx: ExtensionContext) => {
-		if (!isEnabled() && !runtime.evalEnabled) return;
-
 		const paths = extractToolFilePaths(event.toolName, event.args, runtime.workspaceRoot);
 		for (const p of paths) runtime.turn.touchedFiles.add(p);
-		runtime.turn.toolsCalled.add(event.toolName);
-
-		await emitEval(runtime, "tool_call", isEnabled(), {
-			turn_id: runtime.turn.turnId,
-			tool_name: event.toolName,
-			tool_args: sanitizeToolArgs(event.toolName, event.args),
-			call_id: event.toolCallId,
-			touched_files: paths,
-		});
-	});
-
-	api.on("tool_execution_end", async (event: ToolExecutionEndEvent, _ctx: ExtensionContext) => {
-		const resultText =
-			typeof event.result === "string" ? event.result : JSON.stringify(event.result ?? {}, null, 0);
-		await emitEval(runtime, "tool_result", isEnabled(), {
-			turn_id: runtime.turn.turnId,
-			call_id: event.toolCallId,
-			result_preview: resultText.slice(0, 500),
-			result_length: resultText.length,
-			success: !event.isError,
-			error: event.isError ? resultText.slice(0, 500) : undefined,
-		});
 	});
 
 	api.on("agent_end", async (_event: AgentEndEvent, _ctx: ExtensionContext) => {
 		const turnDuration = Math.max(0, Date.now() - runtime.turn.startedAtMs);
-		await emitEval(runtime, "turn_end", isEnabled(), {
-			turn_id: runtime.turn.turnId,
-			assistant_response_length: 0,
-			duration_ms: turnDuration,
-			tools_called: Array.from(runtime.turn.toolsCalled),
-			touched_files: Array.from(runtime.turn.touchedFiles),
-		});
-
-		if (!isEnabled()) {
-			runtime.turn = {
-				turnId: runtime.turn.turnId,
-				startedAtMs: Date.now(),
-				touchedFiles: new Set<string>(),
-				toolsCalled: new Set<string>(),
-			};
-			return;
-		}
+		const taskRes = runtime.turn.taskResolution;
 
 		const snapshot = runtime.snapshot;
-		if (!snapshot) return;
-		const actionRes = locateAction({
-			touchedFiles: Array.from(runtime.turn.touchedFiles),
-			snapshot,
-		});
+		let actionRes: AnchorResolution | undefined;
+		if (isEnabled() && snapshot) {
+			actionRes = locateAction({
+				touchedFiles: Array.from(runtime.turn.touchedFiles),
+				snapshot,
+			});
+		}
 
-		await emitEval(runtime, "sal_anchor", true, {
+		// hit = SAL predicted the right module where the agent actually worked
+		const taskModule = taskRes?.selected?.modulePath ?? taskRes?.selected?.filePath ?? null;
+		const actionModule = actionRes?.selected?.modulePath ?? actionRes?.selected?.filePath ?? null;
+		const hit = !!(taskModule && actionModule && taskModule === actionModule);
+
+		await emitEval(runtime, "turn_anchor", isEnabled(), {
 			turn_id: runtime.turn.turnId,
-			anchor_type: "action",
-			anchor: actionRes.selected,
-			candidates: actionRes.candidates.slice(0, 5),
-			touched_files: Array.from(runtime.turn.touchedFiles),
-			unresolved_signals: actionRes.unresolvedSignals,
+			prompt_summary: (runtime.turn.prompt ?? "").slice(0, 200),
+			task_anchor: taskRes?.selected ?? null,
+			task_candidates: (taskRes?.candidates ?? []).slice(0, 3).map(
+				(c) => c.anchor.modulePath ?? c.anchor.filePath ?? null,
+			),
+			action_files: Array.from(runtime.turn.touchedFiles).slice(0, 10),
+			action_anchor: actionRes?.selected ?? null,
+			hit,
+			sal_enabled: isEnabled(),
+			duration_ms: turnDuration,
 		});
 
-		persistTurnRecord(runtime, runtime.turn.taskResolution, actionRes);
+		if (actionRes) {
+			persistTurnRecord(runtime, taskRes, actionRes);
+		}
+
 		runtime.turn = {
 			turnId: runtime.turn.turnId,
 			startedAtMs: Date.now(),
 			touchedFiles: new Set<string>(),
-			toolsCalled: new Set<string>(),
 		};
 	});
 

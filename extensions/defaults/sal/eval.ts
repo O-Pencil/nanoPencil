@@ -2,7 +2,7 @@
  * [WHO]: Provides EvalSink, EvalVariant, EvalEvent, EvalEventEnvelope, createEvalEvent, createEvalSink
  * [FROM]: Depends on node:https, node:http, node:url, node:crypto for HTTP POST + UUID; no internal project deps
  * [TO]: Consumed by extensions/defaults/sal/index.ts for experiment telemetry
- * [HERE]: extensions/defaults/sal/eval.ts - batched eval event sink for InsForge evaluation platform
+ * [HERE]: extensions/defaults/sal/eval.ts - batched eval event sink for InsForge; EvalEventType: run_start | run_end | turn_anchor
  */
 
 import { request } from "node:https";
@@ -19,12 +19,7 @@ export type EvalVariant = "sal" | "control" | "baseline";
 export type EvalEventType =
 	| "run_start"
 	| "run_end"
-	| "turn_start"
-	| "turn_end"
-	| "sal_anchor"
-	| "sal_coverage_check"
-	| "tool_call"
-	| "tool_result";
+	| "turn_anchor";
 
 /** Wire format matching InsForge EvalEventEnvelope schema. */
 export interface EvalEventEnvelope {

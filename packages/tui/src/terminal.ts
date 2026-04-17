@@ -167,10 +167,24 @@ export class ProcessTerminal implements Terminal {
 	 *
 	 * The response is detected in setupStdinBuffer's data handler, which properly
 	 * handles the case where the response arrives split across multiple stdin events.
+	 *
+	 * GPU-renderer terminals (Warp, Wave) may have issues with Kitty protocol queries.
+	 * Skip the query on these terminals to prevent crashes or hangs.
 	 */
 	private queryAndEnableKittyProtocol(): void {
 		this.setupStdinBuffer();
 		process.stdin.on("data", this.stdinDataHandler!);
+
+		// Skip Kitty protocol query on GPU terminals that may mishandle it
+		const termProgram = process.env.TERM_PROGRAM?.toLowerCase() || "";
+		const kittyProtocolBlocklist = new Set([
+			"warpterminal", // Warp
+			"waveterm",     // Wave Terminal
+		]);
+		if (kittyProtocolBlocklist.has(termProgram)) {
+			return;
+		}
+
 		process.stdout.write("\x1b[?u");
 	}
 

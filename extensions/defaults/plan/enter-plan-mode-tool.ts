@@ -54,6 +54,7 @@ export function createEnterPlanModeTool(
 						type: "text",
 						text: "EnterPlanMode is not available in channels mode. The user may not be present to approve the plan.",
 					}],
+					details: null,
 				};
 			}
 
@@ -70,6 +71,7 @@ export function createEnterPlanModeTool(
 					type: "text",
 					text: getEnterPlanModeToolResult(),
 				}],
+				details: null,
 			};
 		},
 	};

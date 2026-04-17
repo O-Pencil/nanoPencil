@@ -68,6 +68,7 @@ export function createExitPlanModeTool(
 						text: "You are not in plan mode. This tool is only for exiting plan mode after writing a plan. If your plan was already approved, continue with implementation.",
 					}],
 					isError: true,
+					details: null,
 				};
 			}
 
@@ -105,6 +106,7 @@ export function createExitPlanModeTool(
 							text: `Plan validation failed:\n\n${message}\n\nPlease add the missing sections and try again, or use forceExit: true for trivial changes.`,
 						}],
 						isError: true,
+						details: null,
 					};
 				}
 			}
@@ -125,6 +127,7 @@ export function createExitPlanModeTool(
 							type: "text",
 							text: submittedMessage,
 						}],
+						details: null,
 					};
 				} catch (err) {
 					// Fall through to normal exit if submission fails
@@ -151,6 +154,7 @@ export function createExitPlanModeTool(
 					type: "text",
 					text: resultText,
 				}],
+				details: null,
 			};
 		},
 	};

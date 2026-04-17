@@ -21,7 +21,7 @@ export function getPlanModeInstructions(
 		return getSparseReminder(planFilePath, existingPlan !== null);
 	}
 
-	return getFullWorkflow(planFilePath, existingPlan);
+	return getFullWorkflow(planFilePath, existingPlan !== null ? true : null);
 }
 
 function getSparseReminder(planFilePath: string, planExists: boolean): string {

@@ -24,7 +24,7 @@ import type {
 	ExtensionContext,
 	ToolExecutionStartEvent,
 } from "../../../core/extensions/types.js";
-import { setTurnContext } from "../../../core/runtime/turn-context.js";
+import { getTurnContext, resetTurnContext, setTurnContext } from "../../../core/runtime/turn-context.js";
 import { locateAction, locateTask, type AnchorResolution } from "./anchors.js";
 
 import {
@@ -621,64 +621,64 @@ export default async function salExtension(api: ExtensionAPI) {
 		},
 	});
 
-	api.on(
-		"before_agent_start",
-		async (event: BeforeAgentStartEvent, ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
-			setTurnContext("structuralAnchor", undefined);
+		api.on(
+			"before_agent_start",
+			async (event: BeforeAgentStartEvent, ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
+				resetTurnContext();
 
-			runtime.turnCounter += 1;
-			runtime.turn = {
-				turnId: runtime.turnCounter,
-				startedAtMs: Date.now(),
-				touchedFiles: new Set<string>(),
-				prompt: event.prompt,
-			};
+				runtime.turnCounter += 1;
+				runtime.turn = {
+					turnId: runtime.turnCounter,
+					startedAtMs: Date.now(),
+					touchedFiles: new Set<string>(),
+					prompt: event.prompt,
+				};
 
-			if (!runtime.evalRunStarted && runtime.evalEnabled) {
-				runtime.evalRunStarted = true;
-				runtime.evalMetadata.model = runtime.evalMetadata.model ?? (ctx.model as any)?.id ?? (ctx.model as any)?.name;
-				await emitEval(runtime, "run_start", isEnabled(), {
-					task_description: (event.prompt ?? "").slice(0, 500),
-					task_file: process.env.NANOPENCIL_EXPERIMENT_TASK_FILE,
-					model: runtime.evalMetadata.model ?? "unknown",
-					thinking: false,
-					commit: process.env.NANOPENCIL_EVAL_COMMIT ?? "unknown",
-					branch: process.env.NANOPENCIL_EVAL_BRANCH ?? "unknown",
-					workspace_root: runtime.workspaceRoot,
+				if (!runtime.evalRunStarted && runtime.evalEnabled) {
+					runtime.evalRunStarted = true;
+					runtime.evalMetadata.model = runtime.evalMetadata.model ?? (ctx.model as any)?.id ?? (ctx.model as any)?.name;
+					await emitEval(runtime, "run_start", isEnabled(), {
+						task_description: (event.prompt ?? "").slice(0, 500),
+						task_file: process.env.NANOPENCIL_EXPERIMENT_TASK_FILE,
+						model: runtime.evalMetadata.model ?? "unknown",
+						thinking: false,
+						commit: process.env.NANOPENCIL_EVAL_COMMIT ?? "unknown",
+						branch: process.env.NANOPENCIL_EVAL_BRANCH ?? "unknown",
+						workspace_root: runtime.workspaceRoot,
+					});
+				}
+
+				if (!isEnabled()) return undefined;
+
+				const forceRebuild = Boolean(api.getFlag(SAL_REBUILD_FLAG));
+				const snapshot = ensureSnapshot(runtime, forceRebuild);
+				if (!snapshot) return undefined;
+
+				const resolution = locateTask({
+					prompt: event.prompt ?? "",
+					cwd: runtime.workspaceRoot,
+					snapshot,
+					weights: runtime.weights,
 				});
-			}
+				runtime.turn.taskResolution = resolution;
 
-			if (!isEnabled()) return undefined;
+				const selectedAnchor = resolution.selected;
+				const candidatePaths = resolution.candidates
+					.slice(0, 4)
+					.flatMap((c) => [c.anchor.modulePath, c.anchor.filePath].filter(Boolean) as string[]);
+				if (selectedAnchor || candidatePaths.length > 0) {
+					setTurnContext("structuralAnchor", {
+						modulePath: selectedAnchor?.modulePath,
+						filePath: selectedAnchor?.filePath,
+						candidatePaths,
+					});
+				}
 
-			const forceRebuild = Boolean(api.getFlag(SAL_REBUILD_FLAG));
-			const snapshot = ensureSnapshot(runtime, forceRebuild);
-			if (!snapshot) return undefined;
-
-			const resolution = locateTask({
-				prompt: event.prompt ?? "",
-				cwd: runtime.workspaceRoot,
-				snapshot,
-				weights: runtime.weights,
-			});
-			runtime.turn.taskResolution = resolution;
-
-			const selectedAnchor = resolution.selected;
-			const candidatePaths = resolution.candidates
-				.slice(0, 4)
-				.flatMap((c) => [c.anchor.modulePath, c.anchor.filePath].filter(Boolean) as string[]);
-			if (selectedAnchor || candidatePaths.length > 0) {
-				setTurnContext("structuralAnchor", {
-					modulePath: selectedAnchor?.modulePath,
-					filePath: selectedAnchor?.filePath,
-					candidatePaths,
-				});
-			}
-
-			const injection = buildContextInjection(resolution, snapshot);
-			if (!injection) return undefined;
-			return { appendSystemPrompt: injection };
-		},
-	);
+				const injection = buildContextInjection(resolution, snapshot);
+				if (!injection) return undefined;
+				return { appendSystemPrompt: injection };
+			},
+		);
 
 	api.on("tool_execution_start", async (event: ToolExecutionStartEvent, _ctx: ExtensionContext) => {
 		const paths = extractToolFilePaths(event.toolName, event.args, runtime.workspaceRoot);
@@ -717,6 +717,15 @@ export default async function salExtension(api: ExtensionAPI) {
 			duration_ms: turnDuration,
 		});
 
+		// Emit memory recall snapshot (written by mem-core during before_agent_start)
+		const recallSnapshot = getTurnContext("memoryRecallSnapshot");
+		if (recallSnapshot && recallSnapshot.length > 0) {
+			await emitEval(runtime, "memory_recalls", isEnabled(), {
+				turn_id: runtime.turn.turnId,
+				recalls: recallSnapshot,
+			});
+		}
+
 		if (actionRes) {
 			persistTurnRecord(runtime, taskRes, actionRes);
 		}
@@ -741,8 +750,6 @@ export default async function salExtension(api: ExtensionAPI) {
 }
 
 export { SAL_DEFAULT_WEIGHTS, normalizeExperimentId, resolveSalSidecarDir };
-
-
 
 
 

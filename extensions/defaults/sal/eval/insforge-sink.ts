@@ -87,9 +87,10 @@ export class InsForgeEvalSink implements EvalSink {
 	private async routeEvent(event: EvalEventEnvelope): Promise<void> {
 		try {
 			switch (event.event_type) {
-				case "run_start":   await this.handleRunStart(event); break;
-				case "turn_anchor": await this.handleTurnAnchor(event); break;
-				case "run_end":     await this.handleRunEnd(event); break;
+				case "run_start":       await this.handleRunStart(event); break;
+				case "turn_anchor":     await this.handleTurnAnchor(event); break;
+				case "memory_recalls":  await this.handleMemoryRecalls(event); break;
+				case "run_end":         await this.handleRunEnd(event); break;
 			}
 		} catch (err) {
 			console.error(`[sal][eval] route ${event.event_type} failed:`, (err as Error).message);
@@ -174,6 +175,35 @@ export class InsForgeEvalSink implements EvalSink {
 				total_duration_ms: numOrNull(p.total_duration_ms),
 				ended_at:         ev.ts,
 			},
+		);
+	}
+
+	// INSERT into eval_memory_recalls — one row per scored memory in this turn
+	private async handleMemoryRecalls(ev: EvalEventEnvelope): Promise<void> {
+		const recalls = ev.payload.recalls as Array<Record<string, unknown>> | undefined;
+		if (!recalls || recalls.length === 0) return;
+		const rows = recalls.map((r, idx) => ({
+			run_id:            ev.run_id,
+			turn_id:           ev.payload.turn_id as number,
+			event_id:          `${ev.event_id}-${idx}`,
+			memory_id:         r.memoryId,
+			memory_kind:       strOrNull(r.memoryKind),
+			score_breakdown_status: strOrNull(r.scoreBreakdownStatus),
+			anchor_module:     strOrNull(r.anchorModule),
+			anchor_file:       strOrNull(r.anchorFile),
+			score_recency:     numOrNull(r.scoreRecency),
+			score_importance:  numOrNull(r.scoreImportance),
+			score_relevance:   numOrNull(r.scoreRelevance),
+			score_structural:  numOrNull(r.scoreStructural),
+			score_final:       numOrNull(r.scoreFinal),
+			was_injected:      r.wasInjected === true,
+			inject_rank:       numOrNull(r.injectRank),
+			recorded_at:       ev.ts,
+		}));
+		await this.postJson(
+			`${this.base}/api/database/records/eval_memory_recalls`,
+			rows,
+			{ prefer: "resolution=ignore-duplicates" },
 		);
 	}
 

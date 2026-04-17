@@ -59,6 +59,68 @@ export function computeStructuralBoost(entry: BaseMemoryV2): number {
 	return Math.min(hits / entryPaths.length, 1);
 }
 
+/** Score breakdown for eval collection. All fields are the raw component values before final combination. */
+export interface V2ScoreBreakdown {
+	recency: number;
+	importance: number;
+	relevance: number;
+	structural: number;
+	final: number;
+}
+
+export function breakdownEpisodeMemory(entry: EpisodeMemory, project: string, contextTags: string[], structuralWeight: number): V2ScoreBreakdown {
+	const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
+	const tagScore = tagOverlap(entry.tags, contextTags);
+	const summaryTags = extractTags(`${entry.title ?? ""} ${entry.summary} ${entry.userGoal ?? ""} ${entry.outcome ?? ""}`);
+	const semanticScore = tagOverlap(summaryTags, contextTags);
+	const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+	const salienceBoost = (entry.salience ?? entry.importance) / 10;
+	const structural = computeStructuralBoost(entry);
+	const relevance = projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore));
+	const final = relevance + recency * 0.18 + salienceBoost * 0.22 + structural * structuralWeight;
+	return { recency, importance: salienceBoost, relevance, structural, final };
+}
+
+export function breakdownEpisodeFacet(entry: EpisodeFacet, project: string, contextTags: string[], structuralWeight: number): V2ScoreBreakdown {
+	const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
+	const tagScore = tagOverlap(entry.tags, contextTags);
+	const semanticTags = extractTags(`${entry.searchText} ${entry.anchorText ?? ""} ${entry.summary ?? ""}`);
+	const semanticScore = tagOverlap(semanticTags, contextTags);
+	const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+	const salienceBoost = (entry.salience ?? entry.importance) / 10;
+	const structural = computeStructuralBoost(entry);
+	const relevance = projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore));
+	const final = relevance + recency * 0.15 + salienceBoost * 0.24 + structural * structuralWeight;
+	return { recency, importance: salienceBoost, relevance, structural, final };
+}
+
+export function breakdownV2Semantic(entry: SemanticMemory, project: string, contextTags: string[], structuralWeight: number): V2ScoreBreakdown {
+	const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
+	const tagScore = tagOverlap(entry.tags, contextTags);
+	const semanticTags = extractTags(`${entry.name} ${entry.summary} ${entry.detail ?? ""}`);
+	const semanticScore = tagOverlap(semanticTags, contextTags);
+	const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+	const salienceBoost = (entry.salience ?? entry.importance) / 10;
+	const structural = computeStructuralBoost(entry);
+	const relevance = projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore));
+	const final = relevance + recency * 0.14 + salienceBoost * 0.2 + structural * structuralWeight;
+	return { recency, importance: salienceBoost, relevance, structural, final };
+}
+
+export function breakdownProcedural(entry: ProceduralMemory, project: string, contextTags: string[], structuralWeight: number): V2ScoreBreakdown {
+	const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
+	const tagScore = tagOverlap(entry.tags, contextTags);
+	const summaryTags = extractTags(`${entry.searchText} ${entry.summary} ${entry.contextText ?? ""}`);
+	const semanticScore = tagOverlap(summaryTags, contextTags);
+	const recency = 1 / (1 + daysSince(entry.updatedAt || entry.createdAt));
+	const statusBoost = entry.status === "active" ? 0.2 : entry.status === "draft" ? 0.05 : -0.2;
+	const salienceBoost = (entry.salience ?? entry.importance) / 10;
+	const structural = computeStructuralBoost(entry);
+	const relevance = projectBoost * (0.45 + 0.55 * Math.max(tagScore, semanticScore));
+	const final = relevance + recency * 0.15 + salienceBoost * 0.2 + statusBoost + structural * structuralWeight;
+	return { recency, importance: salienceBoost, relevance, structural, final };
+}
+
 export function scoreEpisodeMemory(entry: EpisodeMemory, project: string, contextTags: string[], structuralWeight: number): number {
 	const projectBoost = !project ? 0.8 : entry.scope?.project === project ? 1 : 0.55;
 	const tagScore = tagOverlap(entry.tags, contextTags);

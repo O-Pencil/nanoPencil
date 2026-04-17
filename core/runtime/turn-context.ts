@@ -11,6 +11,22 @@
  *   key string + TurnContext schema, not the implementation file.
  */
 
+/** Per-memory scoring breakdown published by mem-core for eval collection. */
+export interface MemoryRecallRecord {
+	memoryId: string;
+	memoryKind: string;
+	anchorModule?: string;
+	anchorFile?: string;
+	scoreBreakdownStatus: "available" | "unavailable";
+	scoreRecency?: number;
+	scoreImportance?: number;
+	scoreRelevance?: number;
+	scoreStructural?: number;
+	scoreFinal: number;
+	wasInjected: boolean;
+	injectRank?: number;
+}
+
 /** Channel for per-turn hints that one extension may publish and others may consume. */
 export interface TurnContext {
 	/**
@@ -22,6 +38,11 @@ export interface TurnContext {
 		filePath?: string;
 		candidatePaths?: string[];
 	};
+	/**
+	 * Memory recall snapshot for the active turn (set by mem-core after scoring).
+	 * Contains per-entry score breakdowns for eval collection.
+	 */
+	memoryRecallSnapshot?: MemoryRecallRecord[];
 }
 
 /** Reserved globalThis key. Mirrors must use exactly this string. */

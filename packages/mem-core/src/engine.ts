@@ -87,9 +87,14 @@ import {
 	scoreEpisodeMemory as scoreEpisodeMemoryFn,
 	scoreProceduralMemory as scoreProceduralMemoryFn,
 	scoreV2SemanticMemory as scoreV2SemanticMemoryFn,
+	breakdownEpisodeMemory,
+	breakdownEpisodeFacet,
+	breakdownV2Semantic,
+	breakdownProcedural,
 } from "./engine-scoring-v2.js";
 import {
 	CONVERSATION_PREFERENCE_PATTERNS,
+	buildInjectedMemoryOrder,
 	buildProgressiveInjectionText,
 	isConversationPreference as isConversationPreferenceFn,
 	mergeUniqueEntries as mergeUniqueEntriesFn,
@@ -138,6 +143,7 @@ import {
 	reconsolidateIfNeeded as reconsolidateIfNeededFn,
 } from "./engine-reinforce.js";
 import { selectRecallEntries } from "./engine-recall-select.js";
+import { setTurnContext, type MemoryRecallRecord } from "./turn-context.js";
 
 export class NanoMemEngine {
 	readonly cfg: NanomemConfig;
@@ -541,6 +547,9 @@ export class NanoMemEngine {
 				project, contextTags,
 			});
 
+			// Publish recall snapshot to turn-context bus for eval collection
+			this.publishRecallSnapshot(selection, project, contextTags);
+
 			// Reinforce all recalled entries via spaced repetition
 			await this.reinforceEntries(selection.injectedActiveKnowledge, allKnowledge, this.knowledgePath);
 			await this.reinforceEntries(selection.injectedActiveLessons, allLessons, this.lessonsPath);
@@ -567,6 +576,126 @@ export class NanoMemEngine {
 			const p = PROMPTS[this.cfg.locale] ?? PROMPTS.en;
 			return this.buildProgressiveInjectionText(selection.active, selection.cue, selection.allEntries, selection.graphContext, p);
 		}
+
+	// ─── Recall snapshot for eval collection ──────────────────
+
+	/**
+	 * Build per-memory score breakdowns from the selection result and publish
+	 * to the turn-context bus. The SAL extension (or any eval consumer) can
+	 * read this snapshot from getTurnContext("memoryRecallSnapshot") in its
+	 * agent_end hook to emit eval events. mem-core itself never imports from
+	 * SAL or the eval system.
+	 */
+	private publishRecallSnapshot(
+		selection: import("./engine-recall-select.js").RecallSelectionResult,
+		project: string,
+		contextTags: string[],
+	): void {
+		const sw = this.cfg.structuralWeight;
+		const records: MemoryRecallRecord[] = [];
+		const injectionOrder = buildInjectedMemoryOrder(selection.active, selection.cue);
+		const injectOrderByMemory = new Map(
+			injectionOrder.map((record, index) => [`${record.memoryKind}:${record.memoryId}`, index + 1]),
+		);
+
+		// V2 episode memories
+		const activeEpIds = new Set(selection.active.episodeMemories.map((e) => e.id));
+		const allEpisodes = [...selection.active.episodeMemories, ...selection.cue.episodeMemories];
+		for (const entry of allEpisodes) {
+			const bd = breakdownEpisodeMemory(entry, project, contextTags, sw);
+			const injected = activeEpIds.has(entry.id);
+			records.push({
+				memoryId: entry.id, memoryKind: "episode",
+				anchorModule: entry.structuralAnchor?.modulePath,
+				anchorFile: entry.structuralAnchor?.filePath,
+				scoreBreakdownStatus: "available",
+				scoreRecency: bd.recency, scoreImportance: bd.importance,
+				scoreRelevance: bd.relevance, scoreStructural: bd.structural,
+				scoreFinal: bd.final, wasInjected: injected,
+			});
+		}
+
+		// V2 episode facets
+		const activeEfIds = new Set(selection.active.episodeFacets.map((e) => e.id));
+		const allFacets = [...selection.active.episodeFacets, ...selection.cue.episodeFacets];
+		for (const entry of allFacets) {
+			const bd = breakdownEpisodeFacet(entry, project, contextTags, sw);
+			const injected = activeEfIds.has(entry.id);
+			records.push({
+				memoryId: entry.id, memoryKind: "episodeFacet",
+				anchorModule: entry.structuralAnchor?.modulePath,
+				anchorFile: entry.structuralAnchor?.filePath,
+				scoreBreakdownStatus: "available",
+				scoreRecency: bd.recency, scoreImportance: bd.importance,
+				scoreRelevance: bd.relevance, scoreStructural: bd.structural,
+				scoreFinal: bd.final, wasInjected: injected,
+			});
+		}
+
+		// V2 semantic memories
+		const activeSmIds = new Set(selection.active.semanticMemories.map((e) => e.id));
+		const allSemantic = [...selection.active.semanticMemories, ...selection.cue.semanticMemories];
+		for (const entry of allSemantic) {
+			const bd = breakdownV2Semantic(entry, project, contextTags, sw);
+			const injected = activeSmIds.has(entry.id);
+			records.push({
+				memoryId: entry.id, memoryKind: "semantic",
+				anchorModule: entry.structuralAnchor?.modulePath,
+				anchorFile: entry.structuralAnchor?.filePath,
+				scoreBreakdownStatus: "available",
+				scoreRecency: bd.recency, scoreImportance: bd.importance,
+				scoreRelevance: bd.relevance, scoreStructural: bd.structural,
+				scoreFinal: bd.final, wasInjected: injected,
+			});
+		}
+
+		// V2 procedural memories
+		const activePrIds = new Set(selection.active.procedural.map((e) => e.id));
+		const allProcedural = [...selection.active.procedural, ...selection.cue.procedural];
+		for (const entry of allProcedural) {
+			const bd = breakdownProcedural(entry, project, contextTags, sw);
+			const injected = activePrIds.has(entry.id);
+			records.push({
+				memoryId: entry.id, memoryKind: "procedural",
+				anchorModule: entry.structuralAnchor?.modulePath,
+				anchorFile: entry.structuralAnchor?.filePath,
+				scoreBreakdownStatus: "available",
+				scoreRecency: bd.recency, scoreImportance: bd.importance,
+				scoreRelevance: bd.relevance, scoreStructural: bd.structural,
+				scoreFinal: bd.final, wasInjected: injected,
+			});
+		}
+
+		// Legacy entries (knowledge/lessons/events/prefs/facets) — no structural anchor
+		const legacyKinds = [
+			{ active: selection.injectedActiveKnowledge, cue: selection.injectedCueKnowledge, kind: "knowledge" },
+			{ active: selection.injectedActiveLessons, cue: selection.injectedCueLessons, kind: "lesson" },
+			{ active: selection.injectedActiveEvents, cue: selection.injectedCueEvents, kind: "event" },
+			{ active: selection.injectedActivePrefs, cue: selection.injectedCuePrefs, kind: "preference" },
+			{ active: selection.legacyFacetBridgeActive, cue: selection.legacyFacetBridgeCue, kind: "facet" },
+		];
+		const hl = this.cfg.halfLife;
+		const scoreWeights = this.cfg.scoreWeights;
+		for (const { active, cue, kind } of legacyKinds) {
+			const activeIds = new Set(active.map((e) => e.id));
+			for (const entry of [...active, ...cue]) {
+				const score = scoreEntry(entry, project, contextTags, hl, scoreWeights);
+				records.push({
+					memoryId: entry.id, memoryKind: kind,
+					scoreBreakdownStatus: "unavailable",
+					scoreFinal: score, wasInjected: activeIds.has(entry.id),
+				});
+			}
+		}
+
+		// Assign inject_rank by actual injection order, matching prompt assembly order.
+		for (const record of records) {
+			if (!record.wasInjected) continue;
+			record.injectRank = injectOrderByMemory.get(`${record.memoryKind}:${record.memoryId}`);
+		}
+
+		setTurnContext("memoryRecallSnapshot", records);
+	}
 
 	// ─── Progressive Recall Tools ───────────────────────────────
 

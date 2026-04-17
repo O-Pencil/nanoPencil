@@ -84,6 +84,85 @@ export interface CueInjectionData {
 	procedural: ProceduralMemory[];
 }
 
+export interface InjectedMemoryOrderRecord {
+	memoryId: string;
+	memoryKind: string;
+}
+
+function toLegacyMemoryKind(entry: MemoryEntry): string {
+	switch (entry.type) {
+		case "fact":
+		case "decision":
+		case "entity":
+			return "knowledge";
+		case "lesson":
+		case "preference":
+		case "event":
+			return entry.type;
+		case "pattern":
+		case "struggle":
+			return "facet";
+		default:
+			return "memory";
+	}
+}
+
+export function buildInjectedMemoryOrder(
+	active: ActiveInjectionData,
+	cue: CueInjectionData,
+): InjectedMemoryOrderRecord[] {
+	const conversationPreferenceEntries: InjectedMemoryOrderRecord[] = [];
+	const activeEntries: InjectedMemoryOrderRecord[] = [];
+	const keyEventEntries: InjectedMemoryOrderRecord[] = [];
+	const stateEntries: InjectedMemoryOrderRecord[] = [];
+
+	const pushActiveLegacyEntry = (entry: MemoryEntry) => {
+		const record = {
+			memoryId: entry.id,
+			memoryKind: toLegacyMemoryKind(entry),
+		};
+		if (isConversationPreference(entry)) {
+			conversationPreferenceEntries.push(record);
+			return;
+		}
+		if (entry.stability === "situational" || entry.stateData) {
+			stateEntries.push(record);
+			return;
+		}
+		activeEntries.push(record);
+	};
+
+	for (const entry of active.lessons) pushActiveLegacyEntry(entry);
+	for (const entry of active.knowledge) pushActiveLegacyEntry(entry);
+	for (const entry of active.preferences) pushActiveLegacyEntry(entry);
+	for (const entry of active.facets) {
+		activeEntries.push({ memoryId: entry.id, memoryKind: "facet" });
+	}
+	for (const entry of active.events) {
+		keyEventEntries.push({ memoryId: entry.id, memoryKind: "event" });
+	}
+
+	return [
+		...conversationPreferenceEntries,
+		...activeEntries,
+		...active.episodeMemories.map((entry) => ({ memoryId: entry.id, memoryKind: "episode" })),
+		...active.episodeFacets.map((entry) => ({ memoryId: entry.id, memoryKind: "episodeFacet" })),
+		...active.semanticMemories.map((entry) => ({ memoryId: entry.id, memoryKind: "semantic" })),
+		...active.procedural.map((entry) => ({ memoryId: entry.id, memoryKind: "procedural" })),
+		...keyEventEntries,
+		...stateEntries,
+		...cue.lessons.map((entry) => ({ memoryId: entry.id, memoryKind: "lesson" })),
+		...cue.knowledge.map((entry) => ({ memoryId: entry.id, memoryKind: "knowledge" })),
+		...cue.events.map((entry) => ({ memoryId: entry.id, memoryKind: "event" })),
+		...cue.preferences.map((entry) => ({ memoryId: entry.id, memoryKind: "preference" })),
+		...cue.facets.map((entry) => ({ memoryId: entry.id, memoryKind: "facet" })),
+		...cue.episodeMemories.map((entry) => ({ memoryId: entry.id, memoryKind: "episode" })),
+		...cue.episodeFacets.map((entry) => ({ memoryId: entry.id, memoryKind: "episodeFacet" })),
+		...cue.semanticMemories.map((entry) => ({ memoryId: entry.id, memoryKind: "semantic" })),
+		...cue.procedural.map((entry) => ({ memoryId: entry.id, memoryKind: "procedural" })),
+	];
+}
+
 export function buildProgressiveInjectionText(
 	active: ActiveInjectionData,
 	cue: CueInjectionData,

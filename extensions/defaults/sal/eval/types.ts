@@ -13,7 +13,7 @@ import { randomUUID } from "node:crypto";
 
 export type EvalVariant = "sal" | "control" | "baseline";
 
-export type EvalEventType = "run_start" | "run_end" | "turn_anchor";
+export type EvalEventType = "run_start" | "run_end" | "turn_anchor" | "memory_recalls";
 
 /** Wire format for eval events. Adapter implementations decide how to materialize. */
 export interface EvalEventEnvelope {

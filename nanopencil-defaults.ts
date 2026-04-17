@@ -75,6 +75,13 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 					maxTokens: 65536,
 				},
 				{
+					id: "qwen3.6-plus",
+					name: "Qwen3.6 Plus",
+					input: ["text", "image"],
+					contextWindow: 1000000,
+					maxTokens: 65536,
+				},
+				{
 					id: "qwen3-max-2026-01-23",
 					name: "Qwen3 Max",
 					input: ["text"],

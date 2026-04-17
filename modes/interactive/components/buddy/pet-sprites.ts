@@ -200,8 +200,8 @@ export const ALL_SPRITES: SpriteData[] = [
 // Buddy Pet Component
 // ============================================================================
 
-const IDLE_BLINK_INTERVAL_MS = 6800;
-const IDLE_BLINK_DURATION_MS = 180;
+const IDLE_BLINK_INTERVAL_MS = 2500;
+const IDLE_BLINK_DURATION_MS = 250;
 
 export class BuddyPetComponent implements Component {
 	private tui: TUI;

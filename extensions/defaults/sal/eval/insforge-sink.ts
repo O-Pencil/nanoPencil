@@ -22,6 +22,7 @@ export class InsForgeEvalSink implements EvalSink {
 	private batchIntervalMs: number;
 	private pending: EvalEventEnvelope[] = [];
 	private flushTimer: ReturnType<typeof setTimeout> | undefined;
+	private flushInFlight: Promise<void> | undefined;
 	private closed = false;
 
 	constructor(options: CreateEvalSinkOptions) {
@@ -56,13 +57,30 @@ export class InsForgeEvalSink implements EvalSink {
 	}
 
 	async flush(): Promise<void> {
+		if (this.flushInFlight) {
+			await this.flushInFlight;
+			return;
+		}
+
+		this.flushInFlight = this.doFlush();
+		try {
+			await this.flushInFlight;
+		} finally {
+			this.flushInFlight = undefined;
+		}
+	}
+
+	private async doFlush(): Promise<void> {
 		if (this.flushTimer) {
 			clearTimeout(this.flushTimer);
 			this.flushTimer = undefined;
 		}
-		const toFlush = this.pending.splice(0);
-		for (const event of toFlush) {
-			await this.routeEvent(event);
+		while (true) {
+			const toFlush = this.pending.splice(0);
+			if (toFlush.length === 0) break;
+			for (const event of toFlush) {
+				await this.routeEvent(event);
+			}
 		}
 	}
 
@@ -75,8 +93,7 @@ export class InsForgeEvalSink implements EvalSink {
 		if (this.flushTimer) return;
 		this.flushTimer = setTimeout(() => {
 			this.flushTimer = undefined;
-			const toFlush = this.pending.splice(0);
-			Promise.all(toFlush.map((e) => this.routeEvent(e))).catch(() => {});
+			void this.flush().catch(() => {});
 		}, this.batchIntervalMs);
 	}
 

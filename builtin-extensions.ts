@@ -85,21 +85,24 @@ export function getBuiltinExtensionPaths(): string[] {
 	if (existsSync(BUNDLED_NANOMEM_EXTENSION_PACKAGES)) {
 		paths.push(BUNDLED_NANOMEM_EXTENSION_PACKAGES);
 	} else {
-		// 2) require.resolve: mem-core in node_modules during development/local install
-		try {
-			const extPath = require.resolve("@pencil-agent/mem-core/extension.js");
-			if (existsSync(extPath)) paths.push(extPath);
-		} catch {
-			// 3) Look for package root + node_modules/@pencil-agent/mem-core/dist/extension.js
-			const packageRoot = findPackageRoot(__dirname);
-			if (packageRoot) {
-				const candidate = join(packageRoot, "node_modules", "@pencil-agent", "mem-core", "dist", "extension.js");
-				if (existsSync(candidate)) paths.push(candidate);
+		// 2) Development mode: local workspace source file (preferred over node_modules to avoid conflicts)
+		const memCoreTs = join(__dirname, "packages", "mem-core", "src", "extension.ts");
+		if (existsSync(memCoreTs)) {
+			paths.push(memCoreTs);
+		} else {
+			// 3) require.resolve: mem-core in node_modules during development/local install
+			try {
+				const extPath = require.resolve("@pencil-agent/mem-core/extension.js");
+				if (existsSync(extPath)) paths.push(extPath);
+			} catch {
+				// 4) Look for package root + node_modules/@pencil-agent/mem-core/dist/extension.js
+				const packageRoot = findPackageRoot(__dirname);
+				if (packageRoot) {
+					const candidate = join(packageRoot, "node_modules", "@pencil-agent", "mem-core", "dist", "extension.js");
+					if (existsSync(candidate)) paths.push(candidate);
+				}
 			}
 		}
-		// 4) Development mode: local workspace source file
-		const memCoreTs = join(__dirname, "packages", "mem-core", "src", "extension.ts");
-		if (existsSync(memCoreTs)) paths.push(memCoreTs);
 	}
 
 	// === Simplify extension (optional source, compiled to dist/extensions/optional/simplify) ===

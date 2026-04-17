@@ -272,23 +272,10 @@ export class BuddyPetComponent implements Component {
 
 		const frame = frames[this.currentFrame % frames.length];
 
+		// Only render the sprite, no name or speech bubble
 		const lines: string[] = [];
 		for (const line of frame) {
 			lines.push(theme.fg("accent", line));
-		}
-
-		const nameLine = theme.fg("dim", this.name);
-		lines.push(nameLine);
-
-		if (this.speechBubble) {
-			const bubbleWidth = Math.min(this.speechBubble.length + 4, width);
-			const top = theme.fg("muted", " " + "_".repeat(bubbleWidth - 2) + " ");
-			const mid =
-				theme.fg("muted", "< ") +
-				theme.fg("text", this.speechBubble.slice(0, bubbleWidth - 4)) +
-				theme.fg("muted", " >");
-			const bot = theme.fg("muted", " " + "-".repeat(bubbleWidth - 2) + " ");
-			lines.push(top, mid, bot);
 		}
 
 		return lines;

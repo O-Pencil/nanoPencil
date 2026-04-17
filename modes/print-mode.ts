@@ -88,6 +88,13 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 		await session.prompt(message);
 	}
 
+	// Mirror other modes so extensions can flush per-session finalizers
+	// (for example SAL eval run_end and pending batched uploads).
+	const extensionRunner = session.extensionRunner;
+	if (extensionRunner?.hasHandlers("session_shutdown")) {
+		await extensionRunner.emit({ type: "session_shutdown" });
+	}
+
 	// In text mode, output final response
 	if (mode === "text") {
 		const state = session.state;

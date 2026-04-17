@@ -23,6 +23,8 @@ export interface ScheduledLoopTask {
 	pending: boolean;
 	paused: boolean;
 	quiet: boolean;
+	durable?: boolean;
+	agentId?: string;
 	lastError?: string;
 	lastOutputSnippet?: string;
 }
@@ -35,6 +37,7 @@ export interface LoopStartSpec {
 	name?: string;
 	maxRuns?: number;
 	quiet?: boolean;
+	durable?: boolean;
 }
 
 export type ParsedSchedulerCommand =

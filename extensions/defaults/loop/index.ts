@@ -1,32 +1,41 @@
 /**
- * [WHO]: loopExtension default export - registers /loop scheduler command + loop renderer
- * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions/types, core/runtime/event-bus, ./scheduler-controller, ./scheduler-parser, ./scheduler-types
+ * [WHO]: loopExtension - registers /loop command, cron tools (CronCreate/Delete/List), and unified scheduler
+ * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions/types, core/runtime/event-bus, ./cron, ./cron-tools, ./scheduler-parser
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
- * [HERE]: extensions/defaults/loop/index.ts - session-scoped recurring prompt/command scheduler with pause/resume/run-now/max-runs/quiet
+ * [HERE]: extensions/defaults/loop/index.ts - unified loop extension with single cron scheduler per refactoring plan
  */
 
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions/types.js";
 import type { EventBus } from "../../../core/runtime/event-bus.js";
-import { SchedulerController } from "./scheduler-controller.js";
+import { createCronCreateTool, createCronDeleteTool, createCronListTool } from "./cron-tools/index.js";
+import {
+	createCronScheduler,
+	addCronTask,
+	deleteCronTask,
+	listCronTasks,
+	getCronTask,
+	updateCronTask,
+	intervalToCron,
+	getSessionCronTasks,
+	readCronTasks,
+	clearSessionCronTasks,
+} from "./cron/index.js";
+import type { CronScheduler, CronTask } from "./cron/index.js";
 import { buildSchedulerHelp, parseSchedulerCommand } from "./scheduler-parser.js";
-import type { ScheduledLoopTask } from "./scheduler-types.js";
 
 const LOOP_CUSTOM_TYPE = "loop";
 const SCHEDULER_TICK_MS = 1000;
 
-const schedulerByBus = new WeakMap<EventBus, SchedulerController>();
+// Single unified scheduler per session
+const cronSchedulerByBus = new WeakMap<EventBus, CronScheduler>();
+const apiByBus = new WeakMap<EventBus, ExtensionAPI>();
 const notifyByBus = new WeakMap<EventBus, (msg: string, type?: "info" | "warning" | "error") => void>();
 const schedulerTimerByBus = new WeakMap<EventBus, ReturnType<typeof setInterval>>();
 
-function getScheduler(bus: EventBus): SchedulerController {
-	let scheduler = schedulerByBus.get(bus);
-	if (!scheduler) {
-		scheduler = new SchedulerController();
-		schedulerByBus.set(bus, scheduler);
-	}
-	return scheduler;
+function getCronScheduler(bus: EventBus): CronScheduler | undefined {
+	return cronSchedulerByBus.get(bus);
 }
 
 function notify(bus: EventBus, message: string, type: "info" | "warning" | "error" = "info"): void {
@@ -41,8 +50,6 @@ function publishLoopUpdate(
 	options: { quiet?: boolean } = {},
 ): void {
 	api.appendEntry(LOOP_CUSTOM_TYPE, { message, level: type, timestamp: Date.now() });
-	// Quiet loops still record errors and terminal events to the UI; routine
-	// info ticks are recorded only via appendEntry above.
 	if (options.quiet && type === "info") return;
 	notify(bus, message, type);
 	api.sendMessage({
@@ -52,6 +59,10 @@ function publishLoopUpdate(
 		details: { message, level: type, timestamp: Date.now() },
 	});
 }
+
+// ============================================================================
+// Formatting helpers
+// ============================================================================
 
 function formatRelative(ms: number): string {
 	if (ms <= 0) return "now";
@@ -77,34 +88,30 @@ function summarizeLoopInput(input: string, maxLength = 72): string {
 	return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength - 3)}...`;
 }
 
-function refLabel(task: ScheduledLoopTask): string {
+function refLabel(task: CronTask): string {
 	return task.name ? `${task.name} (${task.id})` : task.id;
 }
 
-function formatScheduledTask(task: ScheduledLoopTask): string {
+function formatScheduledTask(task: CronTask, nextRunAt?: number): string {
 	const now = Date.now();
-	const status = task.paused
-		? "paused"
-		: task.pending
-			? "pending"
-			: task.nextRunAt <= now
-				? "due"
-				: "scheduled";
+	const runAt = nextRunAt ?? task.createdAt;
+	const status = task.paused ? "paused" : task.pending ? "pending" : runAt <= now ? "due" : "scheduled";
+	const nextLabel = nextRunAt !== undefined ? formatRelative(nextRunAt - now) : "unknown";
 	const lines = [
 		`[Loop] ${refLabel(task)} — ${status}`,
-		`Every: ${task.intervalLabel}`,
-		`Kind: ${task.kind}${task.quiet ? " (quiet)" : ""}`,
-		`Next run: ${formatLoopDate(task.nextRunAt)} (in ${formatRelative(task.nextRunAt - now)})`,
-		`Last run: ${formatLoopDate(task.lastRunAt)}`,
-		`Run count: ${task.runCount}${task.maxRuns ? `/${task.maxRuns}` : ""}`,
-		`Input: ${task.input}`,
+		`Every: ${describeInterval(task.cron)}`,
+		`Kind: ${task.prompt.startsWith("/") ? "command" : "prompt"}${task.quiet ? " (quiet)" : ""}`,
+		`Next run: in ${nextLabel}`,
+		`Last run: ${formatLoopDate(task.lastFiredAt)}`,
+		`Run count: ${task.maxRuns ? task.runCount + "/" + task.maxRuns : task.runCount}`,
+		`Input: ${task.prompt}`,
 	];
 	if (task.lastOutputSnippet) lines.push(`Last output: ${task.lastOutputSnippet}`);
 	if (task.lastError) lines.push(`Last error: ${task.lastError}`);
 	return lines.join("\n");
 }
 
-function formatScheduledList(tasks: ScheduledLoopTask[]): string {
+function formatScheduledList(tasks: CronTask[], nextFireTimes: Map<string, number>): string {
 	if (tasks.length === 0) return "[Loop] No scheduled tasks are active.";
 	const now = Date.now();
 	return [
@@ -115,10 +122,21 @@ function formatScheduledList(tasks: ScheduledLoopTask[]): string {
 			if (task.quiet) flags.push("quiet");
 			if (task.maxRuns) flags.push(`max ${task.runCount}/${task.maxRuns}`);
 			const flagStr = flags.length ? ` [${flags.join(", ")}]` : "";
-			const next = task.paused ? "paused" : `next in ${formatRelative(task.nextRunAt - now)}`;
-			return `- ${refLabel(task)}  every ${task.intervalLabel}  ${next}${flagStr}  ${summarizeLoopInput(task.input)}`;
+			const nextFire = nextFireTimes.get(task.id);
+			const next = task.paused ? "paused" : nextFire ? `next in ${formatRelative(nextFire - now)}` : "scheduled";
+			return `- ${refLabel(task)}  every ${describeInterval(task.cron)}  ${next}${flagStr}  ${summarizeLoopInput(task.prompt)}`;
 		}),
 	].join("\n");
+}
+
+function describeInterval(cron: string): string {
+	const match = cron.match(/^\*\/(\d+) \* \* \* \*$/);
+	if (match) return `${match[1]}m`;
+	const hourMatch = cron.match(/^0 \*\/(\d+) \* \* \*$/);
+	if (hourMatch) return `${hourMatch[1]}h`;
+	const dayMatch = cron.match(/^0 0 \*\/(\d+) \* \*$/);
+	if (dayMatch) return `${dayMatch[1]}d`;
+	return cron;
 }
 
 function extractAssistantText(message: AgentMessage | undefined): string {
@@ -129,11 +147,7 @@ function extractAssistantText(message: AgentMessage | undefined): string {
 	return content
 		.filter(
 			(part): part is { type: "text"; text: string } =>
-				typeof part === "object" &&
-				part !== null &&
-				"type" in part &&
-				(part as { type?: unknown }).type === "text" &&
-				typeof (part as { text?: unknown }).text === "string",
+				typeof part === "object" && part !== null && "type" in part && (part as { type?: unknown }).type === "text" && typeof (part as { text?: unknown }).text === "string",
 		)
 		.map((part) => part.text)
 		.join("\n");
@@ -146,47 +160,62 @@ function getLastAssistantMessage(messages: AgentMessage[]): AgentMessage | undef
 	return undefined;
 }
 
-function maybeDispatchScheduledTask(api: ExtensionAPI, bus: EventBus): void {
-	const scheduler = getScheduler(bus);
-	if (!api.isIdle()) return;
+// ============================================================================
+// Task dispatch: triggered by cron scheduler onFire callback
+// ============================================================================
 
-	const dueTask = scheduler.nextDue();
-	if (!dueTask) return;
+async function dispatchTask(api: ExtensionAPI, bus: EventBus, task: CronTask): Promise<void> {
+	const scheduler = getCronScheduler(bus);
+	if (!scheduler) return;
 
-	const task = scheduler.markDispatched(dueTask.id);
-	const scheduledInput = task.input.trim();
+	const label = refLabel(task);
 	publishLoopUpdate(
 		api,
 		bus,
-		`[Loop] Triggering ${refLabel(task)} (${task.intervalLabel}): ${summarizeLoopInput(scheduledInput)}`,
+		`[Loop] Triggering ${label} (${describeInterval(task.cron)}): ${summarizeLoopInput(task.prompt)}`,
 		"info",
 		{ quiet: task.quiet },
 	);
 
-	if (task.kind === "command") {
-		void api.executeCommand(scheduledInput).then((handled) => {
-			if (!handled) {
-				scheduler.markSettled(task.id, "Unknown slash command.");
-				publishLoopUpdate(api, bus, `[Loop] Failed to run ${refLabel(task)}: unknown slash command.`, "error");
-				return;
-			}
-
-			if (api.isIdle()) {
-				scheduler.markSettled(task.id);
-				maybeAutoCancel(api, bus, task.id);
-			}
-		});
-		return;
+	// Mark as pending
+	task.pending = true;
+	if (task.durable) {
+		await updateCronTask(api.cwd, task);
+	} else {
+		const { updateSessionCronTask } = await import("./cron/index.js");
+		updateSessionCronTask(task);
 	}
 
-	api.sendUserMessage(scheduledInput, { deliverAs: "followUp" });
+	if (task.prompt.startsWith("/")) {
+		// Slash command: execute directly
+		const handled = await api.executeCommand(task.prompt.trim());
+		if (!handled) {
+			scheduler.markSettled(task.id, "Unknown slash command.");
+			if (task.durable) await updateCronTask(api.cwd, { ...task, pending: false, lastError: "Unknown slash command." });
+			publishLoopUpdate(api, bus, `[Loop] Failed to run ${label}: unknown slash command.`, "error");
+			return;
+		}
+
+		// Capture output snippet after execution
+		if (api.isIdle()) {
+			scheduler.markSettled(task.id);
+			if (task.durable) await updateCronTask(api.cwd, { ...task, pending: false });
+			await maybeAutoCancel(api, bus, task.id);
+		}
+	} else {
+		// Prompt: send as follow-up user message
+		api.sendUserMessage(task.prompt, { deliverAs: "followUp" });
+	}
 }
 
-function maybeAutoCancel(api: ExtensionAPI, bus: EventBus, id: string): void {
-	const scheduler = getScheduler(bus);
-	if (!scheduler.hasReachedMaxRuns(id)) return;
-	const task = scheduler.cancel(id);
-	if (!task) return;
+async function maybeAutoCancel(api: ExtensionAPI, bus: EventBus, id: string): Promise<void> {
+	const task = await getCronTask(api.cwd, id);
+	if (!task || task.maxRuns === undefined) return;
+	if ((task.runCount ?? 0) < task.maxRuns) return;
+
+	const deleted = await deleteCronTask(api.cwd, id);
+	if (!deleted) return;
+
 	publishLoopUpdate(
 		api,
 		bus,
@@ -195,18 +224,24 @@ function maybeAutoCancel(api: ExtensionAPI, bus: EventBus, id: string): void {
 	);
 }
 
-function ensureSchedulerTicker(api: ExtensionAPI, bus: EventBus): void {
-	if (schedulerTimerByBus.has(bus)) return;
-	const timer = setInterval(() => {
-		maybeDispatchScheduledTask(api, bus);
-	}, SCHEDULER_TICK_MS);
-	schedulerTimerByBus.set(bus, timer);
-}
+// ============================================================================
+// Extension entry point
+// ============================================================================
 
 export default async function loopExtension(api: ExtensionAPI) {
 	const bus = api.events;
-	getScheduler(bus);
+	apiByBus.set(bus, api);
 
+	// =========================================================================
+	// Register Cron tools (per refactoring plan)
+	// =========================================================================
+	api.registerTool(createCronCreateTool());
+	api.registerTool(createCronDeleteTool());
+	api.registerTool(createCronListTool());
+
+	// =========================================================================
+	// Message renderer
+	// =========================================================================
 	api.registerMessageRenderer(LOOP_CUSTOM_TYPE, (message, _options, theme) => {
 		const text =
 			typeof message.content === "string"
@@ -231,125 +266,217 @@ export default async function loopExtension(api: ExtensionAPI) {
 		return container;
 	});
 
-	api.on("session_start", () => {
-		ensureSchedulerTicker(api, bus);
+	// =========================================================================
+	// Create unified cron scheduler
+	// =========================================================================
+	const scheduler = createCronScheduler({
+		onFire: (prompt: string, task: CronTask) => {
+			const currentApi = apiByBus.get(bus);
+			if (currentApi) {
+				void dispatchTask(currentApi, bus, task);
+			}
+		},
+		onSettle: async (id: string, error?: string, outputSnippet?: string) => {
+			const task = await getCronTask(api.cwd, id);
+			if (!task) return;
+
+			task.pending = false;
+			if (error) task.lastError = error;
+			if (outputSnippet) {
+				task.lastOutputSnippet = outputSnippet.length > 120 ? `${outputSnippet.slice(0, 117)}...` : outputSnippet;
+			}
+
+			if (task.durable) {
+				await updateCronTask(api.cwd, task);
+			} else {
+				const { updateSessionCronTask } = await import("./cron/index.js");
+				updateSessionCronTask(task);
+			}
+
+			await maybeAutoCancel(api, bus, id);
+		},
+		dir: api.cwd,
+	});
+	cronSchedulerByBus.set(bus, scheduler);
+
+	// =========================================================================
+	// Session lifecycle
+	// =========================================================================
+	api.on("session_start", async () => {
+		scheduler.start();
+
+		// Ticker for dispatching tasks when agent becomes idle
+		const timer = setInterval(() => {
+			// Cron scheduler handles timing; we just need to check for pending completions
+		}, SCHEDULER_TICK_MS);
+		schedulerTimerByBus.set(bus, timer);
 	});
 
-	api.on("session_shutdown", () => {
-		const timer = schedulerTimerByBus.get(bus);
-		if (timer) clearInterval(timer);
-		schedulerByBus.delete(bus);
-		schedulerTimerByBus.delete(bus);
-		notifyByBus.delete(bus);
-	});
+	api.on("agent_end", async (event) => {
+		const scheduler = getCronScheduler(bus);
+		if (!scheduler) return;
 
-	api.on("agent_end", (event) => {
-		const scheduler = getScheduler(bus);
-		const pendingLoopTask = scheduler.getPendingTask();
-		if (!pendingLoopTask) return;
+		// Check if there's a pending task that just completed
+		const tasks = await listCronTasks(api.cwd);
+		const pendingTask = tasks.find((t) => t.pending);
+		if (!pendingTask) return;
 
 		const assistantText = extractAssistantText(getLastAssistantMessage(event.messages));
 		const snippet = assistantText.replace(/\s+/g, " ").trim() || undefined;
-		scheduler.markSettled(pendingLoopTask.id, undefined, snippet);
-		maybeAutoCancel(api, bus, pendingLoopTask.id);
-		maybeDispatchScheduledTask(api, bus);
+		scheduler.markSettled(pendingTask.id, undefined, snippet);
 	});
 
+	api.on("session_shutdown", async () => {
+		const timer = schedulerTimerByBus.get(bus);
+		if (timer) clearInterval(timer);
+
+		scheduler.stop();
+
+		cronSchedulerByBus.delete(bus);
+		schedulerTimerByBus.delete(bus);
+		notifyByBus.delete(bus);
+		apiByBus.delete(bus);
+	});
+
+	// =========================================================================
+	// /loop command handler
+	// Unified: creates tasks via addCronTask, uses cron scheduler for everything
+	// =========================================================================
 	const handleLoopCommand = async (args: string, ctx: ExtensionCommandContext) => {
 		if (ctx.ui.notify) {
 			notifyByBus.set(bus, ctx.ui.notify.bind(ctx.ui));
 		}
 
-		const scheduler = getScheduler(bus);
 		const parsed = parseSchedulerCommand(args);
 
+		// Subcommands
 		if (parsed.type === "help") {
 			publishLoopUpdate(api, bus, buildSchedulerHelp(parsed.reason), "warning");
 			return;
 		}
 
 		if (parsed.type === "list") {
-			publishLoopUpdate(api, bus, formatScheduledList(scheduler.list()), "info");
+			const tasks = await listCronTasks(api.cwd);
+			const scheduler = getCronScheduler(bus);
+			const nextFireTimes = new Map<string, number>();
+			// Approximate next fire times from tasks
+			for (const task of tasks) {
+				const { nextCronRunMs } = await import("./cron/index.js");
+				const next = nextCronRunMs(task.cron, task.lastFiredAt ?? task.createdAt);
+				if (next) nextFireTimes.set(task.id, next);
+			}
+			publishLoopUpdate(api, bus, formatScheduledList(tasks, nextFireTimes), "info");
 			return;
 		}
 
 		if (parsed.type === "status") {
-			const task = scheduler.resolve(parsed.ref);
+			const task = await resolveTask(api.cwd, parsed.ref);
 			if (!task) {
 				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
 			}
-			publishLoopUpdate(api, bus, formatScheduledTask(task), "info");
+			const { nextCronRunMs } = await import("./cron/index.js");
+			const nextRun = nextCronRunMs(task.cron, task.lastFiredAt ?? task.createdAt) ?? undefined;
+			publishLoopUpdate(api, bus, formatScheduledTask(task, nextRun), "info");
 			return;
 		}
 
 		if (parsed.type === "clear") {
-			const cleared = scheduler.clear();
-			publishLoopUpdate(
-				api,
-				bus,
-				cleared === 0 ? "[Loop] No scheduled tasks were active." : `[Loop] Cleared ${cleared} scheduled task${cleared === 1 ? "" : "s"}.`,
-				"info",
-			);
+			clearSessionCronTasks();
+			if (api.cwd) {
+				await import("./cron/index.js").then(({ writeCronTasks }) => writeCronTasks(api.cwd, []));
+			}
+			publishLoopUpdate(api, bus, "[Loop] Cleared all scheduled tasks.", "info");
 			return;
 		}
 
 		if (parsed.type === "cancel") {
-			const removed = scheduler.cancel(parsed.ref);
+			const removed = await deleteCronTask(api.cwd, parsed.ref);
 			publishLoopUpdate(
 				api,
 				bus,
-				removed ? `[Loop] Cancelled ${refLabel(removed)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
+				removed ? `[Loop] Cancelled ${parsed.ref}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
 				removed ? "info" : "warning",
 			);
 			return;
 		}
 
 		if (parsed.type === "pause") {
-			const paused = scheduler.pause(parsed.ref);
-			publishLoopUpdate(
-				api,
-				bus,
-				paused ? `[Loop] Paused ${refLabel(paused)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
-				paused ? "info" : "warning",
-			);
+			const task = await resolveTask(api.cwd, parsed.ref);
+			if (!task) {
+				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
+				return;
+			}
+			task.paused = true;
+			await updateCronTask(api.cwd, task);
+			publishLoopUpdate(api, bus, `[Loop] Paused ${refLabel(task)}.`, "info");
 			return;
 		}
 
 		if (parsed.type === "resume") {
-			const resumed = scheduler.resume(parsed.ref);
-			publishLoopUpdate(
-				api,
-				bus,
-				resumed ? `[Loop] Resumed ${refLabel(resumed)}; next run in ${formatRelative(resumed.intervalMs)}.` : `[Loop] No scheduled task matches "${parsed.ref}".`,
-				resumed ? "info" : "warning",
-			);
+			const task = await resolveTask(api.cwd, parsed.ref);
+			if (!task) {
+				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
+				return;
+			}
+			task.paused = false;
+			// Re-prime next run from now to avoid immediate fire
+			const { nextCronRunMs } = await import("./cron/index.js");
+			const next = nextCronRunMs(task.cron, Date.now());
+			if (next) {
+				const scheduler = getCronScheduler(bus);
+				if (scheduler) scheduler.forceDue(task.id);
+			}
+			await updateCronTask(api.cwd, task);
+			const nextMs = nextCronRunMs(task.cron, Date.now());
+			const nextLabel = nextMs ? formatRelative(nextMs - Date.now()) : "scheduled";
+			publishLoopUpdate(api, bus, `[Loop] Resumed ${refLabel(task)}; next run in ${nextLabel}.`, "info");
 			return;
 		}
 
 		if (parsed.type === "run") {
-			const triggered = scheduler.forceDue(parsed.ref);
-			if (!triggered) {
+			const task = await resolveTask(api.cwd, parsed.ref);
+			if (!task) {
 				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
 			}
-			publishLoopUpdate(api, bus, `[Loop] Forcing ${refLabel(triggered)} to run now.`, "info");
-			maybeDispatchScheduledTask(api, bus);
+			const scheduler = getCronScheduler(bus);
+			if (scheduler && scheduler.forceDue(task.id)) {
+				publishLoopUpdate(api, bus, `[Loop] Forcing ${refLabel(task)} to run now.`, "info");
+			}
 			return;
 		}
 
+		// === Create task (type === "start") ===
 		try {
-			const task = scheduler.create({
-				input: parsed.input,
-				kind: parsed.kind,
-				intervalMs: parsed.intervalMs,
-				intervalLabel: parsed.intervalLabel,
+			const cronExpr = intervalToCron(parsed.intervalLabel.split(" ")[0] ?? parsed.intervalLabel);
+			if (!cronExpr) {
+				publishLoopUpdate(api, bus, `[Loop] Could not convert interval "${parsed.intervalLabel}" to cron.`, "error");
+				return;
+			}
+
+			const result = await addCronTask(ctx.cwd, {
+				cron: cronExpr,
+				prompt: parsed.input,
+				recurring: true,
+				durable: parsed.durable,
 				name: parsed.name,
 				maxRuns: parsed.maxRuns,
 				quiet: parsed.quiet,
 			});
-			publishLoopUpdate(api, bus, formatScheduledTask(task), "info");
-			maybeDispatchScheduledTask(api, bus);
+
+			// Immediately dispatch the first run (per refactoring plan requirement)
+			const task = await resolveTask(api.cwd, result.id);
+			if (task) {
+				void dispatchTask(api, bus, task);
+			}
+
+			const displayTask = await resolveTask(api.cwd, result.id);
+			if (displayTask) {
+				const { nextCronRunMs } = await import("./cron/index.js");
+				const nextRun = nextCronRunMs(displayTask.cron, displayTask.lastFiredAt ?? displayTask.createdAt) ?? undefined;
+				publishLoopUpdate(api, bus, formatScheduledTask(displayTask, nextRun), "info");
+			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			publishLoopUpdate(api, bus, `[Loop] ${message}`, "error");
@@ -360,4 +487,21 @@ export default async function loopExtension(api: ExtensionAPI) {
 		description: "Schedule a recurring prompt or slash command for this session.",
 		handler: handleLoopCommand,
 	});
+}
+
+/**
+ * Resolve a task reference (id or name) from any store.
+ */
+async function resolveTask(projectRoot: string | undefined, ref: string): Promise<CronTask | undefined> {
+	const trimmed = ref.trim();
+	if (!trimmed) return undefined;
+
+	// Try direct ID match
+	const byId = await getCronTask(projectRoot, trimmed);
+	if (byId) return byId;
+
+	// Try name match
+	const all = await listCronTasks(projectRoot);
+	const lower = trimmed.toLowerCase();
+	return all.find((t) => t.name && t.name.toLowerCase() === lower);
 }

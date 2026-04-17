@@ -58,6 +58,7 @@ type ExtractedFlags = {
 	name?: string;
 	maxRuns?: number;
 	quiet?: boolean;
+	durable?: boolean;
 	error?: "max" | "ref";
 };
 
@@ -74,6 +75,10 @@ function extractFlags(input: string): ExtractedFlags {
 		const token = tokens[i]!;
 		if (token === "--quiet" || token === "-q") {
 			out.quiet = true;
+			continue;
+		}
+		if (token === "--durable" || token === "-d") {
+			out.durable = true;
 			continue;
 		}
 		if (token === "--name") {
@@ -140,6 +145,7 @@ function withDefaults(
 		name: flags.name,
 		maxRuns: flags.maxRuns,
 		quiet: flags.quiet,
+		durable: flags.durable,
 	};
 }
 
@@ -226,6 +232,7 @@ export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "ca
 		"  /loop 5m /grub status                       — slash command every 5 minutes",
 		"  /loop every 10m Review test failures",
 		"  /loop Drink water every 30m --name hydrate --max 8 --quiet",
+		"  /loop Check build every 5m --durable        — persists across sessions",
 		"",
 		"[Loop] Manage:",
 		"  /loop list                                  — show all scheduled loops",
@@ -234,9 +241,16 @@ export function buildSchedulerHelp(reason?: "empty" | "interval" | "input" | "ca
 		"  /loop run <ref>                             — fire immediately",
 		"  /loop cancel <ref> | clear",
 		"",
+		"[Loop] Flags:",
+		"  --name <slug>  — give the loop a friendly name",
+		"  --max <n>      — auto-cancel after N runs",
+		"  --quiet, -q    — suppress per-tick UI messages",
+		"  --durable, -d  — persist loop across sessions",
+		"",
 		"[Loop] Notes:",
 		"  - If no interval is provided, /loop defaults to every 10 minutes.",
-		"  - Schedules are session-scoped and run only while this session stays open.",
+		"  - By default, loops are session-scoped and run only while this session stays open.",
+		"  - Use --durable to persist loops across sessions (saved to .nanopencil/loop-tasks.json).",
 		"  - Due tasks wait until the agent is idle; missed intervals collapse to one pending run.",
 		"  - --quiet suppresses tick messages but still records them via appendEntry.",
 		"  - --max <n> auto-cancels the loop after N runs.",

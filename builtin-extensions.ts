@@ -22,6 +22,7 @@ const BUNDLED_SOUL_EXTENSION = join(__dirname, "extensions", "defaults", "soul",
 const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "presence", "index.js");
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
+const BUNDLED_PLAN_EXTENSION = join(__dirname, "extensions", "defaults", "plan", "index.js");
 const BUNDLED_SAL_EXTENSION = join(__dirname, "extensions", "defaults", "sal", "index.js");
 const BUNDLED_GRUB_EXTENSION = join(__dirname, "extensions", "defaults", "grub", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
@@ -168,6 +169,14 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const loopTs = join(__dirname, "extensions", "defaults", "loop", "index.ts");
 		if (existsSync(loopTs)) paths.push(loopTs);
+	}
+
+	// === Plan extension (/plan mode for planning before coding) ===
+	if (existsSync(BUNDLED_PLAN_EXTENSION)) {
+		paths.push(BUNDLED_PLAN_EXTENSION);
+	} else {
+		const planTs = join(__dirname, "extensions", "defaults", "plan", "index.ts");
+		if (existsSync(planTs)) paths.push(planTs);
 	}
 
 	// === MCP extension (MCP tool protocol adapter) ===

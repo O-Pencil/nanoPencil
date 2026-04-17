@@ -167,10 +167,15 @@ export class InsForgeEvalSink implements EvalSink {
 	// PATCH eval_runs — set status + final stats
 	private async handleRunEnd(ev: EvalEventEnvelope): Promise<void> {
 		const p = ev.payload;
+		const rawStatus = strOrNull(p.status);
+		const normalizedStatus =
+			rawStatus === "success" ? "completed"
+			: rawStatus === "error" ? "failed"
+			: rawStatus ?? "completed";
 		await this.patchJson(
 			`${this.base}/api/database/records/eval_runs?run_id=eq.${ev.run_id}`,
 			{
-				status:           strOrNull(p.status) ?? "success",
+				status:           normalizedStatus,
 				turn_count:       numOrNull(p.turn_count),
 				total_duration_ms: numOrNull(p.total_duration_ms),
 				ended_at:         ev.ts,

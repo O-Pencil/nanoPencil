@@ -138,6 +138,9 @@ export function createExitPlanModeTool(
 			// Normal exit: restore permissions
 			handlePlanModeExit(sessionState);
 
+			// Clear plan mode status in TUI footer
+			ctx.ui.setStatus("plan", undefined);
+
 			// Build result message
 			const resultText = getExitPlanModeApprovedResult(
 				plan,

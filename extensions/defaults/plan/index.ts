@@ -60,6 +60,22 @@ async function enterPlanMode(
 	sessionState.state.prePlanMode = previousMode;
 	sessionState.state.mode = "plan";
 
+	// Set plan mode status in the TUI footer (like Claude Code)
+	ctx.ui.setStatus("plan", "📋 Plan mode");
+
+	// Show a visible banner (Claude Code style)
+	ctx.ui.notify([
+		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+		"📋 PLAN MODE ENABLED",
+		"",
+		"You are now in Plan Mode.",
+		"• Only read-only tools are available",
+		"• Edit only the plan file (shown in workflow prompt)",
+		"• Call ExitPlanMode when done planning",
+		"• Type /plan:validate to check plan structure",
+		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+	].join("\n"), "info");
+
 	if (shouldQuery) {
 		// Send a follow-up message to trigger the agent to start planning
 		api.sendUserMessage("I've entered plan mode. Please start exploring and designing an approach.", { deliverAs: "followUp" });
@@ -345,9 +361,15 @@ export default async function planExtension(api: ExtensionAPI) {
 	// Session lifecycle
 	// =========================================================================
 
-	api.on("session_start", () => {
+	api.on("session_start", (_event, ctx) => {
 		// Initialize plan directory
 		getPlansDirectory();
+
+		// Restore plan mode status if we're in plan mode (session restored while in plan mode)
+		const sessionState = getSessionState(api);
+		if (sessionState.state.mode === "plan") {
+			ctx.ui.setStatus("plan", "📋 Plan mode");
+		}
 	});
 
 	api.on("session_shutdown", () => {

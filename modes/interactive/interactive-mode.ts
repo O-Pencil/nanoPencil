@@ -1815,6 +1815,7 @@ export class InteractiveMode {
       setEditorText: (text) => this.editor.setText(text),
       getEditorText: () => this.editor.getText(),
       editor: (title, prefill) => this.showExtensionEditor(title, prefill),
+      openExternalEditor: (filePath) => this.openExistingFileInExternalEditor(filePath),
       setEditorComponent: (factory) => this.setCustomEditorComponent(factory),
       get theme() {
         return theme;
@@ -4088,6 +4089,28 @@ export class InteractiveMode {
       // Restart TUI
       this.ui.start();
       // Force full re-render since external editor uses alternate screen
+      this.ui.requestRender(true);
+    }
+  }
+
+  private async openExistingFileInExternalEditor(filePath: string): Promise<boolean> {
+    const editorCmd = process.env.VISUAL || process.env.EDITOR;
+    if (!editorCmd) {
+      this.showWarning(
+        "No editor configured. Set $VISUAL or $EDITOR environment variable.",
+      );
+      return false;
+    }
+
+    try {
+      this.ui.stop();
+      const [editor, ...editorArgs] = editorCmd.split(" ");
+      const result = spawnSync(editor, [...editorArgs, filePath], {
+        stdio: "inherit",
+      });
+      return result.status === 0;
+    } finally {
+      this.ui.start();
       this.ui.requestRender(true);
     }
   }

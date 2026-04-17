@@ -5,7 +5,7 @@
  * [HERE]: extensions/defaults/plan/plan-permissions.ts - tool call permission gating for plan mode
  */
 
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import type { ToolCallInput, ToolPermissionResult } from "./types.js";
 import type { PlanSessionState } from "./types.js";
 
@@ -13,7 +13,17 @@ import type { PlanSessionState } from "./types.js";
 // Read-only tools that are always allowed in plan mode
 // ============================================================================
 
-const READ_ONLY_TOOLS = new Set(["read", "grep", "find", "ls", "time"]);
+const READ_ONLY_TOOLS = new Set(["read", "grep", "find", "ls", "time", "source"]);
+const PLAN_SAFE_AGENT_TYPES = new Set(["Explore", "Plan", "explore", "plan"]);
+const ALWAYS_BLOCKED_TOOLS = new Set([
+	"notebookEdit",
+	"NotebookEdit",
+	"write_file",
+	"edit_file",
+	"replace",
+	"create_file",
+	"delete_file",
+]);
 
 // ============================================================================
 // Read-only bash commands
@@ -55,9 +65,15 @@ const DANGEROUS_BASH_PATTERNS = [
 	/\bcurl\s.*\|.*sh/,  // Pipe curl to sh
 	/\bwget\s.*\|.*sh/,
 	/\bgit\s+(commit|push|reset\s+--hard|clean\s+-f)/,
-	/\bnpm\s+(publish|install\s+--force)/,
+	/\bnpm\s+(publish|install|update|add|remove|uninstall|ci)\b/,
+	/\bpnpm\s+(publish|install|update|add|remove|uninstall)\b/,
+	/\byarn\s+(publish|install|add|remove|upgrade)\b/,
 	/\byarn\s+(publish)/,
 	/\bpip\s+install/,
+	/\btouch\s+/,
+	/\bmkdir\s+/,
+	/\btee\s+/,
+	/\bsed\s+-i\b/,
 	/\bsudo\s+/,
 	/\bdd\s+/,
 ];
@@ -73,28 +89,52 @@ const DANGEROUS_BASH_PATTERNS = [
 export function shouldAllowToolCall(
 	toolCall: ToolCallInput,
 	planFilePath: string,
+	cwd = process.cwd(),
 ): ToolPermissionResult {
 	const { toolName, input } = toolCall;
 
 	// Plan mode tools are always allowed
-	if (toolName === "ExitPlanMode" || toolName === "EnterPlanMode") {
-		return { allowed: true };
+	if (toolName === "ExitPlanMode") {
+		return { allowed: true, classification: "plan" };
+	}
+
+	if (toolName === "EnterPlanMode") {
+		if (isAgentContext(input)) {
+			return {
+				allowed: false,
+				classification: "agent",
+				reason: "EnterPlanMode is not allowed from agent contexts.",
+			};
+		}
+		return { allowed: true, classification: "plan" };
 	}
 
 	// Read-only tools are always allowed
 	if (READ_ONLY_TOOLS.has(toolName)) {
-		return { allowed: true };
+		return { allowed: true, classification: "read" };
 	}
 
 	// Write/edit tools: only allowed if targeting the plan file
 	if (toolName === "write" || toolName === "edit") {
 		const targetPath = typeof input.path === "string" ? input.path : "";
-		if (targetPath && pathsMatch(targetPath, planFilePath)) {
-			return { allowed: true };
+		if (targetPath && pathsMatch(targetPath, planFilePath, cwd)) {
+			return { allowed: true, classification: "write" };
 		}
 		return {
 			allowed: false,
+			classification: "write",
 			reason: `In plan mode, ${toolName} is only allowed for the plan file: ${planFilePath}`,
+		};
+	}
+
+	if (toolName === "Agent" || toolName === "Task") {
+		if (isPlanSafeAgent(input)) {
+			return { allowed: true, classification: "agent" };
+		}
+		return {
+			allowed: false,
+			classification: "agent",
+			reason: "In plan mode, Agent/Task is only allowed for read-only Explore or Plan agents.",
 		};
 	}
 
@@ -102,24 +142,29 @@ export function shouldAllowToolCall(
 	if (toolName === "bash") {
 		const command = typeof input.command === "string" ? input.command : "";
 		if (isReadOnlyBashCommand(command)) {
-			return { allowed: true };
+			return { allowed: true, classification: "read" };
 		}
 		return {
 			allowed: false,
+			classification: "write",
 			reason: `In plan mode, only read-only bash commands are allowed. Command "${command.slice(0, 80)}${command.length > 80 ? "..." : ""}" appears to modify the filesystem.`,
 		};
 	}
 
 	// NotebookEdit: always blocked in plan mode
-	if (toolName === "notebookEdit" || toolName === "NotebookEdit") {
+	if (ALWAYS_BLOCKED_TOOLS.has(toolName)) {
 		return {
 			allowed: false,
-			reason: "NotebookEdit is not allowed in plan mode.",
+			classification: "write",
+			reason: `${toolName} is not allowed in plan mode.`,
 		};
 	}
 
-	// Default: allow (for extension tools, MCP tools, etc. that are read-only by nature)
-	return { allowed: true };
+	return {
+		allowed: false,
+		classification: "unknown",
+		reason: `In plan mode, unknown tool "${toolName}" is blocked unless it is explicitly classified as read-only.`,
+	};
 }
 
 /**
@@ -166,21 +211,40 @@ function isReadOnlyBashCommand(command: string): boolean {
  * Check if a target path matches the plan file path.
  * Handles both absolute and relative path comparisons.
  */
-function pathsMatch(targetPath: string, planFilePath: string): boolean {
+function pathsMatch(targetPath: string, planFilePath: string, cwd: string): boolean {
 	// Direct match
 	if (targetPath === planFilePath) return true;
 
-	// Match by basename (if user uses relative path)
-	if (basename(targetPath) === basename(planFilePath)) return true;
-
 	// Normalize and compare
 	try {
-		const resolvedTarget = resolve(targetPath);
+		const resolvedTarget = resolve(cwd, targetPath);
 		const resolvedPlan = resolve(planFilePath);
 		return resolvedTarget === resolvedPlan;
 	} catch {
 		return false;
 	}
+}
+
+function isAgentContext(input: Record<string, unknown>): boolean {
+	return typeof input.agentId === "string" || typeof input.parentAgentId === "string";
+}
+
+function isPlanSafeAgent(input: Record<string, unknown>): boolean {
+	const type =
+		typeof input.agentType === "string"
+			? input.agentType
+			: typeof input.subagent_type === "string"
+				? input.subagent_type
+				: typeof input.type === "string"
+					? input.type
+					: "";
+	if (type && PLAN_SAFE_AGENT_TYPES.has(type)) return true;
+
+	const prompt = typeof input.prompt === "string" ? input.prompt : "";
+	if (!prompt) return false;
+	const looksPlanSafe = /\b(Explore|Plan) agent\b/i.test(prompt) || /\bread-only\b/i.test(prompt);
+	const looksMutating = /\b(write|edit|modify|delete|commit|apply)\b/i.test(prompt);
+	return looksPlanSafe && !looksMutating;
 }
 
 // ============================================================================

@@ -5,10 +5,16 @@
  * [HERE]: extensions/defaults/plan/plan-file-manager.ts - plan file path management and I/O
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
-import type { PlanSessionState, PlanStateMap } from "./types.js";
+import {
+	PLAN_CUSTOM_TYPE,
+	type PlanSessionState,
+	type PlanStateEntryData,
+	type PlanStateMap,
+} from "./types.js";
+import type { SessionEntry } from "../../../core/session/session-manager.js";
 
 // ============================================================================
 // Word lists for slug generation
@@ -62,8 +68,9 @@ const MAX_SLUG_RETRIES = 10;
 // ============================================================================
 
 const stateByBus: PlanStateMap = new WeakMap();
+const allSessionStates = new Set<PlanSessionState>();
 
-export function getPlanSessionState(bus: unknown): PlanSessionState {
+export function getPlanSessionState(bus: unknown, sessionId?: string, entries?: SessionEntry[]): PlanSessionState {
 	const eventBus = bus as any;
 	let state = stateByBus.get(eventBus);
 	if (!state) {
@@ -74,12 +81,70 @@ export function getPlanSessionState(bus: unknown): PlanSessionState {
 				needsPlanModeExitAttachment: false,
 				hasExitedPlanModeInSession: false,
 				planAttachmentCount: 0,
+				sessionId,
 			},
 			planSlugCache: undefined,
 		};
 		stateByBus.set(eventBus, state);
+		allSessionStates.add(state);
+	}
+	if (sessionId && state.state.hydratedSessionId !== sessionId) {
+		hydratePlanSessionState(state, sessionId, entries ?? []);
 	}
 	return state;
+}
+
+export function hydratePlanSessionState(
+	sessionState: PlanSessionState,
+	sessionId: string,
+	entries: SessionEntry[],
+): void {
+	sessionState.state.hydratedSessionId = sessionId;
+	sessionState.state.sessionId = sessionId;
+
+	for (let i = entries.length - 1; i >= 0; i--) {
+		const entry = entries[i];
+		if (entry.type !== "custom" || entry.customType !== PLAN_CUSTOM_TYPE) continue;
+		const data = entry.data as Partial<PlanStateEntryData> | undefined;
+		if (!data || data.version !== 1) continue;
+		if (data.sessionId && data.sessionId !== sessionId) continue;
+
+		sessionState.state.mode = data.mode ?? "default";
+		sessionState.state.prePlanMode = data.prePlanMode ?? "default";
+		sessionState.state.needsPlanModeExitAttachment = data.needsPlanModeExitAttachment ?? false;
+		sessionState.state.hasExitedPlanModeInSession = data.hasExitedPlanModeInSession ?? false;
+		sessionState.state.planAttachmentCount = data.planAttachmentCount ?? 0;
+		sessionState.state.lastPlanAttachmentHumanTurn = data.lastPlanAttachmentHumanTurn;
+		sessionState.state.planSlug = data.planSlug;
+		sessionState.state.planSnapshot = data.planSnapshot;
+		sessionState.planSlugCache = data.planSlug;
+		return;
+	}
+
+	sessionState.state.mode = "default";
+	sessionState.state.prePlanMode = "default";
+	sessionState.state.needsPlanModeExitAttachment = false;
+	sessionState.state.hasExitedPlanModeInSession = false;
+	sessionState.state.planAttachmentCount = 0;
+	sessionState.state.lastPlanAttachmentHumanTurn = undefined;
+	sessionState.state.planSlug = undefined;
+	sessionState.state.planSnapshot = undefined;
+	sessionState.planSlugCache = undefined;
+}
+
+export function serializePlanSessionState(sessionState: PlanSessionState): PlanStateEntryData {
+	return {
+		version: 1,
+		sessionId: sessionState.state.sessionId,
+		mode: sessionState.state.mode,
+		prePlanMode: sessionState.state.prePlanMode,
+		needsPlanModeExitAttachment: sessionState.state.needsPlanModeExitAttachment,
+		hasExitedPlanModeInSession: sessionState.state.hasExitedPlanModeInSession,
+		planAttachmentCount: sessionState.state.planAttachmentCount,
+		lastPlanAttachmentHumanTurn: sessionState.state.lastPlanAttachmentHumanTurn,
+		planSlug: sessionState.planSlugCache ?? sessionState.state.planSlug,
+		planSnapshot: sessionState.state.planSnapshot,
+	};
 }
 
 // ============================================================================
@@ -98,14 +163,18 @@ export function generatePlanSlug(): string {
 // ============================================================================
 
 let cachedPlansDir: string | undefined;
+let cachedPlansDirKey: string | undefined;
 
 export function getPlansDirectory(settingsPlansDir?: string, cwd?: string): string {
-	if (cachedPlansDir) return cachedPlansDir;
+	const key = `${cwd ?? ""}\0${settingsPlansDir ?? ""}`;
+	if (cachedPlansDir && !settingsPlansDir && !cwd) return cachedPlansDir;
+	if (cachedPlansDir && cachedPlansDirKey === key) return cachedPlansDir;
 
 	if (settingsPlansDir && cwd) {
 		const resolved = resolve(cwd, settingsPlansDir);
 		if (!resolved.startsWith(cwd + sep) && resolved !== cwd) {
 			// Out of project root, fall back to default
+			mkdirSync(DEFAULT_PLANS_DIR, { recursive: true });
 			cachedPlansDir = DEFAULT_PLANS_DIR;
 		} else {
 			mkdirSync(resolved, { recursive: true });
@@ -116,11 +185,13 @@ export function getPlansDirectory(settingsPlansDir?: string, cwd?: string): stri
 		cachedPlansDir = DEFAULT_PLANS_DIR;
 	}
 
+	cachedPlansDirKey = key;
 	return cachedPlansDir;
 }
 
 export function resetPlansDirectoryCache(): void {
 	cachedPlansDir = undefined;
+	cachedPlansDirKey = undefined;
 }
 
 // ============================================================================
@@ -142,17 +213,27 @@ export function getPlanSlug(bus: unknown): string {
 
 	slug = slug!;
 	sessionState.planSlugCache = slug;
+	sessionState.state.planSlug = slug;
 	return slug;
 }
 
 export function setPlanSlug(bus: unknown, slug: string): void {
 	const sessionState = getPlanSessionState(bus);
 	sessionState.planSlugCache = slug;
+	sessionState.state.planSlug = slug;
 }
 
 export function clearPlanSlug(bus: unknown): void {
 	const sessionState = getPlanSessionState(bus);
 	sessionState.planSlugCache = undefined;
+	sessionState.state.planSlug = undefined;
+}
+
+export function clearAllPlanSlugs(): void {
+	for (const sessionState of allSessionStates) {
+		sessionState.planSlugCache = undefined;
+		sessionState.state.planSlug = undefined;
+	}
 }
 
 // ============================================================================
@@ -233,4 +314,21 @@ export async function copyPlanForFork(
 	clearPlanSlug(targetBus);
 	writePlan(targetBus, content);
 	return true;
+}
+
+export function copyPlanFileToNewSlug(bus: unknown): boolean {
+	const content = getPlan(bus);
+	if (content === null) return false;
+	clearPlanSlug(bus);
+	return writePlan(bus, content);
+}
+
+export function copyPlanFile(sourcePath: string, targetPath: string): boolean {
+	try {
+		mkdirSync(dirname(targetPath), { recursive: true });
+		copyFileSync(sourcePath, targetPath);
+		return true;
+	} catch {
+		return false;
+	}
 }

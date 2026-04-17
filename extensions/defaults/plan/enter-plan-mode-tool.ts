@@ -7,15 +7,16 @@
 
 import { Type, type Static } from "@sinclair/typebox";
 import type { ExtensionAPI, ToolDefinition } from "../../../core/extensions/types.js";
-import type { PlanSessionState } from "./types.js";
+import { PLAN_CUSTOM_TYPE, type PlanSessionState } from "./types.js";
 import { handlePlanModeTransition } from "./plan-permissions.js";
 import { getEnterPlanModeToolResult } from "./plan-workflow-prompt.js";
+import { getPlanFilePath, getPlansDirectory, serializePlanSessionState } from "./plan-file-manager.js";
 
 // ============================================================================
 // Schema
 // ============================================================================
 
-const EnterPlanModeInputSchema = Type.Object({});
+const EnterPlanModeInputSchema = Type.Object({}, { additionalProperties: false });
 
 type EnterPlanModeInput = Static<typeof EnterPlanModeInputSchema>;
 
@@ -41,6 +42,7 @@ export function createEnterPlanModeTool(
 			_onUpdate: undefined,
 			ctx,
 		) => {
+			getPlansDirectory(ctx.getSettings().plansDirectory, ctx.cwd);
 			const sessionState = getSessionState();
 
 			// Block in agent contexts (agents shouldn't enter plan mode themselves)
@@ -65,6 +67,14 @@ export function createEnterPlanModeTool(
 			handlePlanModeTransition(sessionState);
 			sessionState.state.prePlanMode = previousMode;
 			sessionState.state.mode = "plan";
+			api.appendEntry(PLAN_CUSTOM_TYPE, serializePlanSessionState(sessionState));
+			ctx.ui.setStatus("plan", "Plan mode");
+			ctx.ui.setWidget("plan-mode", [
+				"PLAN MODE",
+				`Plan: ${getPlanFilePath(api.events)}`,
+				"Read-only except the plan file",
+				"Use /plan open to edit; ExitPlanMode requests approval",
+			], { placement: "aboveEditor" });
 
 			return {
 				content: [{

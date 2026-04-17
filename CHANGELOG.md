@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.0] - 2026-04-17
+
+### Added
+- feat(plan): add TUI status indicators for plan mode
+
+
 ## [1.11.44] - 2026-04-16
 
 ### Added

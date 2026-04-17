@@ -283,6 +283,7 @@ function createAcpExtensionUIContext(): ExtensionUIContext {
 		confirm: async (options: any) => options?.default ?? true,
 		input: async (options: any) => options?.default ?? "",
 		editor: async (options: any) => options?.default ?? "",
+		openExternalEditor: async () => false,
 
 		notify(message: string, type?: "info" | "warning" | "error"): void {
 			process.stderr.write(`[${type ?? "info"}] ${message}\n`);

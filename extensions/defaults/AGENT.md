@@ -6,6 +6,16 @@ Member List
 link-world/index.ts: Internet access extension, provides internet-search Skill after setup
 mcp/index.ts: MCP protocol integration extension, MCP guidance resources
 presence/index.ts: AI-driven opening + idle presence lines, uses NanoMemEngine episodes/preferences/lessons + git/cwd snapshot, injects latest line into agent systemPrompt every turn for main-conversation perception, 30s debounce + idle in-flight lock, configurable via settings.presence.enabled, PRESENCE_MESSAGE_TYPE renderer
+plan/index.ts: Plan Mode extension entry, /plan /plan:validate /plan:approve commands, EnterPlanMode/ExitPlanMode tools, permission gating, TUI status/widget, workflow prompt injection
+plan/types.ts: Plan mode types, persisted state payload, attachment variants, permission result model
+plan/plan-file-manager.ts: Plan file path management, slug generation, settings-aware plans directory, plan state hydration/serialization, resume/fork copy helpers
+plan/plan-permissions.ts: Plan mode tool permission gating, exact plan-file write checks, read-only bash allowlist, agent/tool blocking policy
+plan/plan-workflow-prompt.ts: Plan mode full/sparse workflow prompt, reentry prompt, exit prompt, EnterPlanMode/ExitPlanMode tool result text
+plan/enter-plan-mode-tool.ts: EnterPlanMode tool for model-initiated plan mode entry and UI state activation
+plan/exit-plan-mode-tool.ts: ExitPlanMode tool for user-approved plan mode exit, validation, teammate approval, UI cleanup
+plan/plan-agents.ts: Explore/Plan subagent prompt helpers and read-only tool list for plan mode
+plan/plan-validation.ts: Plan structure validation for Context, Approach, Files/Changes, and Verification sections
+plan/teammate-approval.ts: Teammate plan approval mailbox integration and approval/waiting message formatting
 subagent/index.ts: SubAgent extension entry, /subagent:/subagent:run/:stop/:status/:report/:apply commands, SUBAGENT_MESSAGE_TYPE renderer
 subagent/subagent-parser.ts: SubAgent command parsing, parseSubAgentCommand/buildSubAgentHelp
 subagent/subagent-runner.ts: SubAgent orchestration — research (read-only) and implement (isolated worktree) roles, diff preview and apply flow

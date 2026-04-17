@@ -235,6 +235,19 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			});
 		},
 
+		async openExternalEditor(filePath: string, title?: string): Promise<boolean> {
+			const id = crypto.randomUUID();
+			return new Promise((resolve, reject) => {
+				pendingExtensionRequests.set(id, {
+					resolve: (response: RpcExtensionUIResponse) => {
+						resolve("confirmed" in response ? response.confirmed : false);
+					},
+					reject,
+				});
+				output({ type: "extension_ui_request", id, method: "openExternalEditor", title, filePath } as RpcExtensionUIRequest);
+			});
+		},
+
 		setEditorComponent(): void {
 			// Custom editor components not supported in RPC mode
 		},

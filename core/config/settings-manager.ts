@@ -103,6 +103,8 @@ export interface Settings {
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
+	/** Directory for plan mode files. Relative paths must stay inside the project root. */
+	plansDirectory?: string;
 	/** NanoMem / Dream settings */
 	nanomem?: {
 		autoDream?: {

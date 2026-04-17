@@ -7,6 +7,8 @@
 
 import type { EventBus } from "../../../core/runtime/event-bus.js";
 
+export const PLAN_CUSTOM_TYPE = "plan_state";
+
 // ============================================================================
 // Plan Mode State
 // ============================================================================
@@ -29,6 +31,16 @@ export interface PlanModeState {
 	hasExitedPlanModeInSession: boolean;
 	/** Count of plan mode attachments sent (for throttling) */
 	planAttachmentCount: number;
+	/** Last session id this in-memory state was hydrated from */
+	hydratedSessionId?: string;
+	/** Number of human turns seen when the last plan attachment was injected */
+	lastPlanAttachmentHumanTurn?: number;
+	/** Current session id, when available */
+	sessionId?: string;
+	/** Current plan slug, persisted for resume/fork recovery */
+	planSlug?: string;
+	/** Last known plan file snapshot for recovery */
+	planSnapshot?: string;
 }
 
 // ============================================================================
@@ -57,7 +69,7 @@ export interface PlanFileInfo {
 // Workflow Prompt Attachments
 // ============================================================================
 
-export type PlanAttachmentType = "plan_mode" | "plan_mode_exit" | "plan_mode_reentry";
+export type PlanAttachmentType = "plan_mode" | "plan_mode_exit" | "plan_mode_reentry" | "plan_file_reference";
 
 export interface PlanModeAttachment {
 	type: "plan_mode";
@@ -78,15 +90,38 @@ export interface PlanModeExitAttachment {
 	planExists: boolean;
 }
 
-export type PlanAttachment = PlanModeAttachment | PlanModeReentryAttachment | PlanModeExitAttachment;
+export interface PlanFileReferenceAttachment {
+	type: "plan_file_reference";
+	planFilePath: string;
+	planContent: string;
+}
+
+export type PlanAttachment =
+	| PlanModeAttachment
+	| PlanModeReentryAttachment
+	| PlanModeExitAttachment
+	| PlanFileReferenceAttachment;
 
 // ============================================================================
 // Permission gating
 // ============================================================================
 
 export type ToolPermissionResult =
-	| { allowed: true }
-	| { allowed: false; reason: string };
+	| { allowed: true; classification?: "read" | "write" | "plan" | "agent" }
+	| { allowed: false; reason: string; classification?: "write" | "unknown" | "agent" };
+
+export interface PlanStateEntryData {
+	version: 1;
+	sessionId?: string;
+	mode: PlanModePermissionMode;
+	prePlanMode: PlanModePermissionMode;
+	needsPlanModeExitAttachment: boolean;
+	hasExitedPlanModeInSession: boolean;
+	planAttachmentCount: number;
+	lastPlanAttachmentHumanTurn?: number;
+	planSlug?: string;
+	planSnapshot?: string;
+}
 
 // ============================================================================
 // Configuration

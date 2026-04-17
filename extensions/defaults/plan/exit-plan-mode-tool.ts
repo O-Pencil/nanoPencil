@@ -6,11 +6,16 @@
  */
 
 import { Type, type Static } from "@sinclair/typebox";
-import { writeFileSync } from "node:fs";
 import type { ExtensionAPI, ToolDefinition } from "../../../core/extensions/types.js";
-import type { PlanSessionState } from "./types.js";
+import { PLAN_CUSTOM_TYPE, type PlanSessionState } from "./types.js";
 import { handlePlanModeExit } from "./plan-permissions.js";
-import { getPlanFilePath, getPlan } from "./plan-file-manager.js";
+import {
+	getPlanFilePath,
+	getPlan,
+	getPlansDirectory,
+	serializePlanSessionState,
+	writePlan,
+} from "./plan-file-manager.js";
 import { getExitPlanModeApprovedResult } from "./plan-workflow-prompt.js";
 import { validatePlan, formatValidationMessage } from "./plan-validation.js";
 import {
@@ -58,6 +63,7 @@ export function createExitPlanModeTool(
 			_onUpdate: undefined,
 			ctx,
 		) => {
+			getPlansDirectory(ctx.getSettings().plansDirectory, ctx.cwd);
 			const sessionState = getSessionState();
 
 			// Validate: must be in plan mode
@@ -88,12 +94,9 @@ export function createExitPlanModeTool(
 			// If input.plan was provided, write it back to the plan file
 			const planWasEdited = inputPlan !== undefined;
 			if (planWasEdited && plan !== null) {
-				try {
-					writeFileSync(planFilePath, plan, "utf-8");
-				} catch (err) {
-					console.error(`Failed to write updated plan file: ${err}`);
-				}
+				writePlan(api.events, plan);
 			}
+			sessionState.state.planSnapshot = plan ?? undefined;
 
 			// Plan validation
 			if (!forceExit) {
@@ -113,6 +116,11 @@ export function createExitPlanModeTool(
 
 			// Check if we're in teammate context
 			if (isInTeammateContext()) {
+				if (!plan || plan.trim().length === 0) {
+					throw new Error(
+						`No plan file found at ${planFilePath}. Please write your plan to this file before calling ExitPlanMode.`,
+					);
+				}
 				// Submit plan to leader for approval
 				try {
 					const { requestId } = await submitPlanToLeader(planFilePath, plan || "");
@@ -121,6 +129,7 @@ export function createExitPlanModeTool(
 					// Mark as awaiting approval - mode is still "plan" until approved
 					sessionState.state.mode = "plan"; // Keep in plan mode
 					// Note: handlePlanModeExit is NOT called here - we stay in plan mode
+					api.appendEntry(PLAN_CUSTOM_TYPE, serializePlanSessionState(sessionState));
 
 					return {
 						content: [{
@@ -135,11 +144,50 @@ export function createExitPlanModeTool(
 				}
 			}
 
+			if (!ctx.hasUI) {
+				return {
+					content: [{
+						type: "text",
+						text: "ExitPlanMode requires user approval, but no interactive UI is available. Stay in plan mode and ask the user to approve from an interactive session.",
+					}],
+					isError: true,
+					details: null,
+				};
+			}
+
+			const preview = plan && plan.trim().length > 0
+				? plan.trim().slice(0, 1200)
+				: "No plan content was written.";
+			const approved = await ctx.ui.confirm(
+				"Exit plan mode?",
+				[
+					`Plan file: ${planFilePath}`,
+					"",
+					preview,
+					plan && plan.length > 1200 ? "\n...(truncated)" : "",
+					"",
+					"Approve this plan and allow implementation mode?",
+				].join("\n"),
+			);
+
+			if (!approved) {
+				return {
+					content: [{
+						type: "text",
+						text: "User rejected exiting plan mode. Stay in plan mode, revise the plan file, and call ExitPlanMode again when ready.",
+					}],
+					isError: true,
+					details: null,
+				};
+			}
+
 			// Normal exit: restore permissions
 			handlePlanModeExit(sessionState);
+			api.appendEntry(PLAN_CUSTOM_TYPE, serializePlanSessionState(sessionState));
 
 			// Clear plan mode status in TUI footer
 			ctx.ui.setStatus("plan", undefined);
+			ctx.ui.setWidget("plan-mode", undefined);
 
 			// Build result message
 			const resultText = getExitPlanModeApprovedResult(

@@ -179,6 +179,9 @@ export interface ExtensionUIContext {
 	/** Show a multi-line editor for text editing. */
 	editor(title: string, prefill?: string): Promise<string | undefined>;
 
+	/** Open an existing file in the user's external editor. Returns true when the editor exits successfully. */
+	openExternalEditor(filePath: string, title?: string): Promise<boolean>;
+
 	/**
 	 * Set a custom editor component via factory function.
 	 * Pass undefined to restore the default editor.

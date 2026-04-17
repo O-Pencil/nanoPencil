@@ -5,13 +5,20 @@
  * [HERE]: extensions/defaults/plan/index.ts - main plan mode extension entry point
  */
 
-import type { ExtensionAPI, ExtensionCommandContext, ToolCallEvent, ToolCallEventResult } from "../../../core/extensions/types.js";
+import type {
+	ExtensionAPI,
+	ExtensionCommandContext,
+	ExtensionContext,
+	ToolCallEvent,
+	ToolCallEventResult,
+} from "../../../core/extensions/types.js";
 import {
 	getPlanSessionState,
 	getPlanFilePath,
 	getPlan,
 	writePlan,
 	getPlansDirectory,
+	serializePlanSessionState,
 } from "./plan-file-manager.js";
 import {
 	handlePlanModeTransition,
@@ -25,7 +32,7 @@ import {
 } from "./plan-workflow-prompt.js";
 import { createEnterPlanModeTool } from "./enter-plan-mode-tool.js";
 import { createExitPlanModeTool } from "./exit-plan-mode-tool.js";
-import type { PlanSessionState } from "./types.js";
+import { PLAN_CUSTOM_TYPE, type PlanSessionState } from "./types.js";
 
 // ============================================================================
 // Constants
@@ -36,12 +43,47 @@ const PLAN_ATTACHMENT_CONFIG = {
 	FULL_REMINDER_EVERY_N: 3,
 };
 
+function countHumanTurns(ctx: ExtensionContext): number {
+	return ctx.sessionManager.getBranch().filter((entry) => {
+		if (entry.type !== "message") return false;
+		if (entry.message.role !== "user") return false;
+		const content = entry.message.content;
+		return typeof content === "string"
+			? content.trim().length > 0
+			: content.some((block) => block.type === "text" && block.text.trim().length > 0);
+	}).length;
+}
+
 // ============================================================================
 // State helpers
 // ============================================================================
 
-function getSessionState(api: ExtensionAPI): PlanSessionState {
-	return getPlanSessionState(api.events);
+function preparePlansDirectory(ctx: ExtensionContext): void {
+	const settings = ctx.getSettings();
+	getPlansDirectory(settings.plansDirectory, ctx.cwd);
+}
+
+function getSessionState(api: ExtensionAPI, ctx?: ExtensionContext): PlanSessionState {
+	return getPlanSessionState(
+		api.events,
+		ctx?.sessionManager.getSessionId(),
+		ctx?.sessionManager.getEntries(),
+	);
+}
+
+function persistPlanState(api: ExtensionAPI, sessionState: PlanSessionState): void {
+	api.appendEntry(PLAN_CUSTOM_TYPE, serializePlanSessionState(sessionState));
+}
+
+function setPlanModeUi(ctx: ExtensionContext, api: ExtensionAPI): void {
+	const planFilePath = getPlanFilePath(api.events);
+	ctx.ui.setStatus("plan", "Plan mode");
+	ctx.ui.setWidget("plan-mode", [
+		"PLAN MODE",
+		`Plan: ${planFilePath}`,
+		"Read-only except the plan file",
+		"Use /plan open to edit; ExitPlanMode requests approval",
+	], { placement: "aboveEditor" });
 }
 
 // ============================================================================
@@ -51,34 +93,22 @@ function getSessionState(api: ExtensionAPI): PlanSessionState {
 async function enterPlanMode(
 	api: ExtensionAPI,
 	ctx: ExtensionCommandContext,
-	shouldQuery: boolean,
+	description: string,
 ): Promise<void> {
-	const sessionState = getSessionState(api);
+	preparePlansDirectory(ctx);
+	const sessionState = getSessionState(api, ctx);
 	const previousMode = sessionState.state.mode;
 
 	handlePlanModeTransition(sessionState);
 	sessionState.state.prePlanMode = previousMode;
 	sessionState.state.mode = "plan";
 
-	// Set plan mode status in the TUI footer (like Claude Code)
-	ctx.ui.setStatus("plan", "📋 Plan mode");
+	setPlanModeUi(ctx, api);
+	persistPlanState(api, sessionState);
+	ctx.ui.notify("Enabled plan mode. Read-only except the plan file.", "info");
 
-	// Show a visible banner (Claude Code style)
-	ctx.ui.notify([
-		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-		"📋 PLAN MODE ENABLED",
-		"",
-		"You are now in Plan Mode.",
-		"• Only read-only tools are available",
-		"• Edit only the plan file (shown in workflow prompt)",
-		"• Call ExitPlanMode when done planning",
-		"• Type /plan:validate to check plan structure",
-		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-	].join("\n"), "info");
-
-	if (shouldQuery) {
-		// Send a follow-up message to trigger the agent to start planning
-		api.sendUserMessage("I've entered plan mode. Please start exploring and designing an approach.", { deliverAs: "followUp" });
+	if (description) {
+		api.sendUserMessage(description, { deliverAs: "followUp" });
 	}
 }
 
@@ -96,6 +126,7 @@ function hasTool(api: ExtensionAPI, name: string): boolean {
 // ============================================================================
 
 function displayPlan(api: ExtensionAPI, ctx: ExtensionCommandContext): void {
+	preparePlansDirectory(ctx);
 	const planFilePath = getPlanFilePath(api.events);
 	const planContent = getPlan(api.events);
 
@@ -109,6 +140,10 @@ function displayPlan(api: ExtensionAPI, ctx: ExtensionCommandContext): void {
 		`Path: ${planFilePath}`,
 		"",
 		planContent,
+		"",
+		(process.env.VISUAL || process.env.EDITOR)
+			? `Use /plan open to edit this plan in ${process.env.VISUAL || process.env.EDITOR}.`
+			: "Use /plan open to edit this plan.",
 	];
 
 	ctx.ui.notify(output.join("\n"), "info");
@@ -143,15 +178,15 @@ export default async function planExtension(api: ExtensionAPI) {
 	// =========================================================================
 
 	const handlePlanCommand = async (args: string, ctx: ExtensionCommandContext) => {
-		const sessionState = getSessionState(api);
+		preparePlansDirectory(ctx);
+		const sessionState = getSessionState(api, ctx);
 		const currentMode = sessionState.state.mode;
 
 		// Not in plan mode: enter plan mode
 		if (currentMode !== "plan") {
 			const trimmed = args.trim();
-			const shouldQuery = trimmed.length > 0 && trimmed !== "open";
-			await enterPlanMode(api, ctx, shouldQuery);
-			ctx.ui.notify("Enabled plan mode", "info");
+			const description = trimmed.length > 0 && trimmed !== "open" ? trimmed : "";
+			await enterPlanMode(api, ctx, description);
 			return;
 		}
 
@@ -159,19 +194,33 @@ export default async function planExtension(api: ExtensionAPI) {
 		const trimmed = args.trim();
 
 		if (trimmed === "open") {
-			// Open plan file in inline editor
 			const planFilePath = getPlanFilePath(api.events);
-			const existingPlan = getPlan(api.events) || "";
-
-			const editedContent = await ctx.ui.editor("Edit Plan", existingPlan);
-
-			if (editedContent !== undefined) {
-				// User saved the plan
-				writePlan(api.events, editedContent);
-				ctx.ui.notify(`Plan saved to: ${planFilePath}`, "info");
-			} else {
-				ctx.ui.notify("Plan editing cancelled.", "info");
+			if (!getPlan(api.events)) {
+				writePlan(api.events, "");
 			}
+			if (process.env.VISUAL || process.env.EDITOR) {
+				const opened = await ctx.ui.openExternalEditor(planFilePath, "Edit Plan");
+				if (opened) {
+					const state = getSessionState(api, ctx);
+					state.state.planSnapshot = getPlan(api.events) ?? undefined;
+					persistPlanState(api, state);
+					ctx.ui.notify(`Opened plan in editor: ${planFilePath}`, "info");
+				} else {
+					ctx.ui.notify("Failed to open plan in external editor.", "warning");
+				}
+				return;
+			}
+
+			const editedContent = await ctx.ui.editor("Edit Plan", getPlan(api.events) || "");
+			if (editedContent === undefined) {
+				ctx.ui.notify("Plan editing cancelled.", "info");
+				return;
+			}
+			writePlan(api.events, editedContent);
+			const state = getSessionState(api, ctx);
+			state.state.planSnapshot = editedContent;
+			persistPlanState(api, state);
+			ctx.ui.notify(`Plan saved to: ${planFilePath}`, "info");
 			return;
 		}
 
@@ -181,6 +230,8 @@ export default async function planExtension(api: ExtensionAPI) {
 
 	api.registerCommand("plan", {
 		description: "Enable plan mode or view the current session plan",
+		getArgumentCompletions: (argumentPrefix) =>
+			"open".startsWith(argumentPrefix.trim()) ? [{ value: "open", label: "open" }] : null,
 		handler: handlePlanCommand,
 	});
 
@@ -303,7 +354,7 @@ export default async function planExtension(api: ExtensionAPI) {
 		};
 
 		const planFilePath = getPlanFilePath(api.events);
-		const result = shouldAllowToolCall(toolCall, planFilePath);
+		const result = shouldAllowToolCall(toolCall, planFilePath, api.cwd);
 
 		if (!result.allowed) {
 			return { block: true, reason: result.reason };
@@ -315,12 +366,14 @@ export default async function planExtension(api: ExtensionAPI) {
 	// =========================================================================
 
 	api.on("before_agent_start", async (_event, ctx) => {
-		const sessionState = getSessionState(api);
+		preparePlansDirectory(ctx);
+		const sessionState = getSessionState(api, ctx);
 		const { mode, needsPlanModeExitAttachment, hasExitedPlanModeInSession, planAttachmentCount } = sessionState.state;
 
 		// Exit attachment: injected once after plan mode exit
 		if (mode !== "plan" && needsPlanModeExitAttachment) {
 			sessionState.state.needsPlanModeExitAttachment = false;
+			persistPlanState(api, sessionState);
 			const planFilePath = getPlanFilePath(api.events);
 			const planExists = getPlan(api.events) !== null;
 			return {
@@ -330,12 +383,22 @@ export default async function planExtension(api: ExtensionAPI) {
 
 		// Plan mode: inject workflow prompt
 		if (mode === "plan") {
+			setPlanModeUi(ctx, api);
 			const planFilePath = getPlanFilePath(api.events);
 			const existingPlan = getPlan(api.events);
+			const humanTurns = countHumanTurns(ctx);
+			if (
+				sessionState.state.lastPlanAttachmentHumanTurn !== undefined &&
+				humanTurns - sessionState.state.lastPlanAttachmentHumanTurn < PLAN_ATTACHMENT_CONFIG.TURNS_BETWEEN_ATTACHMENTS
+			) {
+				return;
+			}
 
 			// Reentry detection
 			if (hasExitedPlanModeInSession && existingPlan !== null) {
 				sessionState.state.hasExitedPlanModeInSession = false;
+				sessionState.state.lastPlanAttachmentHumanTurn = humanTurns;
+				persistPlanState(api, sessionState);
 				// Prepend reentry instructions
 				const reentry = getPlanModeReentryInstructions(planFilePath);
 				const workflow = getPlanModeInstructions(sessionState, planFilePath, existingPlan, "full");
@@ -349,6 +412,9 @@ export default async function planExtension(api: ExtensionAPI) {
 			const reminderType = shouldFullReminder ? "full" : "sparse";
 
 			sessionState.state.planAttachmentCount += 1;
+			sessionState.state.lastPlanAttachmentHumanTurn = humanTurns;
+			sessionState.state.planSnapshot = existingPlan ?? undefined;
+			persistPlanState(api, sessionState);
 
 			const prompt = getPlanModeInstructions(sessionState, planFilePath, existingPlan, reminderType);
 			return {
@@ -363,12 +429,12 @@ export default async function planExtension(api: ExtensionAPI) {
 
 	api.on("session_start", (_event, ctx) => {
 		// Initialize plan directory
-		getPlansDirectory();
+		preparePlansDirectory(ctx);
 
 		// Restore plan mode status if we're in plan mode (session restored while in plan mode)
-		const sessionState = getSessionState(api);
+		const sessionState = getSessionState(api, ctx);
 		if (sessionState.state.mode === "plan") {
-			ctx.ui.setStatus("plan", "📋 Plan mode");
+			setPlanModeUi(ctx, api);
 		}
 	});
 

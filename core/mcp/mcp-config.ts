@@ -37,16 +37,6 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
       toolTimeout: 30000,
     },
     {
-      id: "puppeteer",
-      name: "Puppeteer (Browser Automation)",
-      // Note: This package is DEPRECATED but still works
-      command: "npx",
-      args: ["-y", "@modelcontextprotocol/server-puppeteer"],
-      enabled: true,
-      transport: "stdio",
-      toolTimeout: 60000,
-    },
-    {
       id: "sequential-thinking",
       name: "Sequential Thinking",
       command: "npx",

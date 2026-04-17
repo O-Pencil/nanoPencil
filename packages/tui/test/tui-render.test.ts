@@ -98,6 +98,26 @@ describe("TUI synchronized output compatibility", () => {
 		}
 	});
 
+	it("disables synchronized output in Wave Terminal", async () => {
+		const previousTermProgram = process.env.TERM_PROGRAM;
+		process.env.TERM_PROGRAM = "WaveTerm";
+		try {
+			const terminal = new RecordingTerminal();
+			const tui = new TUI(terminal);
+			const component = new TestComponent();
+			component.lines = ["Hello from Wave"];
+			tui.addChild(component);
+			tui.requestRender(true);
+			await flushRender();
+
+			assert.ok(!terminal.writes.includes("\x1b[?2026h"));
+			assert.ok(!terminal.writes.includes("\x1b[?2026l"));
+		} finally {
+			if (previousTermProgram === undefined) delete process.env.TERM_PROGRAM;
+			else process.env.TERM_PROGRAM = previousTermProgram;
+		}
+	});
+
 	it("keeps synchronized output in other terminals", async () => {
 		const previousTermProgram = process.env.TERM_PROGRAM;
 		process.env.TERM_PROGRAM = "WezTerm";

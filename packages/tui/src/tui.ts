@@ -69,10 +69,21 @@ function shouldUseSynchronizedOutput(): boolean {
 	if (process.env.NANOPENCIL_SYNC_OUTPUT === "0") {
 		return false;
 	}
+	if (process.env.NANOPENCIL_SYNC_OUTPUT === "1") {
+		return true;
+	}
 	const termProgram = process.env.TERM_PROGRAM?.toLowerCase() || "";
-	// Warp has shown intermittent delayed/hidden frame presentation with our
-	// diff renderer, so prefer plain writes there until its TUI path is stable.
-	return termProgram !== "warpterminal";
+	// GPU-renderer / "AI terminal" emulators have shown intermittent delayed
+	// or hidden frame presentation when we wrap diffs in DEC mode 2026
+	// (BSU/ESU). They appear to hold the frame buffer until they detect a
+	// terminator they recognize, which manifests as "typed input not visible
+	// until the model finishes streaming." Until each one's 2026 path is
+	// verified, prefer plain writes.
+	const SYNC_OUTPUT_BLOCKLIST = new Set([
+		"warpterminal", // Warp
+		"waveterm",     // Wave Terminal
+	]);
+	return !SYNC_OUTPUT_BLOCKLIST.has(termProgram);
 }
 
 /**

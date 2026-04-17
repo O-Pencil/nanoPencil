@@ -27,6 +27,16 @@ loop/scheduler-controller.ts: SchedulerController - in-memory recurring task sto
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
+plan/index.ts: Plan Mode extension entry - registers /plan command, EnterPlanMode/ExitPlanMode tools, permission gating, workflow prompt injection
+plan/types.ts: PlanModeState, PlanModeAttachment types, PlanModeConfig, PlanApprovalRequest/Response
+plan/plan-file-manager.ts: PlanFileManager - plan file path management and I/O, slug generation, plans directory
+plan/plan-permissions.ts: shouldAllowToolCall() - tool call permission gating for plan mode (read-only + plan file write)
+plan/plan-workflow-prompt.ts: getPlanModeInstructions(), getPlanModeExitInstructions(), getPlanModeReentryInstructions() - workflow prompt generation
+plan/enter-plan-mode-tool.ts: createEnterPlanModeTool() - EnterPlanMode tool for model-initiated plan mode entry
+plan/exit-plan-mode-tool.ts: createExitPlanModeTool() - ExitPlanMode tool with plan validation and teammate approval flow
+plan/plan-agents.ts: Explore/Plan subagent definitions with read-only tools for plan mode workflow
+plan/plan-validation.ts: validatePlan() - validates plan has required sections (Context, Approach, Files, Verification)
+plan/teammate-approval.ts: isInTeammateContext(), submitPlanToLeader(), formatPlanSubmittedMessage() - teammate plan approval integration
 sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; /sal:setup writes ~/.memory-experiments/credentials.json with adapter inference (insforge/jsonl/noop); publishes structuralAnchor via core/runtime/turn-context (no SAL-specific globals); emits run_start/turn_anchor/memory_recalls/run_end eval events through pluggable EvalSink; reads memoryRecallSnapshot from turn-context bus in agent_end; runtime no-op when --nosal is set
 sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 CLAUDE.md and P3 file headers
 sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights, CJK bigram tokenization

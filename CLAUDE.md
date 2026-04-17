@@ -361,6 +361,7 @@ nanoPencil/
 |   |---- defaults/           # Auto-loaded extensions
 |   |   |---- interview/      # Requirement clarification
 |   |   |---- loop/           # Timed prompt scheduler
+|   |   |---- plan/           # Plan mode for read-only planning before coding
 |   |   |---- link-world/     # Internet access
 |   |   |---- mcp/            # MCP integration
 |   |   |---- security-audit/ # Security detection

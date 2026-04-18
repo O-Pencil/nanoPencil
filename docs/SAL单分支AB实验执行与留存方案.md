@@ -48,7 +48,36 @@
 
 ---
 
-## 4. 标准执行流程
+## 4. 实验前检查清单
+
+正式开始实验前，必须先确认以下条件：
+
+1. **运行入口已固定**  
+   两组必须使用同一种运行方式。要么都使用全局安装的 `pencil`，要么都在 worktree 内使用同一个本地源码入口。不能一组跑发布版，一组跑源码版。
+
+2. **任务文本已固化到文件**  
+   control 与 sal 必须读取同一个任务文件中的同一轮 prompt，不能靠人工复制后临时改写。
+
+3. **模型与主要参数一致**  
+   model、thinking、tools、扩展集必须保持一致。
+
+4. **eval 上报已启用**  
+   若需要保留 `eval_runs / eval_turns / eval_sal_anchors / eval_memory_recalls`，则必须提前配置好 `NANOPENCIL_EVAL_*` 或对应 credentials。只设置 `NANOMEM_MEMORY_DIR` 不能产生完整上报数据。
+
+5. **run-id 已明确**  
+   control 与 sal 应使用同一个实验 run 的命名体系，例如：
+   - `RUN_ID=run-001`
+   - `NANOPENCIL_EVAL_RUN_ID=$RUN_ID-control`
+   - `NANOPENCIL_EVAL_RUN_ID=$RUN_ID-sal`
+
+6. **基线提交已冻结**  
+   在创建 worktree 前记录 `BASE_COMMIT`，实验中途不得切换代码基线。
+
+只有满足以上 6 项，实验结果才具有可比性。
+
+---
+
+## 5. 标准执行流程
 
 ```bash
 # 0) 固定基线
@@ -83,9 +112,9 @@ pencil "<TASK PROMPT>"
 
 ---
 
-## 5. 如何保存代码变更内容
+## 6. 如何保存代码变更内容
 
-### 5.1 最小留存（必做）
+### 6.1 最小留存（必做）
 
 ```bash
 git -C "$CTRL_WS" diff > "$ROOT/control.patch"
@@ -94,7 +123,7 @@ git -C "$CTRL_WS" diff --name-only > "$ROOT/control.files.txt"
 git -C "$SAL_WS" diff --name-only > "$ROOT/sal.files.txt"
 ```
 
-### 5.2 可复现留存（推荐）
+### 6.2 可复现留存（推荐）
 
 如果你希望后续“可直接重放某组改动”，建议在 worktree 内做临时提交并导出 patch：
 
@@ -115,7 +144,7 @@ git -C "$SAL_WS" format-patch -1 --stdout > "$ROOT/sal.commit.patch"
 1. 这些提交只存在临时 worktree，不会污染主分支。
 2. 归档 `*.commit.patch` 后，删除 worktree 即可。
 
-### 5.3 结构化证据（配合代码补丁）
+### 6.3 结构化证据（配合代码补丁）
 
 每个 run 至少保留：
 
@@ -127,7 +156,7 @@ git -C "$SAL_WS" format-patch -1 --stdout > "$ROOT/sal.commit.patch"
 
 ---
 
-## 6. 实验后清理
+## 7. 实验后清理
 
 ```bash
 git worktree remove "$CTRL_WS"
@@ -138,7 +167,7 @@ git worktree remove "$SAL_WS"
 
 ---
 
-## 7. 多轮任务的 Memory 继承
+## 8. 多轮任务的 Memory 继承
 
 当任务包含多轮（如 round-1 + round-2）时，每组必须独立继承自己的 memory：
 
@@ -161,7 +190,7 @@ sal round-1      →  sal round-2
 
 ---
 
-## 8. 一次实验是否必须跑两次任务
+## 9. 一次实验是否必须跑两次任务
 
 正常开发不需要同任务重复执行；  
 但 A/B 实验的本质就是控制变量比较，因此必须执行 control 与 sal 两组。
@@ -170,7 +199,7 @@ sal round-1      →  sal round-2
 
 ---
 
-## 9. 判废条件
+## 10. 判废条件
 
 出现以下任一情况，该 run 建议判废：
 

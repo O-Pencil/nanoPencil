@@ -740,7 +740,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	api.on("session_shutdown", async () => {
 		if (!runtime.evalEnabled) return;
 		await emitEval(runtime, "run_end", isEnabled(), {
-			status: "success",
+			status: "completed",
 			turn_count: runtime.turnCounter,
 			total_duration_ms: Math.max(0, Date.now() - runtime.evalStartedAtMs),
 		});

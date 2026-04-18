@@ -1,0 +1,98 @@
+version: 1
+suite_id: sal-comparison-benchmark
+name: SAL Comparison Benchmark Tasks
+description: >
+  Two task families for SAL vs control comparison on code-changing scenarios.
+  Both families assume same-commit and isolated workspaces/memory directories.
+
+global_constraints:
+  same_commit: true
+  same_model: true
+  same_thinking: true
+  same_tools: true
+  isolated_workspace: true
+  isolated_memory_dir: true
+  control_flag: "--nosal"
+  sal_mode: "default"
+
+task_families:
+  - id: startup-performance
+    name: Pencil Startup Performance
+    objective: >
+      Diagnose and optimize startup latency with measurable evidence and low-risk changes.
+    rounds:
+      - id: round-1
+        prompt: >
+          Analyze nanoPencil startup slowness and implement one low-risk optimization.
+          First establish a reproducible startup timing baseline (interactive ready time or first
+          print response time), then apply the optimization and report before/after.
+          Keep default behavior unchanged.
+      - id: round-2
+        prompt: >
+          Based on round-1, extend the optimization pattern to print/rpc/acp startup paths where applicable.
+          Add regression checks or timing scripts and report before/after deltas and touched modules.
+    success_criteria:
+      - baseline and after metrics are both reported
+      - measurable startup improvement is achieved
+      - no default behavior regression is introduced
+      - round-2 reuses round-1 architecture understanding
+    evaluation_metrics:
+      - startup_total_ms_delta
+      - first_response_ms_delta
+      - target_module_hit_rate
+      - unrelated_file_exploration_count
+      - follow_up_reuse_quality
+      - patch_concentration
+
+  - id: package-footprint-readability
+    name: Package Footprint and Source Readability
+    objective: >
+      Reduce package delivery overhead and improve developer readability path without
+      changing release behavior.
+    rounds:
+      - id: round-1
+        prompt: >
+          Investigate package size and readability pain in the packages workflow.
+          Implement one reversible, low-risk footprint improvement and provide npm pack
+          size comparison before/after.
+      - id: round-2
+        prompt: >
+          Based on round-1 findings, add a better developer-source readability path for dev/test
+          while keeping release behavior unchanged. Add validation that confirms release compatibility.
+    success_criteria:
+      - package size evidence is reported before and after
+      - dev readability path improves without changing release semantics
+      - modifications remain reversible and localized
+      - round-2 clearly builds on round-1 findings
+    evaluation_metrics:
+      - npm_pack_size_delta
+      - build_or_readability_step_reduction
+      - target_module_hit_rate
+      - unrelated_file_exploration_count
+      - follow_up_reuse_quality
+      - patch_concentration
+
+required_artifacts:
+  - control.patch
+  - sal.patch
+  - control.files.txt
+  - sal.files.txt
+  - control memory snapshot
+  - sal memory snapshot
+  - eval_runs row
+  - eval_turns rows
+  - eval_sal_anchors rows
+  - eval_memory_recalls rows
+
+execution_notes:
+  recommended_order:
+    - control round-1
+    - sal round-1
+    - control round-2
+    - sal round-2
+  invalid_if:
+    - task prompt differs materially between control and sal
+    - source commit differs between variants
+    - model or thinking differs between variants
+    - memory directory is shared between variants
+    - workspace is shared between variants for code-changing tasks

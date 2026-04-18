@@ -138,16 +138,39 @@ git worktree remove "$SAL_WS"
 
 ---
 
-## 7. 一次实验是否必须跑两次任务
+## 7. 多轮任务的 Memory 继承
+
+当任务包含多轮（如 round-1 + round-2）时，每组必须独立继承自己的 memory：
+
+- **control round-2** 继承 **control round-1** 的 memory 目录
+- **sal round-2** 继承 **sal round-1** 的 memory 目录
+
+**严禁**跨组继承（sal round-2 读 control round-1 的 memory），否则变量不再隔离。
+
+推荐执行顺序与 memory 流向：
+
+```
+control round-1  →  control round-2
+   (MEMORY_DIR=$ROOT/control/memory)
+
+sal round-1      →  sal round-2
+   (MEMORY_DIR=$ROOT/sal/memory)
+```
+
+每轮 round-2 启动时，对应 memory 目录已包含 round-1 沉淀的记忆。这正是 follow-up 评估的核心：**同组 round-1 经验是否被正确复用**。
+
+---
+
+## 8. 一次实验是否必须跑两次任务
 
 正常开发不需要同任务重复执行；  
 但 A/B 实验的本质就是控制变量比较，因此必须执行 control 与 sal 两组。
 
-建议把它视为“实验成本”，而不是日常开发流程。
+建议把它视为”实验成本”，而不是日常开发流程。
 
 ---
 
-## 8. 判废条件
+## 9. 判废条件
 
 出现以下任一情况，该 run 建议判废：
 

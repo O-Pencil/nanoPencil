@@ -321,6 +321,12 @@ export async function extExportFromFile(inputPath: string, options?: ExtExportOp
 }
 
 /**
+ * Check if running in development mode
+ */
+const isDebugMode = process.env.NODE_ENV === "development" ||
+	(typeof import.meta.url === "string" && !import.meta.url.includes("node_modules"));
+
+/**
  * Extension factory function
  */
 export default async function exportHtmlExtension(api: ExtensionAPI) {
@@ -345,5 +351,7 @@ export default async function exportHtmlExtension(api: ExtensionAPI) {
 		},
 	});
 
-	console.error("[export-html] Extension loaded");
+	if (isDebugMode) {
+		console.error("[export-html] Extension loaded");
+	}
 }

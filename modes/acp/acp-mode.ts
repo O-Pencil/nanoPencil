@@ -380,7 +380,10 @@ class NanoPencilAgent implements acp.Agent {
 				},
 			},
 			shutdownHandler: () => {
-				process.exit(0);
+				void (async () => {
+					await this.session.extensionRunner?.emit({ type: "session_shutdown" });
+					process.exit(0);
+				})();
 			},
 			onError: (err) => {
 				process.stderr.write(`[extension_error] ${err.extensionPath}: ${err.error}\n`);

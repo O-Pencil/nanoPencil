@@ -671,6 +671,13 @@ export class InteractiveMode {
   async run(): Promise<void> {
     await this.init();
 
+    // Register signal handlers so that terminal-close (SIGHUP) and kill (SIGTERM)
+    // trigger graceful shutdown instead of instant death. This ensures extension
+    // cleanup (e.g. SAL eval flush) completes before the process exits.
+    const signalShutdown = () => { void this.shutdown(); };
+    process.once("SIGHUP", signalShutdown);
+    process.once("SIGTERM", signalShutdown);
+
     // Check for auto-update on startup (if enabled)
     await this.checkAutoUpdateOnStartup();
 
@@ -3838,7 +3845,7 @@ export class InteractiveMode {
 
   /**
    * Gracefully shutdown the agent.
-   * Emits shutdown event to extensions, then exits.
+   * Emits shutdown event to extensions (with timeout guard), then exits.
    */
   private isShuttingDown = false;
 
@@ -3846,12 +3853,16 @@ export class InteractiveMode {
     if (this.isShuttingDown) return;
     this.isShuttingDown = true;
 
-    // Emit shutdown event to extensions
+    // Emit shutdown event to extensions with a timeout guard.
+    // Extensions (e.g. SAL eval sink) may need to flush HTTP requests,
+    // but we must not hang indefinitely if a handler stalls.
     const extensionRunner = this.session.extensionRunner;
     if (extensionRunner?.hasHandlers("session_shutdown")) {
-      await extensionRunner.emit({
-        type: "session_shutdown",
-      });
+      const SHUTDOWN_TIMEOUT_MS = 5000;
+      await Promise.race([
+        extensionRunner.emit({ type: "session_shutdown" }),
+        new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_TIMEOUT_MS)),
+      ]);
     }
 
     // Clean up any clipboard image files before exit

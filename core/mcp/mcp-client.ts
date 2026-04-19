@@ -295,13 +295,24 @@ export class MCPClient {
     cwd?: string,
   ): Promise<ChildProcessWithoutNullStreams> {
     return await new Promise((resolve, reject) => {
-      const child = spawn(spec.command, spec.args, {
-        env,
-        cwd,
-        stdio: ["pipe", "pipe", "pipe"],
-        windowsHide: true,
-        shell: process.platform === "win32",
-      });
+      // On Windows, use shell mode but pass command as a single string to avoid DEP0190 warning
+      // On Unix, use non-shell mode for better security
+      const useShell = process.platform === "win32";
+      const child = useShell
+        ? spawn([spec.command, ...spec.args].map(arg => arg.includes(" ") ? `"${arg}"` : arg).join(" "), {
+            env,
+            cwd,
+            stdio: ["pipe", "pipe", "pipe"],
+            windowsHide: true,
+            shell: true,
+          })
+        : spawn(spec.command, spec.args, {
+            env,
+            cwd,
+            stdio: ["pipe", "pipe", "pipe"],
+            windowsHide: true,
+            shell: false,
+          });
 
       const onError = (err: Error) => {
         child.removeListener("spawn", onSpawn);

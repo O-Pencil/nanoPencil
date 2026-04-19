@@ -54,7 +54,24 @@ export function computeStructuralBoost(entry: BaseMemoryV2): number {
 			if (typeof f === "string") entryPaths.push(f);
 		}
 	}
-	if (entryPaths.length === 0) return 0;
+
+	// Fallback: infer module paths from tags when no explicit paths exist.
+	// Tags often contain path segments like "core/config" or filenames.
+	// Use a weak match (0.5× weight via reduced return) to avoid conflating
+	// with the relevance signal which already scores tag overlap.
+	if (entryPaths.length === 0) {
+		const PATH_LIKE = /^[a-z][\w-]*(?:\/[\w.-]+)+$/;
+		const tagPaths = entry.tags.filter((t) => PATH_LIKE.test(t));
+		if (tagPaths.length === 0) return 0;
+		let tagHits = 0;
+		for (const t of tagPaths) {
+			for (const a of anchorPaths) {
+				if (pathsOverlap(t, a)) { tagHits++; break; }
+			}
+		}
+		// Attenuate: tag-inferred paths are weaker evidence than explicit anchors
+		return Math.min(tagHits / tagPaths.length, 1) * 0.5;
+	}
 
 	let hits = 0;
 	for (const p of entryPaths) {

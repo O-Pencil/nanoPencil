@@ -79,10 +79,15 @@
 
 ## 5. 标准执行流程
 
+> **重要**：使用 `pencil -p` 直接传入完整任务 prompt，不要用 stdin 分步传入。
+> 否则 turn 1 会是一个无意义的启动词（如 "print"），导致 SAL 无法定位、
+> eval 数据被噪声污染。
+
 ```bash
 # 0) 固定基线
 BASE_COMMIT=$(git rev-parse HEAD)
 RUN_ID=run-001
+TASK_PROMPT="<完整任务 prompt，不少于 20 字>"
 ROOT=$PWD/.memory-experiments/runs/$RUN_ID
 CTRL_WS=/tmp/np-exp-$RUN_ID-control
 SAL_WS=/tmp/np-exp-$RUN_ID-sal
@@ -94,12 +99,12 @@ git worktree add --detach "$SAL_WS" "$BASE_COMMIT"
 # 2) 建隔离目录
 mkdir -p "$ROOT/control/memory" "$ROOT/sal/memory" "$ROOT/compare"
 
-# 3) 跑 control
+# 3) 跑 control（使用 -p 直接传入 prompt）
 cd "$CTRL_WS"
 NANOMEM_MEMORY_DIR="$ROOT/control/memory" \
 NANOPENCIL_EVAL_RUN_ID="$RUN_ID-control" \
 NANOPENCIL_EVAL_VARIANT=control \
-pencil --nosal "<TASK PROMPT>"
+pencil --nosal -p "$TASK_PROMPT"
 
 # 4) 跑 sal
 cd "$SAL_WS"
@@ -107,7 +112,33 @@ NANOMEM_MEMORY_DIR="$ROOT/sal/memory" \
 NANOPENCIL_EVAL_RUN_ID="$RUN_ID-sal" \
 NANOPENCIL_EVAL_VARIANT=sal \
 NANOPENCIL_EXPERIMENT_ID="$RUN_ID" \
-pencil "<TASK PROMPT>"
+pencil -p "$TASK_PROMPT"
+
+# 5) R2 启动前检查 memory 继承
+echo "=== Memory 继承检查 ==="
+CTRL_MEM_COUNT=$(find "$ROOT/control/memory" -name "*.json" | wc -l)
+SAL_MEM_COUNT=$(find "$ROOT/sal/memory" -name "*.json" | wc -l)
+echo "control memory files: $CTRL_MEM_COUNT"
+echo "sal memory files: $SAL_MEM_COUNT"
+if [ "$CTRL_MEM_COUNT" -eq 0 ] || [ "$SAL_MEM_COUNT" -eq 0 ]; then
+  echo "ERROR: R1 未产生 memory 文件，R2 继承无意义。请检查 R1 是否正常完成。"
+  exit 1
+fi
+
+# 6) 跑 R2（同一 memory dir，继承 R1 记忆）
+TASK_PROMPT_R2="<R2 任务 prompt>"
+cd "$CTRL_WS" && git checkout "$BASE_COMMIT" -- .  # 重置代码到基线
+NANOMEM_MEMORY_DIR="$ROOT/control/memory" \
+NANOPENCIL_EVAL_RUN_ID="$RUN_ID-control" \
+NANOPENCIL_EVAL_VARIANT=control \
+pencil --nosal -p "$TASK_PROMPT_R2"
+
+cd "$SAL_WS" && git checkout "$BASE_COMMIT" -- .
+NANOMEM_MEMORY_DIR="$ROOT/sal/memory" \
+NANOPENCIL_EVAL_RUN_ID="$RUN_ID-sal" \
+NANOPENCIL_EVAL_VARIANT=sal \
+NANOPENCIL_EXPERIMENT_ID="$RUN_ID" \
+pencil -p "$TASK_PROMPT_R2"
 ```
 
 ---

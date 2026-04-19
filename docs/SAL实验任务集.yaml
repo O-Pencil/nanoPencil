@@ -101,6 +101,68 @@ task_families:
       - patch_concentration
       - total_turns_to_completion
 
+  - id: structural-sensitive-bugfix
+    name: Structure-Sensitive Bug Localization
+    objective: >
+      Fix a bug described only by symptom (no file path given), requiring the
+      agent to locate the relevant module first. Tests whether SAL structural
+      context reduces exploration turns and improves patch concentration.
+    rounds:
+      - id: round-1
+        prompt: >
+          Users report that when they switch sessions in interactive mode, the
+          footer status bar sometimes shows stale model information from the
+          previous session. Investigate and fix the root cause. Do not grep
+          the entire codebase blindly — use architectural understanding to
+          narrow down which modules manage footer state and session switching.
+      - id: round-2
+        prompt: >
+          Based on round-1, verify whether the same stale-state bug could
+          affect the RPC mode session-switch path. If so, apply the same fix
+          pattern. If not, explain why RPC is immune and add a comment
+          documenting the invariant.
+    success_criteria:
+      - bug is located without exhaustive grep
+      - patch is concentrated in the relevant module
+      - round-2 reuses round-1 module understanding
+    evaluation_metrics:
+      - target_module_hit_rate
+      - exploration_turns_before_first_edit
+      - unrelated_file_exploration_count
+      - follow_up_reuse_quality
+      - patch_concentration
+
+  - id: cross-module-test-addition
+    name: Cross-Module Test Coverage
+    objective: >
+      Add unit tests for a specific subsystem that spans multiple files.
+      Tests whether SAL helps the agent understand module boundaries and
+      import relationships without manually reading every file.
+    rounds:
+      - id: round-1
+        prompt: >
+          Add basic unit tests for the extension loader subsystem
+          (core/extensions/). Cover at least: extension discovery from
+          filesystem paths, loading from factory functions, and error
+          handling for missing extensions. Use the existing test framework
+          (vitest). Focus on the loader — not the runner or wrapper.
+      - id: round-2
+        prompt: >
+          Based on round-1, add integration-style tests that verify the
+          loader and runner work together: load an extension, emit a
+          lifecycle event, and assert the handler was called. Reuse any
+          test fixtures or helpers from round-1.
+    success_criteria:
+      - tests target the correct module boundary
+      - no unnecessary exploration of unrelated modules
+      - round-2 reuses round-1 test infrastructure
+    evaluation_metrics:
+      - target_module_hit_rate
+      - unrelated_file_exploration_count
+      - follow_up_reuse_quality
+      - patch_concentration
+      - test_pass_rate
+
 required_artifacts:
   - control.patch
   - sal.patch

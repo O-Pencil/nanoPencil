@@ -650,12 +650,18 @@ export default async function salExtension(api: ExtensionAPI) {
 
 				if (!isEnabled()) return undefined;
 
+				// Skip SAL localization for trivially short prompts (e.g. print-mode
+				// startup word "print") — they carry no structural signal and inflate
+				// the zero-hit rate in eval data.
+				const prompt = (event.prompt ?? "").trim();
+				if (prompt.length < 12) return undefined;
+
 				const forceRebuild = Boolean(api.getFlag(SAL_REBUILD_FLAG));
 				const snapshot = ensureSnapshot(runtime, forceRebuild);
 				if (!snapshot) return undefined;
 
 				const resolution = locateTask({
-					prompt: event.prompt ?? "",
+					prompt,
 					cwd: runtime.workspaceRoot,
 					snapshot,
 					weights: runtime.weights,
@@ -717,13 +723,18 @@ export default async function salExtension(api: ExtensionAPI) {
 			duration_ms: turnDuration,
 		});
 
-		// Emit memory recall snapshot (written by mem-core during before_agent_start)
-		const recallSnapshot = getTurnContext("memoryRecallSnapshot");
-		if (recallSnapshot && recallSnapshot.length > 0) {
-			await emitEval(runtime, "memory_recalls", isEnabled(), {
-				turn_id: runtime.turn.turnId,
-				recalls: recallSnapshot,
-			});
+		// Emit memory recall snapshot (written by mem-core during before_agent_start).
+		// Skip for trivially short prompts (internal probes, print-mode startup)
+		// to avoid duplicate records for the same memories.
+		const turnPrompt = (runtime.turn.prompt ?? "").trim();
+		if (turnPrompt.length >= 12) {
+			const recallSnapshot = getTurnContext("memoryRecallSnapshot");
+			if (recallSnapshot && recallSnapshot.length > 0) {
+				await emitEval(runtime, "memory_recalls", isEnabled(), {
+					turn_id: runtime.turn.turnId,
+					recalls: recallSnapshot,
+				});
+			}
 		}
 
 		if (actionRes) {

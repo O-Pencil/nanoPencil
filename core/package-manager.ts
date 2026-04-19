@@ -1055,8 +1055,9 @@ export class DefaultPackageManager implements PackageManager {
 
 	/**
 	 * Check if an npm package needs to be updated.
-	 * - For unpinned packages: check if registry has a newer version
 	 * - For pinned packages: check if installed version matches the pinned version
+	 * - For unpinned packages: skip registry check at startup (returns false); registry
+	 *   check is deferred to explicit /update or auto-update runs to avoid startup latency
 	 */
 	private async npmNeedsUpdate(source: NpmSource, installedPath: string): Promise<boolean> {
 		if (isOfflineModeEnabled()) {
@@ -1072,14 +1073,9 @@ export class DefaultPackageManager implements PackageManager {
 			return installedVersion !== pinnedVersion;
 		}
 
-		// Unpinned: check registry for latest version
-		try {
-			const latestVersion = await this.getLatestNpmVersion(source.name);
-			return latestVersion !== installedVersion;
-		} catch {
-			// If we can't check registry, assume it's fine
-			return false;
-		}
+		// For unpinned packages on startup, skip registry check - assume installed version is fine
+		// Registry check will happen only when user explicitly runs /update or auto-update triggers
+		return false;
 	}
 
 	private getInstalledNpmVersion(installedPath: string): string | undefined {

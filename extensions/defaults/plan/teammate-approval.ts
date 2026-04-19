@@ -3,6 +3,9 @@
  * [FROM]: No external dependencies (team extension integration)
  * [TO]: Consumed by exit-plan-mode-tool.ts
  * [HERE]: extensions/defaults/plan/teammate-approval.ts - teammate plan approval flow
+ *
+ * @deprecated MVP implementation — uses filesystem-based mailbox (team-mail dir).
+ *   TODO(v2): Replace with TeamMailbox.post() from team extension when stable.
  */
 
 import type { PlanApprovalRequest, PlanApprovalResponse } from "./types.js";
@@ -47,7 +50,7 @@ export function getTeamName(): string | null {
 
 /**
  * Submit a plan approval request to the leader.
- * In production, this would use the team extension's TeamMailbox.
+ * @deprecated MVP: uses filesystem-based mailbox. Replace with TeamMailbox.post().
  */
 export async function submitPlanToLeader(
 	planFilePath: string,

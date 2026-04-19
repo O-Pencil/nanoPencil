@@ -94,7 +94,7 @@ export function createExitPlanModeTool(
 			// If input.plan was provided, write it back to the plan file
 			const planWasEdited = inputPlan !== undefined;
 			if (planWasEdited && plan !== null) {
-				writePlan(api.events, plan);
+				await writePlan(api.events, plan);
 			}
 			sessionState.state.planSnapshot = plan ?? undefined;
 

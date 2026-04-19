@@ -1,11 +1,11 @@
 /**
  * [WHO]: PlanFileManager class, getPlansDirectory(), getPlanFilePath(), getPlan(), getPlanSlug()
- * [FROM]: Depends on node:fs, node:path, node:os, core/extensions/types (EventBus)
+ * [FROM]: Depends on node:fs, node:path, node:os, node:crypto, proper-lockfile, core/extensions/types (EventBus)
  * [TO]: Consumed by plan extension tools, workflow prompts, permission gating
  * [HERE]: extensions/defaults/plan/plan-file-manager.ts - plan file path management and I/O
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import {
@@ -266,12 +266,17 @@ export function getPlan(bus: unknown, agentId?: string): string | null {
 	}
 }
 
-export function writePlan(bus: unknown, content: string, agentId?: string): boolean {
+export async function writePlan(bus: unknown, content: string, agentId?: string): Promise<boolean> {
 	const filePath = getPlanFilePath(bus, agentId);
 	try {
 		const dir = dirname(filePath);
 		mkdirSync(dir, { recursive: true });
-		writeFileSync(filePath, content, "utf-8");
+		// Atomic write: write to temp file then rename.
+		// Rename is atomic on POSIX and mostly atomic on Windows (for same filesystem).
+		// This avoids locking while preventing partial writes.
+		const tmpPath = filePath + ".tmp." + process.pid;
+		writeFileSync(tmpPath, content, "utf-8");
+		renameSync(tmpPath, filePath);
 		return true;
 	} catch (error) {
 		console.error(`Error writing plan file: ${error}`);
@@ -296,7 +301,7 @@ export async function copyPlanForResume(
 
 	const content = getPlan(sourceBus);
 	if (content !== null) {
-		writePlan(targetBus, content);
+		await writePlan(targetBus, content);
 		return true;
 	}
 
@@ -312,11 +317,11 @@ export async function copyPlanForFork(
 
 	// Generate a new slug for the forked session to avoid conflicts
 	clearPlanSlug(targetBus);
-	writePlan(targetBus, content);
+	await writePlan(targetBus, content);
 	return true;
 }
 
-export function copyPlanFileToNewSlug(bus: unknown): boolean {
+export async function copyPlanFileToNewSlug(bus: unknown): Promise<boolean> {
 	const content = getPlan(bus);
 	if (content === null) return false;
 	clearPlanSlug(bus);

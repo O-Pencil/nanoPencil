@@ -196,7 +196,7 @@ export default async function planExtension(api: ExtensionAPI) {
 		if (trimmed === "open") {
 			const planFilePath = getPlanFilePath(api.events);
 			if (!getPlan(api.events)) {
-				writePlan(api.events, "");
+				await writePlan(api.events, "");
 			}
 			if (process.env.VISUAL || process.env.EDITOR) {
 				const opened = await ctx.ui.openExternalEditor(planFilePath, "Edit Plan");
@@ -216,7 +216,7 @@ export default async function planExtension(api: ExtensionAPI) {
 				ctx.ui.notify("Plan editing cancelled.", "info");
 				return;
 			}
-			writePlan(api.events, editedContent);
+			await writePlan(api.events, editedContent);
 			const state = getSessionState(api, ctx);
 			state.state.planSnapshot = editedContent;
 			persistPlanState(api, state);

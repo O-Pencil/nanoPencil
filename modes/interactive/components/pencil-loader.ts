@@ -1,17 +1,18 @@
 /**
  * PencilLoader - Custom loader with rotating diamond animation
  * Uses ◆◇◈ symbols for a smooth loading indicator
+ * Supports stalled animation (color transition to red) and tips display
  */
 /**
  * [WHO]: PencilLoader
- * [FROM]: Depends on @pencil-agent/tui
+ * [FROM]: Depends on @pencil-agent/tui, ../services/tips
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/pencil-loader.ts -
  */
 
-
 import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import type { Theme } from "../theme/theme.js";
+import { getTipToShow } from "../services/tips.js";
 
 export class PencilLoader extends Container {
 	private tui: TUI;
@@ -20,7 +21,17 @@ export class PencilLoader extends Container {
 	private interval: NodeJS.Timeout | undefined;
 	private currentFrame = 0;
 	private textComponent: Text;
+	private tipComponent: Text;
 	private isStopped = false;
+
+	// Time tracking for stalled animation
+	private readonly startTime: number;
+	private lastTokenTime: number;
+	private sessionId: string;
+
+	// Stall thresholds (in ms)
+	private readonly STALL_THRESHOLD_MS = 3000;
+	private readonly TIP_THRESHOLD_MS = 5000;
 
 	// Rotating diamond animation frames
 	private readonly frames = [
@@ -29,16 +40,21 @@ export class PencilLoader extends Container {
 		"◈", // outlined diamond with dot
 	];
 
-	constructor(tui: TUI, theme: Theme, message: string) {
+	constructor(tui: TUI, theme: Theme, message: string, sessionId: string = "default") {
 		super();
 		this.tui = tui;
 		this.theme = theme;
 		this.message = message;
+		this.sessionId = sessionId;
+		this.startTime = Date.now();
+		this.lastTokenTime = Date.now();
 
 		this.textComponent = new Text("", 0, 0);
+		this.tipComponent = new Text("", 0, 0);
 
 		this.addChild(new Spacer(1));
 		this.addChild(this.textComponent);
+		this.addChild(this.tipComponent);
 		this.addChild(new Spacer(1));
 
 		this.startAnimation();
@@ -49,9 +65,23 @@ export class PencilLoader extends Container {
 			if (this.isStopped) return;
 
 			const frameChar = this.frames[this.currentFrame];
-			const diamond = this.theme.fg("accent", frameChar);
+			const diamondColor = this.getSpinnerColor();
+			const diamond = diamondColor(frameChar);
+			const stallDuration = this.getStallDuration();
 
-			this.textComponent.setText(`${diamond} ${this.message}`);
+			// Build display: spinner + message
+			let display = `${diamond} ${this.message}`;
+
+			// Show tip after TIP_THRESHOLD_MS of continuous stall
+			if (stallDuration > this.TIP_THRESHOLD_MS) {
+				const tip = getTipToShow(this.sessionId);
+				if (tip) {
+					const dimTip = this.theme.fg("dim", `  💡 ${tip}`);
+					display += `\n${dimTip}`;
+				}
+			}
+
+			this.textComponent.setText(display);
 			this.tui.requestRender();
 
 			this.currentFrame = (this.currentFrame + 1) % this.frames.length;
@@ -64,12 +94,56 @@ export class PencilLoader extends Container {
 		this.interval = setInterval(updateFrame, 200);
 	}
 
+	/**
+	 * Get spinner color based on stall duration.
+	 * Normal: accent color
+	 * After STALL_THRESHOLD_MS: interpolates toward error red
+	 */
+	private getSpinnerColor(): (char: string) => string {
+		const stallDuration = this.getStallDuration();
+		if (stallDuration < this.STALL_THRESHOLD_MS) {
+			return (char: string) => this.theme.fg("accent", char);
+		}
+
+		// Interpolate: 0 at STALL_THRESHOLD, 1 at STALL_THRESHOLD + 2000
+		const intensity = Math.min((stallDuration - this.STALL_THRESHOLD_MS) / 2000, 1);
+
+		// Return a function that applies interpolated color
+		return (char: string) => {
+			if (intensity >= 1) {
+				return this.theme.fg("error", char);
+			}
+			// For intermediate values, just use warning color
+			return intensity > 0.5 ? this.theme.fg("warning", char) : this.theme.fg("accent", char);
+		};
+	}
+
+	/**
+	 * Get how long since last token/output (for stalled animation).
+	 */
+	private getStallDuration(): number {
+		return Date.now() - this.lastTokenTime;
+	}
+
+	/**
+	 * Call this when new output arrives to reset the stall timer.
+	 */
+	resetStallTimer(): void {
+		this.lastTokenTime = Date.now();
+	}
+
 	setMessage(message: string): void {
 		this.message = message;
+		this.resetStallTimer();
 		const frameChar = this.frames[this.currentFrame];
-		const diamond = this.theme.fg("accent", frameChar);
+		const diamondColor = this.getSpinnerColor();
+		const diamond = diamondColor(frameChar);
 		this.textComponent.setText(`${diamond} ${this.message}`);
 		this.tui.requestRender();
+	}
+
+	setSessionId(sessionId: string): void {
+		this.sessionId = sessionId;
 	}
 
 	stop(): void {

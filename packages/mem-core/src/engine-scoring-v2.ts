@@ -19,6 +19,15 @@ export function currentStructuralAnchor(): { modulePath?: string; filePath?: str
 	};
 }
 
+/** Match two paths that may differ in absolute/relative form. */
+function pathsOverlap(a: string, b: string): boolean {
+	if (a === b) return true;
+	if (a.startsWith(b + "/") || b.startsWith(a + "/")) return true;
+	// Suffix alignment: absolute vs relative (e.g. "/root/proj/core/x.ts" vs "core/x.ts")
+	if (a.endsWith("/" + b) || b.endsWith("/" + a)) return true;
+	return false;
+}
+
 /**
  * Compute structural proximity boost from the active turn's structural anchor.
  * Reads from the generic turn-context bus; returns 0 when no anchor has been
@@ -47,13 +56,10 @@ export function computeStructuralBoost(entry: BaseMemoryV2): number {
 	}
 	if (entryPaths.length === 0) return 0;
 
-	const anchorSet = new Set(anchorPaths);
 	let hits = 0;
 	for (const p of entryPaths) {
-		// Match full path or module prefix
-		if (anchorSet.has(p)) { hits++; continue; }
 		for (const a of anchorPaths) {
-			if (p.startsWith(a + "/") || a.startsWith(p + "/")) { hits++; break; }
+			if (pathsOverlap(p, a)) { hits++; break; }
 		}
 	}
 	return Math.min(hits / entryPaths.length, 1);

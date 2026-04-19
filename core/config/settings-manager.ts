@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";
 import { APP_NAME, CONFIG_DIR_NAME, getAgentDir } from "../../config.js";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 
 export interface CompactionSettings {
 	enabled?: boolean; // default: true
@@ -162,6 +163,8 @@ export type SettingsScope = "global" | "project";
 
 export interface SettingsStorage {
 	withLock(scope: SettingsScope, fn: (current: string | undefined) => string | undefined): void;
+	withLockAsync(scope: SettingsScope, fn: (current: string | undefined) => Promise<string | undefined>): Promise<void>;
+	readStorageAsync(scope: SettingsScope): Promise<string | undefined>;
 }
 
 export interface SettingsError {
@@ -207,6 +210,47 @@ export class FileSettingsStorage implements SettingsStorage {
 			}
 		}
 	}
+
+	async withLockAsync(
+		scope: SettingsScope,
+		fn: (current: string | undefined) => Promise<string | undefined>,
+	): Promise<void> {
+		const filePath = scope === "global" ? this.globalSettingsPath : this.projectSettingsPath;
+		const dir = dirname(filePath);
+
+		let release: (() => void) | undefined;
+		try {
+			const fileExists = existsSync(filePath);
+			if (fileExists) {
+				release = lockfile.lockSync(filePath, { realpath: false });
+			}
+			// Read inside the lock so we capture a consistent snapshot before writing.
+			const current = fileExists ? await readFile(filePath, "utf-8") : undefined;
+			const next = await fn(current);
+			if (next !== undefined) {
+				if (!existsSync(dir)) {
+					await mkdir(dir, { recursive: true });
+				}
+				// Ensure we hold the lock for the write even if we only read above.
+				if (!release) {
+					release = lockfile.lockSync(filePath, { realpath: false });
+				}
+				await writeFile(filePath, next, "utf-8");
+			}
+		} finally {
+			if (release) {
+				release();
+			}
+		}
+	}
+
+	async readStorageAsync(scope: SettingsScope): Promise<string | undefined> {
+		const filePath = scope === "global" ? this.globalSettingsPath : this.projectSettingsPath;
+		if (!existsSync(filePath)) {
+			return undefined;
+		}
+		return readFile(filePath, "utf-8");
+	}
 }
 
 export class InMemorySettingsStorage implements SettingsStorage {
@@ -223,6 +267,25 @@ export class InMemorySettingsStorage implements SettingsStorage {
 				this.project = next;
 			}
 		}
+	}
+
+	async withLockAsync(
+		scope: SettingsScope,
+		fn: (current: string | undefined) => Promise<string | undefined>,
+	): Promise<void> {
+		const current = scope === "global" ? this.global : this.project;
+		const next = await fn(current);
+		if (next !== undefined) {
+			if (scope === "global") {
+				this.global = next;
+			} else {
+				this.project = next;
+			}
+		}
+	}
+
+	async readStorageAsync(scope: SettingsScope): Promise<string | undefined> {
+		return scope === "global" ? this.global : this.project;
 	}
 }
 
@@ -263,6 +326,12 @@ export class SettingsManager {
 		return SettingsManager.fromStorage(storage);
 	}
 
+	/** Create a SettingsManager that loads from files async */
+	static async createAsync(cwd: string = process.cwd(), agentDir: string = getAgentDir()): Promise<SettingsManager> {
+		const storage = new FileSettingsStorage(cwd, agentDir);
+		return SettingsManager.fromStorageAsync(storage);
+	}
+
 	/** Create a SettingsManager from an arbitrary storage backend */
 	static fromStorage(storage: SettingsStorage): SettingsManager {
 		const globalLoad = SettingsManager.tryLoadFromStorage(storage, "global");
@@ -281,6 +350,30 @@ export class SettingsManager {
 			projectLoad.settings,
 			globalLoad.error,
 			projectLoad.error,
+			initialErrors,
+		);
+	}
+
+	/** Create a SettingsManager from an arbitrary storage backend async */
+	static async fromStorageAsync(storage: SettingsStorage): Promise<SettingsManager> {
+		const [globalLoadResult, projectLoadResult] = await Promise.all([
+			SettingsManager.tryLoadFromStorageAsync(storage, "global"),
+			SettingsManager.tryLoadFromStorageAsync(storage, "project"),
+		]);
+		const initialErrors: SettingsError[] = [];
+		if (globalLoadResult.error) {
+			initialErrors.push({ scope: "global", error: globalLoadResult.error });
+		}
+		if (projectLoadResult.error) {
+			initialErrors.push({ scope: "project", error: projectLoadResult.error });
+		}
+
+		return new SettingsManager(
+			storage,
+			globalLoadResult.settings,
+			projectLoadResult.settings,
+			globalLoadResult.error,
+			projectLoadResult.error,
 			initialErrors,
 		);
 	}
@@ -305,12 +398,32 @@ export class SettingsManager {
 		return SettingsManager.migrateSettings(settings);
 	}
 
+	private static async loadFromStorageAsync(storage: SettingsStorage, scope: SettingsScope): Promise<Settings> {
+		const content = await storage.readStorageAsync(scope);
+		if (!content) {
+			return {};
+		}
+		const settings = JSON.parse(content);
+		return SettingsManager.migrateSettings(settings);
+	}
+
 	private static tryLoadFromStorage(
 		storage: SettingsStorage,
 		scope: SettingsScope,
 	): { settings: Settings; error: Error | null } {
 		try {
 			return { settings: SettingsManager.loadFromStorage(storage, scope), error: null };
+		} catch (error) {
+			return { settings: {}, error: error as Error };
+		}
+	}
+
+	private static async tryLoadFromStorageAsync(
+		storage: SettingsStorage,
+		scope: SettingsScope,
+	): Promise<{ settings: Settings; error: Error | null }> {
+		try {
+			return { settings: await SettingsManager.loadFromStorageAsync(storage, scope), error: null };
 		} catch (error) {
 			return { settings: {}, error: error as Error };
 		}
@@ -394,6 +507,36 @@ export class SettingsManager {
 		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
 	}
 
+	async reloadAsync(): Promise<void> {
+		const [globalLoadResult, projectLoadResult] = await Promise.all([
+			SettingsManager.tryLoadFromStorageAsync(this.storage, "global"),
+			SettingsManager.tryLoadFromStorageAsync(this.storage, "project"),
+		]);
+
+		if (!globalLoadResult.error) {
+			this.globalSettings = globalLoadResult.settings;
+			this.globalSettingsLoadError = null;
+		} else {
+			this.globalSettingsLoadError = globalLoadResult.error;
+			this.recordError("global", globalLoadResult.error);
+		}
+
+		this.modifiedFields.clear();
+		this.modifiedNestedFields.clear();
+		this.modifiedProjectFields.clear();
+		this.modifiedProjectNestedFields.clear();
+
+		if (!projectLoadResult.error) {
+			this.projectSettings = projectLoadResult.settings;
+			this.projectSettingsLoadError = null;
+		} else {
+			this.projectSettingsLoadError = projectLoadResult.error;
+			this.recordError("project", projectLoadResult.error);
+		}
+
+		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+	}
+
 	/** Apply additional overrides on top of current settings */
 	applyOverrides(overrides: Partial<Settings>): void {
 		this.settings = deepMergeSettings(this.settings, overrides);
@@ -448,6 +591,18 @@ export class SettingsManager {
 			});
 	}
 
+	private enqueueWriteAsync(scope: SettingsScope, task: () => Promise<void>): Promise<void> {
+		this.writeQueue = this.writeQueue
+			.then(async () => {
+				await task();
+				this.clearModifiedScope(scope);
+			})
+			.catch((error) => {
+				this.recordError(scope, error);
+			});
+		return this.writeQueue;
+	}
+
 	private cloneModifiedNestedFields(source: Map<keyof Settings, Set<string>>): Map<keyof Settings, Set<string>> {
 		const snapshot = new Map<keyof Settings, Set<string>>();
 		for (const [key, value] of source.entries()) {
@@ -463,6 +618,37 @@ export class SettingsManager {
 		modifiedNestedFields: Map<keyof Settings, Set<string>>,
 	): void {
 		this.storage.withLock(scope, (current) => {
+			const currentFileSettings = current
+				? SettingsManager.migrateSettings(JSON.parse(current) as Record<string, unknown>)
+				: {};
+			const mergedSettings: Settings = { ...currentFileSettings };
+			for (const field of modifiedFields) {
+				const value = snapshotSettings[field];
+				if (modifiedNestedFields.has(field) && typeof value === "object" && value !== null) {
+					const nestedModified = modifiedNestedFields.get(field)!;
+					const baseNested = (currentFileSettings[field] as Record<string, unknown>) ?? {};
+					const inMemoryNested = value as Record<string, unknown>;
+					const mergedNested = { ...baseNested };
+					for (const nestedKey of nestedModified) {
+						mergedNested[nestedKey] = inMemoryNested[nestedKey];
+					}
+					(mergedSettings as Record<string, unknown>)[field] = mergedNested;
+				} else {
+					(mergedSettings as Record<string, unknown>)[field] = value;
+				}
+			}
+
+			return JSON.stringify(mergedSettings, null, 2);
+		});
+	}
+
+	private async persistScopedSettingsAsync(
+		scope: SettingsScope,
+		snapshotSettings: Settings,
+		modifiedFields: Set<keyof Settings>,
+		modifiedNestedFields: Map<keyof Settings, Set<string>>,
+	): Promise<void> {
+		await this.storage.withLockAsync(scope, async (current) => {
 			const currentFileSettings = current
 				? SettingsManager.migrateSettings(JSON.parse(current) as Record<string, unknown>)
 				: {};
@@ -503,6 +689,22 @@ export class SettingsManager {
 		});
 	}
 
+	private async saveAsync(): Promise<void> {
+		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+
+		if (this.globalSettingsLoadError) {
+			return;
+		}
+
+		const snapshotGlobalSettings = structuredClone(this.globalSettings);
+		const modifiedFields = new Set(this.modifiedFields);
+		const modifiedNestedFields = this.cloneModifiedNestedFields(this.modifiedNestedFields);
+
+		await this.enqueueWriteAsync("global", async () => {
+			await this.persistScopedSettingsAsync("global", snapshotGlobalSettings, modifiedFields, modifiedNestedFields);
+		});
+	}
+
 	private saveProjectSettings(settings: Settings): void {
 		this.projectSettings = structuredClone(settings);
 		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
@@ -516,6 +718,22 @@ export class SettingsManager {
 		const modifiedNestedFields = this.cloneModifiedNestedFields(this.modifiedProjectNestedFields);
 		this.enqueueWrite("project", () => {
 			this.persistScopedSettings("project", snapshotProjectSettings, modifiedFields, modifiedNestedFields);
+		});
+	}
+
+	private async saveProjectSettingsAsync(settings: Settings): Promise<void> {
+		this.projectSettings = structuredClone(settings);
+		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+
+		if (this.projectSettingsLoadError) {
+			return;
+		}
+
+		const snapshotProjectSettings = structuredClone(this.projectSettings);
+		const modifiedFields = new Set(this.modifiedProjectFields);
+		const modifiedNestedFields = this.cloneModifiedNestedFields(this.modifiedProjectNestedFields);
+		await this.enqueueWriteAsync("project", async () => {
+			await this.persistScopedSettingsAsync("project", snapshotProjectSettings, modifiedFields, modifiedNestedFields);
 		});
 	}
 

@@ -9,7 +9,7 @@ import { spawnSync } from "child_process";
 import { readdirSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, join } from "path";
-import { fuzzyFilter } from "./fuzzy.js";
+import { fuzzyFilter, weightedFuzzyFilter } from "./fuzzy.js";
 
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
 
@@ -245,14 +245,15 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 
 				// Weighted fuzzy: name (weight 3) > description (weight 1)
 				// Prefix exact match gets priority boost handled by fuzzyMatch
+				type FuzzyItem = { name: string; label: string; description?: string };
 				const filtered = weightedFuzzyFilter(
 					commandItems,
 					prefix,
 					[
-						{ name: "name", getText: (i) => i.name, weight: 3 },
+						{ name: "name", getText: (i: FuzzyItem) => i.name, weight: 3 },
 						...(prefix.length > 0
 							? []
-							: [{ name: "description", getText: (i) => i.description ?? "", weight: 0.5 }]),
+							: [{ name: "description", getText: (i: FuzzyItem) => i.description ?? "", weight: 0.5 }]),
 					],
 				)
 					.slice(0, 10)

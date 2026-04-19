@@ -167,7 +167,51 @@ git worktree remove "$SAL_WS"
 
 ---
 
-## 8. 多轮任务的 Memory 继承
+## 8. 需要保留实验结果时如何处理
+
+默认情况下，A/B 实验运行应被视为“实验运行”，而不是直接进入主线的正式开发提交。
+
+推荐分两步处理：
+
+### 8.1 默认策略：先留证据，不直接合入
+
+先保留：
+
+1. `control.patch`
+2. `sal.patch`
+3. `*.files.txt`
+4. `*.commit.patch`（如果做了临时提交）
+5. memory 快照与 eval 表数据
+
+这样你可以先完成对比评估，再决定哪一组值得保留。
+
+### 8.2 晋升策略：只提取一组最优结果
+
+如果实验后确认某一组结果值得保留：
+
+1. 不要把 `exp(control)` 和 `exp(sal)` 两组实验提交都合进主线。
+2. 只选择一组最优结果（通常是 `sal` 或 `control` 中的一组）。
+3. 回到实验分支或新整理分支，将该组 patch 单独应用并重新验证。
+4. 使用正式业务提交信息重新提交，而不是保留实验提交名。
+
+示例：
+
+```bash
+# 以 sal 结果为例
+git apply "$ROOT/sal.commit.patch"
+git add -A
+git commit -m "fix(startup): reduce extension bootstrap overhead"
+```
+
+### 8.3 原则
+
+1. 实验提交用于留证，不用于直接发布。
+2. 正式合入只保留一组最优改动。
+3. 正式合入前必须重新验证，不直接把实验 patch 当成最终产物。
+
+---
+
+## 9. 多轮任务的 Memory 继承
 
 当任务包含多轮（如 round-1 + round-2）时，每组必须独立继承自己的 memory：
 
@@ -190,7 +234,33 @@ sal round-1      →  sal round-2
 
 ---
 
-## 9. 一次实验是否必须跑两次任务
+## 10. 多个任务族如何组织运行
+
+任务集中的多个 task family 可以放在**同一个实验分支**中执行，但**不应在同一个 run 目录或同一对 worktree 中连续混跑**。
+
+推荐做法是：
+
+1. 一个 task family 对应一个独立 `RUN_ID`
+2. 一个 `RUN_ID` 对应一对独立 worktree
+3. 跑完一个任务族并归档后，再开始下一个任务族
+
+示例：
+
+```text
+startup-performance        -> run-startup-001
+package-footprint         -> run-package-001
+cross-module-config       -> run-config-001
+```
+
+这意味着：
+
+1. 三个任务族可以都在 `experiment/sal-ab-comparison` 分支上跑
+2. 但它们应当是三次独立实验，不是一次 run 里串起来执行
+3. 每个任务族都应独立保留自己的 patch、memory、eval 数据
+
+---
+
+## 11. 一次实验是否必须跑两次任务
 
 正常开发不需要同任务重复执行；  
 但 A/B 实验的本质就是控制变量比较，因此必须执行 control 与 sal 两组。
@@ -199,7 +269,7 @@ sal round-1      →  sal round-2
 
 ---
 
-## 10. 判废条件
+## 12. 判废条件
 
 出现以下任一情况，该 run 建议判废：
 

@@ -6,7 +6,6 @@
  */
 
 import { type ImageContent, modelsAreEqual, supportsXhigh } from "@pencil-agent/ai";
-import chalk from "chalk";
 import { join, resolve } from "path";
 import { createInterface } from "readline";
 import { type Args, parseArgs, printHelp } from "./cli/args.js";
@@ -17,7 +16,6 @@ import { selectSession } from "./cli/session-picker.js";
 import { APP_NAME, getAgentDir, getModelsPath, VERSION } from "./config.js";
 import { AuthStorage } from "./core/config/auth-storage.js";
 import { DEFAULT_THINKING_LEVEL } from "./core/defaults.js";
-import { exportFromFile } from "./core/export-html/index.js";
 import type { LoadExtensionsResult } from "./core/extensions/index.js";
 import { KeybindingsManager } from "./core/keybindings.js";
 import { ModelRegistry } from "./core/model-registry.js";
@@ -30,8 +28,6 @@ import { SettingsManager } from "./core/config/settings-manager.js";
 import { time } from "./core/timings.js";
 import { allTools } from "./core/tools/index.js";
 import { runMigrations, showDeprecationWarnings } from "./migrations.js";
-import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
-import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
 import { profileCheckpoint } from "./utils/startup-profiler.js";
 import {
 	CUSTOM_ANTHROPIC_PROVIDER,

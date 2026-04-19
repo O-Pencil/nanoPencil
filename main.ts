@@ -6,6 +6,7 @@
  */
 
 import { type ImageContent, modelsAreEqual, supportsXhigh } from "@pencil-agent/ai";
+import chalk from "chalk";
 import { join, resolve } from "path";
 import { createInterface } from "readline";
 import { type Args, parseArgs, printHelp } from "./cli/args.js";
@@ -28,6 +29,9 @@ import { SettingsManager } from "./core/config/settings-manager.js";
 import { time } from "./core/timings.js";
 import { allTools } from "./core/tools/index.js";
 import { runMigrations, showDeprecationWarnings } from "./migrations.js";
+import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
+import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
+import { exportFromFile } from "./core/export-html/index.js";
 import { profileCheckpoint } from "./utils/startup-profiler.js";
 import {
 	CUSTOM_ANTHROPIC_PROVIDER,

@@ -347,11 +347,22 @@ export async function loadExtensions(paths: string[], cwd: string, eventBus?: Ev
 	const resolvedEventBus = eventBus ?? createEventBus();
 	const runtime = createExtensionRuntime();
 
-	for (const extPath of paths) {
-		const { extension, error } = await loadExtension(extPath, cwd, resolvedEventBus, runtime);
+	// Parallel loading for faster startup.
+	// Note: unlike the old sequential loop, this collects all errors before surfacing
+	// them — a crashing extension no longer aborts early. This is intentional: we want
+	// all extensions to attempt loading so error reports are comprehensive, not truncated.
+	const results = await Promise.all(
+		paths.map((extPath) =>
+			loadExtension(extPath, cwd, resolvedEventBus, runtime).then((result) => ({
+				...result,
+				path: extPath,
+			})),
+		),
+	);
 
+	for (const { extension, error, path } of results) {
 		if (error) {
-			errors.push({ path: extPath, error });
+			errors.push({ path, error });
 			continue;
 		}
 

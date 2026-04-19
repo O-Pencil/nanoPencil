@@ -27,6 +27,7 @@ const BUNDLED_SAL_EXTENSION = join(__dirname, "extensions", "defaults", "sal", "
 const BUNDLED_GRUB_EXTENSION = join(__dirname, "extensions", "defaults", "grub", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
 const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
+const BUNDLED_BTW_EXTENSION = join(__dirname, "extensions", "defaults", "btw", "index.js");
 const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "defaults", "mcp", "index.js");
 const BUNDLED_EXPORT_HTML_EXTENSION = join(__dirname, "extensions", "optional", "export-html", "index.js");
 
@@ -194,6 +195,14 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const teamTs = join(__dirname, "extensions", "defaults", "team", "index.ts");
 		if (existsSync(teamTs)) paths.push(teamTs);
+	}
+
+	// === BTW extension (quick side question without interrupting) ===
+	if (existsSync(BUNDLED_BTW_EXTENSION)) {
+		paths.push(BUNDLED_BTW_EXTENSION);
+	} else {
+		const btwTs = join(__dirname, "extensions", "defaults", "btw", "index.ts");
+		if (existsSync(btwTs)) paths.push(btwTs);
 	}
 
 	// Built-in MCP extension

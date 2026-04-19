@@ -27,6 +27,7 @@ loop/scheduler-controller.ts: SchedulerController - in-memory recurring task sto
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
+btw/index.ts: BTW extension entry - /btw command for quick side questions without interrupting main task, uses completeSimple() for lightweight response, BTW_MESSAGE_TYPE renderer
 plan/index.ts: Plan Mode extension entry - registers /plan command, EnterPlanMode/ExitPlanMode tools, permission gating, workflow prompt injection
 plan/types.ts: PlanModeState, PlanModeAttachment types, PlanModeConfig, PlanApprovalRequest/Response
 plan/plan-file-manager.ts: PlanFileManager - plan file path management and I/O, slug generation, plans directory

@@ -21,7 +21,7 @@ export const BRANCH_SUMMARY_PREFIX = `The following is a summary of a branch tha
 `;
 
 export const BRANCH_SUMMARY_SUFFIX = `</summary>`;
-export const CUSTOM_MESSAGE_TYPES_EXCLUDED_FROM_CONTEXT = new Set(["presence"]);
+export const CUSTOM_MESSAGE_TYPES_EXCLUDED_FROM_CONTEXT = new Set(["presence", "btw"]);
 
 /**
  * Message type for bash executions via the ! command.

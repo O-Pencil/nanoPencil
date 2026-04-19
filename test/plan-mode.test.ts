@@ -164,7 +164,7 @@ test("ExitPlanMode requires approval and restores previous mode", async () => {
 		const sessionState = getPlanSessionState(bus, "session-1", []);
 		sessionState.state.mode = "plan";
 		sessionState.state.prePlanMode = "acceptEdits";
-		writePlan(bus, [
+		await writePlan(bus, [
 			"# Context",
 			"Need to improve plan mode.",
 			"# Approach",

@@ -1,0 +1,3 @@
+core/config/resource-loader.ts
+main.ts
+modes/print-mode.ts

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "procedure:s1",
+    "kind": "procedural",
+    "name": "did something",
+    "summary": "did something",
+    "searchText": "did something",
+    "contextText": "did something",
+    "steps": [
+      {
+        "id": "procedure:s1:step:1",
+        "text": "Use this success signal as the expected outcome: did something",
+        "kind": "validation"
+      }
+    ],
+    "status": "active",
+    "version": 1,
+    "sourceFacetIds": [
+      "episode:s1:facet:1"
+    ],
+    "sourceSemanticIds": [],
+    "supersedesIds": [],
+    "accessCount": 0,
+    "importance": 8,
+    "salience": 8,
+    "confidence": 0.65,
+    "retention": "key-event",
+    "stability": "stable",
+    "tags": [
+      "did",
+      "something"
+    ],
+    "sourceEpisodeIds": [
+      "episode:s1"
+    ],
+    "evidence": [],
+    "scope": {
+      "project": "p"
+    },
+    "createdAt": "2026-04-19T05:57:01.559Z",
+    "updatedAt": "2026-04-19T05:57:01.559Z"
+  }
+]

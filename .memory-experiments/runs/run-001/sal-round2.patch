@@ -1,0 +1,202 @@
+diff --git a/core/config/resource-loader.ts b/core/config/resource-loader.ts
+index 4d2122e..1c24f05 100644
+--- a/core/config/resource-loader.ts
++++ b/core/config/resource-loader.ts
+@@ -28,6 +28,7 @@ import { loadPromptTemplates } from "../prompt/prompt-templates.js";
+ import { SettingsManager } from "./settings-manager.js";
+ import type { Skill } from "../skills.js";
+ import { loadSkills } from "../skills.js";
++import { time } from "../timings.js";
+ 
+ export interface ResourceExtensionPaths {
+ 	skillPaths?: Array<{ path: string; metadata: PathMetadata }>;
+@@ -350,9 +351,11 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 	async reload(): Promise<void> {
+ 		const resolvedPaths = await this.packageManager.resolve();
++		time("reload.packageManager.resolve");
+ 		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+ 			temporary: true,
+ 		});
++		time("reload.packageManager.resolveExtensionSources");
+ 
+ 		// Helper to extract enabled paths and store metadata
+ 		const getEnabledResources = (
+@@ -419,10 +422,11 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 		const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
+ 
+ 		const extensionPaths = this.noExtensions
+-			? cliEnabledExtensions
++			? []
+ 			: this.mergePaths(enabledExtensions, cliEnabledExtensions);
+ 
+ 		const extensionsResult = await loadExtensions(extensionPaths, this.cwd, this.eventBus);
++		time("reload.loadExtensions");
+ 		const inlineExtensions = await this.loadExtensionFactories(extensionsResult.runtime);
+ 		extensionsResult.extensions.push(...inlineExtensions.extensions);
+ 		extensionsResult.errors.push(...inlineExtensions.errors);
+@@ -448,6 +452,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 		this.lastSkillPaths = skillPaths;
+ 		this.updateSkillsFromPaths(skillPaths);
++		time("reload.updateSkillsFromPaths");
+ 
+ 		const promptPaths = this.noPromptTemplates
+ 			? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
+@@ -455,6 +460,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 		this.lastPromptPaths = promptPaths;
+ 		this.updatePromptsFromPaths(promptPaths);
++		time("reload.updatePromptsFromPaths");
+ 
+ 		const themePaths = this.noThemes
+ 			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
+@@ -462,6 +468,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 		this.lastThemePaths = themePaths;
+ 		this.updateThemesFromPaths(themePaths);
++		time("reload.updateThemesFromPaths");
+ 
+ 		for (const extension of this.extensionsResult.extensions) {
+ 			this.addDefaultMetadataForPath(extension.path);
+diff --git a/main.ts b/main.ts
+index 3dbf13c..510c2aa 100644
+--- a/main.ts
++++ b/main.ts
+@@ -671,6 +671,7 @@ export async function main(args: string[]) {
+ 			}
+ 		}
+ 	}
++	time("post-extension-loading");
+ 
+ 	// Apply pending provider registrations from extensions immediately
+ 	// so they're available for model resolution before AgentSession is created
+@@ -811,6 +812,7 @@ export async function main(args: string[]) {
+ 	}
+ 
+ 	const { session, modelFallbackMessage } = await createAgentSession(sessionOptions);
++	time("createAgentSession");
+ 
+ 	if (!isInteractive && !session.model) {
+ 		console.error(chalk.red("No models available."));
+@@ -919,11 +921,14 @@ export async function main(args: string[]) {
+ 		});
+ 		await mode.run();
+ 	} else {
++		time("startup-to-mode-dispatch");
++		printTimings();
+ 		await runPrintMode(session, {
+ 			mode,
+ 			messages: parsed.messages,
+ 			initialMessage,
+ 			initialImages,
++			verbose: parsed.verbose || isDevelopment,
+ 		});
+ 		stopThemeWatcher();
+ 		if (process.stdout.writableLength > 0) {
+diff --git a/modes/print-mode.ts b/modes/print-mode.ts
+index 32d90b8..d86da3d 100644
+--- a/modes/print-mode.ts
++++ b/modes/print-mode.ts
+@@ -7,6 +7,15 @@
+ import type { AssistantMessage, ImageContent } from "@pencil-agent/ai";
+ import type { AgentSession } from "../core/runtime/agent-session.js";
+ 
++/**
++ * Print a dimmed diagnostic message to stderr.
++ * Never touches stdout, so it doesn't interfere with piped output.
++ */
++function stderrDim(msg: string): void {
++	const dim = (s: string) => `\x1b[2m${s}\x1b[22m`;
++	process.stderr.write(`${dim(msg)}\n`);
++}
++
+ /**
+  * Options for print mode.
+  */
+@@ -19,6 +28,14 @@ export interface PrintModeOptions {
+ 	initialMessage?: string;
+ 	/** Images to attach to the initial message */
+ 	initialImages?: ImageContent[];
++	/**
++	 * Verbose mode for development/debugging.
++	 * When true, prints structured diagnostic metadata to stderr (model info,
++	 * session ID, timing, token usage, error details with stack traces).
++	 * Does NOT affect stdout — the response text remains clean for piping.
++	 * Should be enabled in dev/test, disabled in release/production.
++	 */
++	verbose?: boolean;
+ }
+ 
+ /**
+@@ -26,13 +43,31 @@ export interface PrintModeOptions {
+  * Sends prompts to the agent and outputs the result.
+  */
+ export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<void> {
+-	const { mode, messages = [], initialMessage, initialImages } = options;
++	const { mode, messages = [], initialMessage, initialImages, verbose } = options;
++
++	// --- Verbose diagnostics (stderr only, never pollutes stdout) ---
++	if (verbose) {
++		const model = session.model;
++		const sessionId = session.sessionManager.getSessionId();
++		const header = session.sessionManager.getHeader();
++		stderrDim(`[print] model: ${model?.id ?? "(none)"} (${model?.provider ?? "?"})`);
++		stderrDim(`[print] session: ${sessionId}`);
++		if (header) {
++			stderrDim(`[print] parent: ${header.parentSession ?? "(none)"}`);
++		}
++		stderrDim(`[print] mode: ${mode}, messages: ${messages.length}, initialMessage: ${initialMessage ? "yes" : "no"}`);
++		stderrDim(`[print] extensions: ${session.extensionRunner ? "bound" : "none"}`);
++	}
++
+ 	if (mode === "json") {
+ 		const header = session.sessionManager.getHeader();
+ 		if (header) {
+ 			console.log(JSON.stringify(header));
+ 		}
+ 	}
++
++	const t0 = verbose ? Date.now() : 0;
++
+ 	// Set up extensions for print mode (no UI)
+ 	await session.bindExtensions({
+ 		commandContextActions: {
+@@ -105,10 +140,23 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
+ 
+ 			// Check for error/aborted
+ 			if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
+-				console.error(assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`);
++				const errMsg = assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`;
++				if (verbose) {
++					stderrDim(`[print] error: ${errMsg}`);
++					stderrDim(`[print] stopReason: ${assistantMsg.stopReason}`);
++				}
++				console.error(errMsg);
+ 				process.exit(1);
+ 			}
+ 
++			// Verbose: show response metadata before stdout text
++			if (verbose) {
++				stderrDim(`[print] stopReason: ${assistantMsg.stopReason ?? "(none)"}`);
++				const textBlocks = assistantMsg.content.filter((c) => c.type === "text");
++				const totalChars = textBlocks.reduce((sum, c) => sum + (c.text?.length ?? 0), 0);
++				stderrDim(`[print] response: ${textBlocks.length} block(s), ${totalChars} chars`);
++			}
++
+ 			// Output text content
+ 			for (const content of assistantMsg.content) {
+ 				if (content.type === "text") {
+@@ -118,6 +166,12 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
+ 		}
+ 	}
+ 
++	// Verbose timing footer
++	if (verbose && t0) {
++		const elapsed = Date.now() - t0;
++		stderrDim(`[print] done in ${elapsed}ms`);
++	}
++
+ 	// Ensure stdout is fully flushed before returning
+ 	// This prevents race conditions where the process exits before all output is written
+ 	await new Promise<void>((resolve, reject) => {

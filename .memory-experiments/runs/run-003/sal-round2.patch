@@ -1,0 +1,148 @@
+diff --git a/cli/args.ts b/cli/args.ts
+index 70fbbe9..e08e477 100644
+--- a/cli/args.ts
++++ b/cli/args.ts
+@@ -45,6 +45,8 @@ export interface Args {
+ 	/** Disable MCP (Model Context Protocol). Default: false (MCP enabled) */
+ 	noMcp?: boolean;
+ 	verbose?: boolean;
++	/** Suppress non-essential startup messages. Default: false */
++	quiet?: boolean;
+ 	/** Disable Soul (AI personality evolution). Default: false (Soul enabled) */
+ 	disableSoul?: boolean;
+ 	/** Enable ACP (Agent Client Protocol) mode for editor integration */
+@@ -163,6 +165,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
+ 			}
+ 		} else if (arg === "--verbose") {
+ 			result.verbose = true;
++		} else if (arg === "--quiet" || arg === "-q") {
++			result.quiet = true;
+ 		} else if (arg === "--offline") {
+ 			result.offline = true;
+ 		} else if (arg === "--disable-soul") {
+@@ -238,6 +242,7 @@ ${chalk.bold("Options:")}
+   --export <file>                Export session file to HTML and exit
+   --list-models [search]         List available models (with optional fuzzy search)
+   --verbose                      Force verbose startup (overrides quietStartup setting)
++  --quiet, -q                    Suppress non-essential startup messages
+   --offline                      Disable startup network operations (same as NANOPENCIL_OFFLINE=1)
+   --disable-soul                 Disable Soul (AI personality evolution)
+   --no-mcp                       Disable MCP (Model Context Protocol) tools
+diff --git a/main.ts b/main.ts
+index 3dbf13c..02b96d2 100644
+--- a/main.ts
++++ b/main.ts
+@@ -754,8 +754,15 @@ export async function main(args: string[]) {
+ 	}
+ 	initTheme(settingsManager.getTheme() ?? (APP_NAME === "nanopencil" ? "warm" : undefined), isInteractive);
+ 
+-	// Show deprecation warnings in interactive mode
+-	if (isInteractive && deprecationWarnings.length > 0) {
++	// Compute quiet mode: CLI --quiet overrides settings
++	const quietMode = parsed.quiet === true
++		? true
++		: parsed.verbose === true
++			? false
++			: settingsManager.getQuietStartup();
++
++	// Show deprecation warnings in interactive mode (unless quiet)
++	if (isInteractive && deprecationWarnings.length > 0 && !quietMode) {
+ 		await showDeprecationWarnings(deprecationWarnings);
+ 	}
+ 
+@@ -899,7 +906,7 @@ export async function main(args: string[]) {
+ 	} else if (mode === "rpc") {
+ 		await runRpcMode(session);
+ 	} else if (isInteractive) {
+-		if (scopedModels.length > 0 && (parsed.verbose || !settingsManager.getQuietStartup())) {
++		if (scopedModels.length > 0 && !quietMode) {
+ 			const modelList = scopedModels
+ 				.map((sm) => {
+ 					const thinkingStr = sm.thinkingLevel ? `:${sm.thinkingLevel}` : "";
+@@ -916,6 +923,7 @@ export async function main(args: string[]) {
+ 			initialImages,
+ 			initialMessages: parsed.messages,
+ 			verbose: parsed.verbose,
++			quiet: quietMode,
+ 		});
+ 		await mode.run();
+ 	} else {
+diff --git a/modes/interactive/interactive-mode.ts b/modes/interactive/interactive-mode.ts
+index 11c4e89..a3ace5c 100644
+--- a/modes/interactive/interactive-mode.ts
++++ b/modes/interactive/interactive-mode.ts
+@@ -216,6 +216,8 @@ export interface InteractiveModeOptions {
+   initialMessages?: string[];
+   /** Force verbose startup (overrides quietStartup setting) */
+   verbose?: boolean;
++  /** Suppress non-essential startup messages (CLI --quiet) */
++  quiet?: boolean;
+ }
+ 
+ export class InteractiveMode {
+@@ -541,7 +543,9 @@ export class InteractiveMode {
+     this.ui.addChild(this.headerContainer);
+ 
+     // Add header with keybindings from config (unless silenced)
+-    if (this.options.verbose || !this.settingsManager.getQuietStartup()) {
++    const isQuiet = this.options.quiet === true
++      || (this.options.verbose !== true && this.settingsManager.getQuietStartup());
++    if (!isQuiet) {
+       const logo =
+         theme.bold(theme.fg("accent", APP_NAME)) +
+         theme.fg("dim", ` v${this.version}`);
+@@ -671,12 +675,14 @@ export class InteractiveMode {
+   async run(): Promise<void> {
+     await this.init();
+ 
+-    // Check for auto-update on startup (if enabled)
+-    await this.checkAutoUpdateOnStartup();
++    // Check for auto-update on startup (if enabled, suppressed in quiet mode)
++    if (!this.options.quiet) {
++      await this.checkAutoUpdateOnStartup();
++    }
+ 
+     // Start version check asynchronously (for notification only, if auto-update is not enabled)
+     const autoUpdate = this.settingsManager.getAutoUpdate();
+-    if (autoUpdate !== "always") {
++    if (!this.options.quiet && autoUpdate !== "always") {
+       this.checkForNewVersion().then((newVersion) => {
+         if (newVersion) {
+           this.showNewVersionNotification(newVersion);
+@@ -684,7 +690,7 @@ export class InteractiveMode {
+       });
+     }
+ 
+-    // Show startup warnings
++    // Show startup warnings (suppressed in quiet mode)
+     const {
+       migratedProviders,
+       modelFallbackMessage,
+@@ -692,19 +698,22 @@ export class InteractiveMode {
+       initialImages,
+       initialMessages,
+     } = this.options;
++    const isQuiet = this.options.quiet === true;
+ 
+-    if (migratedProviders && migratedProviders.length > 0) {
++    if (!isQuiet && migratedProviders && migratedProviders.length > 0) {
+       this.showWarning(
+         `Migrated credentials to auth.json: ${migratedProviders.join(", ")}`,
+       );
+     }
+ 
+-    const modelsJsonError = this.session.modelRegistry.getError();
+-    if (modelsJsonError) {
+-      this.showError(`models.json error: ${modelsJsonError}`);
++    if (!isQuiet) {
++      const modelsJsonError = this.session.modelRegistry.getError();
++      if (modelsJsonError) {
++        this.showError(`models.json error: ${modelsJsonError}`);
++      }
+     }
+ 
+-    if (modelFallbackMessage) {
++    if (!isQuiet && modelFallbackMessage) {
+       this.showWarning(modelFallbackMessage);
+     }
+ 

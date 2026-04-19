@@ -1,0 +1,12 @@
+diff --git a/packages/mem-core/package.json b/packages/mem-core/package.json
+index b17ef36..8c3a9e3 100644
+--- a/packages/mem-core/package.json
++++ b/packages/mem-core/package.json
+@@ -17,7 +17,6 @@
+   },
+   "files": [
+     "dist",
+-    "src",
+     "README.md",
+     "AGENT.md"
+   ],

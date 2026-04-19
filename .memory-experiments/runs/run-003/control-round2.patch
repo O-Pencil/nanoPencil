@@ -1,0 +1,187 @@
+diff --git a/cli/args.ts b/cli/args.ts
+index 70fbbe9..e08e477 100644
+--- a/cli/args.ts
++++ b/cli/args.ts
+@@ -45,6 +45,8 @@ export interface Args {
+ 	/** Disable MCP (Model Context Protocol). Default: false (MCP enabled) */
+ 	noMcp?: boolean;
+ 	verbose?: boolean;
++	/** Suppress non-essential startup messages. Default: false */
++	quiet?: boolean;
+ 	/** Disable Soul (AI personality evolution). Default: false (Soul enabled) */
+ 	disableSoul?: boolean;
+ 	/** Enable ACP (Agent Client Protocol) mode for editor integration */
+@@ -163,6 +165,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
+ 			}
+ 		} else if (arg === "--verbose") {
+ 			result.verbose = true;
++		} else if (arg === "--quiet" || arg === "-q") {
++			result.quiet = true;
+ 		} else if (arg === "--offline") {
+ 			result.offline = true;
+ 		} else if (arg === "--disable-soul") {
+@@ -238,6 +242,7 @@ ${chalk.bold("Options:")}
+   --export <file>                Export session file to HTML and exit
+   --list-models [search]         List available models (with optional fuzzy search)
+   --verbose                      Force verbose startup (overrides quietStartup setting)
++  --quiet, -q                    Suppress non-essential startup messages
+   --offline                      Disable startup network operations (same as NANOPENCIL_OFFLINE=1)
+   --disable-soul                 Disable Soul (AI personality evolution)
+   --no-mcp                       Disable MCP (Model Context Protocol) tools
+diff --git a/main.ts b/main.ts
+index 3dbf13c..0b3e1e3 100644
+--- a/main.ts
++++ b/main.ts
+@@ -91,9 +91,10 @@ async function readPipedStdin(): Promise<string | undefined> {
+ 	});
+ }
+ 
+-function reportSettingsErrors(settingsManager: SettingsManager, context: string): void {
++function reportSettingsErrors(settingsManager: SettingsManager, context: string, quiet?: boolean): void {
+ 	const errors = settingsManager.drainErrors();
+ 	for (const { scope, error } of errors) {
++		if (quiet) continue;
+ 		console.error(chalk.yellow(`Warning (${context}, ${scope} settings): ${error.message}`));
+ 		if (error.stack) {
+ 			console.error(chalk.dim(error.stack));
+@@ -604,7 +605,7 @@ export async function main(args: string[]) {
+ 	// Early load extensions to discover their CLI flags
+ 	const agentDir = getAgentDir();
+ 	const settingsManager = SettingsManager.create(cwd, agentDir);
+-	reportSettingsErrors(settingsManager, "startup");
++	reportSettingsErrors(settingsManager, "startup", firstPass.quiet);
+ 	const authStorage = AuthStorage.create();
+ 	if (APP_NAME === "nanopencil") {
+ 		ensureNanopencilDefaultConfig();
+@@ -654,9 +655,11 @@ export async function main(args: string[]) {
+ 
+ 	const extensionsResult: LoadExtensionsResult = resourceLoader.getExtensions();
+ 	for (const { path, error } of extensionsResult.errors) {
+-		console.error(chalk.red(`Failed to load extension "${path}": ${error}`));
++		if (!firstPass.quiet) {
++			console.error(chalk.red(`Failed to load extension "${path}": ${error}`));
++		}
+ 	}
+-	if (APP_NAME === "nanopencil") {
++	if (APP_NAME === "nanopencil" && !firstPass.quiet) {
+ 		const nanomemLoaded = extensionsResult.extensions.some((e) => e.path.includes("nano-mem"));
+ 		const nanomemFailed = extensionsResult.errors.some((e) => e.path.includes("nano-mem"));
+ 		// Only show NanoMem status in development mode (not production)
+@@ -754,8 +757,8 @@ export async function main(args: string[]) {
+ 	}
+ 	initTheme(settingsManager.getTheme() ?? (APP_NAME === "nanopencil" ? "warm" : undefined), isInteractive);
+ 
+-	// Show deprecation warnings in interactive mode
+-	if (isInteractive && deprecationWarnings.length > 0) {
++	// Show deprecation warnings in interactive mode (suppressed when --quiet)
++	if (isInteractive && deprecationWarnings.length > 0 && !parsed.quiet) {
+ 		await showDeprecationWarnings(deprecationWarnings);
+ 	}
+ 
+@@ -840,7 +843,7 @@ export async function main(args: string[]) {
+ 		const createAcpSessionForCwd = async (workspaceCwd: string) => {
+ 			const resolvedWorkspaceCwd = resolveWorkingDirectory(workspaceCwd);
+ 			const workspaceSettingsManager = SettingsManager.create(resolvedWorkspaceCwd, agentDir);
+-			reportSettingsErrors(workspaceSettingsManager, "acp startup");
++			reportSettingsErrors(workspaceSettingsManager, "acp startup", parsed.quiet);
+ 
+ 			const workspaceResourceLoader = new DefaultResourceLoader({
+ 				cwd: resolvedWorkspaceCwd,
+@@ -861,7 +864,9 @@ export async function main(args: string[]) {
+ 
+ 			const workspaceExtensionsResult = workspaceResourceLoader.getExtensions();
+ 			for (const { path, error } of workspaceExtensionsResult.errors) {
+-				console.error(chalk.red(`Failed to load extension "${path}": ${error}`));
++				if (!parsed.quiet) {
++					console.error(chalk.red(`Failed to load extension "${path}": ${error}`));
++				}
+ 			}
+ 			for (const { name, config } of workspaceExtensionsResult.runtime.pendingProviderRegistrations) {
+ 				modelRegistry.registerProvider(name, config);
+@@ -899,7 +904,7 @@ export async function main(args: string[]) {
+ 	} else if (mode === "rpc") {
+ 		await runRpcMode(session);
+ 	} else if (isInteractive) {
+-		if (scopedModels.length > 0 && (parsed.verbose || !settingsManager.getQuietStartup())) {
++		if (scopedModels.length > 0 && !parsed.quiet && (parsed.verbose || !settingsManager.getQuietStartup())) {
+ 			const modelList = scopedModels
+ 				.map((sm) => {
+ 					const thinkingStr = sm.thinkingLevel ? `:${sm.thinkingLevel}` : "";
+@@ -916,6 +921,7 @@ export async function main(args: string[]) {
+ 			initialImages,
+ 			initialMessages: parsed.messages,
+ 			verbose: parsed.verbose,
++			quiet: parsed.quiet,
+ 		});
+ 		await mode.run();
+ 	} else {
+diff --git a/modes/interactive/interactive-mode.ts b/modes/interactive/interactive-mode.ts
+index 11c4e89..289d72f 100644
+--- a/modes/interactive/interactive-mode.ts
++++ b/modes/interactive/interactive-mode.ts
+@@ -216,6 +216,8 @@ export interface InteractiveModeOptions {
+   initialMessages?: string[];
+   /** Force verbose startup (overrides quietStartup setting) */
+   verbose?: boolean;
++  /** Suppress non-essential startup messages (overrides quietStartup setting) */
++  quiet?: boolean;
+ }
+ 
+ export class InteractiveMode {
+@@ -674,17 +676,19 @@ export class InteractiveMode {
+     // Check for auto-update on startup (if enabled)
+     await this.checkAutoUpdateOnStartup();
+ 
+-    // Start version check asynchronously (for notification only, if auto-update is not enabled)
+-    const autoUpdate = this.settingsManager.getAutoUpdate();
+-    if (autoUpdate !== "always") {
+-      this.checkForNewVersion().then((newVersion) => {
+-        if (newVersion) {
+-          this.showNewVersionNotification(newVersion);
+-        }
+-      });
++    // Start version check asynchronously (for notification only, if auto-update is not enabled; suppressed when --quiet)
++    if (!this.options.quiet) {
++      const autoUpdate = this.settingsManager.getAutoUpdate();
++      if (autoUpdate !== "always") {
++        this.checkForNewVersion().then((newVersion) => {
++          if (newVersion) {
++            this.showNewVersionNotification(newVersion);
++          }
++        });
++      }
+     }
+ 
+-    // Show startup warnings
++    // Show startup warnings (suppressed when --quiet)
+     const {
+       migratedProviders,
+       modelFallbackMessage,
+@@ -692,19 +696,22 @@ export class InteractiveMode {
+       initialImages,
+       initialMessages,
+     } = this.options;
++    const isQuiet = this.options.quiet === true;
+ 
+-    if (migratedProviders && migratedProviders.length > 0) {
++    if (!isQuiet && migratedProviders && migratedProviders.length > 0) {
+       this.showWarning(
+         `Migrated credentials to auth.json: ${migratedProviders.join(", ")}`,
+       );
+     }
+ 
+-    const modelsJsonError = this.session.modelRegistry.getError();
+-    if (modelsJsonError) {
+-      this.showError(`models.json error: ${modelsJsonError}`);
++    if (!isQuiet) {
++      const modelsJsonError = this.session.modelRegistry.getError();
++      if (modelsJsonError) {
++        this.showError(`models.json error: ${modelsJsonError}`);
++      }
+     }
+ 
+-    if (modelFallbackMessage) {
++    if (!isQuiet && modelFallbackMessage) {
+       this.showWarning(modelFallbackMessage);
+     }
+ 

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "episode:s1",
+    "kind": "episode",
+    "sessionId": "s1",
+    "title": "did something",
+    "summary": "did something",
+    "outcome": "completed",
+    "accessCount": 0,
+    "importance": 8,
+    "salience": 8,
+    "confidence": 0.85,
+    "retention": "key-event",
+    "stability": "stable",
+    "tags": [
+      "did",
+      "something"
+    ],
+    "sourceEpisodeIds": [
+      "episode:s1"
+    ],
+    "evidence": [],
+    "scope": {
+      "project": "p"
+    },
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-04-19T05:57:01.559Z",
+    "filesModified": [
+      "a.ts"
+    ],
+    "toolsUsed": {},
+    "entities": [],
+    "facetIds": [
+      "episode:s1:facet:1"
+    ],
+    "derivedSemanticIds": [],
+    "derivedProcedureIds": [
+      "procedure:s1"
+    ]
+  }
+]

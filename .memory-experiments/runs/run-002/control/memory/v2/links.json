@@ -1,0 +1,13 @@
+[
+  {
+    "id": "episode:s1->episode:s1:facet:1",
+    "fromId": "episode:s1",
+    "toId": "episode:s1:facet:1",
+    "type": "has-facet",
+    "weight": 1,
+    "explicit": true,
+    "createdAt": "2026-04-19T05:57:01.559Z",
+    "updatedAt": "2026-04-19T05:57:01.559Z",
+    "evidence": []
+  }
+]

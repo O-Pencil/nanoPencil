@@ -1,0 +1,6 @@
+package.json
+packages/agent-core/package.json
+packages/ai/package.json
+packages/ai/src/models.generated.ts
+packages/tui/package.json
+scripts/bundle-deps.js

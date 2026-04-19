@@ -1,0 +1,36 @@
+[
+  {
+    "id": "episode:s1:facet:1",
+    "kind": "facet",
+    "episodeId": "episode:s1",
+    "facetType": "outcome",
+    "searchText": "did something",
+    "anchorText": "did something",
+    "summary": "did something",
+    "detail": "",
+    "accessCount": 0,
+    "importance": 8,
+    "salience": 8,
+    "confidence": 0.7,
+    "retention": "key-event",
+    "stability": "stable",
+    "tags": [
+      "did",
+      "something",
+      "outcome"
+    ],
+    "sourceEpisodeIds": [
+      "episode:s1"
+    ],
+    "evidence": [],
+    "scope": {
+      "project": "p"
+    },
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-04-19T05:57:01.559Z",
+    "entityRefs": [],
+    "aliases": [],
+    "causalRole": "signal",
+    "outcomeScore": 8
+  }
+]

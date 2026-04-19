@@ -1,0 +1,90 @@
+diff --git a/core/config/resource-loader.ts b/core/config/resource-loader.ts
+index 4d2122e..1c24f05 100644
+--- a/core/config/resource-loader.ts
++++ b/core/config/resource-loader.ts
+@@ -28,6 +28,7 @@ import { loadPromptTemplates } from "../prompt/prompt-templates.js";
+ import { SettingsManager } from "./settings-manager.js";
+ import type { Skill } from "../skills.js";
+ import { loadSkills } from "../skills.js";
++import { time } from "../timings.js";
+ 
+ export interface ResourceExtensionPaths {
+ 	skillPaths?: Array<{ path: string; metadata: PathMetadata }>;
+@@ -350,9 +351,11 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 	async reload(): Promise<void> {
+ 		const resolvedPaths = await this.packageManager.resolve();
++		time("reload.packageManager.resolve");
+ 		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+ 			temporary: true,
+ 		});
++		time("reload.packageManager.resolveExtensionSources");
+ 
+ 		// Helper to extract enabled paths and store metadata
+ 		const getEnabledResources = (
+@@ -419,10 +422,11 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 		const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
+ 
+ 		const extensionPaths = this.noExtensions
+-			? cliEnabledExtensions
++			? []
+ 			: this.mergePaths(enabledExtensions, cliEnabledExtensions);
+ 
+ 		const extensionsResult = await loadExtensions(extensionPaths, this.cwd, this.eventBus);
++		time("reload.loadExtensions");
+ 		const inlineExtensions = await this.loadExtensionFactories(extensionsResult.runtime);
+ 		extensionsResult.extensions.push(...inlineExtensions.extensions);
+ 		extensionsResult.errors.push(...inlineExtensions.errors);
+@@ -448,6 +452,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 		this.lastSkillPaths = skillPaths;
+ 		this.updateSkillsFromPaths(skillPaths);
++		time("reload.updateSkillsFromPaths");
+ 
+ 		const promptPaths = this.noPromptTemplates
+ 			? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
+@@ -455,6 +460,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 		this.lastPromptPaths = promptPaths;
+ 		this.updatePromptsFromPaths(promptPaths);
++		time("reload.updatePromptsFromPaths");
+ 
+ 		const themePaths = this.noThemes
+ 			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
+@@ -462,6 +468,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
+ 		this.lastThemePaths = themePaths;
+ 		this.updateThemesFromPaths(themePaths);
++		time("reload.updateThemesFromPaths");
+ 
+ 		for (const extension of this.extensionsResult.extensions) {
+ 			this.addDefaultMetadataForPath(extension.path);
+diff --git a/main.ts b/main.ts
+index 3dbf13c..8fff96c 100644
+--- a/main.ts
++++ b/main.ts
+@@ -671,6 +671,7 @@ export async function main(args: string[]) {
+ 			}
+ 		}
+ 	}
++	time("post-extension-loading");
+ 
+ 	// Apply pending provider registrations from extensions immediately
+ 	// so they're available for model resolution before AgentSession is created
+@@ -811,6 +812,7 @@ export async function main(args: string[]) {
+ 	}
+ 
+ 	const { session, modelFallbackMessage } = await createAgentSession(sessionOptions);
++	time("createAgentSession");
+ 
+ 	if (!isInteractive && !session.model) {
+ 		console.error(chalk.red("No models available."));
+@@ -919,6 +921,8 @@ export async function main(args: string[]) {
+ 		});
+ 		await mode.run();
+ 	} else {
++		time("startup-to-mode-dispatch");
++		printTimings();
+ 		await runPrintMode(session, {
+ 			mode,
+ 			messages: parsed.messages,

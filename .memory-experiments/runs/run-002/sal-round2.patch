@@ -1,0 +1,689 @@
+diff --git a/package.json b/package.json
+index 2b5c863..c0a497c 100644
+--- a/package.json
++++ b/package.json
+@@ -19,7 +19,6 @@
+     "dist/**/*.md",
+     "dist/**/*.html",
+     "dist/**/*.css",
+-    "docs",
+     "LICENSE",
+     "README.md"
+   ],
+@@ -27,7 +26,10 @@
+     "dev": "tsx cli.ts",
+     "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages",
+     "build:release": "npm run generate-models --prefix packages/ai && npm run build",
++    "build:dev": "npm run clean:dist && npm run build:dev:deps && tsc -p tsconfig.dev.json && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages",
+     "build:deps": "npm run build --prefix packages/ai && npm run build --prefix packages/agent-core && npm run build --prefix packages/tui",
++    "build:dev:deps": "npm run build:dev --prefix packages/ai && npm run build:dev --prefix packages/agent-core && npm run build:dev --prefix packages/tui",
++    "verify:release": "bash scripts/verify-release-compat.sh",
+     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+     "copy:theme:json": "node -e \"const fs=require('fs');const p=require('path');const d='dist/modes/interactive/theme';if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});fs.readdirSync('modes/interactive/theme').forEach(f=>{if(f.endsWith('.json'))fs.copyFileSync(p.join('modes/interactive/theme',f),p.join(d,f))})\"",
+     "copy:assets": "node scripts/copy-assets.js",
+@@ -40,7 +42,7 @@
+     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
+     "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
+     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
+-    "prepublishOnly": "npm run changelog && npm run build:release",
++    "prepublishOnly": "npm run verify:release && npm run changelog && npm run build:release",
+     "changelog": "node scripts/generate-changelog.js",
+     "release": "npm run changelog && npm version patch && npm publish"
+   },
+diff --git a/packages/agent-core/package.json b/packages/agent-core/package.json
+index 4ba37fb..18072f9 100644
+--- a/packages/agent-core/package.json
++++ b/packages/agent-core/package.json
+@@ -12,7 +12,8 @@
+ 	"scripts": {
+ 		"clean": "node -e \"require('fs').rmSync('./dist',{recursive:true,force:true})\"",
+ 		"build": "npx tsc -p tsconfig.build.json",
+-		"dev": "npx tsc -p tsconfig.build.json --watch --preserveWatchOutput",
++		"build:dev": "npx tsc -p tsconfig.dev.json",
++		"dev": "npx tsc -p tsconfig.dev.json --watch --preserveWatchOutput",
+ 		"test": "vitest --run",
+ 		"prepublishOnly": "npm run clean && npm run build"
+ 	},
+diff --git a/packages/ai/package.json b/packages/ai/package.json
+index 66e7e33..59741ab 100644
+--- a/packages/ai/package.json
++++ b/packages/ai/package.json
+@@ -16,9 +16,10 @@
+ 		"clean": "node -e \"require('fs').rmSync('./dist',{recursive:true,force:true})\"",
+ 		"generate-models": "npx tsx scripts/generate-models.ts",
+ 		"build": "npx tsc -p tsconfig.build.json",
++		"build:dev": "npx tsc -p tsconfig.dev.json",
+ 		"build:with-models": "npm run generate-models && npm run build",
+-		"dev": "npx tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+-		"dev:tsc": "npx tsc -p tsconfig.build.json --watch --preserveWatchOutput",
++		"dev": "npx tsc -p tsconfig.dev.json --watch --preserveWatchOutput",
++		"dev:tsc": "npx tsc -p tsconfig.dev.json --watch --preserveWatchOutput",
+ 		"test": "vitest --run",
+ 		"prepublishOnly": "npm run clean && npm run build:with-models"
+ 	},
+diff --git a/packages/ai/src/models.generated.ts b/packages/ai/src/models.generated.ts
+index b7d2cc1..e0965d8 100644
+--- a/packages/ai/src/models.generated.ts
++++ b/packages/ai/src/models.generated.ts
+@@ -260,6 +260,23 @@ export const MODELS = {
+ 			contextWindow: 200000,
+ 			maxTokens: 128000,
+ 		} satisfies Model<"bedrock-converse-stream">,
++		"anthropic.claude-opus-4-7": {
++			id: "anthropic.claude-opus-4-7",
++			name: "Claude Opus 4.7",
++			api: "bedrock-converse-stream",
++			provider: "amazon-bedrock",
++			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 5,
++				output: 25,
++				cacheRead: 0.5,
++				cacheWrite: 6.25,
++			},
++			contextWindow: 1000000,
++			maxTokens: 128000,
++		} satisfies Model<"bedrock-converse-stream">,
+ 		"anthropic.claude-sonnet-4-20250514-v1:0": {
+ 			id: "anthropic.claude-sonnet-4-20250514-v1:0",
+ 			name: "Claude Sonnet 4",
+@@ -413,6 +430,23 @@ export const MODELS = {
+ 			contextWindow: 200000,
+ 			maxTokens: 128000,
+ 		} satisfies Model<"bedrock-converse-stream">,
++		"eu.anthropic.claude-opus-4-7": {
++			id: "eu.anthropic.claude-opus-4-7",
++			name: "Claude Opus 4.7 (EU)",
++			api: "bedrock-converse-stream",
++			provider: "amazon-bedrock",
++			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 5,
++				output: 25,
++				cacheRead: 0.5,
++				cacheWrite: 6.25,
++			},
++			contextWindow: 1000000,
++			maxTokens: 128000,
++		} satisfies Model<"bedrock-converse-stream">,
+ 		"eu.anthropic.claude-sonnet-4-20250514-v1:0": {
+ 			id: "eu.anthropic.claude-sonnet-4-20250514-v1:0",
+ 			name: "Claude Sonnet 4 (EU)",
+@@ -515,6 +549,23 @@ export const MODELS = {
+ 			contextWindow: 200000,
+ 			maxTokens: 128000,
+ 		} satisfies Model<"bedrock-converse-stream">,
++		"global.anthropic.claude-opus-4-7": {
++			id: "global.anthropic.claude-opus-4-7",
++			name: "Claude Opus 4.7 (Global)",
++			api: "bedrock-converse-stream",
++			provider: "amazon-bedrock",
++			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 5,
++				output: 25,
++				cacheRead: 0.5,
++				cacheWrite: 6.25,
++			},
++			contextWindow: 1000000,
++			maxTokens: 128000,
++		} satisfies Model<"bedrock-converse-stream">,
+ 		"global.anthropic.claude-sonnet-4-20250514-v1:0": {
+ 			id: "global.anthropic.claude-sonnet-4-20250514-v1:0",
+ 			name: "Claude Sonnet 4 (Global)",
+@@ -1348,6 +1399,23 @@ export const MODELS = {
+ 			contextWindow: 200000,
+ 			maxTokens: 128000,
+ 		} satisfies Model<"bedrock-converse-stream">,
++		"us.anthropic.claude-opus-4-7": {
++			id: "us.anthropic.claude-opus-4-7",
++			name: "Claude Opus 4.7 (US)",
++			api: "bedrock-converse-stream",
++			provider: "amazon-bedrock",
++			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 5,
++				output: 25,
++				cacheRead: 0.5,
++				cacheWrite: 6.25,
++			},
++			contextWindow: 1000000,
++			maxTokens: 128000,
++		} satisfies Model<"bedrock-converse-stream">,
+ 		"us.anthropic.claude-sonnet-4-20250514-v1:0": {
+ 			id: "us.anthropic.claude-sonnet-4-20250514-v1:0",
+ 			name: "Claude Sonnet 4 (US)",
+@@ -1775,6 +1843,23 @@ export const MODELS = {
+ 			contextWindow: 200000,
+ 			maxTokens: 128000,
+ 		} satisfies Model<"anthropic-messages">,
++		"claude-opus-4-7": {
++			id: "claude-opus-4-7",
++			name: "Claude Opus 4.7",
++			api: "anthropic-messages",
++			provider: "anthropic",
++			baseUrl: "https://api.anthropic.com",
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 5,
++				output: 25,
++				cacheRead: 0.5,
++				cacheWrite: 6.25,
++			},
++			contextWindow: 1000000,
++			maxTokens: 128000,
++		} satisfies Model<"anthropic-messages">,
+ 		"claude-sonnet-4-0": {
+ 			id: "claude-sonnet-4-0",
+ 			name: "Claude Sonnet 4 (latest)",
+@@ -1862,23 +1947,6 @@ export const MODELS = {
+ 		} satisfies Model<"anthropic-messages">,
+ 	},
+ 	"azure-openai-responses": {
+-		"codex-mini-latest": {
+-			id: "codex-mini-latest",
+-			name: "Codex Mini",
+-			api: "azure-openai-responses",
+-			provider: "azure-openai-responses",
+-			baseUrl: "",
+-			reasoning: true,
+-			input: ["text"],
+-			cost: {
+-				input: 1.5,
+-				output: 6,
+-				cacheRead: 0.375,
+-				cacheWrite: 0,
+-			},
+-			contextWindow: 200000,
+-			maxTokens: 100000,
+-		} satisfies Model<"azure-openai-responses">,
+ 		"gpt-4": {
+ 			id: "gpt-4",
+ 			name: "GPT-4",
+@@ -2685,6 +2753,24 @@ export const MODELS = {
+ 			contextWindow: 144000,
+ 			maxTokens: 64000,
+ 		} satisfies Model<"anthropic-messages">,
++		"claude-opus-4.7": {
++			id: "claude-opus-4.7",
++			name: "Claude Opus 4.7",
++			api: "anthropic-messages",
++			provider: "github-copilot",
++			baseUrl: "https://api.individual.githubcopilot.com",
++			headers: {"User-Agent":"GitHubCopilotChat/0.35.0","Editor-Version":"vscode/1.107.0","Editor-Plugin-Version":"copilot-chat/0.35.0","Copilot-Integration-Id":"vscode-chat"},
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 0,
++				output: 0,
++				cacheRead: 0,
++				cacheWrite: 0,
++			},
++			contextWindow: 144000,
++			maxTokens: 64000,
++		} satisfies Model<"anthropic-messages">,
+ 		"claude-sonnet-4": {
+ 			id: "claude-sonnet-4",
+ 			name: "Claude Sonnet 4",
+@@ -5339,23 +5425,6 @@ export const MODELS = {
+ 		} satisfies Model<"openai-completions">,
+ 	},
+ 	"openai": {
+-		"codex-mini-latest": {
+-			id: "codex-mini-latest",
+-			name: "Codex Mini",
+-			api: "openai-responses",
+-			provider: "openai",
+-			baseUrl: "https://api.openai.com/v1",
+-			reasoning: true,
+-			input: ["text"],
+-			cost: {
+-				input: 1.5,
+-				output: 6,
+-				cacheRead: 0.375,
+-				cacheWrite: 0,
+-			},
+-			contextWindow: 200000,
+-			maxTokens: 100000,
+-		} satisfies Model<"openai-responses">,
+ 		"gpt-4": {
+ 			id: "gpt-4",
+ 			name: "GPT-4",
+@@ -6261,6 +6330,23 @@ export const MODELS = {
+ 			contextWindow: 200000,
+ 			maxTokens: 128000,
+ 		} satisfies Model<"anthropic-messages">,
++		"claude-opus-4-7": {
++			id: "claude-opus-4-7",
++			name: "Claude Opus 4.7",
++			api: "anthropic-messages",
++			provider: "opencode",
++			baseUrl: "https://opencode.ai/zen",
++			reasoning: true,
++			input: ["text", "image"],
++			cost: {
++				input: 5,
++				output: 25,
++				cacheRead: 0.5,
++				cacheWrite: 6.25,
++			},
++			contextWindow: 1000000,
++			maxTokens: 128000,
++		} satisfies Model<"anthropic-messages">,
+ 		"claude-sonnet-4": {
+ 			id: "claude-sonnet-4",
+ 			name: "Claude Sonnet 4",
+@@ -6827,9 +6913,9 @@ export const MODELS = {
+ 		"minimax-m2.5": {
+ 			id: "minimax-m2.5",
+ 			name: "MiniMax M2.5",
+-			api: "anthropic-messages",
++			api: "openai-completions",
+ 			provider: "opencode-go",
+-			baseUrl: "https://opencode.ai/zen/go",
++			baseUrl: "https://opencode.ai/zen/go/v1",
+ 			reasoning: true,
+ 			input: ["text"],
+ 			cost: {
+@@ -6839,8 +6925,8 @@ export const MODELS = {
+ 				cacheWrite: 0,
+ 			},
+ 			contextWindow: 204800,
+-			maxTokens: 131072,
+-		} satisfies Model<"anthropic-messages">,
++			maxTokens: 65536,
++		} satisfies Model<"openai-completions">,
+ 		"minimax-m2.7": {
+ 			id: "minimax-m2.7",
+ 			name: "MiniMax M2.7",
+@@ -7512,7 +7598,7 @@ export const MODELS = {
+ 			api: "openai-completions",
+ 			provider: "openrouter",
+ 			baseUrl: "https://openrouter.ai/api/v1",
+-			reasoning: true,
++			reasoning: false,
+ 			input: ["text"],
+ 			cost: {
+ 				input: 0.19999999999999998,
+@@ -7600,13 +7686,13 @@ export const MODELS = {
+ 			reasoning: true,
+ 			input: ["text"],
+ 			cost: {
+-				input: 0.26,
+-				output: 0.38,
+-				cacheRead: 0.13,
++				input: 0.25899999999999995,
++				output: 0.42,
++				cacheRead: 0.135,
+ 				cacheWrite: 0,
+ 			},
+ 			contextWindow: 163840,
+-			maxTokens: 4096,
++			maxTokens: 163840,
+ 		} satisfies Model<"openai-completions">,
+ 		"deepseek/deepseek-v3.2-exp": {
+ 			id: "deepseek/deepseek-v3.2-exp",
+@@ -7855,13 +7941,13 @@ export const MODELS = {
+ 			reasoning: true,
+ 			input: ["text", "image"],
+ 			cost: {
+-				input: 0.07,
+-				output: 0.39999999999999997,
+-				cacheRead: 0.04,
++				input: 0.08,
++				output: 0.35,
++				cacheRead: 0.01,
+ 				cacheWrite: 0,
+ 			},
+ 			contextWindow: 262144,
+-			maxTokens: 262144,
++			maxTokens: 4096,
+ 		} satisfies Model<"openai-completions">,
+ 		"google/gemma-4-26b-a4b-it:free": {
+ 			id: "google/gemma-4-26b-a4b-it:free",
+@@ -8008,13 +8094,13 @@ export const MODELS = {
+ 			reasoning: false,
+ 			input: ["text"],
+ 			cost: {
+-				input: 0.09999999999999999,
+-				output: 0.32,
++				input: 0.12,
++				output: 0.38,
+ 				cacheRead: 0,
+ 				cacheWrite: 0,
+ 			},
+ 			contextWindow: 131072,
+-			maxTokens: 16384,
++			maxTokens: 131072,
+ 		} satisfies Model<"openai-completions">,
+ 		"meta-llama/llama-3.3-70b-instruct:free": {
+ 			id: "meta-llama/llama-3.3-70b-instruct:free",
+@@ -8033,23 +8119,6 @@ export const MODELS = {
+ 			contextWindow: 65536,
+ 			maxTokens: 4096,
+ 		} satisfies Model<"openai-completions">,
+-		"meta-llama/llama-4-maverick": {
+-			id: "meta-llama/llama-4-maverick",
+-			name: "Meta: Llama 4 Maverick",
+-			api: "openai-completions",
+-			provider: "openrouter",
+-			baseUrl: "https://openrouter.ai/api/v1",
+-			reasoning: false,
+-			input: ["text", "image"],
+-			cost: {
+-				input: 0.15,
+-				output: 0.6,
+-				cacheRead: 0,
+-				cacheWrite: 0,
+-			},
+-			contextWindow: 1048576,
+-			maxTokens: 16384,
+-		} satisfies Model<"openai-completions">,
+ 		"meta-llama/llama-4-scout": {
+ 			id: "meta-llama/llama-4-scout",
+ 			name: "Meta: Llama 4 Scout",
+@@ -8705,9 +8774,9 @@ export const MODELS = {
+ 			reasoning: true,
+ 			input: ["text"],
+ 			cost: {
+-				input: 0.09999999999999999,
+-				output: 0.5,
+-				cacheRead: 0.09999999999999999,
++				input: 0.09,
++				output: 0.44999999999999996,
++				cacheRead: 0,
+ 				cacheWrite: 0,
+ 			},
+ 			contextWindow: 262144,
+@@ -9087,23 +9156,6 @@ export const MODELS = {
+ 			contextWindow: 128000,
+ 			maxTokens: 16384,
+ 		} satisfies Model<"openai-completions">,
+-		"openai/gpt-4o:extended": {
+-			id: "openai/gpt-4o:extended",
+-			name: "OpenAI: GPT-4o (extended)",
+-			api: "openai-completions",
+-			provider: "openrouter",
+-			baseUrl: "https://openrouter.ai/api/v1",
+-			reasoning: false,
+-			input: ["text", "image"],
+-			cost: {
+-				input: 6,
+-				output: 18,
+-				cacheRead: 0,
+-				cacheWrite: 0,
+-			},
+-			contextWindow: 128000,
+-			maxTokens: 64000,
+-		} satisfies Model<"openai-completions">,
+ 		"openai/gpt-5": {
+ 			id: "openai/gpt-5",
+ 			name: "OpenAI: GPT-5",
+@@ -9881,7 +9933,7 @@ export const MODELS = {
+ 				input: 0.26,
+ 				output: 0.78,
+ 				cacheRead: 0.052000000000000005,
+-				cacheWrite: 0,
++				cacheWrite: 0.325,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 32768,
+@@ -9898,7 +9950,7 @@ export const MODELS = {
+ 				input: 0.26,
+ 				output: 0.78,
+ 				cacheRead: 0,
+-				cacheWrite: 0,
++				cacheWrite: 0.325,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 32768,
+@@ -9915,7 +9967,7 @@ export const MODELS = {
+ 				input: 0.26,
+ 				output: 0.78,
+ 				cacheRead: 0,
+-				cacheWrite: 0,
++				cacheWrite: 0.325,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 32768,
+@@ -9994,7 +10046,7 @@ export const MODELS = {
+ 			api: "openai-completions",
+ 			provider: "openrouter",
+ 			baseUrl: "https://openrouter.ai/api/v1",
+-			reasoning: true,
++			reasoning: false,
+ 			input: ["text"],
+ 			cost: {
+ 				input: 0.071,
+@@ -10014,13 +10066,13 @@ export const MODELS = {
+ 			reasoning: true,
+ 			input: ["text"],
+ 			cost: {
+-				input: 0.14950000000000002,
+-				output: 1.495,
++				input: 0.13,
++				output: 0.6,
+ 				cacheRead: 0,
+ 				cacheWrite: 0,
+ 			},
+-			contextWindow: 131072,
+-			maxTokens: 4096,
++			contextWindow: 262144,
++			maxTokens: 262144,
+ 		} satisfies Model<"openai-completions">,
+ 		"qwen/qwen3-30b-a3b": {
+ 			id: "qwen/qwen3-30b-a3b",
+@@ -10153,7 +10205,7 @@ export const MODELS = {
+ 				input: 0.195,
+ 				output: 0.975,
+ 				cacheRead: 0.039,
+-				cacheWrite: 0,
++				cacheWrite: 0.24375,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 65536,
+@@ -10187,7 +10239,7 @@ export const MODELS = {
+ 				input: 0.65,
+ 				output: 3.25,
+ 				cacheRead: 0.13,
+-				cacheWrite: 0,
++				cacheWrite: 0.8125,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 65536,
+@@ -10221,7 +10273,7 @@ export const MODELS = {
+ 				input: 0.78,
+ 				output: 3.9,
+ 				cacheRead: 0.156,
+-				cacheWrite: 0,
++				cacheWrite: 0.975,
+ 			},
+ 			contextWindow: 262144,
+ 			maxTokens: 32768,
+@@ -10475,7 +10527,7 @@ export const MODELS = {
+ 			cost: {
+ 				input: 0.39,
+ 				output: 2.34,
+-				cacheRead: 0,
++				cacheRead: 0.195,
+ 				cacheWrite: 0,
+ 			},
+ 			contextWindow: 262144,
+@@ -10490,13 +10542,13 @@ export const MODELS = {
+ 			reasoning: true,
+ 			input: ["text", "image"],
+ 			cost: {
+-				input: 0.049999999999999996,
++				input: 0.09999999999999999,
+ 				output: 0.15,
+ 				cacheRead: 0,
+ 				cacheWrite: 0,
+ 			},
+-			contextWindow: 256000,
+-			maxTokens: 32768,
++			contextWindow: 262144,
++			maxTokens: 4096,
+ 		} satisfies Model<"openai-completions">,
+ 		"qwen/qwen3.5-flash-02-23": {
+ 			id: "qwen/qwen3.5-flash-02-23",
+@@ -10510,7 +10562,7 @@ export const MODELS = {
+ 				input: 0.065,
+ 				output: 0.26,
+ 				cacheRead: 0,
+-				cacheWrite: 0,
++				cacheWrite: 0.08125,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 65536,
+@@ -10527,7 +10579,7 @@ export const MODELS = {
+ 				input: 0.26,
+ 				output: 1.56,
+ 				cacheRead: 0,
+-				cacheWrite: 0,
++				cacheWrite: 0.325,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 65536,
+@@ -10544,7 +10596,7 @@ export const MODELS = {
+ 				input: 0.325,
+ 				output: 1.95,
+ 				cacheRead: 0,
+-				cacheWrite: 0,
++				cacheWrite: 0.40625,
+ 			},
+ 			contextWindow: 1000000,
+ 			maxTokens: 65536,
+@@ -13052,7 +13104,7 @@ export const MODELS = {
+ 		} satisfies Model<"anthropic-messages">,
+ 		"openai/gpt-oss-20b": {
+ 			id: "openai/gpt-oss-20b",
+-			name: "gpt-oss-20b",
++			name: "GPT OSS 120B",
+ 			api: "anthropic-messages",
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+@@ -13069,7 +13121,7 @@ export const MODELS = {
+ 		} satisfies Model<"anthropic-messages">,
+ 		"openai/gpt-oss-safeguard-20b": {
+ 			id: "openai/gpt-oss-safeguard-20b",
+-			name: "gpt-oss-safeguard-20b",
++			name: "GPT OSS Safeguard 20B",
+ 			api: "anthropic-messages",
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+@@ -13329,7 +13381,7 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: false,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 0.19999999999999998,
+ 				output: 0.5,
+@@ -13346,7 +13398,7 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: true,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 0.19999999999999998,
+ 				output: 0.5,
+@@ -13363,7 +13415,7 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: false,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 0.19999999999999998,
+ 				output: 0.5,
+@@ -13380,7 +13432,7 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: true,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 0.19999999999999998,
+ 				output: 0.5,
+@@ -13397,7 +13449,7 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: true,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 2,
+ 				output: 6,
+@@ -13414,7 +13466,7 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: true,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 2,
+ 				output: 6,
+@@ -13737,15 +13789,15 @@ export const MODELS = {
+ 			provider: "vercel-ai-gateway",
+ 			baseUrl: "https://ai-gateway.vercel.sh",
+ 			reasoning: true,
+-			input: ["text"],
++			input: ["text", "image"],
+ 			cost: {
+ 				input: 1.4,
+ 				output: 4.4,
+ 				cacheRead: 0.26,
+ 				cacheWrite: 0,
+ 			},
+-			contextWindow: 202800,
+-			maxTokens: 64000,
++			contextWindow: 202752,
++			maxTokens: 202752,
+ 		} satisfies Model<"anthropic-messages">,
+ 		"zai/glm-5v-turbo": {
+ 			id: "zai/glm-5v-turbo",
+diff --git a/packages/tui/package.json b/packages/tui/package.json
+index 1da5d72..01be281 100644
+--- a/packages/tui/package.json
++++ b/packages/tui/package.json
+@@ -7,7 +7,8 @@
+ 	"scripts": {
+ 		"clean": "node -e \"require('fs').rmSync('./dist',{recursive:true,force:true})\"",
+ 		"build": "npx tsc -p tsconfig.build.json",
+-		"dev": "npx tsc -p tsconfig.build.json --watch --preserveWatchOutput",
++		"build:dev": "npx tsc -p tsconfig.dev.json",
++		"dev": "npx tsc -p tsconfig.dev.json --watch --preserveWatchOutput",
+ 		"test": "node --test --import tsx test/*.test.ts",
+ 		"prepublishOnly": "npm run clean && npm run build"
+ 	},
+diff --git a/scripts/bundle-deps.js b/scripts/bundle-deps.js
+index 536c295..8fc5020 100644
+--- a/scripts/bundle-deps.js
++++ b/scripts/bundle-deps.js
+@@ -143,12 +143,13 @@ function copyDirectory(src, dest) {
+     const destPath = path.join(dest, entry.name);
+ 
+     if (entry.isDirectory()) {
+-      // Skip node_modules, test, and directories we don't need
++      // Skip node_modules, test, source, and directories we don't need
+       if (
+         entry.name === "node_modules" ||
+         entry.name === "test" ||
+         entry.name === "tests" ||
+-        entry.name === ".git"
++        entry.name === ".git" ||
++        entry.name === "src"
+       ) {
+         continue;
+       }

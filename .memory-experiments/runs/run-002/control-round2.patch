@@ -1,0 +1,38 @@
+diff --git a/packages/mem-core/package.json b/packages/mem-core/package.json
+index b17ef36..2a93551 100644
+--- a/packages/mem-core/package.json
++++ b/packages/mem-core/package.json
+@@ -5,6 +5,7 @@
+   "type": "module",
+   "main": "./dist/index.js",
+   "types": "./dist/index.d.ts",
++  "source": "./src/index.ts",
+   "exports": {
+     ".": {
+       "import": "./dist/index.js",
+@@ -13,11 +14,14 @@
+     "./extension": {
+       "import": "./dist/extension.js",
+       "types": "./dist/extension.d.ts"
++    },
++    "./src/*": {
++      "types": "./src/*.d.ts",
++      "default": "./src/*.ts"
+     }
+   },
+   "files": [
+     "dist",
+-    "src",
+     "README.md",
+     "AGENT.md"
+   ],
+@@ -26,7 +30,8 @@
+     "dev": "node ../../node_modules/typescript/bin/tsc --watch",
+     "clean": "rm -rf dist",
+     "test": "node --test --import tsx test/dream-lock.test.ts test/dream-abort-and-scan.test.ts test/hash-embedding.test.ts test/procedural-v2.test.ts test/consolidate-v2.test.ts test/reconsolidate-v2.test.ts test/engine-v2-links.test.ts test/archive-maintenance.test.ts test/archive-restore.test.ts test/injection-v2-preferred.test.ts test/search-v2-first.test.ts test/extraction-v2-dual-write.test.ts test/conversation-preferences.test.ts test/extension-commands.test.ts",
+-    "prepublishOnly": "npm run build"
++    "validate-release": "node scripts/validate-release.mjs",
++    "prepublishOnly": "npm run build && npm run validate-release"
+   },
+   "keywords": [
+     "nanomem",

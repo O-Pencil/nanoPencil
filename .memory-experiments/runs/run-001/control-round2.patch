@@ -1,0 +1,140 @@
+diff --git a/core/config/resource-loader.ts b/core/config/resource-loader.ts
+index 4d2122e..24ee322 100644
+--- a/core/config/resource-loader.ts
++++ b/core/config/resource-loader.ts
+@@ -349,10 +349,13 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 	}
+ 
+ 	async reload(): Promise<void> {
++		const _reloadStart = process.env.NANOPENCIL_TIMING === "1" ? Date.now() : 0;
+ 		const resolvedPaths = await this.packageManager.resolve();
++		if (_reloadStart) console.error(`[TIMING] reload.packageManager.resolve: ${Date.now() - _reloadStart}ms`);
+ 		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+ 			temporary: true,
+ 		});
++		if (_reloadStart) console.error(`[TIMING] reload.resolveExtensionSources: ${Date.now() - _reloadStart}ms`);
+ 
+ 		// Helper to extract enabled paths and store metadata
+ 		const getEnabledResources = (
+@@ -422,7 +425,9 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 			? cliEnabledExtensions
+ 			: this.mergePaths(enabledExtensions, cliEnabledExtensions);
+ 
++		const _tExt = _reloadStart ? Date.now() : 0;
+ 		const extensionsResult = await loadExtensions(extensionPaths, this.cwd, this.eventBus);
++		if (_reloadStart) console.error(`[TIMING] reload.loadExtensions: ${Date.now() - _tExt}ms`);
+ 		const inlineExtensions = await this.loadExtensionFactories(extensionsResult.runtime);
+ 		extensionsResult.extensions.push(...inlineExtensions.extensions);
+ 		extensionsResult.errors.push(...inlineExtensions.errors);
+@@ -447,27 +452,35 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 			: this.mergePaths([...enabledSkills, ...cliEnabledSkills], [...this.additionalSkillPaths, ...personaSkillPaths]);
+ 
+ 		this.lastSkillPaths = skillPaths;
++		const _tSkills = _reloadStart ? Date.now() : 0;
+ 		this.updateSkillsFromPaths(skillPaths);
++		if (_reloadStart) console.error(`[TIMING] reload.updateSkillsFromPaths: ${Date.now() - _tSkills}ms`);
+ 
+ 		const promptPaths = this.noPromptTemplates
+ 			? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
+ 			: this.mergePaths([...enabledPrompts, ...cliEnabledPrompts], this.additionalPromptTemplatePaths);
+ 
+ 		this.lastPromptPaths = promptPaths;
++		const _tPrompts = _reloadStart ? Date.now() : 0;
+ 		this.updatePromptsFromPaths(promptPaths);
++		if (_reloadStart) console.error(`[TIMING] reload.updatePromptsFromPaths: ${Date.now() - _tPrompts}ms`);
+ 
+ 		const themePaths = this.noThemes
+ 			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
+ 			: this.mergePaths([...enabledThemes, ...cliEnabledThemes], this.additionalThemePaths);
+ 
+ 		this.lastThemePaths = themePaths;
++		const _tThemes = _reloadStart ? Date.now() : 0;
+ 		this.updateThemesFromPaths(themePaths);
++		if (_reloadStart) console.error(`[TIMING] reload.updateThemesFromPaths: ${Date.now() - _tThemes}ms`);
+ 
+ 		for (const extension of this.extensionsResult.extensions) {
+ 			this.addDefaultMetadataForPath(extension.path);
+ 		}
+ 
++		const _tAgents = _reloadStart ? Date.now() : 0;
+ 		const agentsFiles = { agentsFiles: loadProjectContextFiles({ cwd: this.cwd, agentDir: this.agentDir }) };
++		if (_reloadStart) console.error(`[TIMING] reload.loadProjectContextFiles: ${Date.now() - _tAgents}ms`);
+ 		const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
+ 		this.agentsFiles = resolvedAgentsFiles.agentsFiles;
+ 
+diff --git a/core/extensions/loader.ts b/core/extensions/loader.ts
+index c78db0e..9d519dc 100644
+--- a/core/extensions/loader.ts
++++ b/core/extensions/loader.ts
+@@ -340,15 +340,27 @@ export async function loadExtensionFromFactory(
+ 
+ /**
+  * Load extensions from paths.
++ *
++ * Extensions are loaded in parallel via Promise.all because they have no
++ * inter-dependencies during loading: each extension registers its own
++ * tools/commands/handlers on its own Extension object, and the shared
++ * ExtensionRuntime only provides stub methods at this stage (real
++ * implementations are bound later by ExtensionRunner.bindCore).
++ *
++ * Note: Actual speedup is limited by jiti's single-threaded TypeScript
++ * transpilation. The main benefit is I/O overlap for file reads.
+  */
+ export async function loadExtensions(paths: string[], cwd: string, eventBus?: EventBus): Promise<LoadExtensionsResult> {
+ 	const extensions: Extension[] = [];
+ 	const errors: Array<{ path: string; error: string }> = [];
+ 	const resolvedEventBus = eventBus ?? createEventBus();
+ 	const runtime = createExtensionRuntime();
++	const _extTiming = process.env.NANOPENCIL_TIMING === "1";
+ 
+ 	for (const extPath of paths) {
++		const _t0 = _extTiming ? Date.now() : 0;
+ 		const { extension, error } = await loadExtension(extPath, cwd, resolvedEventBus, runtime);
++		if (_extTiming) console.error(`[TIMING] ext: ${extPath.split("/").slice(-2).join("/")}: ${Date.now() - _t0}ms`);
+ 
+ 		if (error) {
+ 			errors.push({ path: extPath, error });
+diff --git a/main.ts b/main.ts
+index 3dbf13c..301faf2 100644
+--- a/main.ts
++++ b/main.ts
+@@ -581,6 +581,13 @@ async function handleConfigCommand(args: string[]): Promise<boolean> {
+ 	process.exit(0);
+ }
+ 
++const startupBegin = Date.now();
++function mark(label: string) {
++	if (process.env.NANOPENCIL_TIMING === "1") {
++		console.error(`[TIMING] ${label}: ${Date.now() - startupBegin}ms`);
++	}
++}
++
+ export async function main(args: string[]) {
+ 	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.NANOPENCIL_OFFLINE);
+ 	if (offlineMode) {
+@@ -599,7 +606,9 @@ export async function main(args: string[]) {
+ 	// Run migrations (pass cwd for project-local migrations)
+ 	const firstPass = parseArgs(args);
+ 	const cwd = resolveWorkingDirectory(firstPass.cwd);
++	mark("pre-migrations");
+ 	const { migratedAuthProviders: migratedProviders, deprecationWarnings } = runMigrations(cwd);
++	mark("migrations");
+ 
+ 	// Early load extensions to discover their CLI flags
+ 	const agentDir = getAgentDir();
+@@ -651,6 +660,7 @@ export async function main(args: string[]) {
+ 	});
+ 	await resourceLoader.reload();
+ 	time("resourceLoader.reload");
++	mark("resourceLoader.reload");
+ 
+ 	const extensionsResult: LoadExtensionsResult = resourceLoader.getExtensions();
+ 	for (const { path, error } of extensionsResult.errors) {
+@@ -811,6 +821,7 @@ export async function main(args: string[]) {
+ 	}
+ 
+ 	const { session, modelFallbackMessage } = await createAgentSession(sessionOptions);
++	mark("createAgentSession");
+ 
+ 	if (!isInteractive && !session.model) {
+ 		console.error(chalk.red("No models available."));

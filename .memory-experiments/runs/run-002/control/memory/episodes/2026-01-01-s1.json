@@ -1,0 +1,15 @@
+{
+  "sessionId": "s1",
+  "project": "p",
+  "date": "2026-01-01",
+  "summary": "did something",
+  "filesModified": [
+    "a.ts"
+  ],
+  "toolsUsed": {},
+  "keyObservations": [],
+  "errors": [],
+  "tags": [],
+  "importance": 8,
+  "consolidated": false
+}

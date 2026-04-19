@@ -1,0 +1,59 @@
+[
+  {
+    "id": "semantic:extract:1776581529572-aetmy2",
+    "kind": "semantic",
+    "semanticType": "fact",
+    "name": "CLI quiet mode implementation",
+    "summary": "--quiet/-q flag suppresses startup UI, warnings, and checks with specific precedence over verbose and settings.",
+    "detail": "Implemented --quiet/-q flag in cli/args.ts. Precedence: CLI --quiet > CLI --verbose > settings quietStartup. Suppresses header/logo, keybindings, auto-update/version checks, deprecation warnings, credential migration, models.json errors, and model fallback warnings. Reuses existing quietStartup settings plumbing.",
+    "accessCount": 0,
+    "importance": 5,
+    "salience": 5,
+    "confidence": 0.8,
+    "retention": "ambient",
+    "stability": "stable",
+    "tags": [
+      "cli",
+      "quiet",
+      "mode",
+      "implementation",
+      "--quiet",
+      "-q",
+      "flag",
+      "suppresses",
+      "startup",
+      "ui",
+      "warnings",
+      "and",
+      "checks",
+      "with",
+      "specific",
+      "precedence",
+      "over",
+      "verbose",
+      "settings.",
+      "implemented",
+      "in",
+      "args.ts.",
+      "--verbose",
+      "settings",
+      "quietstartup.",
+      "header",
+      "logo",
+      "keybindings",
+      "auto-update",
+      "version"
+    ],
+    "evidence": [],
+    "scope": {
+      "project": "tmp/np-exp-run-003-sal"
+    },
+    "createdAt": "2026-04-19T06:52:09.572Z",
+    "updatedAt": "2026-04-19T06:52:09.572Z",
+    "abstractionLevel": "generalization",
+    "structuralAnchor": {
+      "modulePath": "packages/ai",
+      "filePath": "packages/ai/src/cli.ts"
+    }
+  }
+]

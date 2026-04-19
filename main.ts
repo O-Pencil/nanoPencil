@@ -32,6 +32,7 @@ import { allTools } from "./core/tools/index.js";
 import { runMigrations, showDeprecationWarnings } from "./migrations.js";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
 import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
+import { profileCheckpoint } from "./utils/startup-profiler.js";
 import {
 	CUSTOM_ANTHROPIC_PROVIDER,
 	CUSTOM_OPENAI_PROVIDER,
@@ -582,6 +583,7 @@ async function handleConfigCommand(args: string[]): Promise<boolean> {
 }
 
 export async function main(args: string[]) {
+	profileCheckpoint("main_entry");
 	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.NANOPENCIL_OFFLINE);
 	if (offlineMode) {
 		process.env.NANOPENCIL_OFFLINE = "1";
@@ -603,7 +605,9 @@ export async function main(args: string[]) {
 
 	// Early load extensions to discover their CLI flags
 	const agentDir = getAgentDir();
+	profileCheckpoint("before_settings_manager");
 	const settingsManager = SettingsManager.create(cwd, agentDir);
+	profileCheckpoint("settings_manager_ready");
 	reportSettingsErrors(settingsManager, "startup");
 	const authStorage = AuthStorage.create();
 	if (APP_NAME === "nanopencil") {
@@ -651,6 +655,7 @@ export async function main(args: string[]) {
 	});
 	await resourceLoader.reload();
 	time("resourceLoader.reload");
+	profileCheckpoint("resource_loader_reload", "settings_manager_ready");
 
 	const extensionsResult: LoadExtensionsResult = resourceLoader.getExtensions();
 	for (const { path, error } of extensionsResult.errors) {

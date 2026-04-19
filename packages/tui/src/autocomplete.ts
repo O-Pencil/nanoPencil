@@ -235,7 +235,7 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 			const spaceIndex = textBeforeCursor.indexOf(" ");
 
 			if (spaceIndex === -1) {
-				// No space yet - complete command names with fuzzy matching
+				// No space yet - complete command names with weighted fuzzy matching
 				const prefix = textBeforeCursor.slice(1); // Remove the "/"
 				const commandItems = this.commands.map((cmd) => ({
 					name: "name" in cmd ? cmd.name : cmd.value,
@@ -243,11 +243,24 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 					description: cmd.description,
 				}));
 
-				const filtered = fuzzyFilter(commandItems, prefix, (item) => item.name).map((item) => ({
-					value: item.name,
-					label: item.label,
-					...(item.description && { description: item.description }),
-				}));
+				// Weighted fuzzy: name (weight 3) > description (weight 1)
+				// Prefix exact match gets priority boost handled by fuzzyMatch
+				const filtered = weightedFuzzyFilter(
+					commandItems,
+					prefix,
+					[
+						{ name: "name", getText: (i) => i.name, weight: 3 },
+						...(prefix.length > 0
+							? []
+							: [{ name: "description", getText: (i) => i.description ?? "", weight: 0.5 }]),
+					],
+				)
+					.slice(0, 10)
+					.map((item) => ({
+						value: item.name,
+						label: item.label,
+						...(item.description && { description: item.description }),
+					}));
 
 				if (filtered.length === 0) return null;
 

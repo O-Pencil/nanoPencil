@@ -146,6 +146,7 @@ interface LayoutLine {
 	text: string;
 	hasCursor: boolean;
 	cursorPos?: number;
+	isPlaceholder?: boolean;
 }
 
 export interface EditorTheme {
@@ -216,6 +217,8 @@ export class Editor implements Component, Focusable {
 	public onSubmit?: (text: string) => void;
 	public onChange?: (text: string) => void;
 	public disableSubmit: boolean = false;
+	/** Placeholder text shown when editor is empty */
+	public placeholder: string = "";
 
 	constructor(tui: TUI, theme: EditorTheme, options: EditorOptions = {}) {
 		this.tui = tui;
@@ -740,11 +743,13 @@ export class Editor implements Component, Focusable {
 		const layoutLines: LayoutLine[] = [];
 
 		if (this.state.lines.length === 0 || (this.state.lines.length === 1 && this.state.lines[0] === "")) {
-			// Empty editor
+			// Empty editor - show placeholder if available
+			const placeholderText = this.placeholder || "";
 			layoutLines.push({
-				text: "",
+				text: placeholderText,
 				hasCursor: true,
 				cursorPos: 0,
+				isPlaceholder: placeholderText !== "",
 			});
 			return layoutLines;
 		}

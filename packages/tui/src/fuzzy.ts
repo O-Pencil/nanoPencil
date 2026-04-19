@@ -138,3 +138,67 @@ export function fuzzyFilter<T>(items: T[], query: string, getText: (item: T) => 
 	results.sort((a, b) => a.totalScore - b.totalScore);
 	return results.map((r) => r.item);
 }
+
+/**
+ * Weighted fuzzy filter for command autocomplete.
+ * Scores items by multiple fields with different weights.
+ * Higher score = better match.
+ */
+export interface WeightedField<T> {
+	name: string;
+	getText: (item: T) => string;
+	weight: number;
+}
+
+export function weightedFuzzyFilter<T>(
+	items: T[],
+	query: string,
+	fields: WeightedField<T>[],
+): T[] {
+	if (!query.trim()) {
+		return items;
+	}
+
+	const tokens = query
+		.trim()
+		.split(/\s+/)
+		.filter((t) => t.length > 0);
+
+	if (tokens.length === 0) {
+		return items;
+	}
+
+	const results: { item: T; totalScore: number }[] = [];
+
+	for (const item of items) {
+		let totalWeightedScore = 0;
+		let hasMatch = false;
+
+		for (const field of fields) {
+			const text = field.getText(item);
+			let fieldScore = 0;
+
+			for (const token of tokens) {
+				const match = fuzzyMatch(token, text);
+				if (match.matches) {
+					fieldScore += match.score;
+				} else {
+					fieldScore = Infinity; // Token didn't match this field
+					break;
+				}
+			}
+
+			if (fieldScore !== Infinity) {
+				totalWeightedScore += fieldScore * field.weight;
+				hasMatch = true;
+			}
+		}
+
+		if (hasMatch) {
+			results.push({ item, totalScore: totalWeightedScore });
+		}
+	}
+
+	results.sort((a, b) => a.totalScore - b.totalScore);
+	return results.map((r) => r.item);
+}

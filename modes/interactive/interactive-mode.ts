@@ -3172,6 +3172,7 @@ export class InteractiveMode {
           this.ui,
           theme,
           this.defaultWorkingMessage,
+          this.sessionManager.getSessionId(),
         );
         this.statusContainer.addChild(this.loadingAnimation);
         this.setBuddyPetState("working", "Working...");
@@ -3221,6 +3222,10 @@ export class InteractiveMode {
 
       case "message_update":
         if (this.streamingComponent && event.message.role === "assistant") {
+          // Reset stall timer on new output - spinner should not show as stuck
+          if (this.loadingAnimation) {
+            (this.loadingAnimation as PencilLoader).resetStallTimer();
+          }
           this.streamingMessage = event.message;
           this.streamingComponent.updateContent(this.streamingMessage);
 

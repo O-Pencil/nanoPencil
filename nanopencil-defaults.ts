@@ -720,12 +720,10 @@ export async function ensureNanopencilCodingPlanAuth(
 	authStorage: AuthStorage,
 	modelRegistry: ModelRegistry,
 ): Promise<void> {
-	if (modelRegistry.getAvailable().length > 0) return;
-
-	const dashscopeKey = await modelRegistry.getApiKeyForProvider(NANOPENCIL_DEFAULT_PROVIDER);
-	const qianfanKey = await modelRegistry.getApiKeyForProvider(NANOPENCIL_QIANFAN_CODING_PROVIDER);
-	const arkKey = await modelRegistry.getApiKeyForProvider(NANOPENCIL_ARK_CODING_PROVIDER);
-	if (dashscopeKey || qianfanKey || arkKey) return;
+	// Skip if any non-local provider already has auth (ollama is local-only, doesn't count)
+	const LOCAL_ONLY_PROVIDERS = new Set([NANOPENCIL_OLLAMA_PROVIDER]);
+	const availableRemote = modelRegistry.getAvailable().filter((m) => !LOCAL_ONLY_PROVIDERS.has(m.provider));
+	if (availableRemote.length > 0) return;
 
 	if (process.stdin.isTTY) {
 		const rl = createInterface({ input: process.stdin, output: process.stdout });

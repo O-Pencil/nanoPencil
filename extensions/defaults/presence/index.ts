@@ -188,7 +188,13 @@ function clearTimers(state: PresenceState): void {
 
 function getMemoryDir(): string {
 	// Use the same memory directory as the main app
-	return process.env.NANOMEM_MEMORY_DIR || join(homedir(), ".nanomem", "memory");
+	// Priority: env var > nanopencil default > legacy nanomem path
+	if (process.env.NANOMEM_MEMORY_DIR) return process.env.NANOMEM_MEMORY_DIR;
+	// Check if nanopencil's memory directory exists
+	const nanopencilMemory = join(homedir(), ".nanopencil", "agent", "memory");
+	if (existsSync(nanopencilMemory)) return nanopencilMemory;
+	// Fallback to legacy path
+	return join(homedir(), ".nanomem", "memory");
 }
 
 async function initMemEngine(state: PresenceState): Promise<void> {

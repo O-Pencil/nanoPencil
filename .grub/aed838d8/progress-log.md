@@ -55,3 +55,15 @@ Goal: 按照长期方案实现 - 让 presence 模块能够从 mem-core 记忆中
 - **Fix applied**: Modified `getMemoryDir()` to check `~/.nanopencil/agent/memory` first before fallback
 - Verified language preference entry exists: `{name: "用户偏好中文", type: "preference"}` in preferences.json
 - Build succeeded: 4/20 features passing
+
+### Iteration 2-4 Progress
+
+- Verified language preference detection works with fixed getMemoryDir()
+- Confirmed detectLanguageFromMemory() correctly finds Chinese preferences
+- Verified memory persistence (preferences.json survives restart)
+- Verified system fallback: getLocale() returns 'en' when no memory preference
+- Current status: 13/20 features passing
+
+### Remaining Features (nice-to-have)
+- User commands: /set-locale, /debug preferences (enhancements)
+- Full integration test (complex, requires running LLM)

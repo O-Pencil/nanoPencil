@@ -75,6 +75,13 @@ Goal: 按照长期方案实现 - 让 presence 模块能够从 mem-core 记忆中
 - Fix: Added homedir import to presence extension
 - Current status: 15/20 features passing
 
-### Remaining Features (nice-to-have)
-- /set-locale command (to explicitly set language preference)
+### Iteration 6 Progress
+
+- Implemented `/set-locale` command:
+  - `/set-locale zh` - sets Chinese preference
+  - `/set-locale en` - sets English preference
+  - Writes to preferences.json in memory directory
+- Current status: 16/20 features passing
+
+### Remaining (nice-to-have)
 - Full integration test (complex, requires running LLM)

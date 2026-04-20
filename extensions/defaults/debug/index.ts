@@ -236,7 +236,69 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 	});
 
 	api.registerCommand("debug", {
-		description: "Run system diagnostics (/debug [env|session|model|<issue>])",
+		description: "Run system diagnostics (/debug [env|session|model|preferences|<issue>])",
 		handler: (args, ctx) => handleDebugCommand(args, ctx, api),
+	});
+
+	// Register /set-locale command
+	api.registerCommand("set-locale", {
+		description: "Set language preference (/set-locale zh|en)",
+		handler: async (args, ctx) => {
+			const trimmed = args.trim().toLowerCase();
+			if (trimmed !== "zh" && trimmed !== "en") {
+				ctx.ui.notify("Usage: /set-locale zh or /set-locale en", "info");
+				return;
+			}
+
+			// Get memory directory
+			const os = await import("node:os");
+			const fs = await import("node:fs");
+			const path = await import("node:path");
+			const memoryDir = process.env.NANOMEM_MEMORY_DIR || path.join(os.homedir(), ".nanopencil", "agent", "memory");
+			const prefsPath = path.join(memoryDir, "preferences.json");
+
+			try {
+				let prefs: Record<string, unknown>[] = [];
+				if (fs.existsSync(prefsPath)) {
+					prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8"));
+				}
+
+				// Check if language preference already exists
+				const existingIndex = prefs.findIndex((p) => {
+					const name = (p.name as string) || "";
+					return name.includes("用户偏好") || name.includes("language preference") || name.includes("locale");
+				});
+
+				const newPref = {
+					id: `set-locale-${Date.now()}`,
+					type: "preference",
+					name: trimmed === "zh" ? "用户偏好中文" : "Language Preference (English)",
+					summary: trimmed === "zh" ? "用户希望我用中文回复" : "User prefers English",
+					detail: trimmed === "zh" ? "用户通过 /set-locale 命令明确设置语言为中文" : "User explicitly set language to English via /set-locale command",
+					content: trimmed === "zh" ? "用户希望用中文回复" : "User prefers English responses",
+					tags: ["locale", "language", trimmed === "zh" ? "中文" : "english"],
+					importance: 10,
+					strength: 1000,
+					created: new Date().toISOString(),
+					eventTime: new Date().toISOString(),
+					accessCount: 0,
+					retention: "core",
+					salience: 10,
+					stability: "stable",
+					relations: [],
+				};
+
+				if (existingIndex >= 0) {
+					prefs[existingIndex] = newPref;
+				} else {
+					prefs.push(newPref);
+				}
+
+				fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
+				ctx.ui.notify(`Locale set to ${trimmed === "zh" ? "中文" : "English"}. Restart or run /debug preferences to verify.`, "info");
+			} catch (error) {
+				ctx.ui.notify(`Failed to set locale: ${error}`, "error");
+			}
+		},
 	});
 }

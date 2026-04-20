@@ -211,7 +211,8 @@
         "用户执行 /set-locale zh-CN",
         "验证偏好被写入记忆"
       ],
-      "passes": false
+      "passes": true,
+      "evidence": "Implemented /set-locale command that writes language preference to preferences.json"
     },
     {
       "id": "debug-preferences-command",

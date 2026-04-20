@@ -82,7 +82,7 @@ function setPlanModeUi(ctx: ExtensionContext, api: ExtensionAPI): void {
 		"PLAN MODE",
 		`Plan: ${planFilePath}`,
 		"Read-only except the plan file",
-		"Use /plan open to edit; ExitPlanMode requests approval",
+		"Use /plan open to edit; /plan exit requests approval",
 	], { placement: "aboveEditor" });
 }
 
@@ -185,7 +185,7 @@ export default async function planExtension(api: ExtensionAPI) {
 		// Not in plan mode: enter plan mode
 		if (currentMode !== "plan") {
 			const trimmed = args.trim();
-			const description = trimmed.length > 0 && trimmed !== "open" ? trimmed : "";
+			const description = trimmed.length > 0 && trimmed !== "open" && trimmed !== "exit" ? trimmed : "";
 			await enterPlanMode(api, ctx, description);
 			return;
 		}
@@ -224,14 +224,29 @@ export default async function planExtension(api: ExtensionAPI) {
 			return;
 		}
 
+		if (trimmed === "exit") {
+			try {
+				await exitPlanModeTool.execute("plan-exit", { forceExit: true }, undefined, undefined, ctx);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				ctx.ui.notify(message, "warning");
+			}
+			return;
+		}
+
 		// Display plan content
 		displayPlan(api, ctx);
 	};
 
 	api.registerCommand("plan", {
 		description: "Enable plan mode or view the current session plan",
-		getArgumentCompletions: (argumentPrefix) =>
-			"open".startsWith(argumentPrefix.trim()) ? [{ value: "open", label: "open" }] : null,
+		getArgumentCompletions: (argumentPrefix) => {
+			const prefix = argumentPrefix.trim();
+			const values = ["open", "exit"]
+				.filter((value) => value.startsWith(prefix))
+				.map((value) => ({ value, label: value }));
+			return values.length > 0 ? values : null;
+		},
 		handler: handlePlanCommand,
 	});
 

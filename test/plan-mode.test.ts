@@ -82,6 +82,7 @@ function createCommandHarness(cwd: string) {
 			notify: (message: string) => notifications.push(message),
 			setStatus: (key: string, text: string | undefined) => statuses.set(key, text),
 			setWidget: (key: string, content: string[] | undefined) => widgets.set(key, content),
+			select: async () => undefined,
 			editor: async (_title: string, prefill = "") => `${prefill}\nupdated`,
 			openExternalEditor: async () => false,
 		},
@@ -190,7 +191,7 @@ test("ExitPlanMode requires approval and restores previous mode", async () => {
 			hasUI: true,
 			getSettings: () => ({ plansDirectory: ".plans" }),
 			ui: {
-				confirm: async () => true,
+				select: async () => "Execute plan",
 				notify: () => {},
 				setStatus: () => {},
 				setWidget: (key: string, value: string[] | undefined) => cleared.push([key, value]),
@@ -204,6 +205,88 @@ test("ExitPlanMode requires approval and restores previous mode", async () => {
 		assert.match(result.content[0].text, /Approved Plan/);
 		assert.deepEqual(cleared, [["plan-mode", undefined]]);
 		assert.ok(appended.length > 0);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("ExitPlanMode rejection aborts current run and keeps plan mode", async () => {
+	const cwd = createTempProject();
+	try {
+		const bus = {};
+		const sessionState = getPlanSessionState(bus, "session-1", []);
+		sessionState.state.mode = "plan";
+		sessionState.state.prePlanMode = "acceptEdits";
+		await writePlan(bus, [
+			"# Context",
+			"Need to improve plan mode.",
+			"# Approach",
+			"Use existing extension hooks.",
+			"# Files",
+			"Update plan extension.",
+			"# Verification",
+			"Run tests.",
+		].join("\n\n"));
+
+		const tool = createExitPlanModeTool(
+			{
+				events: bus,
+				appendEntry: () => {},
+			} as unknown as ExtensionAPI,
+			() => sessionState,
+			() => false,
+		);
+
+		let aborted = false;
+		const ctx = {
+			cwd,
+			hasUI: true,
+			abort: () => {
+				aborted = true;
+			},
+			getSettings: () => ({ plansDirectory: ".plans" }),
+			ui: {
+				select: async () => "Keep planning",
+				notify: () => {},
+				setStatus: () => {},
+				setWidget: () => {},
+			},
+		} as unknown as ExtensionContext;
+
+		await assert.rejects(
+			tool.execute("exit", {}, undefined, undefined, ctx),
+			/User rejected exiting plan mode/,
+		);
+		assert.equal(aborted, true);
+		assert.equal(sessionState.state.mode, "plan");
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("plan command supports manual /plan exit approval flow", async () => {
+	const cwd = createTempProject();
+	try {
+		const harness = createCommandHarness(cwd);
+		harness.ctx.ui.select = async () => "Execute plan";
+		await planExtension(harness.api);
+
+		await harness.commands.get("plan").handler("", harness.ctx);
+		await writePlan(harness.bus, [
+			"# Context",
+			"Manual exit from plan mode.",
+			"# Approach",
+			"Use /plan exit.",
+			"# Files",
+			"Plan extension.",
+			"# Verification",
+			"Run tests.",
+		].join("\n\n"));
+
+		await harness.commands.get("plan").handler("exit", harness.ctx);
+
+		const state = getPlanSessionState(harness.bus, "session-1", []);
+		assert.equal(state.state.mode, "default");
 	} finally {
 		cleanup(cwd);
 	}

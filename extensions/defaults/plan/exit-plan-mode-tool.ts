@@ -130,6 +130,7 @@ export function createExitPlanModeTool(
 					sessionState.state.mode = "plan"; // Keep in plan mode
 					// Note: handlePlanModeExit is NOT called here - we stay in plan mode
 					api.appendEntry(PLAN_CUSTOM_TYPE, serializePlanSessionState(sessionState));
+					ctx.abort();
 
 					return {
 						content: [{
@@ -145,40 +146,34 @@ export function createExitPlanModeTool(
 			}
 
 			if (!ctx.hasUI) {
-				return {
-					content: [{
-						type: "text",
-						text: "ExitPlanMode requires user approval, but no interactive UI is available. Stay in plan mode and ask the user to approve from an interactive session.",
-					}],
-					isError: true,
-					details: null,
-				};
+				ctx.abort();
+				throw new Error(
+					"ExitPlanMode requires user approval, but no interactive UI is available. Stay in plan mode and ask the user to approve from an interactive session.",
+				);
 			}
 
 			const preview = plan && plan.trim().length > 0
 				? plan.trim().slice(0, 1200)
 				: "No plan content was written.";
-			const approved = await ctx.ui.confirm(
-				"Exit plan mode?",
+			const choice = await ctx.ui.select(
 				[
+					"Plan ready for review:",
 					`Plan file: ${planFilePath}`,
 					"",
 					preview,
 					plan && plan.length > 1200 ? "\n...(truncated)" : "",
 					"",
-					"Approve this plan and allow implementation mode?",
+					"Choose next action:",
 				].join("\n"),
+				["Execute plan", "Keep planning"],
 			);
+			const approved = choice === "Execute plan";
 
 			if (!approved) {
-				return {
-					content: [{
-						type: "text",
-						text: "User rejected exiting plan mode. Stay in plan mode, revise the plan file, and call ExitPlanMode again when ready.",
-					}],
-					isError: true,
-					details: null,
-				};
+				ctx.abort();
+				throw new Error(
+					"User rejected exiting plan mode. Stay in plan mode, revise the plan file, and call ExitPlanMode again when ready.",
+				);
 			}
 
 			// Normal exit: restore permissions

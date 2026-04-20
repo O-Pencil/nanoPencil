@@ -28,6 +28,7 @@ const BUNDLED_GRUB_EXTENSION = join(__dirname, "extensions", "defaults", "grub",
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
 const BUNDLED_TEAM_EXTENSION = join(__dirname, "extensions", "defaults", "team", "index.js");
 const BUNDLED_BTW_EXTENSION = join(__dirname, "extensions", "defaults", "btw", "index.js");
+const BUNDLED_DEBUG_EXTENSION = join(__dirname, "extensions", "defaults", "debug", "index.js");
 const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "defaults", "mcp", "index.js");
 const BUNDLED_EXPORT_HTML_EXTENSION = join(__dirname, "extensions", "optional", "export-html", "index.js");
 
@@ -203,6 +204,14 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const btwTs = join(__dirname, "extensions", "defaults", "btw", "index.ts");
 		if (existsSync(btwTs)) paths.push(btwTs);
+	}
+
+	// === Debug extension (system diagnostics with three-layer analysis) ===
+	if (existsSync(BUNDLED_DEBUG_EXTENSION)) {
+		paths.push(BUNDLED_DEBUG_EXTENSION);
+	} else {
+		const debugTs = join(__dirname, "extensions", "defaults", "debug", "index.ts");
+		if (existsSync(debugTs)) paths.push(debugTs);
 	}
 
 	// Built-in MCP extension

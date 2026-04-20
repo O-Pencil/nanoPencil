@@ -246,6 +246,9 @@ export class InteractiveMode {
   private loadingAnimation: Component | undefined = undefined;
   private pendingWorkingMessage: string | undefined = undefined;
   private readonly defaultWorkingMessage = "Working...";
+  private workingMessageOverride: string | undefined = undefined;
+  private agentRunStartMs: number | undefined = undefined;
+  private agentRunTimer: ReturnType<typeof setInterval> | undefined = undefined;
 
   private lastSigintTime = 0;
   private lastEscapeTime = 0;
@@ -1542,6 +1545,50 @@ export class InteractiveMode {
     this.renderWidgets();
   }
 
+  private formatElapsedSeconds(ms: number): string {
+    return `${(Math.max(0, ms) / 1000).toFixed(1)}s`;
+  }
+
+  private buildWorkingMessage(): string {
+    const baseMessage = this.workingMessageOverride || this.defaultWorkingMessage;
+    const interruptHint = `${appKey(this.keybindings, "interrupt")} to interrupt`;
+    const elapsed =
+      this.agentRunStartMs !== undefined
+        ? this.formatElapsedSeconds(Date.now() - this.agentRunStartMs)
+        : undefined;
+    return elapsed
+      ? `${baseMessage} (${elapsed}, ${interruptHint})`
+      : `${baseMessage} (${interruptHint})`;
+  }
+
+  private updateWorkingMessage(options?: { resetStallTimer?: boolean }): void {
+    if (!this.loadingAnimation) return;
+    (this.loadingAnimation as PencilLoader).setMessage(
+      this.buildWorkingMessage(),
+      options,
+    );
+  }
+
+  private stopAgentRunTimer(): void {
+    if (this.agentRunTimer) {
+      clearInterval(this.agentRunTimer);
+      this.agentRunTimer = undefined;
+    }
+  }
+
+  private startAgentRunTimer(): void {
+    this.stopAgentRunTimer();
+    this.agentRunStartMs = Date.now();
+    this.agentRunTimer = setInterval(() => {
+      if (!this.loadingAnimation || this.agentRunStartMs === undefined) {
+        this.stopAgentRunTimer();
+        return;
+      }
+      // Keep stall detection meaningful while still showing live elapsed time.
+      this.updateWorkingMessage({ resetStallTimer: false });
+    }, 100);
+  }
+
   private resetExtensionUI(): void {
     if (this.extensionSelector) {
       this.hideExtensionSelector();
@@ -1563,9 +1610,8 @@ export class InteractiveMode {
     this.defaultEditor.onExtensionShortcut = undefined;
     this.updateTerminalTitle();
     if (this.loadingAnimation) {
-      (this.loadingAnimation as PencilLoader).setMessage(
-        `${this.defaultWorkingMessage} (${appKey(this.keybindings, "interrupt")} to interrupt)`,
-      );
+      this.workingMessageOverride = undefined;
+      this.updateWorkingMessage();
     }
   }
 
@@ -1798,14 +1844,9 @@ export class InteractiveMode {
         this.addExtensionTerminalInputListener(handler),
       setStatus: (key, text) => this.setExtensionStatus(key, text),
       setWorkingMessage: (message) => {
+        this.workingMessageOverride = message || undefined;
         if (this.loadingAnimation) {
-          if (message) {
-            (this.loadingAnimation as PencilLoader).setMessage(message);
-          } else {
-            (this.loadingAnimation as PencilLoader).setMessage(
-              `${this.defaultWorkingMessage} (${appKey(this.keybindings, "interrupt")} to interrupt)`,
-            );
-          }
+          this.updateWorkingMessage();
         } else {
           // Queue message for when loadingAnimation is created (handles agent_start race)
           this.pendingWorkingMessage = message;
@@ -2773,6 +2814,20 @@ export class InteractiveMode {
       if (this.session.isStreaming) {
         this.editor.addToHistory?.(text);
         this.editor.setText("");
+
+        // Display user's message in chat BEFORE processing (including extension commands like /plan)
+        // This ensures users can see what they typed, even if it's a slash command
+        const displayContent: (TextContent | ImageContent)[] = [
+          { type: "text", text: text },
+        ];
+        this.optimisticUserMessages.push({ text: text });
+        this.addMessageToChat({
+          role: "user",
+          content: displayContent,
+          timestamp: Date.now(),
+        } as AgentMessage);
+        this.ui.requestRender();
+
         const steerResult = await this.extractImagesFromText(text);
         const steerImages = steerResult.images;
         let steerAttachmentPaths: string[] = [];
@@ -3178,13 +3233,11 @@ export class InteractiveMode {
         this.setBuddyPetState("working", "Working...");
         // Apply any pending working message queued before loader existed
         if (this.pendingWorkingMessage !== undefined) {
-          if (this.pendingWorkingMessage) {
-            (this.loadingAnimation as PencilLoader).setMessage(
-              this.pendingWorkingMessage,
-            );
-          }
+          this.workingMessageOverride = this.pendingWorkingMessage || undefined;
           this.pendingWorkingMessage = undefined;
         }
+        this.startAgentRunTimer();
+        this.updateWorkingMessage({ resetStallTimer: false });
         this.restoreEditorFocusIfPossible();
         this.ui.requestRender();
         break;
@@ -3347,6 +3400,13 @@ export class InteractiveMode {
       }
 
       case "agent_end":
+        const finalElapsed =
+          this.agentRunStartMs !== undefined
+            ? this.formatElapsedSeconds(Date.now() - this.agentRunStartMs)
+            : undefined;
+        this.stopAgentRunTimer();
+        this.agentRunStartMs = undefined;
+        this.workingMessageOverride = undefined;
         if (this.loadingAnimation) {
           (this.loadingAnimation as PencilLoader).stop();
           this.loadingAnimation = undefined;
@@ -3362,6 +3422,9 @@ export class InteractiveMode {
           resetTo: "idle",
           afterMs: 1800,
         });
+        if (finalElapsed) {
+          this.showStatus(`Completed in ${finalElapsed}`);
+        }
 
         await this.checkShutdownRequested();
 

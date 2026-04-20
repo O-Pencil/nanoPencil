@@ -132,9 +132,11 @@ export class PencilLoader extends Container {
 		this.lastTokenTime = Date.now();
 	}
 
-	setMessage(message: string): void {
+	setMessage(message: string, options?: { resetStallTimer?: boolean }): void {
 		this.message = message;
-		this.resetStallTimer();
+		if (options?.resetStallTimer !== false) {
+			this.resetStallTimer();
+		}
 		const frameChar = this.frames[this.currentFrame];
 		const diamondColor = this.getSpinnerColor();
 		const diamond = diamondColor(frameChar);

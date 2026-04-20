@@ -426,8 +426,8 @@ npm run release
 npm run release
   ├─ npm version patch
   │    ├─ [version hook] generate CHANGELOG.md + git add
-  │    ├─ npm auto-commits package.json + CHANGELOG.md + creates git tag
-  │    └─ [postversion hook] git push + git push --tags
+  │    ├─ npm auto-commits package.json + CHANGELOG.md + creates local git tag
+  │    └─ [postversion hook] git push (tags kept local, GitHub rules block tag push)
   └─ npm publish
        └─ [prepublishOnly hook] build:release (build only, no changelog)
 ```

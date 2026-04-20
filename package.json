@@ -43,7 +43,7 @@
     "prepublishOnly": "npm run build:release",
     "changelog": "node scripts/generate-changelog.js",
     "version": "npm run changelog && git add CHANGELOG.md",
-    "postversion": "git push && git push --tags",
+    "postversion": "git push",
     "release": "npm version patch && npm publish"
   },
   "keywords": [

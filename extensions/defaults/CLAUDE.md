@@ -17,17 +17,21 @@ security-audit/engine/interceptor.ts: Request/response interception, Interceptor
 security-audit/engine/logger.ts: Security event logging, JSON file audit trail
 security-audit/engine/detector.ts: Vulnerability detection, pattern matching for dangerous commands
 soul/index.ts: AI personality evolution extension, persistent personality across sessions
-grub/index.ts: Grub extension entry - autonomous iterative task runner extracted from legacy loop, /grub command + GRUB_MESSAGE_TYPE renderer
-grub/grub-controller.ts: GrubController - drives autonomous grub iterations, state machine for LoopTaskState
-grub/grub-parser.ts: Grub command parsing, parseGrubCommand/buildGrubHelp
-grub/grub-types.ts: Grub types, GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState/GrubTaskSnapshot
-grub/README.md: Grub extension documentation - autonomous "keep digging until done" runner
+grub/index.ts: Grub extension entry - long-running autonomous harness, dual-phase system prompts (initializer/coding), /grub command (start/status/resume/stop) + grub renderer, session_start auto-adopt, git harness commit, pruneStale cleanup
+grub/grub-controller.ts: GrubController - state machine for /grub iterations, durable persistState on every transition, adoptResumedTask for cross-session resume, validateCompletion downgrades premature complete when feature-list still has pending entries
+grub/grub-parser.ts: Grub command parsing - parseGrubCommand/buildGrubHelp with resume subcommand, status --json, --max-iter/--max-fail flags
+grub/grub-types.ts: Grub types - GrubStatus/GrubDecisionStatus/GrubDecision/GrubPhase/GrubTaskState/GrubTaskSnapshot/ParsedGrubCommand + FeatureItem/FeatureList (version 1 schema) + PersistedGrubState envelope
+grub/grub-feature-list.ts: feature-list.json IO - readFeatureList/writeFeatureList atomic write, validateFeatureListDiff enforces passes/evidence-only mutations, createInitialFeatureList placeholder, migrateChecklistToFeatureList legacy converter, countPassing/allPassing/firstPending helpers
+grub/grub-persistence.ts: Cross-session persistence - persistState atomic JSON write to .grub/<id>/state.json, loadState shape-validated read, discoverActiveTasks scans .grub/ for running records, pruneStale removes terminal harnesses older than 30 days by default
+grub/README.md: Grub extension documentation - long-running harness contract, feature-list.json schema, completion guard, cross-session resume, legacy migration
 loop/index.ts: Loop extension entry - session-scoped recurring prompt/command scheduler with pause/resume/run-now/max-runs/quiet, /loop command + LOOP_MESSAGE_TYPE renderer
 loop/scheduler-controller.ts: SchedulerController - in-memory recurring task store with pause/resume/run-now/max-runs, MAX_SCHEDULED_TASKS=50
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
 btw/index.ts: BTW extension entry - /btw command for quick side questions without interrupting main task, uses completeSimple() for lightweight response, BTW_MESSAGE_TYPE renderer
+debug/index.ts: Debug extension entry - /debug command for system diagnostics with three-layer analysis (Phenomenon/Essence/Philosophy), supports /debug env|session|model subcommands, uses completeSimple() for LLM analysis, DEBUG_MESSAGE_TYPE renderer
+debug/collectors.ts: Diagnostic data collectors for /debug command, collectSystemInfo/collectModelInfo/collectSessionInfo/collectConfigInfo/collectGitInfo/collectAgentState, sanitizeForLLM, formatDiagnosticData
 plan/index.ts: Plan Mode extension entry - registers /plan command, EnterPlanMode/ExitPlanMode tools, permission gating, workflow prompt injection
 plan/types.ts: PlanModeState, PlanModeAttachment types, PlanModeConfig, PlanApprovalRequest/Response
 plan/plan-file-manager.ts: PlanFileManager - plan file path management and I/O, slug generation, plans directory

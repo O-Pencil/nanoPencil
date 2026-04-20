@@ -86,6 +86,15 @@ Auto-loaded extensions available to all users.
     - [FROM]: core/extensions/types, @pencil-agent/ai
     - [HERE]: btw extension entry
 
+#### debug/ — System Diagnostics
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with /debug command, DEBUG_MESSAGE_TYPE renderer, three-layer diagnostic analysis
+    - [FROM]: core/extensions/types, @pencil-agent/tui, ./collectors
+    - [HERE]: debug extension entry
+
+`collectors.ts`: Diagnostic data collection, collectSystemInfo/collectModelInfo/collectSessionInfo/collectConfigInfo/collectGitInfo/collectAgentState, sanitizeForLLM, formatDiagnosticData
+
 #### plan/ — Plan Mode for Read-only Planning
 
 **P3 Contract:**

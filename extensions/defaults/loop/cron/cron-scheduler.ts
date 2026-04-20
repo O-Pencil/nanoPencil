@@ -204,12 +204,16 @@ export function createCronScheduler(options: CronSchedulerOptions): CronSchedule
 		onFire(task.prompt, task);
 	}
 
-	function removeTask(id: string, isSession: boolean): void {
+	async function removeTask(id: string, isSession: boolean): Promise<void> {
 		if (isSession) {
-			const { removeSessionCronTasks } = require("./cron-tasks.js");
+			const { removeSessionCronTasks } = await import("./cron-tasks.js");
 			removeSessionCronTasks([id]);
 		} else {
 			fileTasks.delete(id);
+			// Persist deletion to disk for durable tasks
+			if (dir) {
+				await writeCronTasks(dir, [...fileTasks.values()]);
+			}
 		}
 	}
 

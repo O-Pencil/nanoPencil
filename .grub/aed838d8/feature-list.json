@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "goal": "按照长期方案实现",
+  "features": [
+    {
+      "id": "placeholder-expand-features",
+      "category": "functional",
+      "description": "Initializer must replace this placeholder with 15-40 concrete, end-to-end testable features.",
+      "steps": [
+        "Read the goal carefully",
+        "Enumerate atomic user-observable behaviors",
+        "Rewrite this file with proper features[] entries"
+      ],
+      "passes": false
+    }
+  ]
+}

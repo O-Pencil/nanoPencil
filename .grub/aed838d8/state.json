@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "task": {
+    "id": "aed838d8",
+    "goal": "按照长期方案实现",
+    "status": "running",
+    "phase": "initializer",
+    "startedAt": 1776708357565,
+    "updatedAt": 1776708357565,
+    "currentIteration": 1,
+    "awaitingTurn": false,
+    "consecutiveFailures": 0,
+    "maxIterations": 25,
+    "maxConsecutiveFailures": 3,
+    "harnessDirectory": "/Users/cunyu666/Dev/nanoPencil/.grub/aed838d8",
+    "featureChecklistPath": "/Users/cunyu666/Dev/nanoPencil/.grub/aed838d8/feature-checklist.md",
+    "featureListPath": "/Users/cunyu666/Dev/nanoPencil/.grub/aed838d8/feature-list.json",
+    "stateFilePath": "/Users/cunyu666/Dev/nanoPencil/.grub/aed838d8/state.json",
+    "progressLogPath": "/Users/cunyu666/Dev/nanoPencil/.grub/aed838d8/progress-log.md",
+    "initScriptPath": "/Users/cunyu666/Dev/nanoPencil/.grub/aed838d8/init.sh"
+  },
+  "createdAt": 1776708357565,
+  "lastPersistedAt": 1776708357565
+}

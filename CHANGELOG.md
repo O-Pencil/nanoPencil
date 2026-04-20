@@ -7,30 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
 ## [1.13.4] - 2026-04-20
 
+### Highlights
+- **Interactive TUI**: User messages appear in the chat immediately after send (including slash commands like `/plan`); the loading banner shows live elapsed time while the agent runs.
+- **SAL and block-style terminals**: SAL terrain indexing no longer holds the Node event loop for long synchronous filesystem walks. This addresses delayed user-bubble rendering in Warp and similar GPU block terminals when SAL is enabled. Use `--nosal` only if you need to disable SAL entirely.
+
 ### Added
-- feat(grub): feature list, persistence layer, and controller/parser upgrades
-- feat(plan): refine exit-plan-mode tool and extension wiring
-- feat(interactive): optimistic user chat bubble and working elapsed timer
-- feat(extensions): add default debug extension with /debug diagnostics
+- GRUB: feature list module, persistence layer, and controller/parser upgrades.
+- Plan mode: refined `exit-plan-mode` tool and extension wiring.
+- Built-in **debug** extension with `/debug` diagnostics (structured three-layer report).
+- Interactive: optimistic user message rendering and working-message timer on the pencil loader.
 
 ### Fixed
-- fix(presence): only send opening when idle without pending messages
-- fix(loop): persist durable cron task removal to disk
-- fix(sal): yield before before_agent_start work and prewarm snapshot
-- fix(sal): build terrain index asynchronously for TUI responsiveness
-- fix(release): remove tag push from postversion to avoid GitHub rule violations
-- fix(release): decouple changelog from prepublishOnly to fix circular release flow
-- fix(nanopencil-defaults): skip coding plan prompt only when remote provider has auth
-- fix(main): add anthropic-custom and ollama to allowOptionalApiKeyForProvider
+- **SAL**: async terrain snapshot (`buildTerrainIndex`), async staleness checks, deduplicated concurrent snapshot builds, one `setImmediate` yield at `before_agent_start`, and optional background snapshot prewarm after extension load.
+- Presence: only emit AI opening lines when the session is idle with no pending messages (avoids races while the agent is busy).
+- Loop cron: persist durable cron task deletion to disk after removing file-backed tasks.
 
 ### Documentation
-- docs(extensions): refresh CLAUDE maps for defaults and optional paths
-- docs: update CHANGELOG for v1.13.1 and v1.13.2
+- Refreshed extension CLAUDE maps under `extensions/` and `extensions/defaults/`.
 
 ### Maintenance
-- chore(ai): regenerate models catalog
+- Regenerated bundled AI model catalog (`packages/ai/src/models.generated.ts`).
 
 
 ## [1.13.3] - 2026-04-20
@@ -43,8 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - docs: update CHANGELOG for v1.13.1 and v1.13.2
 
-
-## [Unreleased]
 
 ## [1.13.2] - 2026-04-20
 

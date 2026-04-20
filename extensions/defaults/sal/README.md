@@ -20,6 +20,10 @@ pencil --nosal -p "your prompt"
 
 When `--nosal` is set, all hooks return early and zero work is performed.
 
+## Terminal compatibility (Warp, block UIs)
+
+SAL builds a **terrain snapshot** of the workspace (walk + read DIP headers). That work is **asynchronous and periodically yields to the event loop** so the TUI can flush user input and status lines to the terminal while indexing runs. If you still see UI glitches in a specific terminal, use `--nosal` to confirm whether SAL is involved, then file an issue with `TERM_PROGRAM`, Warp version, and repro steps.
+
 ## Slash commands
 
 | Command | Purpose |

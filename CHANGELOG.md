@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.3] - 2026-04-20
+
+### Fixed
+- fix(release): decouple changelog from prepublishOnly to fix circular release flow
+- fix(nanopencil-defaults): skip coding plan prompt only when remote provider has auth
+- fix(main): add anthropic-custom and ollama to allowOptionalApiKeyForProvider
+
+### Documentation
+- docs: update CHANGELOG for v1.13.1 and v1.13.2
+
+
 ## [Unreleased]
 
 ## [1.13.2] - 2026-04-20

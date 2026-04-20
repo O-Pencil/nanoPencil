@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.4] - 2026-04-20
+
+### Added
+- feat(grub): feature list, persistence layer, and controller/parser upgrades
+- feat(plan): refine exit-plan-mode tool and extension wiring
+- feat(interactive): optimistic user chat bubble and working elapsed timer
+- feat(extensions): add default debug extension with /debug diagnostics
+
+### Fixed
+- fix(presence): only send opening when idle without pending messages
+- fix(loop): persist durable cron task removal to disk
+- fix(sal): yield before before_agent_start work and prewarm snapshot
+- fix(sal): build terrain index asynchronously for TUI responsiveness
+- fix(release): remove tag push from postversion to avoid GitHub rule violations
+- fix(release): decouple changelog from prepublishOnly to fix circular release flow
+- fix(nanopencil-defaults): skip coding plan prompt only when remote provider has auth
+- fix(main): add anthropic-custom and ollama to allowOptionalApiKeyForProvider
+
+### Documentation
+- docs(extensions): refresh CLAUDE maps for defaults and optional paths
+- docs: update CHANGELOG for v1.13.1 and v1.13.2
+
+### Maintenance
+- chore(ai): regenerate models catalog
+
+
 ## [1.13.3] - 2026-04-20
 
 ### Fixed

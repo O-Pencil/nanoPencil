@@ -45,7 +45,8 @@ async function extractWithLLM(conversation: string, cfg: NanomemConfig, llmFn: L
 				detail,
 			};
 		});
-	} catch {
+	} catch (err) {
+		console.error("[mem-core] extractWithLLM failed, falling back to heuristic:", err);
 		return extractHeuristic(conversation);
 	}
 }

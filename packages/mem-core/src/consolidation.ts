@@ -97,7 +97,8 @@ async function llmConsolidation(
 				scope: cfg.defaultScope,
 			};
 		});
-	} catch {
+	} catch (err) {
+		console.error("[mem-core] consolidateWithLLM failed, falling back to heuristic:", err);
 		return heuristicConsolidation(episodes, cfg);
 	}
 }

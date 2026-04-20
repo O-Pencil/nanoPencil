@@ -235,8 +235,8 @@ function collectFiles(
 				files.push(fullPath);
 			}
 		}
-	} catch {
-		// Ignore errors
+	} catch (err) {
+		console.error("[package-manager] collectFiles failed:", err);
 	}
 
 	return files;
@@ -289,8 +289,8 @@ function collectSkillEntries(
 				}
 			}
 		}
-	} catch {
-		// Ignore errors
+	} catch (err) {
+		console.error("[package-manager] collectSkillEntries failed:", err);
 	}
 
 	return entries;
@@ -365,8 +365,8 @@ function collectAutoPromptEntries(dir: string): string[] {
 				entries.push(fullPath);
 			}
 		}
-	} catch {
-		// Ignore errors
+	} catch (err) {
+		console.error("[package-manager] collectAutoPromptEntries failed:", err);
 	}
 
 	return entries;
@@ -402,8 +402,8 @@ function collectAutoThemeEntries(dir: string): string[] {
 				entries.push(fullPath);
 			}
 		}
-	} catch {
-		// Ignore errors
+	} catch (err) {
+		console.error("[package-manager] collectAutoThemeEntries failed:", err);
 	}
 
 	return entries;
@@ -496,8 +496,8 @@ function collectAutoExtensionEntries(dir: string): string[] {
 				}
 			}
 		}
-	} catch {
-		// Ignore errors
+	} catch (err) {
+		console.error("[package-manager] collectAutoExtensionEntries failed:", err);
 	}
 
 	return entries;
@@ -1699,8 +1699,8 @@ export class DefaultPackageManager implements PackageManager {
 				} else if (stats.isDirectory()) {
 					files.push(...collectResourceFiles(p, resourceType));
 				}
-			} catch {
-				// Ignore errors
+			} catch (err) {
+				console.error("[package-manager] collectFilesFromPaths failed:", err);
 			}
 		}
 		return files;

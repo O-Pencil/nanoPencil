@@ -619,7 +619,9 @@ export class AgentSession {
     if (event.type === "message_update") {
       // Streaming updates: emit to UI immediately, don't await extensions
       this._emit(event);
-      this._emitExtensionEvent(event).catch(() => {});
+      this._emitExtensionEvent(event).catch((err) => {
+        this._logger.error("[extension] message_update event error", { error: err });
+      });
     } else {
       // All other events: extensions run concurrently with UI notification
       const extensionPromise = this._emitExtensionEvent(event);
@@ -691,8 +693,9 @@ export class AgentSession {
               tags,
               outcome === "success",
             );
-          } catch {
+          } catch (err) {
             // Keep Soul failures non-blocking for the main session lifecycle.
+            this._logger.warn("[soul] recordInteraction/updateExpertise failed", { error: err });
           }
         })();
       }
@@ -706,7 +709,9 @@ export class AgentSession {
           type: "agent_end",
           messages: event.messages,
         })
-        .catch(() => {});
+        .catch((err) => {
+          this._logger.error("[extension] agent_end event error", { error: err });
+        });
     }
   };
 

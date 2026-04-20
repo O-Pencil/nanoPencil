@@ -9,14 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.2] - 2026-04-20
+
+### Added
+- feat(dip): add verification script for DIP isomorphism
+- feat(dip): sync P2 docs for core/, extensions/, packages/mem-core/
+
+### Fixed
+- fix(tips): fix cooldown calculation for slash command hints
+- fix(package-manager): add error logging to catch blocks
+- fix(agent-session): add logging for silent extension errors
+- fix(mem-core): log LLM fallback errors in extraction/consolidation
+
+## [1.13.1] - 2026-04-20
+
 ### Added
 - feat(btw): add /btw command for quick side questions without interrupting the main task
+- feat(tui): weighted fuzzy autocomplete and editor placeholder
+- feat(tui): add stall animation and tips to pencil loader
+- feat(plan): make writePlan async with atomic temp-file rename
+
+### Fixed
+- fix(tips): correct cooldown logic for slash command hints
+- fix(settings): use readStorageAsync for plain reads
+- fix(sal,mem-core): improve structural scoring accuracy and eval data quality
+- fix(shutdown): ensure session_shutdown fires on all exit paths
+- fix: suppress debug output and DEP0190 warning in production
+
+### Performance
+- perf(cli): add --version/--help fast path; add startup profiler
+
+### Documentation
+- docs(sal): consolidate outline and prune legacy docs
+- docs(changelog): update for recent changes
 
 ## [1.13.0] - 2026-04-17
-
-### Added
-- feat(plan): add TUI status indicators for plan mode
-- feat(plan): complete plan mode workflow
 
 ### Fixed
 - fix(shutdown): ensure session_shutdown fires on all exit paths

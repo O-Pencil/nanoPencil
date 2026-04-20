@@ -48,7 +48,7 @@ const TIPS: Tip[] = [
 ];
 
 // Track last shown tip per session (sessionId -> tipId)
-const lastShownTip = new Map<string, { tipId: string; shownAt: number }>();
+const lastShownTip = new Map<string, { tipId: string; shownAt: number; sessionNum: number }>();
 const sessionTipCount = new Map<string, number>();
 
 /**
@@ -67,7 +67,7 @@ export function getTipToShow(sessionId: string): string | null {
 
 		// Check cooldown (using sessions as cooldown unit)
 		const cooldown = tip.cooldownSessions ?? 3;
-		if (last.tipId === tip.id && sessionNum - (last.shownAt / 1000) < cooldown) {
+		if (last.tipId === tip.id && sessionNum - last.sessionNum < cooldown) {
 			return false;
 		}
 		return true;
@@ -91,7 +91,7 @@ export function getTipToShow(sessionId: string): string | null {
 	if (!oldest) return null;
 
 	// Record this tip as shown
-	lastShownTip.set(sessionId, { tipId: oldest.id, shownAt: now });
+	lastShownTip.set(sessionId, { tipId: oldest.id, shownAt: now, sessionNum });
 	return typeof oldest.content === "function" ? oldest.content() : oldest.content;
 }
 

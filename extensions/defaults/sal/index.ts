@@ -63,6 +63,11 @@ interface SalRuntime {
 	workspaceRoot: string;
 	snapshot?: TerrainSnapshot;
 	snapshotErrored?: boolean;
+	/**
+	 * In-flight terrain build. Deduplicates concurrent ensureSnapshot callers so
+	 * we never kick off two scans at once (e.g. a prewarm and the first turn).
+	 */
+	snapshotPromise?: Promise<TerrainSnapshot | undefined>;
 	weights: SalWeights;
 	weightsSource: string;
 	turn: TurnState;
@@ -225,19 +230,29 @@ function truncateForBudget(parts: string[], budgetTokens: number): string {
 	return out.join("\n");
 }
 
-function ensureSnapshot(runtime: SalRuntime, forceRebuild: boolean): TerrainSnapshot | undefined {
+async function ensureSnapshot(runtime: SalRuntime, forceRebuild: boolean): Promise<TerrainSnapshot | undefined> {
 	if (runtime.snapshotErrored) return runtime.snapshot;
-	if (runtime.snapshot && !forceRebuild && !isSnapshotStale(runtime.snapshot)) {
+	// Fast path: fresh snapshot on disk and caller isn't forcing a rebuild.
+	// Staleness probe is cheap (bounded readdir+stat) and yields the event loop.
+	if (runtime.snapshot && !forceRebuild && !(await isSnapshotStale(runtime.snapshot))) {
 		return runtime.snapshot;
 	}
-	try {
-		runtime.snapshot = buildTerrainIndex(runtime.workspaceRoot);
-		return runtime.snapshot;
-	} catch (err) {
-		runtime.snapshotErrored = true;
-		console.error("[sal] terrain index build failed:", (err as Error).message);
-		return undefined;
-	}
+	// Dedup concurrent scans (prewarm vs first turn, two back-to-back turns, etc.).
+	if (runtime.snapshotPromise) return runtime.snapshotPromise;
+	runtime.snapshotPromise = (async () => {
+		try {
+			const snap = await buildTerrainIndex(runtime.workspaceRoot);
+			runtime.snapshot = snap;
+			return snap;
+		} catch (err) {
+			runtime.snapshotErrored = true;
+			console.error("[sal] terrain index build failed:", (err as Error).message);
+			return undefined;
+		} finally {
+			runtime.snapshotPromise = undefined;
+		}
+	})();
+	return runtime.snapshotPromise;
 }
 
 function workspaceRelativePath(workspaceRoot: string, candidate: string): string | undefined {
@@ -344,8 +359,8 @@ function persistTurnRecord(runtime: SalRuntime, taskRes: AnchorResolution | unde
 	}
 }
 
-function formatCoverageReport(runtime: SalRuntime, modules: string[]): string {
-	const snapshot = ensureSnapshot(runtime, false);
+async function formatCoverageReport(runtime: SalRuntime, modules: string[]): Promise<string> {
+	const snapshot = await ensureSnapshot(runtime, false);
 	if (!snapshot) return "[sal] terrain snapshot unavailable";
 	const reports = checkDipCoverage(snapshot, modules);
 	if (reports.length === 0) return "[sal] no modules matched the requested filter";
@@ -492,7 +507,7 @@ export default async function salExtension(api: ExtensionAPI) {
 				.trim()
 				.split(/\s+/)
 				.filter((s) => s.length > 0);
-			const report = formatCoverageReport(runtime, modules);
+			const report = await formatCoverageReport(runtime, modules);
 			ctx.ui.notify(report, "info");
 			api.sendMessage({
 				customType: "sal_coverage_report",
@@ -624,6 +639,13 @@ export default async function salExtension(api: ExtensionAPI) {
 		api.on(
 			"before_agent_start",
 			async (event: BeforeAgentStartEvent, ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
+				// Yield once so any UI frame queued via process.nextTick right before
+				// session.prompt() (notably the user-message bubble) flushes to stdout
+				// BEFORE we start the terrain work below. Without this, GPU block
+				// terminals (Warp) can coalesce the whole turn's render into one block
+				// that only paints when the turn ends.
+				await new Promise<void>((resolve) => setImmediate(resolve));
+
 				resetTurnContext();
 
 				runtime.turnCounter += 1;
@@ -657,7 +679,7 @@ export default async function salExtension(api: ExtensionAPI) {
 				if (prompt.length < 12) return undefined;
 
 				const forceRebuild = Boolean(api.getFlag(SAL_REBUILD_FLAG));
-				const snapshot = ensureSnapshot(runtime, forceRebuild);
+				const snapshot = await ensureSnapshot(runtime, forceRebuild);
 				if (!snapshot) return undefined;
 
 				const resolution = locateTask({
@@ -757,6 +779,19 @@ export default async function salExtension(api: ExtensionAPI) {
 		});
 		await runtime.evalSink.flush();
 		await runtime.evalSink.close();
+	});
+
+	// Background prewarm: start the first terrain build as soon as the TUI has
+	// painted the initial frame. setImmediate defers it past the current stack
+	// and any process.nextTick callbacks, so startup rendering is untouched.
+	// On the first turn, ensureSnapshot reuses the in-flight promise (no
+	// redundant scan), and the user's message bubble is never gated on a
+	// cold-disk workspace walk.
+	setImmediate(() => {
+		if (!isEnabled()) return;
+		void ensureSnapshot(runtime, false).catch(() => {
+			// Errors are already captured into runtime.snapshotErrored.
+		});
 	});
 }
 

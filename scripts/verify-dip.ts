@@ -227,6 +227,9 @@ function verifyP2Module(module: P2Module) {
     // Subdirectory contents are covered by the parent directory's member list
     if (relUnix.includes("/")) continue;
 
+    // Skip test files — test coverage is verified separately
+    if (relUnix.startsWith("test/") || relUnix.includes("/test/")) continue;
+
     // Check if this file is listed in the member list
     let found = false;
 

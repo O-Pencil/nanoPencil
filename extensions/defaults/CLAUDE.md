@@ -30,7 +30,7 @@ loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSche
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
 btw/index.ts: BTW extension entry - /btw command for quick side questions without interrupting main task, uses completeSimple() for lightweight response, BTW_MESSAGE_TYPE renderer
-debug/index.ts: Debug extension entry - /debug command for system diagnostics with three-layer analysis (Phenomenon/Essence/Philosophy), supports /debug env|session|model subcommands, uses completeSimple() for LLM analysis, DEBUG_MESSAGE_TYPE renderer
+debug/index.ts: Debug extension entry - /debug command dispatches diagnostics through full agent loop (sendUserMessage + before_agent_start hook), three-layer analysis (Phenomenon/Essence/Philosophy), supports /debug env|session|model quick subcommands, DEBUG_MESSAGE_TYPE renderer
 debug/collectors.ts: Diagnostic data collectors for /debug command, collectSystemInfo/collectModelInfo/collectSessionInfo/collectConfigInfo/collectGitInfo/collectAgentState, sanitizeForLLM, formatDiagnosticData
 plan/index.ts: Plan Mode extension entry - registers /plan command, EnterPlanMode/ExitPlanMode tools, permission gating, workflow prompt injection
 plan/types.ts: PlanModeState, PlanModeAttachment types, PlanModeConfig, PlanApprovalRequest/Response

@@ -172,3 +172,41 @@ test("presence-runtime: resolves bundled packages from dist/packages", { concurr
 		process.chdir(originalCwd);
 	}
 });
+
+test("presence-language: detects zh from memory preferences", async () => {
+	const locale = await __testUtils.detectLanguageFromMemory({
+		memEngine: {
+			getAllEntries: async () => ({
+				knowledge: [{
+					type: "preference",
+					tags: ["preference", "language"],
+					summary: "用户偏好用中文交流",
+				}],
+				lessons: [],
+			}),
+			getAllEpisodes: async () => [],
+			searchEntries: async () => [],
+		},
+	} as any);
+
+	assert.equal(locale, "zh");
+});
+
+test("presence-language: detects en when memory says no Chinese", async () => {
+	const locale = await __testUtils.detectLanguageFromMemory({
+		memEngine: {
+			getAllEntries: async () => ({
+				knowledge: [{
+					type: "preference",
+					tags: ["preference", "language"],
+					summary: "don't use Chinese, use English",
+				}],
+				lessons: [],
+			}),
+			getAllEpisodes: async () => [],
+			searchEntries: async () => [],
+		},
+	} as any);
+
+	assert.equal(locale, "en");
+});

@@ -47,8 +47,15 @@ const TIPS: Tip[] = [
 	},
 ];
 
-// Track last shown tip per session (sessionId -> tipId)
-const lastShownTip = new Map<string, { tipId: string; shownAt: number; sessionNum: number }>();
+const TIP_MIN_DISPLAY_MS = 8000;
+
+// Track last shown session index per tip (sessionId -> tipId -> sessionNum)
+const tipHistoryBySession = new Map<string, Map<string, number>>();
+// Keep the current active tip stable for a minimum duration to avoid flicker.
+const activeTipBySession = new Map<
+	string,
+	{ tipId: string; content: string; shownAt: number; expiresAt: number }
+>();
 const sessionTipCount = new Map<string, number>();
 
 /**
@@ -58,16 +65,28 @@ const sessionTipCount = new Map<string, number>();
 export function getTipToShow(sessionId: string): string | null {
 	const now = Date.now();
 	const sessionNum = sessionTipCount.get(sessionId) ?? 0;
+	const active = activeTipBySession.get(sessionId);
+	if (active && now < active.expiresAt) {
+		return active.content;
+	}
+
+	let tipHistory = tipHistoryBySession.get(sessionId);
+	if (!tipHistory) {
+		tipHistory = new Map<string, number>();
+		tipHistoryBySession.set(sessionId, tipHistory);
+	}
 
 	// Filter to relevant tips
 	const relevantTips = TIPS.filter((tip) => {
 		if (tip.isRelevant && !tip.isRelevant()) return false;
-		const last = lastShownTip.get(sessionId);
-		if (!last) return true;
 
 		// Check cooldown (using sessions as cooldown unit)
 		const cooldown = tip.cooldownSessions ?? 3;
-		if (last.tipId === tip.id && sessionNum - last.sessionNum < cooldown) {
+		const lastSessionNum = tipHistory.get(tip.id);
+		if (
+			lastSessionNum !== undefined &&
+			sessionNum - lastSessionNum < cooldown
+		) {
 			return false;
 		}
 		return true;
@@ -80,8 +99,7 @@ export function getTipToShow(sessionId: string): string | null {
 	let oldestTime = Infinity;
 
 	for (const tip of relevantTips) {
-		const last = lastShownTip.get(sessionId);
-		const lastTime = last?.tipId === tip.id ? last.shownAt : 0;
+		const lastTime = tipHistory.get(tip.id) ?? -Infinity;
 		if (lastTime < oldestTime) {
 			oldestTime = lastTime;
 			oldest = tip;
@@ -91,8 +109,16 @@ export function getTipToShow(sessionId: string): string | null {
 	if (!oldest) return null;
 
 	// Record this tip as shown
-	lastShownTip.set(sessionId, { tipId: oldest.id, shownAt: now, sessionNum });
-	return typeof oldest.content === "function" ? oldest.content() : oldest.content;
+	tipHistory.set(oldest.id, sessionNum);
+	const content =
+		typeof oldest.content === "function" ? oldest.content() : oldest.content;
+	activeTipBySession.set(sessionId, {
+		tipId: oldest.id,
+		content,
+		shownAt: now,
+		expiresAt: now + TIP_MIN_DISPLAY_MS,
+	});
+	return content;
 }
 
 /**
@@ -102,6 +128,7 @@ export function getTipToShow(sessionId: string): string | null {
 export function onSessionIncrement(sessionId: string): void {
 	const current = sessionTipCount.get(sessionId) ?? 0;
 	sessionTipCount.set(sessionId, current + 1);
+	activeTipBySession.delete(sessionId);
 }
 
 /**
@@ -109,5 +136,6 @@ export function onSessionIncrement(sessionId: string): void {
  */
 export function resetTipsForSession(sessionId: string): void {
 	sessionTipCount.delete(sessionId);
-	lastShownTip.delete(sessionId);
+	tipHistoryBySession.delete(sessionId);
+	activeTipBySession.delete(sessionId);
 }

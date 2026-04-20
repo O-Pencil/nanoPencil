@@ -89,7 +89,7 @@ Auto-loaded extensions available to all users.
 #### debug/ — System Diagnostics
 
 **P3 Contract:**
-`index.ts`: - [WHO]: Extension with /debug command, DEBUG_MESSAGE_TYPE renderer, three-layer diagnostic analysis
+`index.ts`: - [WHO]: Extension with /debug command, before_agent_start hook (injects diagnostic system prompt), agent_end cleanup, dispatched via sendUserMessage for streaming output
     - [FROM]: core/extensions/types, @pencil-agent/tui, ./collectors
     - [HERE]: debug extension entry
 

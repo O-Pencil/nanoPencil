@@ -7,7 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.13.5] - 2026-04-21
+
+### Highlights
+- **SAL async mode**: Terrain indexing no longer holds the Node event loop — GPU block terminals (Warp, etc.) render smoothly while SAL builds the index.
+- **Debug extension**: New `/debug` command with structured three-layer diagnostics and `/set-locale` for language overrides.
+
+### Added
+- **BTW extension** (`/btw`): Ask side questions without interrupting the main task — queues follow-up and resumes after the current task.
+- **Tips service**: Rotating productivity tips in the interactive TUI when idle.
+- **DIP verification**: `scripts/verify-dip.ts` validates P1/P2/P3 document isomorphism before commits.
+- **Startup profiler**: `utils/startup-profiler.ts` measures and logs startup timing for performance tuning.
+- **Settings manager**: Full async settings with `readStorageAsync`, file watching, and type-safe schema validation.
+- GRUB feature list with persistence layer and controller/parser upgrades.
+
+### Fixed
+- **Presence**: Corrected memory directory fallback path; only emit AI opening lines when session is idle.
+- **Loop cron**: Durable cron task deletion is now persisted to disk for file-backed tasks.
+- **SAL**: `setImmediate` yield before `before_agent_start` work; background snapshot prewarm after extension load.
+- **Release**: Removed tag push from `postversion` to avoid GitHub Actions rule violations.
+
+### Changed
+- **TUI fuzzy autocomplete**: Weighted scoring prioritizes prefix matches over substring matches.
+- **Pencil loader**: Working message timer now shows live elapsed time; optimistic user bubble rendering.
+
+### Documentation
+- Refreshed P2 CLAUDE.md maps for `core/`, `extensions/`, `packages/`, and SAL experiment guide.
+- Consolidated SAL implementation guide and pruned legacy docs.
+
+### Maintenance
+- Regenerated bundled AI model catalog (`packages/ai/src/models.generated.ts`).
+
 
 ## [1.13.4] - 2026-04-20
 

@@ -247,23 +247,32 @@ async function detectLanguageFromMemory(state: PresenceState): Promise<"en" | "z
 			}
 		} catch { /* ignore */ }
 
+		let zhScore = 0;
+		let enScore = 0;
+
+		const zhTerms = "(中文|chinese|zh-hans|mandarin|普通话)";
+		const enTerms = "(英文|english|en-us)";
+		const negPrefix = "(?:don't|do not|no|not|不用|不要|别|不想用)";
+		const useWords = "(?:\\s+use|\\s+using|\\s+说|\\s+讲|\\s+用)?";
+
+		const zhNegative = new RegExp(`${negPrefix}${useWords}\\s*${zhTerms}`);
+		const enNegative = new RegExp(`${negPrefix}${useWords}\\s*${enTerms}`);
+		const zhPositive = new RegExp(zhTerms);
+		const enPositive = new RegExp(enTerms);
+
 		// Check preference content for language indicators
 		for (const pref of preferences) {
 			const text = `${pref.name || ""} ${pref.summary || ""} ${pref.detail || ""} ${pref.content || ""}`.toLowerCase();
+			const hasZh = zhPositive.test(text);
+			const hasEn = enPositive.test(text);
+			const noZh = zhNegative.test(text);
+			const noEn = enNegative.test(text);
 
-			// Check for Chinese preference
-			if (/中文|chinese|zh-hans|mandarin|普通话/.test(text)) {
-				if (!text.includes("don't") && !text.includes("no chinese") && !text.includes("不用中文")) {
-					return "zh";
-				}
-			}
-
-			// Check for explicit English preference
-			if (/英文|english|en-us/.test(text)) {
-				if (!text.includes("don't") && !text.includes("no english") && !text.includes("不用英文")) {
-					return "en";
-				}
-			}
+			if (hasZh && !noZh) zhScore += 2;
+			if (hasEn && !noEn) enScore += 2;
+			// Cross-language hints: "don't use Chinese" slightly supports English, and vice versa.
+			if (noZh) enScore += 1;
+			if (noEn) zhScore += 1;
 		}
 
 		// Check recent episodes for language patterns
@@ -280,8 +289,11 @@ async function detectLanguageFromMemory(state: PresenceState): Promise<"en" | "z
 			if (/^[a-zA-Z\s.,!?'"()-]+$/.test(text.slice(0, 50))) englishContent++;
 		}
 
-		if (chineseContent > englishContent) return "zh";
-		if (englishContent > chineseContent && englishContent > 2) return "en";
+		if (chineseContent > englishContent) zhScore += 1;
+		if (englishContent > chineseContent && englishContent > 2) enScore += 1;
+
+		if (zhScore > enScore && zhScore > 0) return "zh";
+		if (enScore > zhScore && enScore > 0) return "en";
 
 		return undefined;
 	} catch {
@@ -497,8 +509,9 @@ function getLastUserMessage(ctx: ExtensionContext): string | undefined {
 	for (let i = entries.length - 1; i >= 0; i -= 1) {
 		const entry = entries[i] as any;
 		if (entry.type !== "message") continue;
-		if (entry.role !== "user") continue;
-		const c = entry.content;
+		const message = entry.message;
+		if (!message || message.role !== "user") continue;
+		const c = message.content;
 		if (typeof c === "string") return c;
 		if (Array.isArray(c)) {
 			const text = c.find((p: any) => p?.type === "text")?.text;
@@ -819,4 +832,5 @@ export const __testUtils = {
 	getFallbackIdleLines,
 	resolveBundledPackageEntry,
 	importRuntimeModule,
+	detectLanguageFromMemory,
 };

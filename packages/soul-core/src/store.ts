@@ -1,9 +1,4 @@
 /**
- * [INPUT]: Soul data (profile, memory, evolutions)
- * [OUTPUT]: Persistent storage backed by NanoMem
- * [POS]: Storage layer - bridges Soul and NanoMem
- */
-/**
  * [WHO]: SoulStore
  * [FROM]: Depends on node:fs/promises, node:fs, node:path
  * [TO]: Consumed by packages/soul-core/src/index.ts

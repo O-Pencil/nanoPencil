@@ -1,9 +1,4 @@
 /**
- * [INPUT]: Current profile, experiences, feedback
- * [OUTPUT]: Personality and value deltas (evolution)
- * [POS]: Evolution engine - implements learning algorithms
- */
-/**
  * [WHO]: SoulEvolutionEngine, PatternInsight
  * [FROM]: No external dependencies
  * [TO]: Consumed by packages/soul-core/src/index.ts

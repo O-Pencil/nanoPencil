@@ -1,9 +1,4 @@
 /**
- * [INPUT]: Partial<SoulConfig> overrides
- * [OUTPUT]: Default SoulConfig merged with overrides
- * [POS]: Configuration layer - provides defaults and validation
- */
-/**
  * [WHO]: getDefaultConfig, getSoulConfig, validateSoulConfig
  * [FROM]: Depends on node:path, node:os
  * [TO]: Consumed by packages/soul-core/src/index.ts

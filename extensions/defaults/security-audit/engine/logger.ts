@@ -1,11 +1,4 @@
 /**
- * Audit Logger
- *
- * Records all security events to a local JSON file.
- *
- * [POS]: Engine layer - implements logging functionality
- */
-/**
  * [WHO]: AuditLogger
  * [FROM]: Depends on node:fs, node:path, node:crypto, ../../../../config.js
  * [TO]: Consumed by extension entry point (./index.ts)

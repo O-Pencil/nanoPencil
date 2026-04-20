@@ -1,9 +1,4 @@
 /**
- * [INPUT]: None
- * [OUTPUT]: All core data types for Soul engine
- * [POS]: Foundation layer - every other module imports from here
- */
-/**
  * [WHO]: PersonalityVector, CognitiveStyle, ValueSystem, EmotionalState, ExpertiseArea
  * [FROM]: No external dependencies
  * [TO]: Consumed by packages/soul-core/src/index.ts

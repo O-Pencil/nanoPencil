@@ -1,9 +1,4 @@
 /**
- * [INPUT]: None
- * [OUTPUT]: Public API surface for Soul
- * [POS]: Barrel export - hosts all public exports
- */
-/**
  * [WHO]: SoulStore, SoulManager, getSoulConfig
  * [FROM]: No external dependencies
  * [TO]: Consumed by core/soul-integration.ts

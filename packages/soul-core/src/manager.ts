@@ -1,9 +1,4 @@
 /**
- * [INPUT]: SoulOptions
- * [OUTPUT]: Unified Soul management API
- * [POS]: Main entry point - composes all Soul modules
- */
-/**
  * [WHO]: SoulManager
  * [FROM]: Depends on ./config.js, ./store.js, ./evolution.js, ./injection.js
  * [TO]: Consumed by packages/soul-core/src/index.ts

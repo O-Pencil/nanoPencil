@@ -1,9 +1,4 @@
 /**
- * [INPUT]: Soul profile and memory manager
- * [OUTPUT]: Formatted display of Soul stats and personality
- * [POS]: Interactive mode component for /soul command
- */
-/**
  * [WHO]: formatSoulStats
  * [FROM]: No external dependencies
  * [TO]: Consumed by modes/interactive/components/index.ts

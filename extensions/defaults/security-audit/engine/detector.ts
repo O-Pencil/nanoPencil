@@ -1,11 +1,4 @@
 /**
- * Danger Detector
- *
- * Detects dangerous commands and sensitive file operations using pattern matching.
- *
- * [POS]: Engine layer - implements danger detection
- */
-/**
  * [WHO]: DangerDetector
  * [FROM]: Depends on node:os, node:path, ../interface.js
  * [TO]: Consumed by extension entry point (./index.ts)

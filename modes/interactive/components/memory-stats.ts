@@ -1,9 +1,4 @@
 /**
- * [INPUT]: NanoMem engine
- * [OUTPUT]: Formatted display of memory stats
- * [POS]: Interactive mode component for /memory command
- */
-/**
  * [WHO]: formatMemoryStats
  * [FROM]: No external dependencies
  * [TO]: Consumed by modes/interactive/components/index.ts

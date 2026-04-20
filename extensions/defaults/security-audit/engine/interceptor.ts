@@ -1,11 +1,4 @@
 /**
- * Interceptor
- *
- * Handles the interception and user confirmation flow for dangerous operations.
- *
- * [POS]: Engine layer - implements interception mechanism
- */
-/**
  * [WHO]: InterceptorResult, Interceptor
  * [FROM]: Depends on ./detector.js, ./logger.js
  * [TO]: Consumed by extension entry point (./index.ts)

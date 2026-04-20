@@ -1,9 +1,4 @@
 /**
- * [INPUT]: Soul profile, context
- * [OUTPUT]: Prompt injections for system message
- * [POS]: Expression layer - converts soul to prompt text
- */
-/**
  * [WHO]: generatePersonalityDirective, generateValueGuidance, generateCognitiveStyleHint, generateEmotionalContext, generateExpertiseContext
  * [FROM]: No external dependencies
  * [TO]: Consumed by packages/soul-core/src/index.ts

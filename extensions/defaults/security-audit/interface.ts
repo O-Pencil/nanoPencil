@@ -1,12 +1,4 @@
 /**
- * Security Audit Extension - Standardized Security Interface
- *
- * This interface defines the contract for security engines.
- * Different implementations can be swapped for different security levels.
- *
- * [POS]: Interface layer - defines contract for pluggable security engines
- */
-/**
  * [WHO]: SecurityCheckResult, AuditEvent, LogQueryOptions, SecurityStats, SecurityEngine
  * [FROM]: No external dependencies
  * [TO]: Consumed by extension entry point (./index.ts)

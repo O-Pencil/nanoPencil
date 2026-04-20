@@ -246,6 +246,18 @@ Verify document isomorphism
 | SEVERE-003 | P1 out of sync: global topology or stack inconsistent with repository reality |
 | SEVERE-004 | Parent links broken |
 
+### Verification
+
+Run DIP compliance check before committing:
+
+```bash
+npx tsx scripts/verify-dip.ts
+```
+
+- **Exit 0**: All checks passed
+- **Exit 1**: FATAL violations (must fix before commit)
+- **Exit 2**: SEVERE violations (should fix)
+
 ---
 
 ## INVOCATION

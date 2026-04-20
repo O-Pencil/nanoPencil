@@ -107,16 +107,22 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 ### Model Management (`core/model/`)
 
 `index.ts`: Model registry facade, - [WHO]: ModelRegistry
-- [FROM]: model-registry.ts, model-resolver.ts
+- [FROM]: core/model-registry.ts, core/model-resolver.ts
 - [TO]: (check imports)
 - [HERE]: model abstraction
 `switcher.ts`: Runtime model switching logic, - [WHO]: ModelSwitcher
 - [FROM]: index.ts
 - [TO]: (check imports)
 - [HERE]: model transitions
-`model-registry.ts`: Manages model definitions, handles API key resolution, appendOpenRouterModel writes custom OpenRouter ids to models.json
 
-`model-resolver.ts`: Resolves model IDs to provider configurations
+### Runtime (`core/runtime/`)
+
+`agent-session.ts`: AgentSession class, central session lifecycle manager, wraps Agent, coordinates compaction, emits events, handles model switching, all modes delegate to this class
+`event-bus.ts`: EventBus interface, EventBusController, createEventBus(), typed event emission system for extension hooks
+`sdk.ts`: createAgentSession(options) factory, creates all services with dependency injection, wires up extensions, consumed by all run modes
+`pencil-agent.ts`: PencilAgent helper class wrapping Agent core
+`retry-coordinator.ts`: RetryCoordinator, RetrySessionEvent — retry coordination for transient failures
+`turn-context.ts`: TurnContext interface, TURN_CONTEXT_GLOBAL_KEY, setTurnContext/getTurnContext/resetTurnContext — per-turn hint bus for SAL decoupling
 
 ### Configuration (`core/config/`)
 
@@ -161,6 +167,20 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 `persona/`: Persona management
 
 `export-html/`: HTML export functionality with templates
+
+`exec.ts`: Subprocess execution helper
+
+`package-manager.ts`: Package discovery, resource loading, extension enumeration
+
+`soul-integration.ts`: Soul AI personality integration bridge
+
+`timings.ts`: Performance timing utilities
+
+`utils/`: Shared utilities
+
+`model-registry.ts`: Manages model definitions, handles API key resolution, appendOpenRouterModel writes custom OpenRouter ids to models.json
+
+`model-resolver.ts`: Resolves model IDs to provider configurations
 
 ---
 

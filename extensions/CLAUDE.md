@@ -79,6 +79,59 @@ Auto-loaded extensions available to all users.
 
 `internet-search/`: Internet search capability
 
+#### btw/ — Quick Side Questions
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with /btw command, BTW_MESSAGE_TYPE renderer
+    - [FROM]: core/extensions/types, @pencil-agent/ai
+    - [HERE]: btw extension entry
+
+#### plan/ — Plan Mode for Read-only Planning
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with /plan command, EnterPlanMode/ExitPlanMode tools, plan file management
+    - [FROM]: core/extensions/types
+    - [HERE]: plan extension entry
+
+`plan-file-manager.ts`: PlanFileManager — plan file path management and I/O
+`plan-permissions.ts`: shouldAllowToolCall() — tool call permission gating for plan mode
+`plan-workflow-prompt.ts`: getPlanModeInstructions() — workflow prompt generation
+`enter-plan-mode-tool.ts`: createEnterPlanModeTool() — EnterPlanMode tool
+`exit-plan-mode-tool.ts`: createExitPlanModeTool() — ExitPlanMode tool with plan validation
+`plan-agents.ts`: Explore/Plan subagent definitions
+`plan-validation.ts`: validatePlan() — validates plan has required sections
+`teammate-approval.ts`: isInTeammateContext(), submitPlanToLeader() — teammate plan approval
+
+#### presence/ — AI-driven Presence Lines
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with opening + idle presence lines, uses NanoMemEngine episodes/preferences/lessons + git/cwd snapshot
+    - [FROM]: core/extensions/types, @pencil-agent/tui
+    - [HERE]: presence extension entry
+
+#### sal/ — Structural Anchor Learning
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks
+    - [FROM]: core/extensions/types
+    - [HERE]: sal extension entry
+
+`terrain.ts`: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage()
+`anchors.ts`: StructuralAnchor/AnchorResolution model, locateTask(), locateAction()
+`weights.ts`: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights()
+`eval/`: Eval sink adapters — insforge/jsonl/noop
+
+#### subagent/ — SubAgent Extension
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with /subagent: /subagent:run/:stop/:status/:report/:apply commands, SUBAGENT_MESSAGE_TYPE renderer
+    - [FROM]: core/extensions/types, @pencil-agent/tui
+    - [HERE]: subagent extension entry
+
+`subagent-runner.ts`: SubAgent orchestration — research and implement roles
+`subagent-parser.ts`: SubAgent command parsing
+`subagent-types.ts`: SubAgentPhase, SubAgentRunState, SubAgentRunReport
+
 #### mcp/ — MCP Protocol Integration
 
 **P3 Contract:**

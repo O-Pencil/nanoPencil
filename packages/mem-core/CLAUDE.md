@@ -206,8 +206,8 @@ IMPORTANT: These memories are your personal recollections...
 
 ## Important Patterns
 
-### POS Comments
-Each file has a `[POS]` comment explaining its position in the architecture. These describe the module's role and dependencies.
+### DIP P3 Headers
+Each file has a `[WHO]/[FROM]/[TO]/[HERE]` header explaining its position in the architecture. These describe the module's role, dependencies, consumers, and location.
 
 ### LLM Function Type
 ```typescript
@@ -253,12 +253,19 @@ nanomem insights [--output <path>]  # Generate HTML report
 - `engine-recall-select.ts` - Recall entry selection and budget allocation for progressive recall
 - `config.ts` - Configuration management
 - `types.ts` - All type definitions
+- `types-v2.ts` - V2-specific type definitions
 - `store.ts` - JSON persistence layer
+- `store-v2.ts` - V2 JSON persistence layer
 - `extraction.ts` - Memory extraction (LLM + heuristic)
 - `consolidation.ts` - Episode consolidation
+- `consolidate-v2.ts` - V2 consolidation logic
+- `reconsolidate-v2.ts` - V2 reconsolidation after recall
+- `procedural-v2.ts` - V2 procedural memory chain building
 - `scoring.ts` - Retrieval and ranking algorithms
 - `privacy.ts` - PII filtering, scoping, TTL
 - `linking.ts` - Memory relationship discovery
+- `embedding-index.ts` - Embedding index for semantic search
+- `hash-embedding.ts` - Hash-based embedding utilities
 - `i18n.ts` - Internationalization (en/zh)
 - `eviction.ts` - Memory eviction algorithms
 - `update.ts` - Memory update operations
@@ -266,3 +273,4 @@ nanomem insights [--output <path>]  # Generate HTML report
 - `insights-html.ts` - HTML report generation
 - `cli.ts` - Standalone CLI tool
 - `turn-context.ts` - Read-only mirror of host's per-turn hint bus (TURN_CONTEXT_GLOBAL_KEY/getTurnContext); engine-scoring-v2 reads `structuralAnchor` here for SAL boost without taking a hard dep on the SAL extension
+- `nano-pencil-host.d.ts` - Type declarations for nano-pencil host integration

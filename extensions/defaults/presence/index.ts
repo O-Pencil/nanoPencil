@@ -529,14 +529,18 @@ async function generatePresenceLine(
 	if (!prompt) return fallback();
 
 	const systemPrompt = (() => {
+		const traitsHint = soulHints.traits.length > 0
+			? ` Your key traits: ${soulHints.traits.map((t) => t.split(":")[0]).join(", ")}.`
+			: "";
+
 		if (locale === "zh") {
 			return kind === "opening"
-				? "你是个程序员的好朋友，现在来打个招呼。说得随意自然点。"
-				: "你是个程序员的好朋友。轻声问候，不打扰。一句话。";
+				? `你是个程序员的好朋友，现在来打个招呼。说得随意自然点。${traitsHint}`
+				: `你是个程序员的好朋友。轻声问候，不打扰。一句话。${traitsHint}`;
 		}
 		return kind === "opening"
-			? "You're a developer's coding buddy saying hi. Keep it casual and human."
-			: "You're a developer's coding buddy doing a quiet check-in. One short, non-pushy line.";
+			? `You're a developer's coding buddy saying hi. Keep it casual and human.${traitsHint}`
+			: `You're a developer's coding buddy doing a quiet check-in. One short, non-pushy line.${traitsHint}`;
 	})();
 
 	try {
@@ -780,6 +784,18 @@ export default async function presenceExtension(api: ExtensionAPI) {
 	});
 
 	api.on("agent_end", () => {
+		touch(state);
+	});
+
+	api.on("tool_execution_start", () => {
+		touch(state);
+	});
+
+	api.on("tool_execution_end", () => {
+		touch(state);
+	});
+
+	api.on("tool_call", () => {
 		touch(state);
 	});
 

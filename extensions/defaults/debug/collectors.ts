@@ -341,3 +341,87 @@ export function formatDiagnosticData(data: DiagnosticData): string {
 
 	return parts.join("\n\n");
 }
+
+// ============================================================================
+// Preferences Info
+// ============================================================================
+
+export interface PreferencesInfo {
+	locale: string;
+	localeSource: "memory" | "settings" | "system";
+	memoryDir: string;
+	languagePreference: {
+		found: boolean;
+		name?: string;
+		summary?: string;
+	}[];
+}
+
+export async function collectPreferencesInfo(ctx: ExtensionContext): Promise<CollectorResult<PreferencesInfo>> {
+	try {
+		const os = await import("node:os");
+		const fs = await import("node:fs");
+		const path = await import("node:path");
+
+		// Check memory directory for language preferences
+		const memoryDir = process.env.NANOMEM_MEMORY_DIR || path.join(os.homedir(), ".nanopencil", "agent", "memory");
+		let locale: string = "en";
+		let localeSource: "memory" | "settings" | "system" = "system";
+		const languagePreference: PreferencesInfo["languagePreference"] = [];
+
+		// Try to read from preferences.json
+		const prefsPath = path.join(memoryDir, "preferences.json");
+		if (fs.existsSync(prefsPath)) {
+			try {
+				const prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8"));
+				// Find language-related preferences
+				const langPrefs = prefs.filter((p: Record<string, unknown>) => {
+					const text = ((p.name as string) || "") + ((p.summary as string) || "") + ((p.detail as string) || "");
+					return /中文|chinese|语言|locale|zh/i.test(text);
+				});
+				if (langPrefs.length > 0) {
+					locale = "zh";
+					localeSource = "memory";
+					for (const p of langPrefs.slice(0, 3)) {
+						languagePreference.push({
+							found: true,
+							name: p.name as string,
+							summary: (p.summary as string || "").slice(0, 80),
+						});
+					}
+				}
+			} catch {
+				// Ignore read errors
+			}
+		}
+
+		// Check settings.json for locale
+		const settingsPath = path.join(os.homedir(), ".nanopencil", "agent", "settings.json");
+		if (localeSource === "system" && fs.existsSync(settingsPath)) {
+			try {
+				const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+				if (settings.locale) {
+					locale = settings.locale;
+					localeSource = "settings";
+				}
+			} catch {
+				// Ignore read errors
+			}
+		}
+
+		return {
+			data: {
+				locale,
+				localeSource,
+				memoryDir,
+				languagePreference,
+			},
+			error: null,
+		};
+	} catch (error) {
+		return {
+			data: null,
+			error: String(error),
+		};
+	}
+}

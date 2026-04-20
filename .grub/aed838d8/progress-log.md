@@ -64,6 +64,17 @@ Goal: 按照长期方案实现 - 让 presence 模块能够从 mem-core 记忆中
 - Verified system fallback: getLocale() returns 'en' when no memory preference
 - Current status: 13/20 features passing
 
+### Iteration 5 Progress
+
+- Implemented `/debug preferences` command showing:
+  - Current locale (zh/en)
+  - Locale source (memory/settings/system)
+  - Memory directory path
+  - Language preferences found in memory
+- Fix: Added memoryDir parameter to getConfig() call
+- Fix: Added homedir import to presence extension
+- Current status: 15/20 features passing
+
 ### Remaining Features (nice-to-have)
-- User commands: /set-locale, /debug preferences (enhancements)
+- /set-locale command (to explicitly set language preference)
 - Full integration test (complex, requires running LLM)

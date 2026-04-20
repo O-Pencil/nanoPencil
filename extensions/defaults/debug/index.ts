@@ -1,8 +1,8 @@
 /**
- * [WHO]: debugExtension - registers /debug command and DEBUG_MESSAGE_TYPE renderer
+ * [WHO]: debugExtension - /debug command, before_agent_start hook injects diagnostic system prompt, agent_end cleanup, dispatched via sendUserMessage for streaming UX
  * [FROM]: Depends on core/extensions/types, @pencil-agent/tui, ./collectors
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
- * [HERE]: extensions/defaults/debug/index.ts - system diagnostics with three-layer analysis
+ * [HERE]: extensions/defaults/debug/index.ts - system diagnostics with three-layer analysis through full agent loop
  */
 
 import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
@@ -20,7 +20,8 @@ import {
 } from "./collectors.js";
 
 const DEBUG_MESSAGE_TYPE = "debug";
-const DEBUG_TIMEOUT_MS = 45_000;
+const DEBUG_PROMPT_PREFIX = "[DEBUG:";
+const DEBUG_TAG = "[DEBUG]";
 
 const DEBUG_SYSTEM_PROMPT = `You are a diagnostic analyst for nanoPencil (a terminal-native AI coding agent).
 Analyze the provided system state and produce a structured three-layer diagnostic report.
@@ -51,7 +52,18 @@ Rules:
 - If the user provided an issue description, focus analysis on that issue
 - If no specific issue, perform a general health assessment
 - Use concise language; prefer tables and bullet lists over prose
-- If a diagnostic collection failed, treat that failure itself as a diagnostic signal`;
+- If a diagnostic collection failed, treat that failure itself as a diagnostic signal
+- Do NOT use any tools — this is a pure analysis task`;
+
+// ============================================================================
+// Pending diagnostic state (set by command handler, consumed by hooks)
+// ============================================================================
+
+let pendingDiagnosticPrompt: string | undefined;
+
+function isDebugPrompt(text: string): boolean {
+	return text.startsWith(DEBUG_PROMPT_PREFIX);
+}
 
 // ============================================================================
 // Subcommand parsing
@@ -73,7 +85,7 @@ function parseDebugArgs(args: string): ParsedDebugArgs {
 }
 
 // ============================================================================
-// Full diagnostic flow
+// Full diagnostic flow — collect then dispatch through agent loop
 // ============================================================================
 
 async function handleFullDiagnostic(
@@ -83,11 +95,9 @@ async function handleFullDiagnostic(
 ): Promise<void> {
 	const parsed = parseDebugArgs(args);
 
-	// Show status indicator
 	ctx.ui.setStatus("debug", "Collecting diagnostics...");
 
 	try {
-		// Collect all categories in parallel
 		const [system, model, session, config, git, agent] = await Promise.allSettled([
 			collectSystemInfo(),
 			collectModelInfo(ctx),
@@ -108,37 +118,20 @@ async function handleFullDiagnostic(
 
 		const data = sanitizeForLLM(raw);
 
-		// Build user message for LLM
-		const parts: string[] = [];
-		if (parsed.issueDescription) {
-			parts.push(`## User-Reported Issue\n${parsed.issueDescription}\n`);
-		}
-		parts.push("## Collected Diagnostics\n");
-		parts.push(formatDiagnosticData(data));
-		const userMessage = parts.join("\n");
-
-		// Call LLM with timeout
-		const response = await Promise.race([
-			ctx.completeSimple(DEBUG_SYSTEM_PROMPT, userMessage),
-			new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), DEBUG_TIMEOUT_MS)),
-		]);
-
 		ctx.ui.setStatus("debug", undefined);
 
-		if (response) {
-			api.sendMessage({
-				customType: DEBUG_MESSAGE_TYPE,
-				content: response,
-				display: true,
-			});
-		} else {
-			// LLM unavailable — show raw data as fallback
-			api.sendMessage({
-				customType: DEBUG_MESSAGE_TYPE,
-				content: `**LLM analysis unavailable** (timeout or no API key). Raw diagnostics:\n\n${formatDiagnosticData(data)}`,
-				display: true,
-			});
+		const parts: string[] = [];
+		parts.push(`${DEBUG_TAG} Perform a three-layer diagnostic analysis.`);
+		if (parsed.issueDescription) {
+			parts.push(`\nUser-Reported Issue: ${parsed.issueDescription}`);
 		}
+		parts.push(`\nCollected Diagnostics:\n`);
+		parts.push(formatDiagnosticData(data));
+
+		const prompt = `${DEBUG_PROMPT_PREFIX}${Date.now()}]\n${parts.join("\n")}`;
+		pendingDiagnosticPrompt = prompt;
+
+		api.sendUserMessage(prompt, { deliverAs: "followUp" });
 	} catch (error) {
 		ctx.ui.setStatus("debug", undefined);
 		const message = error instanceof Error ? error.message : String(error);
@@ -147,7 +140,7 @@ async function handleFullDiagnostic(
 }
 
 // ============================================================================
-// Quick subcommand — show raw data without LLM
+// Quick subcommand — show raw data without agent loop
 // ============================================================================
 
 async function handleQuickSub(
@@ -213,7 +206,6 @@ async function handleDebugCommand(args: string, ctx: ExtensionCommandContext, ap
 // ============================================================================
 
 export default async function debugExtension(api: ExtensionAPI): Promise<void> {
-	// Register debug message renderer (same pattern as btw)
 	api.registerMessageRenderer(DEBUG_MESSAGE_TYPE, (message, _options, theme): Component => {
 		const text =
 			typeof message.content === "string"
@@ -232,9 +224,19 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 		return container;
 	});
 
-	// Register /debug command
+	api.on("before_agent_start", (event) => {
+		if (!isDebugPrompt(event.prompt)) return;
+		return { appendSystemPrompt: DEBUG_SYSTEM_PROMPT };
+	});
+
+	api.on("agent_end", () => {
+		if (pendingDiagnosticPrompt) {
+			pendingDiagnosticPrompt = undefined;
+		}
+	});
+
 	api.registerCommand("debug", {
-		description: "Run system diagnostics with three-layer analysis (/debug [env|session|model|<issue>])",
+		description: "Run system diagnostics (/debug [env|session|model|<issue>])",
 		handler: (args, ctx) => handleDebugCommand(args, ctx, api),
 	});
 }

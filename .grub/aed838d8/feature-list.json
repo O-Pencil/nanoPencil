@@ -187,7 +187,8 @@
         "在 settings.json 中设置 locale: 'zh'",
         "验证 presence 使用中文"
       ],
-      "passes": false
+      "passes": true,
+      "evidence": "Implemented /debug preferences command that shows locale source and language preferences from memory"
     },
     {
       "id": "system-locale-fallback",
@@ -221,7 +222,8 @@
         "运行命令",
         "验证显示 locale 来源（memory/settings/system）"
       ],
-      "passes": false
+      "passes": true,
+      "evidence": "Implemented /debug preferences command that shows locale source and language preferences from memory"
     },
     {
       "id": "presence-integration-test",

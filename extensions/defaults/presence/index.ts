@@ -186,17 +186,6 @@ function clearTimers(state: PresenceState): void {
 	state.unsubscribeInput = undefined;
 }
 
-function getMemoryDir(): string {
-	// Use the same memory directory as the main app
-	// Priority: env var > nanopencil default > legacy nanomem path
-	if (process.env.NANOMEM_MEMORY_DIR) return process.env.NANOMEM_MEMORY_DIR;
-	// Check if nanopencil's memory directory exists
-	const nanopencilMemory = join(homedir(), ".nanopencil", "agent", "memory");
-	if (existsSync(nanopencilMemory)) return nanopencilMemory;
-	// Fallback to legacy path
-	return join(homedir(), ".nanomem", "memory");
-}
-
 async function initMemEngine(state: PresenceState): Promise<void> {
 	if (state.memEngine) return;
 	try {
@@ -216,6 +205,17 @@ async function initMemEngine(state: PresenceState): Promise<void> {
 		// NanoMem not available, use fallback messages
 		state.memEngine = undefined;
 	}
+}
+
+function getMemoryDir(): string {
+	// Use the same memory directory as the main app
+	// Priority: env var > nanopencil default > legacy nanomem path
+	if (process.env.NANOMEM_MEMORY_DIR) return process.env.NANOMEM_MEMORY_DIR;
+	// Check if nanopencil's memory directory exists
+	const nanopencilMemory = join(homedir(), ".nanopencil", "agent", "memory");
+	if (existsSync(nanopencilMemory)) return nanopencilMemory;
+	// Fallback to legacy path
+	return join(homedir(), ".nanomem", "memory");
 }
 
 function getProject(): string {

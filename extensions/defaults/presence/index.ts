@@ -2,7 +2,7 @@
  * [WHO]: Extension interface, AI-driven personalized greetings and idle cues
  * [FROM]: Depends on @pencil-agent/tui, core/extensions/types.js, core/i18n, node:path, node:url, node:fs
  * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled
+ * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled, canSendOpening guards against agent-is-busy race
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
@@ -587,7 +587,7 @@ function canSendPresence(ctx: ExtensionContext): boolean {
 }
 
 function canSendOpening(ctx: ExtensionContext): boolean {
-	return ctx.hasUI && !hasDraftText(ctx);
+	return ctx.hasUI && ctx.isIdle() && !ctx.hasPendingMessages() && !hasDraftText(ctx);
 }
 
 function pickLine(lines: readonly string[], seed: number): string {

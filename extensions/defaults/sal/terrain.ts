@@ -1,12 +1,23 @@
 /**
  * [WHO]: TerrainNode, TerrainEdge, TerrainSnapshot, buildTerrainIndex(), checkDipCoverage(), CoverageReport
- * [FROM]: Depends on node:fs, node:path
+ * [FROM]: Depends on node:fs/promises, node:path
  * [TO]: Consumed by extensions/defaults/sal/anchors.ts, extensions/defaults/sal/index.ts
  * [HERE]: extensions/defaults/sal/terrain.ts - terrain graph builder from DIP P2/P3 headers
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
+
+/**
+ * Yield control back to Node's event loop so pending process.nextTick
+ * callbacks (notably TUI render frames) can run between batches of fs work.
+ * Without this, a full workspace scan can block stdout flushes long enough
+ * for GPU block-terminals (e.g. Warp) to coalesce an entire turn into one
+ * block and render it only at the end.
+ */
+async function yieldToEventLoop(): Promise<void> {
+	await new Promise<void>((resolve) => setImmediate(resolve));
+}
 
 export type TerrainNodeKind = "root" | "module" | "file";
 
@@ -88,22 +99,25 @@ interface WalkEntry {
 	mtimeMs: number;
 }
 
-function walk(root: string): { files: WalkEntry[]; dirs: WalkEntry[] } {
+async function walkAsync(root: string): Promise<{ files: WalkEntry[]; dirs: WalkEntry[] }> {
 	const files: WalkEntry[] = [];
 	const dirs: WalkEntry[] = [];
 	const stack: string[] = [root];
+	let dirsProcessed = 0;
 	while (stack.length > 0) {
 		const current = stack.pop();
 		if (!current) break;
 		let entries: import("node:fs").Dirent[];
 		try {
-			entries = readdirSync(current, { withFileTypes: true });
+			entries = await readdir(current, { withFileTypes: true });
 		} catch {
 			continue;
 		}
+		// Batch stat() calls per directory so the event loop turns over
+		// naturally between directories instead of serializing one syscall at a time.
+		const pending: Promise<void>[] = [];
 		for (const entry of entries) {
 			if (entry.name.startsWith(".") && entry.name !== ".") {
-				// allow .pencil-style files via AGENT.md, but skip dot dirs by default
 				if (entry.isDirectory() && IGNORED_DIRS.has(entry.name)) continue;
 				if (entry.isDirectory()) continue;
 			}
@@ -111,26 +125,35 @@ function walk(root: string): { files: WalkEntry[]; dirs: WalkEntry[] } {
 				if (IGNORED_DIRS.has(entry.name)) continue;
 				const abs = join(current, entry.name);
 				const rel = toPosix(relative(root, abs));
-				let mtimeMs = 0;
-				try {
-					mtimeMs = statSync(abs).mtimeMs;
-				} catch {
-					// ignore
-				}
-				dirs.push({ abs, rel, mtimeMs });
-				stack.push(abs);
+				pending.push(
+					stat(abs).then(
+						(st) => {
+							dirs.push({ abs, rel, mtimeMs: st.mtimeMs });
+							stack.push(abs);
+						},
+						() => {
+							dirs.push({ abs, rel, mtimeMs: 0 });
+							stack.push(abs);
+						},
+					),
+				);
 			} else if (entry.isFile()) {
 				const abs = join(current, entry.name);
 				const rel = toPosix(relative(root, abs));
-				let mtimeMs = 0;
-				try {
-					mtimeMs = statSync(abs).mtimeMs;
-				} catch {
-					// ignore
-				}
-				files.push({ abs, rel, mtimeMs });
+				pending.push(
+					stat(abs).then(
+						(st) => {
+							files.push({ abs, rel, mtimeMs: st.mtimeMs });
+						},
+						() => {
+							files.push({ abs, rel, mtimeMs: 0 });
+						},
+					),
+				);
 			}
 		}
+		await Promise.all(pending);
+		if (++dirsProcessed % 16 === 0) await yieldToEventLoop();
 	}
 	return { files, dirs };
 }
@@ -194,9 +217,16 @@ function parseP2Summary(content: string): string | undefined {
 /**
  * Build a terrain index from a workspace root.
  * Coarse, file/module-level only. Symbol-level deferred.
+ *
+ * Async by design: walks the filesystem and reads DIP headers without blocking
+ * the Node event loop, so TUI render frames (e.g. the user's message bubble
+ * queued via process.nextTick right before session.prompt()) can flush between
+ * fs operations. A synchronous implementation holds stdout long enough that
+ * GPU block terminals (Warp) coalesce a whole turn into a single block and
+ * only render it when the turn ends.
  */
-export function buildTerrainIndex(workspaceRoot: string): TerrainSnapshot {
-	const { files } = walk(workspaceRoot);
+export async function buildTerrainIndex(workspaceRoot: string): Promise<TerrainSnapshot> {
+	const { files } = await walkAsync(workspaceRoot);
 	const nodes: TerrainNode[] = [];
 	const edges: TerrainEdge[] = [];
 	const moduleByFile: Record<string, string> = {};
@@ -205,13 +235,14 @@ export function buildTerrainIndex(workspaceRoot: string): TerrainSnapshot {
 	const fileNodes: TerrainNode[] = [];
 
 	// Pass 1: P2 module nodes from AGENT.md (or legacy CLAUDE.md) files
+	let pass1Count = 0;
 	for (const f of files) {
 		const dipName = dipModuleMapFileName(f.rel);
 		if (!dipName) continue;
 		const modulePath = f.rel === dipName ? "" : f.rel.slice(0, f.rel.length - dipName.length - 1);
 		let p2Summary: string | undefined;
 		try {
-			const content = readFileSync(f.abs, "utf-8");
+			const content = await readFile(f.abs, "utf-8");
 			p2Summary = parseP2Summary(content);
 		} catch {
 			// ignore
@@ -228,9 +259,11 @@ export function buildTerrainIndex(workspaceRoot: string): TerrainSnapshot {
 		};
 		moduleNodes.set(id, node);
 		nodes.push(node);
+		if (++pass1Count % 32 === 0) await yieldToEventLoop();
 	}
 
 	// Pass 2: file nodes for source files
+	let pass2Count = 0;
 	for (const f of files) {
 		const dotIdx = f.rel.lastIndexOf(".");
 		if (dotIdx < 0) continue;
@@ -239,7 +272,7 @@ export function buildTerrainIndex(workspaceRoot: string): TerrainSnapshot {
 
 		let p3: P3Fields | undefined;
 		try {
-			const content = readFileSync(f.abs, "utf-8");
+			const content = await readFile(f.abs, "utf-8");
 			p3 = parseP3Header(content);
 		} catch {
 			// ignore unreadable files
@@ -274,6 +307,7 @@ export function buildTerrainIndex(workspaceRoot: string): TerrainSnapshot {
 		nodes.push(node);
 		moduleByFile[node.id] = bestModuleId;
 		edges.push({ fromId: bestModuleId, toId: node.id, type: "contains" });
+		if (++pass2Count % 32 === 0) await yieldToEventLoop();
 	}
 
 	return {
@@ -326,18 +360,23 @@ export function checkDipCoverage(snapshot: TerrainSnapshot, modules: string[]): 
 /**
  * Determine whether the snapshot is stale relative to current DIP files.
  * Returns true when any AGENT.md (or legacy CLAUDE.md) or source file mtime exceeds snapshot.generatedAt.
+ *
+ * Async to avoid blocking the event loop during the staleness probe that runs
+ * at the top of every before_agent_start hook.
  */
-export function isSnapshotStale(snapshot: TerrainSnapshot): boolean {
+export async function isSnapshotStale(snapshot: TerrainSnapshot): Promise<boolean> {
 	const stack: string[] = [snapshot.workspaceRoot];
+	let dirsProcessed = 0;
 	while (stack.length > 0) {
 		const current = stack.pop();
 		if (!current) break;
 		let entries: import("node:fs").Dirent[];
 		try {
-			entries = readdirSync(current, { withFileTypes: true });
+			entries = await readdir(current, { withFileTypes: true });
 		} catch {
 			continue;
 		}
+		const statTargets: string[] = [];
 		for (const entry of entries) {
 			if (entry.isDirectory()) {
 				if (IGNORED_DIRS.has(entry.name)) continue;
@@ -346,18 +385,19 @@ export function isSnapshotStale(snapshot: TerrainSnapshot): boolean {
 				continue;
 			}
 			if (!entry.isFile()) continue;
-			const abs = join(current, entry.name);
 			const isDipModuleMap = (DIP_MODULE_MAP_FILENAMES as readonly string[]).includes(entry.name);
 			const dotIdx = entry.name.lastIndexOf(".");
 			const ext = dotIdx >= 0 ? entry.name.slice(dotIdx) : "";
 			if (!isDipModuleMap && !SOURCE_EXTS.has(ext)) continue;
-			try {
-				const st = statSync(abs);
-				if (st.mtimeMs > snapshot.generatedAt) return true;
-			} catch {
-				// ignore
-			}
+			statTargets.push(join(current, entry.name));
 		}
+		const results = await Promise.all(
+			statTargets.map((abs) => stat(abs).then((st) => st.mtimeMs, () => 0)),
+		);
+		for (const mtime of results) {
+			if (mtime > snapshot.generatedAt) return true;
+		}
+		if (++dirsProcessed % 16 === 0) await yieldToEventLoop();
 	}
 	return false;
 }

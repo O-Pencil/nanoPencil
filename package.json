@@ -40,9 +40,11 @@
     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
     "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
-    "prepublishOnly": "npm run changelog && npm run build:release",
+    "prepublishOnly": "npm run build:release",
     "changelog": "node scripts/generate-changelog.js",
-    "release": "npm run changelog && npm version patch && npm publish"
+    "version": "npm run changelog && git add CHANGELOG.md",
+    "postversion": "git push && git push --tags",
+    "release": "npm version patch && npm publish"
   },
   "keywords": [
     "nanopencil",

@@ -416,37 +416,41 @@ feat(interview): reduce interview trigger frequency
 git status
 git push
 
-# 2. Run release (auto changelog + version bump + npm publish)
+# 2. Run release (patch version bump + changelog + publish)
 npm run release
+```
 
-# Or manually specify version type
-npm version patch    # 1.11.2 -> 1.11.3
-npm version minor    # 1.11.2 -> 1.12.0
-npm version major    # 1.11.2 -> 2.0.0
+### How `npm run release` works
+
+```
+npm run release
+  ├─ npm version patch
+  │    ├─ [version hook] generate CHANGELOG.md + git add
+  │    ├─ npm auto-commits package.json + CHANGELOG.md + creates git tag
+  │    └─ [postversion hook] git push + git push --tags
+  └─ npm publish
+       └─ [prepublishOnly hook] build:release (build only, no changelog)
+```
+
+For non-patch releases, run `npm version` manually:
+
+```bash
+npm version minor && npm publish   # 1.13.2 -> 1.14.0
+npm version major && npm publish   # 1.13.2 -> 2.0.0
 ```
 
 ### Changelog Generation
 
 - Uses `scripts/generate-changelog.js`
-- Based on git commit history, categorized by type
+- Triggered automatically by `version` lifecycle hook
+- Based on git commit history since last tag, categorized by type
 - Follows [Keep a Changelog](https://keepachangelog.com/)
-- Auto-inserts new version at top of CHANGELOG.md
-
-### Version Numbering (SemVer)
-
-| Type | Description |
-|------|-------------|
-| `patch` | Bug fixes |
-| `minor` | New features (backward compatible) |
-| `major` | Breaking changes |
 
 ### Release Checklist
 
-- [ ] All features completed and tested
-- [ ] CHANGELOG.md updated
-- [ ] Version number bumped
-- [ ] Code pushed to remote
-- [ ] npm publish successful
+- [ ] All changes committed and pushed (clean working tree required by `npm version`)
+- [ ] `npm run release` successful
+- [ ] Verify published version: `npm view @pencil-agent/nano-pencil version`
 
 ---
 

@@ -139,6 +139,9 @@ interface SalRuntime {
 		model?: string;
 	};
 	buildMeta: BuildMeta;
+	staleCleanupDone: boolean;
+	/** Set by before_agent_start when --sal-rebuild-terrain is active; consumed by agent_end. */
+	pendingRebuild: boolean;
 }
 
 
@@ -452,6 +455,71 @@ async function emitEval(
 	}
 }
 
+/**
+ * Fire-and-forget PATCH to mark stale "running" eval runs as "abandoned".
+ * Uses raw HTTP so it stays independent of the EvalSink batching pipeline.
+ * Fully async — callers should void-call this and never await on the hot path.
+ */
+async function cleanupStaleRuns(runtime: SalRuntime): Promise<void> {
+	if (!runtime.evalEndpoint) return;
+	const base = runtime.evalEndpoint.replace(/\/+$/, "");
+	// Mark runs from this workspace that are still "running" (but not the current run)
+	const url = `${base}/api/database/records/eval_runs?` +
+		`status=eq.running&` +
+		`workspace_root=eq.${encodeURIComponent(runtime.workspaceRoot)}&` +
+		`run_id=neq.${encodeURIComponent(runtime.evalRunId)}`;
+
+	const headers: Record<string, string> = { "Content-Type": "application/json" };
+	if (runtime.evalAnonKey) {
+		headers["apikey"] = runtime.evalAnonKey;
+		headers["Authorization"] = `Bearer ${runtime.evalAnonKey}`;
+	}
+	if (runtime.evalApiKey) {
+		headers[runtime.evalApiKeyHeader ?? "x-api-key"] = runtime.evalApiKey;
+		if (!runtime.evalAnonKey) {
+			headers["Authorization"] = `Bearer ${runtime.evalApiKey}`;
+		}
+	}
+	Object.assign(headers, runtime.evalHeaders);
+
+	const body = JSON.stringify({
+		status: "abandoned",
+		ended_at: new Date().toISOString(),
+	});
+
+	const { request: httpsRequest } = await import("node:https");
+	const { request: httpRequest } = await import("node:http");
+	const { URL } = await import("node:url");
+
+	const parsed = new URL(url);
+	const isHttps = parsed.protocol === "https:";
+	const reqFn = isHttps ? httpsRequest : httpRequest;
+	const port = parsed.port ? Number(parsed.port) : (isHttps ? 443 : 80);
+
+	return new Promise<void>((resolve) => {
+		const req = reqFn(
+			{
+				hostname: parsed.hostname,
+				port,
+				path: parsed.pathname + parsed.search,
+				method: "PATCH",
+				headers: { ...headers, "Content-Length": Buffer.byteLength(body) },
+				timeout: 5000,
+				...(isHttps ? { rejectUnauthorized: false } : {}),
+			},
+			(res) => {
+				// Drain response body (required to free the socket)
+				res.resume();
+				res.on("end", () => resolve());
+			},
+		);
+		req.on("error", () => resolve());
+		req.on("timeout", () => { req.destroy(); resolve(); });
+		req.write(body);
+		req.end();
+	});
+}
+
 export default async function salExtension(api: ExtensionAPI) {
 	api.registerFlag(NOSAL_FLAG, {
 		type: "boolean",
@@ -546,6 +614,8 @@ export default async function salExtension(api: ExtensionAPI) {
 			session_id: evalRunId,
 		},
 		buildMeta: BUILD_META,
+		staleCleanupDone: false,
+		pendingRebuild: false,
 	};
 
 	const isEnabled = (): boolean => !api.getFlag(NOSAL_FLAG);
@@ -689,11 +759,25 @@ export default async function salExtension(api: ExtensionAPI) {
 		api.on(
 			"before_agent_start",
 			async (event: BeforeAgentStartEvent, ctx: ExtensionContext): Promise<BeforeAgentStartEventResult | undefined> => {
+				// ---------------------------------------------------------------
+				// ZERO-I/O CONTRACT: this handler must NEVER await filesystem work.
+				// runner.ts enforces a 1500ms timeout on before_agent_start; any
+				// I/O (terrain build, staleness probe, HTTP) risks timeout which
+				// silently drops SAL's appendSystemPrompt injection.
+				//
+				// All terrain building and refresh happens in the background:
+				//   1. Extension load → setImmediate prewarm
+				//   2. agent_end     → async staleness check + rebuild
+				//   3. --sal-rebuild-terrain → flag read here, rebuild in agent_end
+				//
+				// This handler only reads runtime.snapshot (in-memory) and runs
+				// locateTask() (pure computation, <5ms).
+				// ---------------------------------------------------------------
+
 				// Yield once so any UI frame queued via process.nextTick right before
-				// session.prompt() (notably the user-message bubble) flushes to stdout
-				// BEFORE we start the terrain work below. Without this, GPU block
-				// terminals (Warp) can coalesce the whole turn's render into one block
-				// that only paints when the turn ends.
+				// session.prompt() (notably the user-message bubble) flushes to stdout.
+				// Without this, GPU block terminals (Warp) coalesce the whole turn's
+				// render into one block that only paints when the turn ends.
 				await new Promise<void>((resolve) => setImmediate(resolve));
 
 				resetTurnContext();
@@ -709,15 +793,19 @@ export default async function salExtension(api: ExtensionAPI) {
 				if (!runtime.evalRunStarted && runtime.evalEnabled) {
 					runtime.evalRunStarted = true;
 					runtime.evalMetadata.model = runtime.evalMetadata.model ?? (ctx.model as any)?.id ?? (ctx.model as any)?.name;
-					await emitEval(runtime, "run_start", isEnabled(), {
+					// emitEval pushes to a batching queue; does NOT await HTTP.
+					void emitEval(runtime, "run_start", isEnabled(), {
 						task_description: (event.prompt ?? "").slice(0, 500),
 						task_file: process.env.NANOPENCIL_EXPERIMENT_TASK_FILE,
 						model: runtime.evalMetadata.model ?? "unknown",
 						thinking: false,
-						commit: process.env.NANOPENCIL_EVAL_COMMIT ?? "unknown",
-						branch: process.env.NANOPENCIL_EVAL_BRANCH ?? "unknown",
+						pencil_version: runtime.buildMeta.version,
+						commit: process.env.NANOPENCIL_EVAL_COMMIT ?? runtime.buildMeta.commitHash ?? "unknown",
+						branch: process.env.NANOPENCIL_EVAL_BRANCH ?? runtime.buildMeta.branch ?? "unknown",
 						workspace_root: runtime.workspaceRoot,
 					});
+					// Strategy B: fire-and-forget stale run cleanup.
+					scheduleStaleCleanup();
 				}
 
 				if (!isEnabled()) return undefined;
@@ -728,9 +816,15 @@ export default async function salExtension(api: ExtensionAPI) {
 				const prompt = (event.prompt ?? "").trim();
 				if (prompt.length < 12) return undefined;
 
-				const forceRebuild = Boolean(api.getFlag(SAL_REBUILD_FLAG));
-				const snapshot = await ensureSnapshot(runtime, forceRebuild);
+				// Pure memory read — if prewarm hasn't finished yet, snapshot is
+				// undefined and we gracefully skip SAL for this turn.
+				const snapshot = runtime.snapshot;
 				if (!snapshot) return undefined;
+
+				// Record if user wants a rebuild; agent_end will act on it.
+				if (api.getFlag(SAL_REBUILD_FLAG)) {
+					runtime.pendingRebuild = true;
+				}
 
 				const resolution = locateTask({
 					prompt,
@@ -818,6 +912,29 @@ export default async function salExtension(api: ExtensionAPI) {
 			startedAtMs: Date.now(),
 			touchedFiles: new Set<string>(),
 		};
+
+		// ---------------------------------------------------------------
+		// Background terrain refresh — runs AFTER the turn is done.
+		// agent_end has no timeout, so async I/O is safe here.
+		// This keeps the snapshot fresh for the NEXT before_agent_start
+		// without ever blocking the hook that has the 1500ms deadline.
+		// ---------------------------------------------------------------
+		if (isEnabled()) {
+			const wantRebuild = runtime.pendingRebuild;
+			runtime.pendingRebuild = false;
+			// Fire-and-forget: don't block agent_end from finishing.
+			void (async () => {
+				try {
+					if (wantRebuild) {
+						await ensureSnapshot(runtime, true);
+					} else if (runtime.snapshot && await isSnapshotStale(runtime.snapshot)) {
+						await ensureSnapshot(runtime, true);
+					}
+				} catch {
+					// Non-fatal; snapshotErrored flag is set inside ensureSnapshot.
+				}
+			})();
+		}
 	});
 
 	api.on("session_shutdown", async () => {
@@ -830,6 +947,49 @@ export default async function salExtension(api: ExtensionAPI) {
 		await runtime.evalSink.flush();
 		await runtime.evalSink.close();
 	});
+
+	// ------------------------------------------------------------------
+	// Strategy A: Emergency flush on abnormal exit.
+	// Best-effort — these may not complete if the process is killed hard,
+	// but they cover uncaught exceptions and natural event-loop drain.
+	// IMPORTANT: no sync I/O — all async, fire-and-forget.
+	// ------------------------------------------------------------------
+	let emergencyFlushed = false;
+	const emergencyFlush = (): void => {
+		if (emergencyFlushed || !runtime.evalEnabled || !runtime.evalRunStarted) return;
+		emergencyFlushed = true;
+		void emitEval(runtime, "run_end", isEnabled(), {
+			status: "interrupted",
+			turn_count: runtime.turnCounter,
+			total_duration_ms: Math.max(0, Date.now() - runtime.evalStartedAtMs),
+		})
+			.then(() => runtime.evalSink.flush())
+			.catch(() => {});
+	};
+	process.on("beforeExit", emergencyFlush);
+	// SIGINT is already handled by interactive-mode (double Ctrl+C → shutdown).
+	// We only add SIGHUP/SIGTERM as secondary safety nets; they do not replace
+	// the primary session_shutdown flow.
+	const signalFlush = () => { emergencyFlush(); };
+	process.on("SIGHUP", signalFlush);
+	process.on("SIGTERM", signalFlush);
+
+	// ------------------------------------------------------------------
+	// Strategy B: Stale run cleanup on first turn.
+	// On the first before_agent_start, fire-and-forget a PATCH to mark
+	// stale "running" runs from the same workspace as "abandoned".
+	// Runs fully async — does NOT block the before_agent_start return,
+	// so the TUI renders the user's message immediately in GPU block
+	// terminals (Warp, etc.).
+	// ------------------------------------------------------------------
+	function scheduleStaleCleanup(): void {
+		if (runtime.staleCleanupDone || !runtime.evalEnabled || !runtime.evalEndpoint) return;
+		runtime.staleCleanupDone = true;
+		// Defer to next tick so the current hook returns instantly.
+		setImmediate(() => {
+			void cleanupStaleRuns(runtime).catch(() => {});
+		});
+	}
 
 	// Background prewarm: start the first terrain build as soon as the TUI has
 	// painted the initial frame. setImmediate defers it past the current stack

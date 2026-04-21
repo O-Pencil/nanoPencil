@@ -2,7 +2,7 @@
  * [WHO]: Provides InsForgeEvalSink (PostgREST-backed adapter)
  * [FROM]: Depends on node:https, node:http, node:url; ./types.js for EvalSink/EvalEventEnvelope/CreateEvalSinkOptions
  * [TO]: Constructed by eval/index.ts factory when adapter resolves to "insforge"
- * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates), turn_anchor→eval_turns + eval_sal_anchors×2, run_end→eval_runs PATCH
+ * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version), turn_anchor→eval_turns + eval_sal_anchors×2, run_end→eval_runs PATCH
  *
  * Pluggable: nothing in this file may be imported from outside the eval/ directory.
  * To add a new backend, write a sibling file with the same EvalSink interface.
@@ -125,6 +125,7 @@ export class InsForgeEvalSink implements EvalSink {
 			task_file:     strOrNull(p.task_file),
 			model:         strOrNull(p.model),
 			thinking:      p.thinking === true,
+			pencil_version: strOrNull(p.pencil_version),
 			commit_hash:   strOrNull(p.commit, "unknown"),
 			branch_name:   strOrNull(p.branch, "unknown"),
 			workspace_root: strOrNull(p.workspace_root),

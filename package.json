@@ -25,7 +25,8 @@
   ],
   "scripts": {
     "dev": "tsx cli.ts",
-    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages",
+    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:theme:json && npm run copy:assets && npm run bundle:packages && npm run build:meta",
+    "build:meta": "node scripts/generate-build-meta.js",
     "build:release": "npm run generate-models --prefix packages/ai && npm run build",
     "build:deps": "npm run build --prefix packages/ai && npm run build --prefix packages/agent-core && npm run build --prefix packages/tui",
     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",

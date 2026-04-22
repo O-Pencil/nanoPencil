@@ -7724,19 +7724,45 @@ export class InteractiveMode {
 
       // Compare versions properly
       if (this.compareVersion(latestVersion, currentVersion) > 0) {
-        // Show notification and auto-update
-        this.chatContainer.addChild(new Spacer(1));
-        this.chatContainer.addChild(
-          new Text(
-            theme.fg("accent", `📦 Auto-updating to version ${latestVersion}...`),
-            1,
-            0,
-          ),
-        );
-        this.ui.requestRender();
+        // Show confirmation dialog before auto-update
+        const title = `${theme.fg("accent", "📦 Update Available")}\n\n${theme.fg("dim", `Current: ${currentVersion}`)}\n${theme.fg("success", `Latest:  ${latestVersion}`)}\n\n${theme.fg("dim", "A new version is available. Would you like to update now?")}`;
 
-        // Perform update
-        await this.performUpdate(latestVersion);
+        const options = [
+          "1. Update now and restart",
+          "2. Skip this version",
+          "3. Continue without updating",
+        ];
+
+        const choice = await this.showExtensionSelector(title, options);
+
+        if (!choice) {
+          // User cancelled, continue without update
+          return;
+        }
+
+        if (choice.includes("Update now")) {
+          // Perform update
+          await this.performUpdate(latestVersion);
+        } else if (choice.includes("Skip")) {
+          // Skip this version
+          this.settingsManager.setSkippedVersion(latestVersion);
+          this.chatContainer.addChild(new Spacer(1));
+          this.chatContainer.addChild(
+            new Text(
+              theme.fg("dim", `⏭️  Skipped version ${latestVersion}. You won't be prompted again.`),
+              1,
+              0,
+            ),
+          );
+          this.ui.requestRender();
+        } else if (choice.includes("Continue")) {
+          // Continue without updating
+          this.chatContainer.addChild(new Spacer(1));
+          this.chatContainer.addChild(
+            new Text(theme.fg("dim", "Continuing without update..."), 1, 0),
+          );
+          this.ui.requestRender();
+        }
       }
     } catch {
       // Silently fail on startup check - don't block user

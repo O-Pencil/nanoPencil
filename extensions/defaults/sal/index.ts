@@ -98,6 +98,7 @@ const EVAL_API_KEY_ENV = "NANOPENCIL_EVAL_API_KEY";
 const EVAL_API_KEY_HEADER_ENV = "NANOPENCIL_EVAL_API_KEY_HEADER";
 const EVAL_HEADERS_JSON_ENV = "NANOPENCIL_EVAL_HEADERS_JSON";
 const EVAL_CREDENTIALS_FILE_ENV = "NANOPENCIL_EVAL_CREDENTIALS_FILE";
+const EVAL_STALE_CLEANUP_ENV = "NANOPENCIL_EVAL_CLEANUP_STALE_RUNS";
 
 interface TurnState {
 	turnId: number;
@@ -127,12 +128,14 @@ interface SalRuntime {
 	evalAnonKey?: string;
 	evalApiKeyHeader?: string;
 	evalHeaders: Record<string, string>;
+	evalAllowSelfSigned: boolean;
 	evalEnabled: boolean;
 	evalRunId: string;
 	evalVariantOverride?: EvalVariant;
 	evalStartedAtMs: number;
 	evalRunStarted: boolean;
 	turnCounter: number;
+	allowStaleCleanup: boolean;
 	evalMetadata: {
 		workspace_root: string;
 		session_id: string;
@@ -166,8 +169,17 @@ interface EvalCredentials {
 	headers?: Record<string, string>;
 	enabled?: boolean;
 	allow_self_signed?: boolean;
+	cleanup_stale_runs?: boolean;
 	/** Adapter selector. When omitted, inferred from endpoint scheme (http→insforge, file/path→jsonl). */
 	adapter?: EvalAdapterId;
+}
+
+function resolveStaleCleanupEnabled(
+	envValue: string | undefined,
+	credentials: EvalCredentials | undefined,
+): boolean {
+	if (envValue !== undefined) return isTruthy(envValue);
+	return credentials?.cleanup_stale_runs === true;
 }
 function isTruthy(value: string | undefined): boolean {
 	if (!value) return false;
@@ -505,7 +517,7 @@ async function cleanupStaleRuns(runtime: SalRuntime): Promise<void> {
 				method: "PATCH",
 				headers: { ...headers, "Content-Length": Buffer.byteLength(body) },
 				timeout: 5000,
-				...(isHttps ? { rejectUnauthorized: false } : {}),
+				...(isHttps && runtime.evalAllowSelfSigned ? { rejectUnauthorized: false } : {}),
 			},
 			(res) => {
 				// Drain response body (required to free the socket)
@@ -577,6 +589,10 @@ export default async function salExtension(api: ExtensionAPI) {
 	const evalAllowSelfSigned =
 		isTruthy(process.env["NANOPENCIL_EVAL_ALLOW_SELF_SIGNED"]) ||
 		(credentials?.allow_self_signed ?? false);
+	const allowStaleCleanup = resolveStaleCleanupEnabled(
+		process.env[EVAL_STALE_CLEANUP_ENV],
+		credentials,
+	);
 
 	const evalSink = createEvalSink({
 		enabled: evalCollectionEnabled && !!evalEndpoint,
@@ -603,12 +619,14 @@ export default async function salExtension(api: ExtensionAPI) {
 		evalAnonKey,
 		evalApiKeyHeader,
 		evalHeaders,
+		evalAllowSelfSigned,
 		evalEnabled: evalSink.enabled,
 		evalRunId,
 		evalVariantOverride,
 		evalStartedAtMs: Date.now(),
 		evalRunStarted: false,
 		turnCounter: 0,
+		allowStaleCleanup,
 		evalMetadata: {
 			workspace_root: workspaceRoot,
 			session_id: evalRunId,
@@ -804,7 +822,7 @@ export default async function salExtension(api: ExtensionAPI) {
 						branch: process.env.NANOPENCIL_EVAL_BRANCH ?? runtime.buildMeta.branch ?? "unknown",
 						workspace_root: runtime.workspaceRoot,
 					});
-					// Strategy B: fire-and-forget stale run cleanup.
+					// Strategy B: optional fire-and-forget stale run cleanup.
 					scheduleStaleCleanup();
 				}
 
@@ -975,15 +993,24 @@ export default async function salExtension(api: ExtensionAPI) {
 	process.on("SIGTERM", signalFlush);
 
 	// ------------------------------------------------------------------
-	// Strategy B: Stale run cleanup on first turn.
-	// On the first before_agent_start, fire-and-forget a PATCH to mark
-	// stale "running" runs from the same workspace as "abandoned".
+	// Strategy B: Opt-in stale run cleanup on first turn.
+	// Disabled by default because workspace_root alone cannot distinguish
+	// a dead run from another live nanoPencil instance in the same repo.
+	// Operators may re-enable it explicitly in single-run environments.
+	//
+	// When enabled, on the first before_agent_start, fire-and-forget a PATCH
+	// to mark stale "running" runs from the same workspace as "abandoned".
 	// Runs fully async — does NOT block the before_agent_start return,
 	// so the TUI renders the user's message immediately in GPU block
 	// terminals (Warp, etc.).
 	// ------------------------------------------------------------------
 	function scheduleStaleCleanup(): void {
-		if (runtime.staleCleanupDone || !runtime.evalEnabled || !runtime.evalEndpoint) return;
+		if (
+			runtime.staleCleanupDone ||
+			!runtime.evalEnabled ||
+			!runtime.evalEndpoint ||
+			!runtime.allowStaleCleanup
+		) return;
 		runtime.staleCleanupDone = true;
 		// Defer to next tick so the current hook returns instantly.
 		setImmediate(() => {
@@ -1005,7 +1032,11 @@ export default async function salExtension(api: ExtensionAPI) {
 	});
 }
 
-export { SAL_DEFAULT_WEIGHTS, normalizeExperimentId, resolveSalSidecarDir };
-
+export {
+	SAL_DEFAULT_WEIGHTS,
+	normalizeExperimentId,
+	resolveSalSidecarDir,
+	resolveStaleCleanupEnabled,
+};
 
 

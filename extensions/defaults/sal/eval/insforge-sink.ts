@@ -2,7 +2,7 @@
  * [WHO]: Provides InsForgeEvalSink (PostgREST-backed adapter)
  * [FROM]: Depends on node:https, node:http, node:url; ./types.js for EvalSink/EvalEventEnvelope/CreateEvalSinkOptions
  * [TO]: Constructed by eval/index.ts factory when adapter resolves to "insforge"
- * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version), turn_anchor→eval_turns + eval_sal_anchors×2, run_end→eval_runs PATCH
+ * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version), turn_anchor→eval_turns + eval_sal_anchors×2, tool_trace→eval_tool_traces, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
  *
  * Pluggable: nothing in this file may be imported from outside the eval/ directory.
  * To add a new backend, write a sibling file with the same EvalSink interface.
@@ -107,6 +107,7 @@ export class InsForgeEvalSink implements EvalSink {
 				case "run_start":       await this.handleRunStart(event); break;
 				case "turn_anchor":     await this.handleTurnAnchor(event); break;
 				case "memory_recalls":  await this.handleMemoryRecalls(event); break;
+				case "tool_trace":      await this.handleToolTrace(event); break;
 				case "run_end":         await this.handleRunEnd(event); break;
 			}
 		} catch (err) {
@@ -228,6 +229,32 @@ export class InsForgeEvalSink implements EvalSink {
 			rows,
 			{ prefer: "resolution=ignore-duplicates" },
 		);
+	}
+
+	// INSERT into eval_tool_traces — one row per turn with tool usage summary
+	// InsForge columns are all TEXT; JSONB fields must be serialized to strings.
+	private async handleToolTrace(ev: EvalEventEnvelope): Promise<void> {
+		const p = ev.payload;
+		const taskSignals = p.task_signals as Record<string, unknown> | undefined;
+		await this.postJson(`${this.base}/api/database/records/eval_tool_traces`, [{
+			run_id:             ev.run_id,
+			turn_id:            String(p.turn_id ?? 0),
+			event_id:           ev.event_id,
+			tool_calls:         p.tool_calls ? JSON.stringify(p.tool_calls) : null,
+			tool_sequence:      p.tool_sequence ? JSON.stringify(p.tool_sequence) : null,
+			intent:             strOrNull(taskSignals?.intent),
+			prompt_length:      String(taskSignals?.prompt_length ?? 0),
+			has_error_trace:    String(taskSignals?.has_error_trace === true),
+			has_file_reference: String(taskSignals?.has_file_reference === true),
+			has_tool_usage:     String(p.has_tool_usage === true),
+			total_tool_calls:   String(p.total_tool_calls ?? 0),
+			total_errors:       String(p.total_errors ?? 0),
+			completed_tool_calls: String(p.completed_tool_calls ?? 0),
+			truncated_tool_calls: String(p.truncated_tool_calls ?? 0),
+			truncated_tool_summary: String(p.truncated_tool_summary ?? 0),
+			duration_ms:        String(p.duration_ms ?? 0),
+			recorded_at:        ev.ts,
+		}], { prefer: "resolution=ignore-duplicates" });
 	}
 
 	// ------------------------------------------------------------------

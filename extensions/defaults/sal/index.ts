@@ -1,8 +1,8 @@
 /**
- * [WHO]: SAL extension entry - enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; runtime no-op when --nosal is set
- * [FROM]: Depends on core/extensions/types.ts, core/runtime/turn-context.ts (publishes structuralAnchor), extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval/index.ts (pluggable adapters)
+ * [WHO]: SAL extension entry - enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/tool_execution_end/agent_end hooks; runtime no-op when --nosal is set
+ * [FROM]: Depends on core/extensions/types.ts (ToolExecutionStartEvent, ToolExecutionEndEvent), core/runtime/turn-context.ts (publishes structuralAnchor), extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval/index.ts (pluggable adapters)
  * [TO]: Loaded by builtin-extensions.ts as a default extension entry point
- * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension; emits run_start/turn_anchor/run_end eval events; /sal:setup writes ~/.memory-experiments/credentials.json
+ * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension; emits run_start/turn_anchor/tool_trace/run_end eval events; tool_trace captures per-turn tool usage profile (call counts, sequences, intent, errors) for self-awareness analytics
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,6 +24,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 	ToolExecutionStartEvent,
+	ToolExecutionEndEvent,
 } from "../../../core/extensions/types.js";
 import { getTurnContext, resetTurnContext, setTurnContext } from "../../../core/runtime/turn-context.js";
 import { locateAction, locateTask, type AnchorResolution } from "./anchors.js";
@@ -99,12 +100,31 @@ const EVAL_API_KEY_HEADER_ENV = "NANOPENCIL_EVAL_API_KEY_HEADER";
 const EVAL_HEADERS_JSON_ENV = "NANOPENCIL_EVAL_HEADERS_JSON";
 const EVAL_CREDENTIALS_FILE_ENV = "NANOPENCIL_EVAL_CREDENTIALS_FILE";
 const EVAL_STALE_CLEANUP_ENV = "NANOPENCIL_EVAL_CLEANUP_STALE_RUNS";
+const MAX_TOOL_SEQUENCE = 32;
+const MAX_TOOL_SUMMARY_TOOLS = 16;
+
+interface ToolCallRecord {
+	toolCallId: string;
+	tool: string;
+	startMs: number;
+	endMs?: number;
+	isError?: boolean;
+}
+
+interface ToolTraceSummary {
+	tool: string;
+	count: number;
+	errors: number;
+	avg_ms: number | null;
+	completed_calls: number;
+}
 
 interface TurnState {
 	turnId: number;
 	startedAtMs: number;
 	taskResolution?: AnchorResolution;
 	touchedFiles: Set<string>;
+	toolCalls: ToolCallRecord[];
 	prompt?: string;
 }
 
@@ -351,6 +371,97 @@ function extractToolFilePaths(toolName: string, args: unknown, workspaceRoot: st
 	return out;
 }
 
+// ---------------------------------------------------------------------------
+// Intent inference — lightweight keyword classifier for tool_trace analytics.
+// Returns a coarse intent label; not used for control, only for eval grouping.
+// ---------------------------------------------------------------------------
+
+type TaskIntent = "fix" | "feat" | "refactor" | "explain" | "explore" | "unknown";
+
+const INTENT_PATTERNS: Array<[TaskIntent, RegExp[]]> = [
+	["fix", [
+		/\b(fix|bug|error|issue|broken|crash|fail|wrong|debug|patch|repair)\b/i,
+		/(修复|报错|问题|异常|崩溃|失败|错误)/,
+	]],
+	["refactor", [
+		/\b(refactor|rename|extract|move|split|merge|clean\s?up|restructure)\b/i,
+		/(重构|整理|拆分|重命名|抽取)/,
+	]],
+	["explain", [
+		/\b(explain|how does|what is|why does|understand|read|review|audit|tell me|describe)\b/i,
+		/(解释|为什么|怎么|什么|看一下|看下|评审|核审|说明)/,
+	]],
+	["feat", [
+		/\b(add|implement|create|build|new|feature|support|enable|integrate)\b/i,
+		/(增加|新增|实现|添加|功能|支持|接入)/,
+	]],
+	["explore", [
+		/\b(find|search|look for|where|locate|explore|check|investigate|list)\b/i,
+		/(查找|找|搜|在哪|检查|排查)/,
+	]],
+];
+
+function inferIntent(prompt: string): TaskIntent {
+	if (!prompt || prompt.length < 4) return "unknown";
+	for (const [intent, patterns] of INTENT_PATTERNS) {
+		for (const pattern of patterns) {
+			if (pattern.test(prompt)) return intent;
+		}
+	}
+	return "unknown";
+}
+
+function buildToolTracePayload(turn: TurnState, turnDuration: number): Record<string, unknown> {
+	const toolSummary = new Map<string, { count: number; errors: number; totalMs: number; completed: number }>();
+	let totalErrors = 0;
+
+	for (const tc of turn.toolCalls) {
+		const entry = toolSummary.get(tc.tool) ?? { count: 0, errors: 0, totalMs: 0, completed: 0 };
+		entry.count += 1;
+		if (tc.isError) {
+			entry.errors += 1;
+			totalErrors += 1;
+		}
+		if (tc.endMs != null) {
+			entry.totalMs += tc.endMs - tc.startMs;
+			entry.completed += 1;
+		}
+		toolSummary.set(tc.tool, entry);
+	}
+
+	const summarizedTools = Array.from(toolSummary.entries())
+		.sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+		.slice(0, MAX_TOOL_SUMMARY_TOOLS)
+		.map(([tool, stats]): ToolTraceSummary => ({
+			tool,
+			count: stats.count,
+			errors: stats.errors,
+			avg_ms: stats.completed > 0 ? Math.round(stats.totalMs / stats.completed) : null,
+			completed_calls: stats.completed,
+		}));
+
+	const sequence = turn.toolCalls.slice(0, MAX_TOOL_SEQUENCE).map((tc) => tc.tool);
+	const completedToolCalls = turn.toolCalls.filter((tc) => tc.endMs != null).length;
+
+	return {
+		turn_id: turn.turnId,
+		tool_calls: summarizedTools,
+		tool_sequence: sequence,
+		task_signals: {
+			prompt_length: (turn.prompt ?? "").length,
+			has_error_trace: /\b(error|exception|stack\s?trace|traceback|panic)\b/i.test(turn.prompt ?? ""),
+			has_file_reference: /[\w./-]+\.(ts|tsx|js|jsx|py|go|rs|md|json)/.test(turn.prompt ?? ""),
+			intent: inferIntent(turn.prompt ?? ""),
+		},
+		has_tool_usage: turn.toolCalls.length > 0,
+		total_tool_calls: turn.toolCalls.length,
+		total_errors: totalErrors,
+		completed_tool_calls: completedToolCalls,
+		truncated_tool_calls: Math.max(0, turn.toolCalls.length - sequence.length),
+		truncated_tool_summary: Math.max(0, toolSummary.size - summarizedTools.length),
+		duration_ms: turnDuration,
+	};
+}
 
 function buildContextInjection(resolution: AnchorResolution, snapshot: TerrainSnapshot): string | undefined {
 	if (!resolution.selected || resolution.candidates.length === 0) return undefined;
@@ -610,7 +721,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		workspaceRoot,
 		weights,
 		weightsSource,
-		turn: { turnId: 0, startedAtMs: Date.now(), touchedFiles: new Set<string>() },
+		turn: { turnId: 0, startedAtMs: Date.now(), touchedFiles: new Set<string>(), toolCalls: [] },
 		sidecarDir,
 		evalSink,
 		evalAdapter,
@@ -805,6 +916,7 @@ export default async function salExtension(api: ExtensionAPI) {
 					turnId: runtime.turnCounter,
 					startedAtMs: Date.now(),
 					touchedFiles: new Set<string>(),
+					toolCalls: [],
 					prompt: event.prompt,
 				};
 
@@ -873,6 +985,19 @@ export default async function salExtension(api: ExtensionAPI) {
 	api.on("tool_execution_start", async (event: ToolExecutionStartEvent, _ctx: ExtensionContext) => {
 		const paths = extractToolFilePaths(event.toolName, event.args, runtime.workspaceRoot);
 		for (const p of paths) runtime.turn.touchedFiles.add(p);
+		runtime.turn.toolCalls.push({
+			toolCallId: event.toolCallId,
+			tool: event.toolName,
+			startMs: Date.now(),
+		});
+	});
+
+	api.on("tool_execution_end", async (event: ToolExecutionEndEvent, _ctx: ExtensionContext) => {
+		const record = runtime.turn.toolCalls.find((tc) => tc.toolCallId === event.toolCallId);
+		if (record) {
+			record.endMs = Date.now();
+			record.isError = event.isError;
+		}
 	});
 
 	api.on("agent_end", async (_event: AgentEndEvent, _ctx: ExtensionContext) => {
@@ -921,6 +1046,10 @@ export default async function salExtension(api: ExtensionAPI) {
 			}
 		}
 
+		// Emit tool usage trace for self-awareness analytics.
+		// Always emit a bounded summary, including no-tool turns.
+		await emitEval(runtime, "tool_trace", isEnabled(), buildToolTracePayload(runtime.turn, turnDuration));
+
 		if (actionRes) {
 			persistTurnRecord(runtime, taskRes, actionRes);
 		}
@@ -929,6 +1058,7 @@ export default async function salExtension(api: ExtensionAPI) {
 			turnId: runtime.turn.turnId,
 			startedAtMs: Date.now(),
 			touchedFiles: new Set<string>(),
+			toolCalls: [],
 		};
 
 		// ---------------------------------------------------------------
@@ -1034,9 +1164,10 @@ export default async function salExtension(api: ExtensionAPI) {
 
 export {
 	SAL_DEFAULT_WEIGHTS,
+	buildToolTracePayload,
+	inferIntent,
 	normalizeExperimentId,
 	resolveSalSidecarDir,
 	resolveStaleCleanupEnabled,
 };
-
 

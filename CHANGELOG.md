@@ -7,6 +7,279 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.6] - 2026-04-23
+
+### Added
+- feat(sal): add bounded tool trace analytics
+- feat(update): add confirmation dialog before auto-update on startup
+- feat(sal): avoid blocking startup with async eval maintenance
+- feat(sal): add build metadata to eval runs
+- feat(debug): add /set-locale command
+- feat(debug): add /debug preferences command
+- feat(grub): feature list, persistence layer, and controller/parser upgrades
+- feat(plan): refine exit-plan-mode tool and extension wiring
+- feat(interactive): optimistic user chat bubble and working elapsed timer
+- feat(extensions): add default debug extension with /debug diagnostics
+- feat(docs): add DIP verification script and integrate into P1 CLAUDE.md
+- feat(dip): add verification script and strengthen covenant
+- feat(tui): weighted fuzzy autocomplete and editor placeholder
+- feat(tui): add stall animation and tips to pencil loader
+- feat(btw): wire BTW extension into builtin list and loader
+- feat(btw): add /btw command for side questions without interrupting main task
+- feat(plan): complete plan mode workflow
+- feat(plan): add TUI status indicators for plan mode
+- feat(plan): add Plan Mode extension for read-only planning
+- feat(sal): collect recall anchor eval snapshots
+- feat(buddy): increase animation frequency for more visible motion
+- feat(buddy): remove name and speech bubble below pet sprite
+- feat(models): add qwen3.6-plus to DashScope Coding Plan provider
+- feat(sal): streamline eval to run_start/turn_anchor/run_end + /sal:setup command
+- feat(sdk): add PencilAgent wrapper + SDKLogger interface + console cleanup
+- feat(interactive): add /status command for agent status card
+- feat(interactive): buddy beside input, ASCII cats, steadier cursor
+- feat: buddy pet system, tools dedup, build config and docs updates
+- feat(sal): add run-local experiment reporting
+- feat(tui): role labels, message backgrounds, theme schema updates
+- feat(core): add typed error hierarchy and streaming retry with backoff
+- feat(interactive): suggest vision model variants when images are dropped
+- feat(interactive): suggest vision model variants when images are dropped
+- feat(sal): implement SAL extension with default-on structural anchor localization
+- feat(sal): implement SAL extension with default-on structural anchor localization
+- feat(presence): integrate soul personality hints and recent lines history
+- feat(extensions): split grub from loop, refactor scheduler
+- feat(presence): AI-generated idle nudges and per-turn agent perception
+- feat(team): add Phase B AgentTeam extension with persistent teammates
+- feat(presence): AI-driven personalized greetings with memory context
+- feat(subagent): add isolated workspace review and apply flow
+- feat(update): add /reinstall command and force update flag
+- feat(subagent): add SubAgent runtime and /subagent command
+- feat(ai): add MiniMax thinking tag support
+- feat(model): improve OAuth token handling in model switching
+- feat(debug): export debug logger from core module
+- feat(debug): add comprehensive debug logging system for AI providers
+- feat(interactive-mode): enhance update workflow with interactive options
+- feat(model-selector): add Ctrl+N to append OpenRouter model by id
+- feat(interactive): enhance custom editor and mode orchestration
+- feat(auth): expose openrouter in login selector
+- feat(presence): add gentle proactive chat extension
+- feat(mem-core): retain superseded procedural rows on merge
+- feat(interview): synchronous before_agent_start hook and heuristics
+- feat(mem-core): release v1.1.0
+- feat(mem-core): add semantic recall and reconsolidation loop
+- feat(i18n): add internationalization support (EN/ZH)
+- feat(mem-core): add v2 episodic and procedural memory bridge
+- feat(dream): add abortable consolidation and auto-dream gating
+- feat(acp): improve zed agent parity
+- feat(figma): improve remote MCP authentication flow
+- feat(agent): hide internal traces and improve time grounding
+- feat(mem): add graph-driven memory governance
+- feat(team): add multi-agent team orchestration extension
+- feat(providers): support custom protocol endpoints
+- feat(loop): replace timer loop with autonomous task loop
+
+### Fixed
+- fix(sal): disable stale cleanup by default
+- fix(presence): correct memory dir fallback path
+- fix(presence): only send opening when idle without pending messages
+- fix(loop): persist durable cron task removal to disk
+- fix(sal): yield before before_agent_start work and prewarm snapshot
+- fix(sal): build terrain index asynchronously for TUI responsiveness
+- fix(release): remove tag push from postversion to avoid GitHub rule violations
+- fix(release): decouple changelog from prepublishOnly to fix circular release flow
+- fix(nanopencil-defaults): skip coding plan prompt only when remote provider has auth
+- fix(main): add anthropic-custom and ollama to allowOptionalApiKeyForProvider
+- fix(tui): correct tip cooldown calculation
+- fix(package-manager): remove duplicate param; improve error logging across codebase
+- fix(main): restore accidentally removed imports
+- fix: restore chalk import; add missing weightedFuzzyFilter import and type annotation
+- fix(settings): use readStorageAsync for plain reads; add clarifying comment
+- fix(sal,mem-core): improve structural scoring accuracy and eval data quality
+- fix(mem-core): structural boost path matching across absolute/relative formats
+- fix(shutdown): ensure session_shutdown fires on all exit paths
+- fix: suppress debug output and DEP0190 warning in production
+- fix(plan): fix TypeScript errors for AgentToolResult details field
+- fix(sink): change flush to serial execution and add flushInFlight protection
+- fix(mcp): Optimize startup performance by removing built-in MCP from Puppeteer.
+- fix(sal): flush print-mode eval uploads
+- fix(extensions): prioritize local mem-core source over node_modules to avoid conflicts
+- fix(tui): disable Kitty keyboard protocol on Wave Terminal
+- fix(presence): clarify that presence messages are NOT generated by main agent
+- fix(tui): disable synchronized output on Wave Terminal
+- fix(sal): add allowSelfSigned option for private CA endpoints
+- fix(sal): adapt eval sink to InsForge PostgREST API (/api/database/records/eval_events)
+- fix(sal): surface HTTP errors in eval sink + connectivity probe on /sal:setup
+- fix(sal): batch eval events for InsForge, sanitize tool_args, fix credentials reading
+- fix(interactive): unblock new users with no API key configured
+- fix(sal): add missing eval.ts, make eval opt-in, restore sidecar writes, fix PencilAgent.reset()
+- fix(interactive): flush user messages before prompt start
+- fix(tui): disable synchronized output on Warp terminal
+- fix(tui): revert beautification changes causing display bugs, add rebuild safeguards
+- fix(session): persist user-only turns before assistant replies
+- fix(retry): reset attempt counter on abort in RetryCoordinator
+- fix(extensions): dispose extension runner on session shutdown
+- fix(tui): align viewport scroll when chat content grows
+- fix(tui): emit UI events before awaiting extension handlers for responsive streaming
+- fix(scripts): generate changelog on Windows without head command
+- fix(scripts): generate changelog on Windows without head command
+- fix(interactive): reset clipboard image sequence counter after sending
+- fix(interactive): reset clipboard image sequence counter after sending
+- fix(build): correct build:deps order — ai must precede agent-core
+- fix(build): correct build:deps order — ai must precede agent-core
+- fix(sal): stabilize structural anchor bridge
+- fix(sal): stabilize structural anchor bridge
+- fix(build): add path aliases for mem-core and soul-core
+- fix(build): add path aliases for mem-core and soul-core
+- fix(team): complete AgentTeam Phase B runtime gaps
+- fix(team): complete AgentTeam Phase B runtime gaps
+- fix(update): add shell:true and env for Windows spawn
+- fix(update): add shell:true and env for Windows spawn
+- fix(presence): pass SoulOptions to SoulManager
+- fix(presence): pass SoulOptions to SoulManager
+- fix(loop): use valid ThemeColor "error" instead of "danger" in renderer
+- fix(subagent): normalize Windows paths to forward slashes
+- fix(loop): update duration parsing and help messages
+- fix(loop): defer scheduler ticker until session_start
+- fix(build): bundle zod for global install; workspace tsc; soul empty JSON
+- fix(utils): improve clipboard timeout and image resize safety
+- fix(interactive): improve clipboard and attachment error handling
+- fix(clipboard): add missing @mariozechner/clipboard dependency
+- fix(team): resolve theme color error and abort listener leak
+- fix(debug-logger): enable late environment variable detection
+- fix(model-cycling): improve OAuth error handling with typed errors
+- fix(interactive-mode): improve update system reliability
+- fix(nanopencil): correct MiniMax API endpoint from /anthropic to /v1
+- fix(build): bundle zod to dist/node_modules for peerDependency resolution
+- fix(interactive-mode): replace npm update with npm install in version check prompt
+- fix(tui): show NanoMem command notifications
+- fix(ai): avoid InvalidCharacterError when OAuth client placeholders are not base64
+- fix(nanopencil): OpenRouter in /login and slim built-in OpenRouter models
+- fix(memory): verify insights and startup presence behavior
+- fix(auth): preserve provider api keys in config flows
+- fix(presence): wait for ui readiness before greeting
+- fix(tui): stabilize startup presence and user echo
+- fix(memory): prioritize conversation preferences in recall
+- fix(presence): show startup greeting after UI init
+- fix(memory): shift runtime recall toward V2
+- fix(memory): back up legacy data before maintenance
+- fix(memory): stabilize recall and startup maintenance
+- fix(release): rebuild bundled packages before publish
+- fix(ci): add workspaces config for npm workspace commands
+- fix(tui): prevent duplicate Working messages in PencilLoader
+- fix(interview): stabilize trigger and clarification flow
+- fix(acp): improve zed loop and team progress visibility
+- fix(mcp): load runtime config from the active MCP path
+- fix(interactive): harden extension prompt focus flow
+- fix(runtime): tighten workspace handling and startup prompts @o-pencil-agent
+- fix(runtime): improve loop recovery and insights reporting
+- fix(deps): add zod runtime dependency
+- fix(ux): improve custom provider messaging
+- fix(providers): reopen and refresh custom provider edits
+- fix(providers): streamline custom provider setup
+- fix: extract clipboard image data before sending to model
+
+### Changed
+- refactor(docs): remove [POS] block headers, standardize on P3 CLAUDE.md format
+- refactor(plan): make writePlan async with atomic temp-file rename
+- refactor(loop): unify /loop to cron scheduler architecture
+- refactor(sal): decouple SAL+InsForge via turn-context bus and pluggable eval adapters
+- refactor(sal): InsForge-native eval sink with typed table routing
+- refactor(runtime): extract RetryCoordinator and add structured logging
+- refactor(mem-core): split engine into modules
+- refactor(mem-core): split engine into modules
+- refactor: unify config paths, env vars, and extension API surface
+- refactor: unify config paths, env vars, and extension API surface
+- refactor(i18n): translate all Chinese comments and strings to English
+
+### Performance
+- perf(main): remove unused imports; style placeholder with dim ANSI
+- perf(cli): add --version/--help fast path; add startup profiler
+
+### Documentation
+- docs: polish 1.13.4 changelog and SAL Warp compatibility notes
+- docs(extensions): refresh CLAUDE maps for defaults and optional paths
+- docs: update CHANGELOG for v1.13.1 and v1.13.2
+- docs: enrich P2 CLAUDE.md entries; inject Soul traits into presence prompts
+- docs(changelog): update for recent changes
+- docs(package-manager): correct JSDoc for npmNeedsUpdate after startup optimization
+- docs(sal): add worktree-based experiment evaluation guide
+- docs(sal): consolidate outline and prune legacy docs
+- docs: merge AGENT.md into AGENTS.md, remove duplicate file
+- docs(changelog): add release notes for v1.11.41
+- docs: attribute repo guidance to @o-pencil-agent; add git msg filter helper
+- docs(experiment): add SAL experiment results report
+- docs(test): add SAL experiment template
+- docs(test): add SAL experiment template
+- docs(dip): migrate AGENT.md files to WHO/FROM/TO/HERE format
+- docs(dip): migrate CLAUDE.md files to WHO/FROM/TO/HERE format
+- docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
+- docs: add P3 protocol headers to 27 files - SubAgent, Team, workspace, security-audit, soul, simplify extensions - packages ai, tui, mem-core key source files - test utilities for agent-core and ai packages
+- docs(changelog): add v1.11.39 release notes
+- docs(changelog): add v1.11.39 release notes
+- docs(memory): add cognitive map and SAL experiment drafts
+- docs(memory): add cognitive map and SAL experiment drafts
+- docs(dip): add P2 for core/sub-agent and core/workspace; sync extensions/defaults
+- docs: update CHANGELOG for 1.11.37
+- docs: update CHANGELOG for 1.11.36
+- docs: update CHANGELOG for 1.11.35
+- docs(dip): complete DIP protocol compliance for all source files
+- docs(team): restructure SubAgent and AgentTeam as two-phase plan
+- docs(team): add agent team refactor plan
+- docs: clarify build order; fix oauth client id decode; tidy tsconfig and vitest header
+- docs(agent): expand AGENT.md with cognitive architecture and quality metrics
+- docs(dip): add P3 file headers and layered AGENT.md navigation
+- docs(prompt): refine project assistant charter @o-pencil-agent
+- docs(agents): require English for code strings and commits
+
+### Maintenance
+- chore(ai): regenerate models catalog
+- chore: bump version to 1.12.0 - add Plan Mode extension
+- chore(models): add MiniMax-M2.7 and Qwen3.5 Plus models
+- chore: update changelog for v1.11.45 release
+- chore: update changelog for release
+- chore: update gitignore for AI agent configs and fix monorepo build scripts
+- chore: gitignore .mcp.json (may contain API keys)
+- chore(release): 1.11.44
+- chore: changelog 1.11.44, gitignore memory-experiments
+- chore(ai): remove canvas devDependency for Windows installs
+- chore(release): 1.11.43
+- chore(ai): sync generated model metadata after release build
+- chore(release): 1.11.41
+- chore: add experiment memory data to main branch
+- chore(changelog): regenerate before release
+- chore(changelog): regenerate before release
+- chore: add SAL experiment output files
+- chore: add SAL experiment output files
+- chore(release): v1.11.39
+- chore(release): v1.11.39
+- chore(release): v1.11.38
+- chore(models): update generated model catalog
+- chore: remove old /agent team extension
+- chore(release): 1.11.35
+- chore(ai): regenerate models.generated.ts after build
+- chore: merge origin/main into main
+- chore: merge origin/main into main
+- chore: release v1.11.34
+- chore: run changelog before build in prepublishOnly
+- chore(release): 1.11.33
+- chore(release): 1.11.32
+- chore(release): 1.11.31
+- chore(ai): update model definitions
+- chore(release): publish v1.11.18
+- chore(release): v1.11.17
+- chore(release): prepare 1.11.16 changelog
+- chore(release): prepare 1.11.15 changelog
+- chore(release): publish 1.11.15
+- chore(release): prepare 1.11.14 changelog
+- chore(release): prepare 1.11.13 changelog
+- chore(release): publish 1.11.12
+- chore(release): prepare 1.11.12 changelog
+- chore(release): publish 1.11.11
+- chore(release): publish 1.11.10
+- chore(release): publish 1.11.8
+- chore(release): publish 1.11.6
+- chore(release): publish 1.11.5
+
+
 ## [1.13.5] - 2026-04-21
 
 ### Highlights

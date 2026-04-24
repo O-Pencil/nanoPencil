@@ -2,7 +2,7 @@
  * [WHO]: Provides InsForgeEvalSink (PostgREST-backed adapter)
  * [FROM]: Depends on node:https, node:http, node:url; ./types.js for EvalSink/EvalEventEnvelope/CreateEvalSinkOptions
  * [TO]: Constructed by eval/index.ts factory when adapter resolves to "insforge"
- * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version), turn_anchor→eval_turns + eval_sal_anchors×2, tool_trace→eval_tool_traces, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
+ * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version), turn_anchor→eval_turns + eval_sal_anchors×2, tool_trace→eval_tool_traces with legacy-schema fallback, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
  *
  * Pluggable: nothing in this file may be imported from outside the eval/ directory.
  * To add a new backend, write a sibling file with the same EvalSink interface.
@@ -12,6 +12,18 @@ import { request } from "node:https";
 import { request as httpRequest } from "node:http";
 import { URL } from "node:url";
 import type { CreateEvalSinkOptions, EvalEventEnvelope, EvalSink } from "./types.js";
+
+interface HttpJsonResult {
+	ok: boolean;
+	statusCode?: number;
+	body?: string;
+	errorCode?: string;
+}
+
+interface PostJsonOptions {
+	prefer?: string;
+	quietErrorCodes?: string[];
+}
 
 export class InsForgeEvalSink implements EvalSink {
 	readonly enabled = true;
@@ -236,7 +248,7 @@ export class InsForgeEvalSink implements EvalSink {
 	private async handleToolTrace(ev: EvalEventEnvelope): Promise<void> {
 		const p = ev.payload;
 		const taskSignals = p.task_signals as Record<string, unknown> | undefined;
-		await this.postJson(`${this.base}/api/database/records/eval_tool_traces`, [{
+		const row = {
 			run_id:             ev.run_id,
 			turn_id:            String(p.turn_id ?? 0),
 			event_id:           ev.event_id,
@@ -254,20 +266,28 @@ export class InsForgeEvalSink implements EvalSink {
 			truncated_tool_summary: String(p.truncated_tool_summary ?? 0),
 			duration_ms:        String(p.duration_ms ?? 0),
 			recorded_at:        ev.ts,
-		}], { prefer: "resolution=ignore-duplicates" });
+		};
+		const url = `${this.base}/api/database/records/eval_tool_traces`;
+		const result = await this.postJson(url, [row], {
+			prefer: "resolution=ignore-duplicates",
+			quietErrorCodes: ["PGRST204"],
+		});
+		if (!result.ok && result.errorCode === "PGRST204") {
+			await this.postJson(url, [toLegacyToolTraceRow(row)], { prefer: "resolution=ignore-duplicates" });
+		}
 	}
 
 	// ------------------------------------------------------------------
 	// HTTP helpers
 	// ------------------------------------------------------------------
 
-	private postJson(url: string, body: unknown, extra?: { prefer?: string }): Promise<boolean> {
+	private postJson(url: string, body: unknown, extra?: PostJsonOptions): Promise<HttpJsonResult> {
 		const extraHeaders: Record<string, string> = {};
 		if (extra?.prefer) extraHeaders["Prefer"] = extra.prefer;
-		return this.httpJson("POST", url, body, extraHeaders);
+		return this.httpJson("POST", url, body, extraHeaders, extra?.quietErrorCodes);
 	}
 
-	private patchJson(url: string, body: unknown): Promise<boolean> {
+	private patchJson(url: string, body: unknown): Promise<HttpJsonResult> {
 		return this.httpJson("PATCH", url, body, {});
 	}
 
@@ -276,7 +296,8 @@ export class InsForgeEvalSink implements EvalSink {
 		url: string,
 		body: unknown,
 		extraHeaders: Record<string, string>,
-	): Promise<boolean> {
+		quietErrorCodes: string[] = [],
+	): Promise<HttpJsonResult> {
 		return new Promise((resolve) => {
 			const payload = JSON.stringify(body);
 			let parsed: URL;
@@ -284,7 +305,7 @@ export class InsForgeEvalSink implements EvalSink {
 				parsed = new URL(url);
 			} catch {
 				console.error(`[sal][eval] invalid URL: ${url}`);
-				resolve(false);
+				resolve({ ok: false });
 				return;
 			}
 			const isHttps = parsed.protocol === "https:";
@@ -310,23 +331,24 @@ export class InsForgeEvalSink implements EvalSink {
 					res.on("data", (chunk) => { rawBody += chunk; });
 					res.on("end", () => {
 						const ok = res.statusCode !== undefined && res.statusCode < 300;
-						if (!ok) {
+						const errorCode = parsePostgrestErrorCode(rawBody);
+						if (!ok && !quietErrorCodes.includes(errorCode ?? "")) {
 							console.error(
 								`[sal][eval] HTTP ${res.statusCode} ${method} ${parsed.pathname} — ${rawBody.slice(0, 300)}`,
 							);
 						}
-						resolve(ok);
+						resolve({ ok, statusCode: res.statusCode, body: rawBody, errorCode });
 					});
 				},
 			);
 			req.on("error", (err) => {
 				console.error(`[sal][eval] network error → ${parsed.hostname}: ${err.message}`);
-				resolve(false);
+				resolve({ ok: false });
 			});
 			req.on("timeout", () => {
 				console.error(`[sal][eval] timeout ${method} ${parsed.pathname}`);
 				req.destroy();
-				resolve(false);
+				resolve({ ok: false });
 			});
 			req.write(payload);
 			req.end();
@@ -347,4 +369,24 @@ function numOrNull(v: unknown): number | null {
 	if (v == null) return null;
 	const n = Number(v);
 	return isNaN(n) ? null : n;
+}
+
+function parsePostgrestErrorCode(rawBody: string): string | undefined {
+	try {
+		const parsed = JSON.parse(rawBody);
+		return typeof parsed?.code === "string" ? parsed.code : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+function toLegacyToolTraceRow(row: Record<string, unknown>): Record<string, unknown> {
+	const {
+		has_tool_usage: _hasToolUsage,
+		completed_tool_calls: _completedToolCalls,
+		truncated_tool_calls: _truncatedToolCalls,
+		truncated_tool_summary: _truncatedToolSummary,
+		...legacyRow
+	} = row;
+	return legacyRow;
 }

@@ -44,7 +44,7 @@ sal/weights.ts: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights() read
 sal/eval/index.ts: createEvalSink() factory + barrel re-exports; adapter selection via options.adapter or endpoint scheme inference (http(s)→insforge, file://|/|./|../→jsonl, missing→noop); ONLY entry point SAL imports from
 sal/eval/types.ts: EvalSink interface, EvalEventEnvelope/EvalEventType (run_start/run_end/turn_anchor), EvalAdapterId ("insforge"|"jsonl"|"noop"), CreateEvalSinkOptions, createEvalEvent factory; zero-dependency type surface
 sal/eval/noop-sink.ts: noopSink — silent EvalSink used when eval disabled or no adapter configured
-sal/eval/insforge-sink.ts: InsForgeEvalSink — PostgREST adapter, routes run_start→eval_runs INSERT (merge-duplicates), turn_anchor→eval_turns + eval_sal_anchors×2, run_end→eval_runs PATCH; allowSelfSigned TLS option, batching with default 2000ms interval
+sal/eval/insforge-sink.ts: InsForgeEvalSink — PostgREST adapter, routes run_start→eval_runs INSERT (merge-duplicates), turn_anchor→eval_turns + eval_sal_anchors×2, tool_trace→eval_tool_traces with PGRST204 legacy-schema fallback, memory_recalls→eval_memory_recalls batch INSERT, run_end→eval_runs PATCH; allowSelfSigned TLS option, batching with default 2000ms interval
 sal/eval/jsonl-sink.ts: JsonlEvalSink — append-only filesystem adapter, one JSON object per line, accepts file:// URLs or plain paths, auto-creates parent dir, batched writes
 sal/README.md: SAL extension usage, sidecar output layout, weights override, pluggability contract
 team/index.ts: AgentTeam extension entry, /team:/team:spawn/:send/:status/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer

@@ -1,8 +1,8 @@
 /**
- * [WHO]: FooterComponent
+ * [WHO]: FooterComponent, renderContextProgressBar()
  * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
- * [TO]: Consumed by modes/interactive/components/index.ts
- * [HERE]: modes/interactive/components/footer.ts - status bar footer
+ * [TO]: Consumed by modes/interactive/components/index.ts, modes/interactive/interactive-mode.ts
+ * [HERE]: modes/interactive/components/footer.ts - status bar footer and shared context progress rendering
  */
 
 import { type Component, truncateToWidth, visibleWidth } from "@pencil-agent/tui";
@@ -31,6 +31,19 @@ function formatTokens(count: number): string {
 	if (count < 1000000) return `${Math.round(count / 1000)}k`;
 	if (count < 10000000) return `${(count / 1000000).toFixed(1)}M`;
 	return `${Math.round(count / 1000000)}M`;
+}
+
+export function renderContextProgressBar(contextPercent: number, barWidth = 12): string {
+	const safeBarWidth = Math.max(0, Math.floor(barWidth));
+	const finitePercent = Number.isFinite(contextPercent) ? contextPercent : 0;
+	const clampedPercent = Math.min(100, Math.max(0, finitePercent));
+	const filled = Math.min(safeBarWidth, Math.max(0, Math.round((clampedPercent / 100) * safeBarWidth)));
+	const empty = Math.max(0, safeBarWidth - filled);
+	const fillColor = finitePercent > 90 ? "error" : finitePercent > 70 ? "warning" : "success";
+	return theme.fg("dim", "[") +
+		theme.fg(fillColor, "█".repeat(filled)) +
+		theme.fg("dim", "░".repeat(empty)) +
+		theme.fg("dim", "]");
 }
 
 /**
@@ -153,17 +166,12 @@ export class FooterComponent implements Component {
 		const autoIndicator = this.autoCompactEnabled ? " (auto)" : "";
 		// Use contextUsage.tokens (current context size) when available; totalUsed is cumulative consumption
 		const contextTokens = contextUsage?.tokens ?? null;
-		
-			// Build progress bar for context usage (only on wide terminals)
-			let contextBar = "";
-			if (width > 80 && contextPercentValue > 0 && contextPercent !== "?") {
-				const barWidth = 12;
-				const filled = Math.round((contextPercentValue / 100) * barWidth);
-				const empty = barWidth - filled;
-				const fillColor = contextPercentValue > 90 ? "error" : contextPercentValue > 70 ? "warning" : "success";
-				contextBar = theme.fg("dim", "[") + theme.fg(fillColor, "█".repeat(filled)) + theme.fg("dim", "░".repeat(empty)) + theme.fg("dim", "] ");
-			}
-			const contextPercentDisplay =
+		// Build progress bar for context usage (only on wide terminals)
+		let contextBar = "";
+		if (width > 80 && contextPercentValue > 0 && contextPercent !== "?") {
+			contextBar = `${renderContextProgressBar(contextPercentValue)} `;
+		}
+		const contextPercentDisplay =
 			contextPercent === "?" || contextTokens === null
 				? `${contextBar}?/${formatTokens(contextWindow)}${autoIndicator}`
 				: `${contextBar}${contextPercent}% ${formatTokens(contextTokens ?? 0)}/${formatTokens(contextWindow)}${autoIndicator}`;

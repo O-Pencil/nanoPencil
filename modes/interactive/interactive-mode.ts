@@ -139,7 +139,7 @@ import { DynamicBorder } from "./components/dynamic-border.js";
 import { ExtensionEditorComponent } from "./components/extension-editor.js";
 import { ExtensionInputComponent } from "./components/extension-input.js";
 import { ExtensionSelectorComponent } from "./components/extension-selector.js";
-import { FooterComponent } from "./components/footer.js";
+import { FooterComponent, renderContextProgressBar } from "./components/footer.js";
 import {
   appKey,
   appKeyHint,
@@ -6034,12 +6034,7 @@ export class InteractiveMode {
     const contextPercent = contextUsage?.percent ?? 0;
     const contextTokens = contextUsage?.tokens ?? 0;
 
-    // Progress bar (12 chars wide)
-    const barWidth = 12;
-    const filled = Math.round((contextPercent / 100) * barWidth);
-    const empty = barWidth - filled;
-    const fillColor = contextPercent > 90 ? "error" : contextPercent > 70 ? "warning" : "success";
-    const bar = theme.fg("dim", "[") + theme.fg(fillColor, "█".repeat(filled)) + theme.fg("dim", "░".repeat(empty)) + theme.fg("dim", "]");
+    const bar = renderContextProgressBar(contextPercent);
 
     const contextLine = `  Context:              ${bar} ${contextPercent.toFixed(1)}% (${fmt(contextTokens)}/${fmt(contextWindow)})`;
     lines.push(theme.fg("border", `│`) + padLine(contextLine, width) + theme.fg("border", `│`));

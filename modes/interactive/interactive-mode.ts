@@ -3945,6 +3945,12 @@ export class InteractiveMode {
     await this.ui.terminal.drainInput(1000);
 
     this.stop();
+
+    // Print session resume hint before exit
+    const sessionId = this.sessionManager.getSessionId();
+    const cwd = this.session.cwd;
+    console.log(`\nResume this session with: nanopencil --session ${sessionId} --cwd "${cwd}"`);
+
     process.exit(0);
   }
 

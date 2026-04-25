@@ -298,9 +298,15 @@ export class ModelRegistry {
 		}
 
 		const builtInModels = this.useOnlyCustomModels
-			? this.loadBuiltInModels(overrides, modelOverrides, new Set<string>(["openrouter"]), {
-					openrouter: new Set(NANOPENCIL_OPENROUTER_BUILTIN_MODEL_IDS),
-				})
+			? this.loadBuiltInModels(
+					overrides,
+					modelOverrides,
+					new Set<string>(["openrouter", "zai"]),
+					{
+						openrouter: new Set(NANOPENCIL_OPENROUTER_BUILTIN_MODEL_IDS),
+						// zai not specified = load all zai models
+					},
+				)
 			: this.loadBuiltInModels(overrides, modelOverrides);
 		let combined = this.mergeCustomModels(builtInModels, customModels);
 

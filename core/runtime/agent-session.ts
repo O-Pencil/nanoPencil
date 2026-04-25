@@ -1619,8 +1619,22 @@ export class AgentSession {
     this.sessionManager.appendModelChange(model.provider, model.id);
     this.settingsManager.setDefaultModelAndProvider(model.provider, model.id);
 
-    // Re-clamp thinking level for new model's capabilities
-    this.setThinkingLevel(this.thinkingLevel);
+    // Auto-select thinking level based on model capabilities
+    const currentLevel = this.thinkingLevel;
+    let newLevel: ThinkingLevel;
+
+    if (!model.reasoning) {
+      // Model doesn't support thinking, force off
+      newLevel = "off";
+    } else if (currentLevel === "off") {
+      // Model supports thinking but current level is off, default to medium
+      newLevel = "medium";
+    } else {
+      // Keep current level but clamp to new model's capabilities
+      newLevel = currentLevel;
+    }
+
+    this.setThinkingLevel(newLevel);
 
     await this._emitModelSelect(model, previousModel, "set");
   }
@@ -1771,8 +1785,19 @@ export class AgentSession {
       nextModel.id,
     );
 
-    // Re-clamp thinking level for new model's capabilities
-    this.setThinkingLevel(this.thinkingLevel);
+    // Auto-select thinking level based on model capabilities
+    const currentLevel = this.thinkingLevel;
+    let newLevel: ThinkingLevel;
+
+    if (!nextModel.reasoning) {
+      newLevel = "off";
+    } else if (currentLevel === "off") {
+      newLevel = "medium";
+    } else {
+      newLevel = currentLevel;
+    }
+
+    this.setThinkingLevel(newLevel);
 
     await this._emitModelSelect(nextModel, currentModel, "cycle");
 

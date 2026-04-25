@@ -4776,7 +4776,7 @@ export class InteractiveMode {
             this.ui.requestRender();
           },
         );
-        return { component: selector, focus: selector.getSelectList() };
+        return { component: selector, focus: selector };
       });
       return;
     }
@@ -5132,7 +5132,7 @@ export class InteractiveMode {
           this.ui.requestRender();
         },
       );
-      return { component: selector, focus: selector.getSelectList() };
+      return { component: selector, focus: selector };
     });
   }
 

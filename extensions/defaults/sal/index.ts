@@ -1,8 +1,8 @@
 /**
- * [WHO]: SAL extension entry - enabled by default, registers --nosal/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/tool_execution_end/agent_end hooks; runtime no-op when --nosal is set
+ * [WHO]: SAL extension entry - enabled by default, registers --nosal/--sal-ab/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/tool_execution_end/agent_end hooks; runtime no-op when --nosal is set
  * [FROM]: Depends on core/extensions/types.ts (ToolExecutionStartEvent, ToolExecutionEndEvent), core/runtime/turn-context.ts (publishes structuralAnchor), extensions/defaults/sal/terrain.ts, anchors.ts, weights.ts, eval/index.ts (pluggable adapters)
  * [TO]: Loaded by builtin-extensions.ts as a default extension entry point
- * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension; emits run_start/turn_anchor/tool_trace/run_end eval events; tool_trace captures per-turn tool usage profile (call counts, sequences, intent, errors) for self-awareness analytics
+ * [HERE]: extensions/defaults/sal/index.ts - pluggable Structural Anchor Localization (SAL) extension; emits run_start/turn_anchor/tool_trace/run_end eval events with best-effort flush/close isolation; tool_trace captures per-turn tool usage profile (call counts, sequences, intent, errors) for self-awareness analytics
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -86,7 +86,9 @@ function loadBuildMeta(): BuildMeta {
 const BUILD_META = loadBuildMeta();
 
 const NOSAL_FLAG = "nosal";
+const SAL_AB_FLAG = "sal-ab";
 const SAL_REBUILD_FLAG = "sal-rebuild-terrain";
+const SAL_AB_ENV = "NANOPENCIL_SAL_AB";
 const SAL_CONTEXT_BUDGET_TOKENS = 800;
 const APPROX_TOKENS_PER_CHAR = 0.25;
 
@@ -201,7 +203,9 @@ function resolveStaleCleanupEnabled(
 	if (envValue !== undefined) return isTruthy(envValue);
 	return credentials?.cleanup_stale_runs === true;
 }
-function isTruthy(value: string | undefined): boolean {
+function isTruthy(value: unknown): boolean {
+	if (value === true) return true;
+	if (typeof value !== "string") return false;
 	if (!value) return false;
 	return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
@@ -557,6 +561,10 @@ function resolveEvalVariant(runtime: SalRuntime, salEnabled: boolean): EvalVaria
 	return salEnabled ? "sal" : "control";
 }
 
+function resolveSalAbEnabled(flagValue: unknown): boolean {
+	return isTruthy(flagValue) || isTruthy(process.env[SAL_AB_ENV]);
+}
+
 async function emitEval(
 	runtime: SalRuntime,
 	eventType: Parameters<typeof createEvalEvent>[0],
@@ -575,6 +583,25 @@ async function emitEval(
 		await runtime.evalSink.sendEvent(event);
 	} catch (err) {
 		console.error("[sal][eval] failed to emit event:", (err as Error).message);
+	}
+}
+
+async function evalBestEffort(label: string, work: Promise<void>, timeoutMs = 6000): Promise<void> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	try {
+		await Promise.race([
+			work,
+			new Promise<void>((resolve) => {
+				timer = setTimeout(() => {
+					console.error(`[sal][eval] ${label} timed out; continuing session shutdown`);
+					resolve();
+				}, timeoutMs);
+			}),
+		]);
+	} catch (err) {
+		console.error(`[sal][eval] ${label} failed:`, (err as Error).message);
+	} finally {
+		if (timer) clearTimeout(timer);
 	}
 }
 
@@ -647,6 +674,11 @@ export default async function salExtension(api: ExtensionAPI) {
 	api.registerFlag(NOSAL_FLAG, {
 		type: "boolean",
 		description: "Disable Structural Anchor Localization (SAL) - fall back to baseline memory mode",
+		default: false,
+	});
+	api.registerFlag(SAL_AB_FLAG, {
+		type: "boolean",
+		description: "Enable SAL A/B experiment sidecar files under .memory-experiments",
 		default: false,
 	});
 	api.registerFlag(SAL_REBUILD_FLAG, {
@@ -748,6 +780,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	};
 
 	const isEnabled = (): boolean => !api.getFlag(NOSAL_FLAG);
+	const isSalAbEnabled = (): boolean => resolveSalAbEnabled(api.getFlag(SAL_AB_FLAG));
 
 	api.registerCommand("sal:coverage", {
 		description: "Report DIP P3 coverage for SAL prerequisite gating. Usage: /sal:coverage [module1 module2 ...]",
@@ -871,6 +904,7 @@ export default async function salExtension(api: ExtensionAPI) {
 			const lines = [
 				"[SAL Status]",
 				`  SAL: ${flagOn ? "ON (default)" : "OFF (--nosal)"}`,
+				`  SAL A/B sidecar: ${isSalAbEnabled() ? "ON (--sal-ab)" : "OFF"}`,
 				`  eval: ${runtime.evalEnabled ? "ON" : "OFF"}`,
 				`  adapter: ${runtime.evalAdapter ?? "(inferred at sink creation)"}`,
 				`  endpoint: ${endpointDisplay}`,
@@ -879,7 +913,7 @@ export default async function salExtension(api: ExtensionAPI) {
 				`  weightsSource: ${runtime.weightsSource}`,
 				`  snapshotGeneratedAt: ${snapshot ? new Date(snapshot.generatedAt).toISOString() : "(not built)"}`,
 				`  nodes: ${snapshot?.nodes.length ?? 0}`,
-				`  sidecarDir: ${runtime.sidecarDir}`,
+				`  sidecarDir: ${isSalAbEnabled() ? runtime.sidecarDir : "(disabled; use --sal-ab)"}`,
 			];
 			ctx.ui.notify(lines.join("\n"), "info");
 		},
@@ -1050,7 +1084,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		// Always emit a bounded summary, including no-tool turns.
 		await emitEval(runtime, "tool_trace", isEnabled(), buildToolTracePayload(runtime.turn, turnDuration));
 
-		if (actionRes) {
+		if (isSalAbEnabled() && actionRes) {
 			persistTurnRecord(runtime, taskRes, actionRes);
 		}
 
@@ -1092,8 +1126,8 @@ export default async function salExtension(api: ExtensionAPI) {
 			turn_count: runtime.turnCounter,
 			total_duration_ms: Math.max(0, Date.now() - runtime.evalStartedAtMs),
 		});
-		await runtime.evalSink.flush();
-		await runtime.evalSink.close();
+		await evalBestEffort("flush", runtime.evalSink.flush());
+		await evalBestEffort("close", runtime.evalSink.close());
 	});
 
 	// ------------------------------------------------------------------
@@ -1111,7 +1145,7 @@ export default async function salExtension(api: ExtensionAPI) {
 			turn_count: runtime.turnCounter,
 			total_duration_ms: Math.max(0, Date.now() - runtime.evalStartedAtMs),
 		})
-			.then(() => runtime.evalSink.flush())
+			.then(() => evalBestEffort("emergency flush", runtime.evalSink.flush()))
 			.catch(() => {});
 	};
 	process.on("beforeExit", emergencyFlush);
@@ -1168,6 +1202,6 @@ export {
 	inferIntent,
 	normalizeExperimentId,
 	resolveSalSidecarDir,
+	resolveSalAbEnabled,
 	resolveStaleCleanupEnabled,
 };
-

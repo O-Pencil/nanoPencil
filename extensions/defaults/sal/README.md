@@ -14,11 +14,14 @@ SAL is **enabled by default** on every nanoPencil session.
 # SAL active (default)
 pencil -p "your prompt"
 
+# SAL active with local A/B sidecar artifacts
+pencil --sal-ab -p "your prompt"
+
 # SAL disabled — baseline memory mode
 pencil --nosal -p "your prompt"
 ```
 
-When `--nosal` is set, all hooks return early and zero work is performed.
+When `--nosal` is set, all hooks return early and zero work is performed. When SAL is active without `--sal-ab`, it can still emit configured eval data to InsForge, but it does not create local `.memory-experiments` sidecar files.
 
 ## Terminal compatibility (Warp, block UIs)
 
@@ -33,7 +36,7 @@ SAL builds a **terrain snapshot** of the workspace (walk + read DIP headers). Th
 
 ## Sidecar output
 
-When enabled, every turn writes a JSON record to:
+Local sidecar output is disabled by default. Enable it only for explicit SAL A/B experiments with `--sal-ab` or `NANOPENCIL_SAL_AB=1`. In that mode, every grounded turn writes a JSON record to:
 
 ```
 <workspace>/.memory-experiments/sal/anchors/turn-<timestamp>.json

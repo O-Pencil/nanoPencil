@@ -2,15 +2,16 @@
  * [WHO]: Provides InsForgeEvalSink (PostgREST-backed adapter)
  * [FROM]: Depends on node:https, node:http, node:url; ./types.js for EvalSink/EvalEventEnvelope/CreateEvalSinkOptions
  * [TO]: Constructed by eval/index.ts factory when adapter resolves to "insforge"
- * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version), turn_anchor→eval_turns + eval_sal_anchors×2, tool_trace→eval_tool_traces with legacy-schema fallback, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
+ * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version with legacy fallback), turn_anchor→eval_turns + eval_sal_anchors×2 only after parent run confirmation, tool_trace→eval_tool_traces with legacy-schema fallback, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
  *
  * Pluggable: nothing in this file may be imported from outside the eval/ directory.
  * To add a new backend, write a sibling file with the same EvalSink interface.
  */
 
-import { request } from "node:https";
 import { request as httpRequest } from "node:http";
+import { request } from "node:https";
 import { URL } from "node:url";
+import { fileURLToPath } from "node:url";
 import type { CreateEvalSinkOptions, EvalEventEnvelope, EvalSink } from "./types.js";
 
 interface HttpJsonResult {
@@ -36,12 +37,14 @@ export class InsForgeEvalSink implements EvalSink {
 	private flushTimer: ReturnType<typeof setTimeout> | undefined;
 	private flushInFlight: Promise<void> | undefined;
 	private closed = false;
+	private confirmedRuns = new Set<string>();
+	private failedRuns = new Set<string>();
 
 	constructor(options: CreateEvalSinkOptions) {
 		this.base = options.endpoint!.replace(/\/+$/, "");
 		this.batchIntervalMs = options.batchIntervalMs ?? 2000;
 		this.allowSelfSigned = options.allowSelfSigned ?? false;
-		if (this.allowSelfSigned) {
+		if (this.allowSelfSigned && isDevelopmentRuntime()) {
 			console.warn("[sal][eval] TLS certificate verification disabled (allowSelfSigned=true)");
 		}
 
@@ -70,13 +73,15 @@ export class InsForgeEvalSink implements EvalSink {
 
 	async flush(): Promise<void> {
 		if (this.flushInFlight) {
-			await this.flushInFlight;
+			await this.flushInFlight.catch(() => {});
 			return;
 		}
 
 		this.flushInFlight = this.doFlush();
 		try {
 			await this.flushInFlight;
+		} catch (err) {
+			console.error("[sal][eval] flush failed:", (err as Error).message);
 		} finally {
 			this.flushInFlight = undefined;
 		}
@@ -98,7 +103,9 @@ export class InsForgeEvalSink implements EvalSink {
 
 	async close(): Promise<void> {
 		this.closed = true;
-		await this.flush();
+		await this.flush().catch((err) => {
+			console.error("[sal][eval] close flush failed:", (err as Error).message);
+		});
 	}
 
 	private scheduleFlush(): void {
@@ -116,11 +123,21 @@ export class InsForgeEvalSink implements EvalSink {
 	private async routeEvent(event: EvalEventEnvelope): Promise<void> {
 		try {
 			switch (event.event_type) {
-				case "run_start":       await this.handleRunStart(event); break;
-				case "turn_anchor":     await this.handleTurnAnchor(event); break;
-				case "memory_recalls":  await this.handleMemoryRecalls(event); break;
-				case "tool_trace":      await this.handleToolTrace(event); break;
-				case "run_end":         await this.handleRunEnd(event); break;
+				case "run_start":
+					await this.handleRunStart(event);
+					break;
+				case "turn_anchor":
+					if (await this.ensureRunExists(event)) await this.handleTurnAnchor(event);
+					break;
+				case "memory_recalls":
+					if (await this.ensureRunExists(event)) await this.handleMemoryRecalls(event);
+					break;
+				case "tool_trace":
+					if (await this.ensureRunExists(event)) await this.handleToolTrace(event);
+					break;
+				case "run_end":
+					if (await this.ensureRunExists(event)) await this.handleRunEnd(event);
+					break;
 			}
 		} catch (err) {
 			console.error(`[sal][eval] route ${event.event_type} failed:`, (err as Error).message);
@@ -130,7 +147,7 @@ export class InsForgeEvalSink implements EvalSink {
 	// INSERT into eval_runs (merge-duplicates so a later run_start can update model)
 	private async handleRunStart(ev: EvalEventEnvelope): Promise<void> {
 		const p = ev.payload;
-		await this.postJson(`${this.base}/api/database/records/eval_runs`, [{
+		const row = {
 			run_id:        ev.run_id,
 			variant:       ev.variant,
 			status:        "running",
@@ -143,7 +160,49 @@ export class InsForgeEvalSink implements EvalSink {
 			branch_name:   strOrNull(p.branch, "unknown"),
 			workspace_root: strOrNull(p.workspace_root),
 			started_at:    ev.ts,
-		}], { prefer: "resolution=merge-duplicates" });
+		};
+		const url = `${this.base}/api/database/records/eval_runs`;
+		const result = await this.postJson(url, [row], {
+			prefer: "resolution=merge-duplicates",
+			quietErrorCodes: ["PGRST204"],
+		});
+		if (result.ok) {
+			this.confirmedRuns.add(ev.run_id);
+			this.failedRuns.delete(ev.run_id);
+			return;
+		}
+
+		const fallback = await this.postJson(url, [toLegacyRunStartRow(row)], {
+			prefer: "resolution=merge-duplicates",
+		});
+		if (fallback.ok) {
+			this.confirmedRuns.add(ev.run_id);
+			this.failedRuns.delete(ev.run_id);
+			return;
+		}
+
+		this.failedRuns.add(ev.run_id);
+	}
+
+	private async ensureRunExists(ev: EvalEventEnvelope): Promise<boolean> {
+		if (this.confirmedRuns.has(ev.run_id)) return true;
+		if (!this.failedRuns.has(ev.run_id)) {
+			await this.handleRunStart({
+				...ev,
+				event_type: "run_start",
+				payload: {
+					task_description: strOrNull(ev.payload.prompt_summary),
+					model: strOrNull(ev.metadata?.model) ?? "unknown",
+					thinking: false,
+					commit: "unknown",
+					branch: "unknown",
+					workspace_root: strOrNull(ev.metadata?.workspace_root),
+				},
+			});
+			if (this.confirmedRuns.has(ev.run_id)) return true;
+		}
+		console.error(`[sal][eval] skipping ${ev.event_type}: eval_runs row is not available for run_id=${ev.run_id}`);
+		return false;
 	}
 
 	// INSERT into eval_turns + eval_sal_anchors (task + action)
@@ -378,6 +437,28 @@ function parsePostgrestErrorCode(rawBody: string): string | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+function isDevelopmentRuntime(): boolean {
+	if (process.env.NODE_ENV === "development") return true;
+	if (process.env.NODE_ENV === "production") return false;
+	try {
+		const currentFile = fileURLToPath(import.meta.url).replace(/\\/g, "/");
+		return !currentFile.includes("/dist/");
+	} catch {
+		return false;
+	}
+}
+
+function toLegacyRunStartRow(row: Record<string, unknown>): Record<string, unknown> {
+	const {
+		pencil_version: _pencilVersion,
+		commit_hash: _commitHash,
+		branch_name: _branchName,
+		workspace_root: _workspaceRoot,
+		...legacyRow
+	} = row;
+	return legacyRow;
 }
 
 function toLegacyToolTraceRow(row: Record<string, unknown>): Record<string, unknown> {

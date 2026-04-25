@@ -81,7 +81,7 @@ NANOPENCIL_EVAL_VARIANT=control \
 pencil --nosal "你的任务提示"
 ```
 
-### Step 4: 运行 sal（默认开启）
+### Step 4: 运行 sal（默认开启 + A/B sidecar）
 
 ```bash
 cd "$SAL_WS"
@@ -89,7 +89,7 @@ NANOMEM_MEMORY_DIR="$ROOT/sal/memory" \
 NANOPENCIL_EVAL_RUN_ID="$RUN_ID-sal" \
 NANOPENCIL_EVAL_VARIANT=sal \
 NANOPENCIL_EXPERIMENT_ID="$RUN_ID" \
-pencil "同一条任务提示"
+pencil --sal-ab "同一条任务提示"
 ```
 
 ### Step 5: 导出代码差异

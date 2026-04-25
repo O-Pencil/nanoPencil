@@ -100,14 +100,14 @@ Round 1:
 
 ```bash
 NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/sal/run-001 \
-pencil <MODEL_ARGS>
+pencil <MODEL_ARGS> --sal-ab
 ```
 
 Round 2:
 
 ```bash
 NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/sal/run-001 \
-pencil <MODEL_ARGS>
+pencil <MODEL_ARGS> --sal-ab
 ```
 
 ## Required Artifacts
@@ -125,7 +125,7 @@ Also save the memory directories as-is.
 
 For SAL runs, also keep:
 
-- `.memory-experiments/sal/anchors/turn-*.json` if present
+- `.memory-experiments/sal/anchors/turn-*.json` from `--sal-ab`
 
 ## Manual Scorecard
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeExperimentId, resolveSalSidecarDir } from "../extensions/defaults/sal/index.js";
+import { normalizeExperimentId, resolveSalAbEnabled, resolveSalSidecarDir } from "../extensions/defaults/sal/index.js";
 
 test("sal experiment: normalizes experiment ids into safe path segments", () => {
 	assert.equal(normalizeExperimentId(undefined), undefined);
@@ -23,4 +23,22 @@ test("sal experiment: exports anchors into a run-local directory when experiment
 		resolveSalSidecarDir("/repo/project", "image flow/001"),
 		"/repo/project/.memory-experiments/runs/image-flow-001/sal/anchors",
 	);
+});
+
+test("sal experiment: sidecar output is disabled unless flag or env enables A/B mode", () => {
+	const prev = process.env.NANOPENCIL_SAL_AB;
+	try {
+		delete process.env.NANOPENCIL_SAL_AB;
+		assert.equal(resolveSalAbEnabled(false), false);
+		assert.equal(resolveSalAbEnabled(true), true);
+
+		process.env.NANOPENCIL_SAL_AB = "1";
+		assert.equal(resolveSalAbEnabled(false), true);
+	} finally {
+		if (prev === undefined) {
+			delete process.env.NANOPENCIL_SAL_AB;
+		} else {
+			process.env.NANOPENCIL_SAL_AB = prev;
+		}
+	}
 });

@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.7] - 2026-04-25
+
+### Added
+- feat: add zai provider support with search and auto thinking level
+- feat(sal): add legacy-schema fallback for tool_trace on PGRST204 drift
+- feat(sal): add bounded tool trace analytics
+- feat(update): add confirmation dialog before auto-update on startup
+- feat(sal): avoid blocking startup with async eval maintenance
+- feat(sal): add build metadata to eval runs
+- feat(debug): add /set-locale command
+- feat(debug): add /debug preferences command
+- feat(grub): feature list, persistence layer, and controller/parser upgrades
+- feat(plan): refine exit-plan-mode tool and extension wiring
+- feat(interactive): optimistic user chat bubble and working elapsed timer
+- feat(extensions): add default debug extension with /debug diagnostics
+- feat(docs): add DIP verification script and integrate into P1 CLAUDE.md
+- feat(dip): add verification script and strengthen covenant
+- feat(tui): weighted fuzzy autocomplete and editor placeholder
+- feat(tui): add stall animation and tips to pencil loader
+- feat(btw): wire BTW extension into builtin list and loader
+- feat(btw): add /btw command for side questions without interrupting main task
+
+### Fixed
+- fix(sal): disable stale cleanup by default
+- fix(presence): correct memory dir fallback path
+- fix(presence): only send opening when idle without pending messages
+- fix(loop): persist durable cron task removal to disk
+- fix(sal): yield before before_agent_start work and prewarm snapshot
+- fix(sal): build terrain index asynchronously for TUI responsiveness
+- fix(release): remove tag push from postversion to avoid GitHub rule violations
+- fix(release): decouple changelog from prepublishOnly to fix circular release flow
+- fix(nanopencil-defaults): skip coding plan prompt only when remote provider has auth
+- fix(main): add anthropic-custom and ollama to allowOptionalApiKeyForProvider
+- fix(tui): correct tip cooldown calculation
+- fix(package-manager): remove duplicate param; improve error logging across codebase
+- fix(main): restore accidentally removed imports
+- fix: restore chalk import; add missing weightedFuzzyFilter import and type annotation
+- fix(settings): use readStorageAsync for plain reads; add clarifying comment
+- fix(sal,mem-core): improve structural scoring accuracy and eval data quality
+- fix(mem-core): structural boost path matching across absolute/relative formats
+- fix(shutdown): ensure session_shutdown fires on all exit paths
+- fix: suppress debug output and DEP0190 warning in production
+
+### Changed
+- refactor(footer): extract renderContextProgressBar with clamp-safe handling
+- refactor(docs): remove [POS] block headers, standardize on P3 CLAUDE.md format
+- refactor(plan): make writePlan async with atomic temp-file rename
+
+### Performance
+- perf(main): remove unused imports; style placeholder with dim ANSI
+- perf(cli): add --version/--help fast path; add startup profiler
+
+### Documentation
+- docs(sal): sync P2 eval/types.ts description with tool_trace event type
+- docs: polish 1.13.4 changelog and SAL Warp compatibility notes
+- docs(extensions): refresh CLAUDE maps for defaults and optional paths
+- docs: update CHANGELOG for v1.13.1 and v1.13.2
+- docs: enrich P2 CLAUDE.md entries; inject Soul traits into presence prompts
+- docs(changelog): update for recent changes
+- docs(package-manager): correct JSDoc for npmNeedsUpdate after startup optimization
+- docs(sal): add worktree-based experiment evaluation guide
+- docs(sal): consolidate outline and prune legacy docs
+
+### Maintenance
+- chore(ai): regenerate models catalog
+
+
 ## [1.13.6] - 2026-04-23
 
 ### Added

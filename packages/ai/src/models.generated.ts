@@ -7759,7 +7759,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1048576,
+			contextWindow: 1000000,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -12642,6 +12642,23 @@ export const MODELS = {
 			},
 			contextWindow: 262114,
 			maxTokens: 262114,
+		} satisfies Model<"anthropic-messages">,
+		"moonshotai/kimi-k2.6": {
+			id: "moonshotai/kimi-k2.6",
+			name: "Kimi K2.6",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.95,
+				output: 4,
+				cacheRead: 0.16,
+				cacheWrite: 0,
+			},
+			contextWindow: 262000,
+			maxTokens: 262000,
 		} satisfies Model<"anthropic-messages">,
 		"nvidia/nemotron-nano-12b-v2-vl": {
 			id: "nvidia/nemotron-nano-12b-v2-vl",

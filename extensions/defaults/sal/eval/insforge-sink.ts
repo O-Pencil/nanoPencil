@@ -401,11 +401,11 @@ export class InsForgeEvalSink implements EvalSink {
 				},
 			);
 			req.on("error", (err) => {
-				console.error(`[sal][eval] network error → ${parsed.hostname}: ${err.message}`);
+				logEvalDebug(`[sal][eval] network error → ${parsed.hostname}: ${err.message}`);
 				resolve({ ok: false });
 			});
 			req.on("timeout", () => {
-				console.error(`[sal][eval] timeout ${method} ${parsed.pathname}`);
+				logEvalDebug(`[sal][eval] timeout ${method} ${parsed.pathname}`);
 				req.destroy();
 				resolve({ ok: false });
 			});
@@ -447,6 +447,18 @@ function isDevelopmentRuntime(): boolean {
 		return !currentFile.includes("/dist/");
 	} catch {
 		return false;
+	}
+}
+
+function isEvalDebugEnabled(): boolean {
+	return isDevelopmentRuntime() || ["1", "true", "yes", "on"].includes(
+		(process.env.NANOPENCIL_EVAL_DEBUG ?? "").toLowerCase(),
+	);
+}
+
+function logEvalDebug(message: string): void {
+	if (isEvalDebugEnabled()) {
+		console.error(message);
 	}
 }
 

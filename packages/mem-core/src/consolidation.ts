@@ -98,9 +98,14 @@ async function llmConsolidation(
 			};
 		});
 	} catch (err) {
-		console.error("[mem-core] consolidateWithLLM failed, falling back to heuristic:", err);
+		console.error(`[mem-core] consolidateWithLLM failed, falling back to heuristic: ${formatFallbackError(err)}`);
 		return heuristicConsolidation(episodes, cfg);
 	}
+}
+
+function formatFallbackError(err: unknown): string {
+	if (err instanceof Error) return `${err.name}: ${err.message}`;
+	return String(err);
 }
 
 function heuristicConsolidation(episodes: Episode[], cfg: NanomemConfig): MemoryEntry[] {

@@ -20,6 +20,25 @@ The `extensions/` module contains built-in extensions that extend nanoPencil's c
 
 Auto-loaded extensions available to all users.
 
+#### diagnostics/ — Extension-Owned Issue Reporting
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with diagnostic:event listener and /report-issue command
+    - [FROM]: core/extensions/types, @pencil-agent/tui, diagnostics helpers
+    - [HERE]: diagnostics extension entry
+
+`diagnostic-buffer.ts`: Session-local diagnostic dedupe and prompt gating
+
+`reporter.ts`: User-approved InsForge pencil_issue_events upload adapter
+
+`redaction.ts`: Secret/path redaction and message normalization
+
+`types.ts`: Diagnostic event/report schema and diagnostic:event channel name
+
+**Design Principle:**
+- Diagnostics policy, buffering, UI prompts, and reporting live in the extension layer.
+- Core and producer extensions emit only structured observations through the extension event bus.
+
 #### interview/ — Requirement Clarification
 
 **P3 Contract:**

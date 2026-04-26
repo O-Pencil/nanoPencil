@@ -22,16 +22,18 @@ export class JsonlEvalSink implements EvalSink {
 	private batchIntervalMs: number;
 	private flushTimer: ReturnType<typeof setTimeout> | undefined;
 	private closed = false;
+	private onDiagnostic: CreateEvalSinkOptions["onDiagnostic"];
 
 	constructor(options: CreateEvalSinkOptions) {
 		this.filePath = resolveFilePath(options.endpoint!);
 		this.batchIntervalMs = options.batchIntervalMs ?? 2000;
+		this.onDiagnostic = options.onDiagnostic;
 		const dir = dirname(this.filePath);
 		if (!existsSync(dir)) {
 			try {
 				mkdirSync(dir, { recursive: true });
 			} catch (err) {
-				console.error(`[sal][eval][jsonl] failed to create directory ${dir}:`, (err as Error).message);
+				this.reportDiagnostic("SAL eval JSONL directory could not be created.", { dir, error: (err as Error).message }, "mkdir");
 			}
 		}
 	}
@@ -71,8 +73,20 @@ export class JsonlEvalSink implements EvalSink {
 		try {
 			appendFileSync(this.filePath, lines, "utf-8");
 		} catch (err) {
-			console.error(`[sal][eval][jsonl] append failed → ${this.filePath}:`, (err as Error).message);
+			this.reportDiagnostic("SAL eval JSONL append failed.", { filePath: this.filePath, error: (err as Error).message }, "append");
 		}
+	}
+
+	private reportDiagnostic(message: string, detail: unknown, fingerprintSuffix: string): void {
+		this.onDiagnostic?.({
+			source: "sal.eval",
+			severity: "error",
+			category: "persistence",
+			message,
+			detail,
+			fingerprint: `sal.eval:persistence:jsonl-${fingerprintSuffix}`,
+			context: { adapter: "jsonl" },
+		});
 	}
 }
 

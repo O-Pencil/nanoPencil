@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import {
 	createEvalEvent,
 	createEvalSink,
+	type CreateEvalSinkOptions,
 	type EvalAdapterId,
 	type EvalSink,
 	type EvalVariant,
@@ -91,6 +92,7 @@ const SAL_REBUILD_FLAG = "sal-rebuild-terrain";
 const SAL_AB_ENV = "NANOPENCIL_SAL_AB";
 const SAL_CONTEXT_BUDGET_TOKENS = 800;
 const APPROX_TOKENS_PER_CHAR = 0.25;
+const DIAGNOSTIC_EVENT_CHANNEL = "diagnostic:event";
 
 const EVAL_ENABLED_ENV = "NANOPENCIL_EVAL_ENABLED";
 const EVAL_ENDPOINT_ENV = "NANOPENCIL_EVAL_ENDPOINT";
@@ -167,6 +169,7 @@ interface SalRuntime {
 	staleCleanupDone: boolean;
 	/** Set by before_agent_start when --sal-rebuild-terrain is active; consumed by agent_end. */
 	pendingRebuild: boolean;
+	reportDiagnostic: NonNullable<CreateEvalSinkOptions["onDiagnostic"]>;
 }
 
 
@@ -210,7 +213,7 @@ function isTruthy(value: unknown): boolean {
 	return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
 
-function parseHeadersJson(raw: string | undefined): Record<string, string> {
+function parseHeadersJson(raw: string | undefined, reportDiagnostic?: SalRuntime["reportDiagnostic"]): Record<string, string> {
 	if (!raw) return {};
 	try {
 		const parsed = JSON.parse(raw);
@@ -223,7 +226,13 @@ function parseHeadersJson(raw: string | undefined): Record<string, string> {
 		}
 		return out;
 	} catch {
-		console.error(`[sal][eval] invalid JSON in ${EVAL_HEADERS_JSON_ENV}, ignoring custom headers.`);
+		reportDiagnostic?.({
+			source: "sal.eval",
+			severity: "warning",
+			category: "config",
+			message: `SAL eval ignored invalid JSON in ${EVAL_HEADERS_JSON_ENV}.`,
+			fingerprint: "sal.eval:config:invalid-headers-json",
+		});
 		return {};
 	}
 }
@@ -236,7 +245,10 @@ function resolveCredentialsFileCandidates(workspaceRoot: string): string[] {
 	return [envPath, workspacePath, userPath].filter((path): path is string => Boolean(path));
 }
 
-function readCredentialsFromFile(filePath: string): EvalCredentials | undefined {
+function readCredentialsFromFile(
+	filePath: string,
+	reportDiagnostic?: SalRuntime["reportDiagnostic"],
+): EvalCredentials | undefined {
 	try {
 		if (!existsSync(filePath)) return undefined;
 		const raw = readFileSync(filePath, "utf-8");
@@ -263,14 +275,24 @@ function readCredentialsFromFile(filePath: string): EvalCredentials | undefined 
 		// Format 2: flat EvalCredentials at top level
 		return parsed as EvalCredentials;
 	} catch (err) {
-		console.error(`[sal][eval] failed to read credentials file ${filePath}:`, (err as Error).message);
+		reportDiagnostic?.({
+			source: "sal.eval",
+			severity: "warning",
+			category: "config",
+			message: "SAL eval credentials file could not be read.",
+			detail: { filePath, error: (err as Error).message },
+			fingerprint: "sal.eval:config:credentials-read-failed",
+		});
 		return undefined;
 	}
 }
 
-function resolveEvalCredentials(workspaceRoot: string): EvalCredentials | undefined {
+function resolveEvalCredentials(
+	workspaceRoot: string,
+	reportDiagnostic?: SalRuntime["reportDiagnostic"],
+): EvalCredentials | undefined {
 	for (const candidate of resolveCredentialsFileCandidates(workspaceRoot)) {
-		const creds = readCredentialsFromFile(candidate);
+		const creds = readCredentialsFromFile(candidate, reportDiagnostic);
 		if (creds) return creds;
 	}
 	return undefined;
@@ -582,24 +604,44 @@ async function emitEval(
 		);
 		await runtime.evalSink.sendEvent(event);
 	} catch (err) {
-		console.error("[sal][eval] failed to emit event:", (err as Error).message);
+		runtime.reportDiagnostic({
+			source: "sal.eval",
+			severity: "error",
+			category: "persistence",
+			message: "SAL eval failed to enqueue an event.",
+			detail: { eventType, error: (err as Error).message },
+			fingerprint: `sal.eval:persistence:emit-${eventType}`,
+		});
 	}
 }
 
-async function evalBestEffort(label: string, work: Promise<void>, timeoutMs = 6000): Promise<void> {
+async function evalBestEffort(runtime: SalRuntime, label: string, work: Promise<void>, timeoutMs = 6000): Promise<void> {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	try {
 		await Promise.race([
 			work,
 			new Promise<void>((resolve) => {
 				timer = setTimeout(() => {
-					console.error(`[sal][eval] ${label} timed out; continuing session shutdown`);
+					runtime.reportDiagnostic({
+						source: "sal.eval",
+						severity: "warning",
+						category: "extension_timeout",
+						message: `SAL eval ${label} timed out; session shutdown continues.`,
+						fingerprint: `sal.eval:extension_timeout:${label}`,
+					});
 					resolve();
 				}, timeoutMs);
 			}),
 		]);
 	} catch (err) {
-		console.error(`[sal][eval] ${label} failed:`, (err as Error).message);
+		runtime.reportDiagnostic({
+			source: "sal.eval",
+			severity: "error",
+			category: "persistence",
+			message: `SAL eval ${label} failed.`,
+			detail: { error: (err as Error).message },
+			fingerprint: `sal.eval:persistence:${label}`,
+		});
 	} finally {
 		if (timer) clearTimeout(timer);
 	}
@@ -692,14 +734,23 @@ export default async function salExtension(api: ExtensionAPI) {
 	const sidecarDir = resolveSalSidecarDir(workspaceRoot, experimentId);
 	const weightsDirCandidates = [workspaceRoot, join(workspaceRoot, ".memory-experiments", "sal")];
 	const { weights, source: weightsSource } = loadSalWeights(weightsDirCandidates);
-
-	const credentials = resolveEvalCredentials(workspaceRoot);
-	const evalEnabledByEnvRaw = process.env[EVAL_ENABLED_ENV];
-	const evalEnabledByEnv = evalEnabledByEnvRaw !== undefined ? isTruthy(evalEnabledByEnvRaw) : undefined;
-	const evalEndpoint = process.env[EVAL_ENDPOINT_ENV] ?? credentials?.insforge_url ?? credentials?.endpoint;
 	const evalRunId =
 		process.env[EVAL_RUN_ID_ENV] ??
 		`np-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${Math.random().toString(36).slice(2, 8)}`;
+	const reportDiagnostic: SalRuntime["reportDiagnostic"] = (event) => api.events.emit(DIAGNOSTIC_EVENT_CHANNEL, {
+		...event,
+		context: {
+			...(event.context ?? {}),
+			version: BUILD_META.version,
+			commit_hash: BUILD_META.commitHash,
+			session_id: evalRunId,
+		},
+	});
+
+	const credentials = resolveEvalCredentials(workspaceRoot, reportDiagnostic);
+	const evalEnabledByEnvRaw = process.env[EVAL_ENABLED_ENV];
+	const evalEnabledByEnv = evalEnabledByEnvRaw !== undefined ? isTruthy(evalEnabledByEnvRaw) : undefined;
+	const evalEndpoint = process.env[EVAL_ENDPOINT_ENV] ?? credentials?.insforge_url ?? credentials?.endpoint;
 	const evalVariantEnv = process.env[EVAL_VARIANT_ENV];
 	const evalVariantOverride =
 		evalVariantEnv === "control" || evalVariantEnv === "sal" || evalVariantEnv === "baseline"
@@ -715,7 +766,7 @@ export default async function salExtension(api: ExtensionAPI) {
 			: credentials?.adapter;
 	const evalHeaders = {
 		...(credentials?.headers ?? {}),
-		...parseHeadersJson(process.env[EVAL_HEADERS_JSON_ENV]),
+		...parseHeadersJson(process.env[EVAL_HEADERS_JSON_ENV], reportDiagnostic),
 	};
 
 	// Activation: credentials with endpoint+api_key auto-enable (unless explicitly disabled).
@@ -726,7 +777,18 @@ export default async function salExtension(api: ExtensionAPI) {
 		evalEnabledByEnv === false ? false : evalEnabledByCreds || evalEnabledByEnv === true;
 
 	if (evalCollectionEnabled && !evalEndpoint) {
-		console.error("[sal][eval] enabled but no endpoint found in env or credentials. Using noop sink.");
+		api.events.emit(DIAGNOSTIC_EVENT_CHANNEL, {
+			source: "sal.eval",
+			severity: "warning",
+			category: "config",
+			message: "SAL eval is enabled but no endpoint was found; eval upload is disabled.",
+			fingerprint: "sal.eval:config:missing-endpoint",
+			context: {
+				version: BUILD_META.version,
+				commit_hash: BUILD_META.commitHash,
+				session_id: evalRunId,
+			},
+		});
 	}
 
 	const evalAllowSelfSigned =
@@ -747,6 +809,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		anonKey: evalAnonKey,
 		apiKeyHeader: evalApiKeyHeader,
 		allowSelfSigned: evalAllowSelfSigned,
+		onDiagnostic: reportDiagnostic,
 	});
 
 	const runtime: SalRuntime = {
@@ -777,6 +840,7 @@ export default async function salExtension(api: ExtensionAPI) {
 		buildMeta: BUILD_META,
 		staleCleanupDone: false,
 		pendingRebuild: false,
+		reportDiagnostic,
 	};
 
 	const isEnabled = (): boolean => !api.getFlag(NOSAL_FLAG);
@@ -1126,8 +1190,8 @@ export default async function salExtension(api: ExtensionAPI) {
 			turn_count: runtime.turnCounter,
 			total_duration_ms: Math.max(0, Date.now() - runtime.evalStartedAtMs),
 		});
-		await evalBestEffort("flush", runtime.evalSink.flush());
-		await evalBestEffort("close", runtime.evalSink.close());
+		await evalBestEffort(runtime, "flush", runtime.evalSink.flush());
+		await evalBestEffort(runtime, "close", runtime.evalSink.close());
 	});
 
 	// ------------------------------------------------------------------
@@ -1145,7 +1209,7 @@ export default async function salExtension(api: ExtensionAPI) {
 			turn_count: runtime.turnCounter,
 			total_duration_ms: Math.max(0, Date.now() - runtime.evalStartedAtMs),
 		})
-			.then(() => evalBestEffort("emergency flush", runtime.evalSink.flush()))
+			.then(() => evalBestEffort(runtime, "emergency flush", runtime.evalSink.flush()))
 			.catch(() => {});
 	};
 	process.on("beforeExit", emergencyFlush);

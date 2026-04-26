@@ -38,19 +38,38 @@ export function createEvalSink(options: CreateEvalSinkOptions): EvalSink {
 			return noopSink;
 		case "jsonl":
 			if (!options.endpoint) {
-				console.error("[sal][eval] jsonl adapter requires endpoint (file path); using noop sink");
+				options.onDiagnostic?.({
+					source: "sal.eval",
+					severity: "warning",
+					category: "config",
+					message: "SAL eval JSONL adapter requires a file endpoint; eval upload is disabled.",
+					fingerprint: "sal.eval:config:jsonl-missing-endpoint",
+				});
 				return noopSink;
 			}
 			return new JsonlEvalSink(options);
 		case "insforge":
 			if (!options.endpoint) {
-				console.error("[sal][eval] insforge adapter requires endpoint (https URL); using noop sink");
+				options.onDiagnostic?.({
+					source: "sal.eval",
+					severity: "warning",
+					category: "config",
+					message: "SAL eval InsForge adapter requires an endpoint; eval upload is disabled.",
+					fingerprint: "sal.eval:config:insforge-missing-endpoint",
+				});
 				return noopSink;
 			}
 			return new InsForgeEvalSink(options);
 		default: {
 			const exhaustive: never = adapter;
-			console.error(`[sal][eval] unknown adapter '${exhaustive as string}'; using noop sink`);
+			options.onDiagnostic?.({
+				source: "sal.eval",
+				severity: "warning",
+				category: "config",
+				message: "SAL eval adapter is unknown; eval upload is disabled.",
+				detail: { adapter: exhaustive as string },
+				fingerprint: "sal.eval:config:unknown-adapter",
+			});
 			return noopSink;
 		}
 	}

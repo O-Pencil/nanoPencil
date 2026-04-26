@@ -33,6 +33,7 @@ export class InsForgeEvalSink implements EvalSink {
 	private headers: Record<string, string>;
 	private allowSelfSigned: boolean;
 	private batchIntervalMs: number;
+	private onDiagnostic: CreateEvalSinkOptions["onDiagnostic"];
 	private pending: EvalEventEnvelope[] = [];
 	private flushTimer: ReturnType<typeof setTimeout> | undefined;
 	private flushInFlight: Promise<void> | undefined;
@@ -43,6 +44,7 @@ export class InsForgeEvalSink implements EvalSink {
 	constructor(options: CreateEvalSinkOptions) {
 		this.base = options.endpoint!.replace(/\/+$/, "");
 		this.batchIntervalMs = options.batchIntervalMs ?? 2000;
+		this.onDiagnostic = options.onDiagnostic;
 		this.allowSelfSigned = options.allowSelfSigned ?? false;
 		if (this.allowSelfSigned && isDevelopmentRuntime()) {
 			console.warn("[sal][eval] TLS certificate verification disabled (allowSelfSigned=true)");
@@ -81,7 +83,7 @@ export class InsForgeEvalSink implements EvalSink {
 		try {
 			await this.flushInFlight;
 		} catch (err) {
-			console.error("[sal][eval] flush failed:", (err as Error).message);
+			this.reportDiagnostic("persistence", "SAL eval flush failed.", err, "flush");
 		} finally {
 			this.flushInFlight = undefined;
 		}
@@ -104,7 +106,7 @@ export class InsForgeEvalSink implements EvalSink {
 	async close(): Promise<void> {
 		this.closed = true;
 		await this.flush().catch((err) => {
-			console.error("[sal][eval] close flush failed:", (err as Error).message);
+			this.reportDiagnostic("persistence", "SAL eval close flush failed.", err, "close-flush");
 		});
 	}
 
@@ -140,7 +142,7 @@ export class InsForgeEvalSink implements EvalSink {
 					break;
 			}
 		} catch (err) {
-			console.error(`[sal][eval] route ${event.event_type} failed:`, (err as Error).message);
+			this.reportDiagnostic("persistence", `SAL eval route ${event.event_type} failed.`, err, `route-${event.event_type}`);
 		}
 	}
 
@@ -201,7 +203,12 @@ export class InsForgeEvalSink implements EvalSink {
 			});
 			if (this.confirmedRuns.has(ev.run_id)) return true;
 		}
-		console.error(`[sal][eval] skipping ${ev.event_type}: eval_runs row is not available for run_id=${ev.run_id}`);
+		this.reportDiagnostic(
+			"persistence",
+			`SAL eval skipped ${ev.event_type} because the eval run row is unavailable.`,
+			{ run_id: ev.run_id, event_type: ev.event_type },
+			"missing-run",
+		);
 		return false;
 	}
 
@@ -363,7 +370,7 @@ export class InsForgeEvalSink implements EvalSink {
 			try {
 				parsed = new URL(url);
 			} catch {
-				console.error(`[sal][eval] invalid URL: ${url}`);
+				this.reportDiagnostic("config", "SAL eval endpoint URL is invalid.", { url }, "invalid-url");
 				resolve({ ok: false });
 				return;
 			}
@@ -392,8 +399,11 @@ export class InsForgeEvalSink implements EvalSink {
 						const ok = res.statusCode !== undefined && res.statusCode < 300;
 						const errorCode = parsePostgrestErrorCode(rawBody);
 						if (!ok && !quietErrorCodes.includes(errorCode ?? "")) {
-							console.error(
-								`[sal][eval] HTTP ${res.statusCode} ${method} ${parsed.pathname} — ${rawBody.slice(0, 300)}`,
+							this.reportDiagnostic(
+								errorCode === "PGRST204" ? "schema" : "network",
+								`SAL eval upload failed with HTTP ${res.statusCode}.`,
+								{ method, path: parsed.pathname, statusCode: res.statusCode, body: rawBody.slice(0, 300), errorCode },
+								`http-${res.statusCode ?? "unknown"}-${errorCode ?? "none"}`,
 							);
 						}
 						resolve({ ok, statusCode: res.statusCode, body: rawBody, errorCode });
@@ -401,16 +411,48 @@ export class InsForgeEvalSink implements EvalSink {
 				},
 			);
 			req.on("error", (err) => {
+				this.reportDiagnostic(
+					"network",
+					"SAL eval upload is failing due to a network connection error.",
+					{ host: parsed.hostname, error: err.message },
+					"network-error",
+				);
 				logEvalDebug(`[sal][eval] network error → ${parsed.hostname}: ${err.message}`);
 				resolve({ ok: false });
 			});
 			req.on("timeout", () => {
+				this.reportDiagnostic(
+					"network",
+					"SAL eval upload timed out.",
+					{ method, path: parsed.pathname, host: parsed.hostname },
+					"timeout",
+				);
 				logEvalDebug(`[sal][eval] timeout ${method} ${parsed.pathname}`);
 				req.destroy();
 				resolve({ ok: false });
 			});
 			req.write(payload);
 			req.end();
+		});
+	}
+
+	private reportDiagnostic(
+		category: "network" | "fallback" | "persistence" | "config" | "extension_timeout" | "schema" | "unknown",
+		message: string,
+		detail: unknown,
+		fingerprintSuffix: string,
+	): void {
+		this.onDiagnostic?.({
+			source: "sal.eval",
+			severity: category === "config" ? "warning" : "error",
+			category,
+			message,
+			detail,
+			fingerprint: `sal.eval:${category}:${fingerprintSuffix}`,
+			context: {
+				adapter: "insforge",
+				endpoint_host: safeHost(this.base),
+			},
 		});
 	}
 }
@@ -459,6 +501,14 @@ function isEvalDebugEnabled(): boolean {
 function logEvalDebug(message: string): void {
 	if (isEvalDebugEnabled()) {
 		console.error(message);
+	}
+}
+
+function safeHost(value: string): string | undefined {
+	try {
+		return new URL(value).hostname;
+	} catch {
+		return undefined;
 	}
 }
 

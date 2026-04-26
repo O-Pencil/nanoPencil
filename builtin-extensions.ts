@@ -23,6 +23,7 @@ const BUNDLED_PRESENCE_EXTENSION = join(__dirname, "extensions", "defaults", "pr
 const BUNDLED_INTERVIEW_EXTENSION = join(__dirname, "extensions", "defaults", "interview", "index.js");
 const BUNDLED_LOOP_EXTENSION = join(__dirname, "extensions", "defaults", "loop", "index.js");
 const BUNDLED_PLAN_EXTENSION = join(__dirname, "extensions", "defaults", "plan", "index.js");
+const BUNDLED_DIAGNOSTICS_EXTENSION = join(__dirname, "extensions", "defaults", "diagnostics", "index.js");
 const BUNDLED_SAL_EXTENSION = join(__dirname, "extensions", "defaults", "sal", "index.js");
 const BUNDLED_GRUB_EXTENSION = join(__dirname, "extensions", "defaults", "grub", "index.js");
 const BUNDLED_SUBAGENT_EXTENSION = join(__dirname, "extensions", "defaults", "subagent", "index.js");
@@ -70,6 +71,16 @@ function findPackageRoot(startDir: string): string | null {
  */
 export function getBuiltinExtensionPaths(): string[] {
 	const paths: string[] = [];
+
+	// === Diagnostics extension (extension-owned issue buffer and reporting) ===
+	// Loaded first so it can subscribe to diagnostic:event before producer
+	// extensions such as SAL publish background failures.
+	if (existsSync(BUNDLED_DIAGNOSTICS_EXTENSION)) {
+		paths.push(BUNDLED_DIAGNOSTICS_EXTENSION);
+	} else {
+		const diagnosticsTs = join(__dirname, "extensions", "defaults", "diagnostics", "index.ts");
+		if (existsSync(diagnosticsTs)) paths.push(diagnosticsTs);
+	}
 
 	// === SAL extension (Structural Anchor Localization, default-on, experimental) ===
 	// Loaded ahead of NanoMem because turn-context producers must publish before

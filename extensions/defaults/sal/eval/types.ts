@@ -66,6 +66,16 @@ export interface CreateEvalSinkOptions {
 	allowSelfSigned?: boolean;
 	/** Flush interval ms (default 2000). */
 	batchIntervalMs?: number;
+	/** Optional extension-owned diagnostic publisher. Eval sinks must not import UI or reporter code. */
+	onDiagnostic?: (event: {
+		source: string;
+		severity: "debug" | "info" | "warning" | "error";
+		category: "network" | "fallback" | "persistence" | "config" | "extension_timeout" | "schema" | "unknown";
+		message: string;
+		detail?: unknown;
+		fingerprint?: string;
+		context?: Record<string, unknown>;
+	}) => void;
 }
 
 // ----------------------------------------------------------------------------

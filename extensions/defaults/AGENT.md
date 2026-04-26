@@ -3,6 +3,11 @@
 > P2 | Parent: ../AGENT.md
 
 Member List
+diagnostics/index.ts: Diagnostics extension entry, subscribes to diagnostic:event, buffers session-local diagnostic records, prompts only after threshold at agent_end, registers /report-issue
+diagnostics/types.ts: Diagnostic event/report type contract and diagnostic:event channel name
+diagnostics/diagnostic-buffer.ts: DiagnosticBuffer, event coercion, fingerprint dedupe, prompt gating
+diagnostics/reporter.ts: User-approved InsForge pencil_issue_events reporter, configured via NANOPENCIL_ISSUE_* env vars
+diagnostics/redaction.ts: Diagnostic message normalization and secret/path redaction helpers
 link-world/index.ts: Internet access extension, provides internet-search Skill after setup
 mcp/index.ts: MCP protocol integration extension, MCP guidance resources
 presence/index.ts: AI-driven opening + idle presence lines, uses NanoMemEngine episodes/preferences/lessons + git/cwd snapshot, injects latest line into agent systemPrompt every turn for main-conversation perception, 30s debounce + idle in-flight lock, configurable via settings.presence.enabled, PRESENCE_MESSAGE_TYPE renderer
@@ -37,12 +42,12 @@ loop/scheduler-controller.ts: SchedulerController - in-memory recurring task sto
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
-sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-ab/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; /sal:setup writes ~/.memory-experiments/credentials.json with adapter inference (insforge/jsonl/noop); publishes structuralAnchor via core/runtime/turn-context (no SAL-specific globals); emits run_start/turn_anchor/run_end eval events through pluggable EvalSink with best-effort shutdown flushing; writes local .memory-experiments sidecar anchors only when --sal-ab or NANOPENCIL_SAL_AB=1 is enabled; runtime no-op when --nosal is set
+sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-ab/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; /sal:setup writes ~/.memory-experiments/credentials.json with adapter inference (insforge/jsonl/noop); publishes structuralAnchor via core/runtime/turn-context (no SAL-specific globals); emits run_start/turn_anchor/run_end eval events through pluggable EvalSink with best-effort shutdown flushing; publishes SAL eval background failures to diagnostic:event; writes local .memory-experiments sidecar anchors only when --sal-ab or NANOPENCIL_SAL_AB=1 is enabled; runtime no-op when --nosal is set
 sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 AGENT.md and P3 file headers
 sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights, CJK bigram tokenization
 sal/weights.ts: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights() reads sal-config.json from workspace or .memory-experiments/sal/
 sal/eval/index.ts: createEvalSink() factory + barrel re-exports; adapter selection via options.adapter or endpoint scheme inference (http(s)→insforge, file://|/|./|../→jsonl, missing→noop); ONLY entry point SAL imports from
-sal/eval/types.ts: EvalSink interface, EvalEventEnvelope/EvalEventType (run_start/run_end/turn_anchor), EvalAdapterId ("insforge"|"jsonl"|"noop"), CreateEvalSinkOptions, createEvalEvent factory; zero-dependency type surface
+sal/eval/types.ts: EvalSink interface, EvalEventEnvelope/EvalEventType (run_start/run_end/turn_anchor), EvalAdapterId ("insforge"|"jsonl"|"noop"), CreateEvalSinkOptions with optional onDiagnostic callback, createEvalEvent factory; zero-dependency type surface
 sal/eval/noop-sink.ts: noopSink — silent EvalSink used when eval disabled or no adapter configured
 sal/eval/insforge-sink.ts: InsForgeEvalSink — PostgREST adapter, routes run_start→eval_runs INSERT (merge-duplicates) with legacy-schema fallback, writes turn_anchor/tool_trace/memory_recalls/run_end only after parent run confirmation, tool_trace→eval_tool_traces with PGRST204 fallback, memory_recalls→eval_memory_recalls batch INSERT, run_end→eval_runs PATCH; allowSelfSigned TLS option logs only in development runtime, batching with default 2000ms interval
 sal/eval/jsonl-sink.ts: JsonlEvalSink — append-only filesystem adapter, one JSON object per line, accepts file:// URLs or plain paths, auto-creates parent dir, batched writes

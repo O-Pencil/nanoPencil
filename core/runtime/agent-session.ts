@@ -316,6 +316,7 @@ export class AgentSession {
 
   // Event subscription state
   private _unsubscribeAgent?: () => void;
+  private _detachExternalAbort?: () => void;
   private _eventListeners: AgentSessionEventListener[] = [];
 
   /** Tracks pending steering messages for UI display. Removed when delivered. */
@@ -402,11 +403,16 @@ export class AgentSession {
     // (session persistence, extensions, auto-compaction, retry logic)
     this._unsubscribeAgent = this.agent.subscribe(this._handleAgentEvent);
 
-    // Listen to external abort signal (e.g., from SubAgent runtime)
+    // Listen to external abort signal (e.g., from SubAgent runtime).
+    // Track the handler and remove it on dispose so a long-lived parent
+    // signal that spawns many short-lived AgentSessions does not accumulate
+    // listeners (Node fires MaxListenersExceededWarning at 11).
     if (config.signal) {
-      config.signal.addEventListener("abort", () => {
-        this.abort();
-      });
+      const externalAbortHandler = () => { this.abort(); };
+      config.signal.addEventListener("abort", externalAbortHandler, { once: true });
+      this._detachExternalAbort = () => {
+        config.signal?.removeEventListener("abort", externalAbortHandler);
+      };
     }
 
     this._buildRuntime({
@@ -853,6 +859,10 @@ export class AgentSession {
     this._disconnectFromAgent();
     this._extensionRunner?.dispose();
     this._eventListeners = [];
+    if (this._detachExternalAbort) {
+      this._detachExternalAbort();
+      this._detachExternalAbort = undefined;
+    }
   }
 
   // =========================================================================

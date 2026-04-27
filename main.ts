@@ -33,6 +33,7 @@ import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
 import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
 import { exportFromFile } from "./core/export-html/index.js";
 import { profileCheckpoint } from "./utils/startup-profiler.js";
+import { isDevRuntime, reportDiagnostic } from "./utils/diagnostics.js";
 import {
 	CUSTOM_ANTHROPIC_PROVIDER,
 	CUSTOM_OPENAI_PROVIDER,
@@ -53,19 +54,47 @@ import { getBuiltinExtensionPaths } from "./builtin-extensions.js";
 // Check if running in development mode (not production)
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-// In production mode, suppress Node.js DEP0190 warning (shell option in child_process)
-// In development mode, all warnings are shown by default
-if (!isDevelopment) {
+// Wrap process.emitWarning so we can filter Node's terminal-noise warnings in
+// user mode. Node's built-in stderr warning printer also goes through this
+// path, so swallowing here is sufficient — no need to fiddle with the
+// 'warning' event listener list.
+{
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
 	const originalEmitWarning: any = process.emitWarning;
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-	(process as any).emitWarning = (message: string, options?: any) => {
-		// Filter out DEP0190 warning in production
-		const warningType = typeof options === "object" ? options?.type : options;
-		const warningCode = typeof options === "object" ? options?.code : undefined;
-		if (warningType === "DeprecationWarning" && warningCode === "DEP0190") {
+	(process as any).emitWarning = (message: any, options?: any) => {
+		const warningType = typeof options === "object" && options !== null ? options.type : options;
+		const warningName = typeof options === "object" && options !== null ? options.name : undefined;
+		const warningCode = typeof options === "object" && options !== null ? options.code : undefined;
+		const messageStr = message instanceof Error ? message.message : String(message ?? "");
+
+		// Existing: DEP0190 (shell option in child_process) — swallow in production.
+		if (!isDevelopment && warningType === "DeprecationWarning" && warningCode === "DEP0190") {
 			return;
 		}
+
+		// MaxListenersExceededWarning fires when 11+ abort/event listeners stack
+		// on a single emitter. It's a real leak signal but the user can't act
+		// on it. In user mode swallow the terminal noise and route the event
+		// into the diagnostic bus so it still surfaces in dev console output
+		// and in pencil_issue_events for follow-up. In dev mode let it through.
+		const isMaxListeners =
+			warningName === "MaxListenersExceededWarning" ||
+			(message instanceof Error && message.name === "MaxListenersExceededWarning") ||
+			messageStr.startsWith("Possible EventTarget memory leak detected") ||
+			messageStr.startsWith("Possible EventEmitter memory leak detected");
+		if (isMaxListeners && !isDevRuntime()) {
+			reportDiagnostic({
+				source: "node.warning",
+				severity: "warning",
+				category: "fallback",
+				message: messageStr.slice(0, 240),
+				detail: { code: warningCode, type: warningType },
+				fingerprint: "node.warning:max-listeners-exceeded",
+			});
+			return;
+		}
+
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 		return originalEmitWarning(message, options);
 	};

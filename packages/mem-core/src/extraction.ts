@@ -46,8 +46,19 @@ async function extractWithLLM(conversation: string, cfg: NanomemConfig, llmFn: L
 			};
 		});
 	} catch (err) {
-		console.error(`[mem-core] extractWithLLM failed, falling back to heuristic: ${formatFallbackError(err)}`);
+		logFallbackDebug(`[mem-core] extractWithLLM failed, falling back to heuristic: ${formatFallbackError(err)}`);
 		return extractHeuristic(conversation);
+	}
+}
+
+function logFallbackDebug(message: string): void {
+	const lifecycle = process.env.npm_lifecycle_event;
+	if (
+		lifecycle === "dev" ||
+		lifecycle === "start" ||
+		["1", "true", "yes", "on"].includes((process.env.NANOMEM_DEBUG ?? "").toLowerCase())
+	) {
+		console.error(message);
 	}
 }
 

@@ -24,6 +24,20 @@ type LlmCapableContext = ExtensionContext & {
 	completeSimple?: (systemPrompt: string, userMessage: string) => Promise<string | undefined>;
 };
 
+const DIAGNOSTIC_EVENT_CHANNEL = "diagnostic:event";
+
+type MemoryDiagnosticEvent = {
+	source: "mem-core.extract" | "mem-core.consolidate" | "mem-core.insights";
+	severity: "warning" | "error";
+	category: "fallback";
+	message: string;
+	detail?: Record<string, unknown>;
+	fingerprint: string;
+	context?: Record<string, unknown>;
+};
+
+type MemoryDiagnosticReporter = (event: MemoryDiagnosticEvent) => void;
+
 type DreamTaskState = {
 	status: "idle" | "running" | "completed" | "failed" | "killed";
 	startedAtMs?: number;
@@ -47,6 +61,30 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | und
 				resolve(undefined);
 			});
 	});
+}
+
+function shouldEmitMemoryConsoleDiagnostics(): boolean {
+	const lifecycle = process.env.npm_lifecycle_event;
+	if (lifecycle === "dev" || lifecycle === "start") return true;
+	return ["1", "true", "yes", "on"].includes((process.env.NANOMEM_DEBUG ?? "").toLowerCase());
+}
+
+function expectsJsonOutput(systemPrompt: string): boolean {
+	return /\bJSON\b/i.test(systemPrompt) || /有效\s*JSON/.test(systemPrompt);
+}
+
+function inferDiagnosticSource(systemPrompt: string): MemoryDiagnosticEvent["source"] {
+	if (/(consolidate|固化|合并相似教训)/i.test(systemPrompt)) return "mem-core.consolidate";
+	if (/(insight|洞察|recommendation|推荐建议)/i.test(systemPrompt)) return "mem-core.insights";
+	return "mem-core.extract";
+}
+
+function looksLikeJson(value: string): boolean {
+	const trimmed = value
+		.replace(/^```json\s*/i, "")
+		.replace(/^```\s*/i, "")
+		.trimStart();
+	return trimmed.startsWith("[") || trimmed.startsWith("{");
 }
 
 function getProject(): string {
@@ -332,6 +370,34 @@ export default function nanomemExtension(api: ExtensionAPI) {
 	let cachedInjection: string | undefined;
 	let lastInjectionAt = 0;
 	let injectionRefreshInFlight: Promise<void> | undefined;
+	const reportDiagnostic: MemoryDiagnosticReporter = (event) => {
+		api.events.emit(DIAGNOSTIC_EVENT_CHANNEL, event);
+	};
+	const bindLlm = (ctx: ExtensionContext) => {
+		const llmCtx = ctx as LlmCapableContext;
+		if (!llmCtx.completeSimple) return;
+		const completeSimple = llmCtx.completeSimple;
+		engine.setLlmFn(async (systemPrompt, userMessage) => {
+			const out = await completeSimple(systemPrompt, userMessage);
+			const text = out ?? "";
+			if (text && expectsJsonOutput(systemPrompt) && !looksLikeJson(text)) {
+				const source = inferDiagnosticSource(systemPrompt);
+				reportDiagnostic({
+					source,
+					severity: "warning",
+					category: "fallback",
+					message: "NanoMem LLM structured extraction returned non-JSON text and used its fallback path.",
+					detail: {
+						output_prefix: text.slice(0, 160),
+						system_prompt_prefix: systemPrompt.slice(0, 80),
+					},
+					fingerprint: `${source}:fallback:non-json-llm-output`,
+					context: { session_id: sessionId },
+				});
+			}
+			return text;
+		});
+	};
 
 	const refreshInjection = async () => {
 		if (injectionRefreshInFlight) return;
@@ -355,13 +421,7 @@ export default function nanomemExtension(api: ExtensionAPI) {
 		if (file) sessionId = basename(file, ".jsonl");
 
 		// Bind LLM if available early, so /dream and auto-dream can use it.
-		const llmCtx = ctx as LlmCapableContext;
-		if (llmCtx.completeSimple) {
-			engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
-				const out = await llmCtx.completeSimple?.(systemPrompt, userMessage);
-				return out ?? "";
-			});
-		}
+		bindLlm(ctx);
 
 		try {
 			const maintenance = await engine.runStartupMaintenance(3);
@@ -493,13 +553,7 @@ export default function nanomemExtension(api: ExtensionAPI) {
 	});
 
 	api.on("agent_end", async (event, ctx) => {
-		const llmCtx = ctx as LlmCapableContext;
-		if (llmCtx.completeSimple) {
-			engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
-				const out = await llmCtx.completeSimple?.(systemPrompt, userMessage);
-				return out ?? "";
-			});
-		}
+		bindLlm(ctx);
 
 		const transcript = buildTranscript(event.messages, getSystemTimeSnapshot());
 		if (!transcript.trim()) return;
@@ -585,13 +639,7 @@ export default function nanomemExtension(api: ExtensionAPI) {
 			// Manual run: not gate-checked and not blocked by lock. Always stamps lock to suppress immediate auto-dream.
 			await stampDreamLock(lockPath);
 
-			const llmCtx = ctx as LlmCapableContext;
-			if (llmCtx.completeSimple) {
-				engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
-					const out = await llmCtx.completeSimple?.(systemPrompt, userMessage);
-					return out ?? "";
-				});
-			}
+			bindLlm(ctx);
 
 			const result = await engine.consolidateDetailed();
 			const sample = result.entries
@@ -642,13 +690,7 @@ export default function nanomemExtension(api: ExtensionAPI) {
 		ctx.ui.notify(`NanoMem: generating insights report -> ${outputPath}`, "info");
 
 		try {
-			const llmCtx = ctx as LlmCapableContext;
-			if (llmCtx.completeSimple) {
-				engine.setLlmFn(async (systemPrompt: string, userMessage: string) => {
-					const out = await llmCtx.completeSimple?.(systemPrompt, userMessage);
-					return out ?? "";
-				});
-			}
+			bindLlm(ctx);
 
 			let enhanced: {
 				report: Awaited<ReturnType<NanoMemEngine["generateFullInsights"]>>;

@@ -98,8 +98,19 @@ async function llmConsolidation(
 			};
 		});
 	} catch (err) {
-		console.error(`[mem-core] consolidateWithLLM failed, falling back to heuristic: ${formatFallbackError(err)}`);
+		logFallbackDebug(`[mem-core] consolidateWithLLM failed, falling back to heuristic: ${formatFallbackError(err)}`);
 		return heuristicConsolidation(episodes, cfg);
+	}
+}
+
+function logFallbackDebug(message: string): void {
+	const lifecycle = process.env.npm_lifecycle_event;
+	if (
+		lifecycle === "dev" ||
+		lifecycle === "start" ||
+		["1", "true", "yes", "on"].includes((process.env.NANOMEM_DEBUG ?? "").toLowerCase())
+	) {
+		console.error(message);
 	}
 }
 

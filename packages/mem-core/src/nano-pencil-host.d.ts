@@ -32,6 +32,9 @@ declare module "@pencil-agent/nano-pencil" {
 	};
 
 	export type ExtensionAPI = {
+		events: {
+			emit(channel: string, data: unknown): void;
+		};
 		on(event: string, handler: (event: any, context: ExtensionContext) => unknown): void;
 		registerCommand(
 			name: string,

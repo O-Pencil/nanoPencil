@@ -17,6 +17,7 @@ import { getSoulConfig } from "./config.js";
 import { SoulStore } from "./store.js";
 import { SoulEvolutionEngine } from "./evolution.js";
 import { generateSoulInjection } from "./injection.js";
+import { reportDiagnostic } from "./diagnostics.js";
 
 /**
  * Generate UUID v4
@@ -525,8 +526,18 @@ export class SoulManager {
     evolutions.push(evolution);
     await this.store.saveEvolutions(evolutions);
 
-    console.log(`[Soul] Evolution triggered: ${triggerType}`);
-    console.log(`[Soul] ${reasoning}`);
+    // Personality evolution is informational, not a failure. Route through
+    // the unified diagnostic bus so dev mode shows it on stdout, user mode
+    // stays silent (no UI flooding), and consumers that want telemetry can
+    // subscribe via utils/diagnostics.ts.
+    reportDiagnostic({
+      source: "soul.evolution",
+      severity: "info",
+      category: "persistence",
+      message: `Evolution triggered: ${triggerType}`,
+      detail: { reasoning },
+      fingerprint: `soul.evolution:trigger:${triggerType}`,
+    });
   }
 
   /**

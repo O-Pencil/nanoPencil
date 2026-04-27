@@ -46,16 +46,26 @@ export default async function diagnosticsExtension(api: ExtensionAPI): Promise<v
 		// Background subsystem failures (SAL eval, mem-core, presence, etc.)
 		// auto-upload silently — they did not interrupt the user, so prompting
 		// for permission would be reverse-value. /report-issue stays available
-		// for the user to bundle records manually.
+		// for the user to bundle records manually (info/debug included).
 		const unreported = buffer.findUnreported();
 		if (unreported.length === 0) return;
-		const result = await reportDiagnostics(unreported, undefined, ctx);
+
+		// pencil_issue_events is for actionable issues. info/debug telemetry
+		// (e.g. Soul evolution success notes) shows up in dev console via the
+		// bus but should not pollute the issue table. Mark them reported so
+		// they don't accumulate forever.
+		const uploadable = unreported.filter((r) => r.severity === "warning" || r.severity === "error");
+		const skipped = unreported.filter((r) => r.severity !== "warning" && r.severity !== "error");
+		for (const record of skipped) buffer.markReported(record.fingerprint);
+
+		if (uploadable.length === 0) return;
+		const result = await reportDiagnostics(uploadable, undefined, ctx);
 		// Mark reported when the upload landed OR when the reporter has no
 		// endpoint configured (no point re-trying every turn against missing
 		// config). Transient HTTP/network failures stay unreported and will
 		// retry on the next agent_end.
 		if (result.ok || !result.configured) {
-			for (const record of unreported) buffer.markReported(record.fingerprint);
+			for (const record of uploadable) buffer.markReported(record.fingerprint);
 		}
 	});
 

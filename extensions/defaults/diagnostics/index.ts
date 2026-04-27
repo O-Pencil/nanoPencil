@@ -50,7 +50,11 @@ export default async function diagnosticsExtension(api: ExtensionAPI): Promise<v
 		const unreported = buffer.findUnreported();
 		if (unreported.length === 0) return;
 		const result = await reportDiagnostics(unreported, undefined, ctx);
-		if (result.ok) {
+		// Mark reported when the upload landed OR when the reporter has no
+		// endpoint configured (no point re-trying every turn against missing
+		// config). Transient HTTP/network failures stay unreported and will
+		// retry on the next agent_end.
+		if (result.ok || !result.configured) {
 			for (const record of unreported) buffer.markReported(record.fingerprint);
 		}
 	});

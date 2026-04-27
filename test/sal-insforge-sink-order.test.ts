@@ -70,7 +70,7 @@ test("insforge sink falls back to legacy eval_runs row before dependent events",
 	assert.equal(runCalls.length, 2);
 	assert.equal("pencil_version" in runCalls[0].body[0], true);
 	assert.equal("pencil_version" in runCalls[1].body[0], false);
-	assert.ok(calls.some((c) => c.url.endsWith("/eval_turns")));
+	assert.ok(calls.some((c) => c.url.includes("/eval_turns")));
 });
 
 test("insforge sink skips dependent events when eval_runs cannot be created", async () => {
@@ -95,8 +95,8 @@ test("insforge sink skips dependent events when eval_runs cannot be created", as
 	await sink.flush();
 
 	assert.equal(calls.filter((url) => url.endsWith("/eval_runs")).length, 2);
-	assert.equal(calls.some((url) => url.endsWith("/eval_turns")), false);
-	assert.equal(calls.some((url) => url.endsWith("/eval_sal_anchors")), false);
+	assert.equal(calls.some((url) => url.includes("/eval_turns")), false);
+	assert.equal(calls.some((url) => url.includes("/eval_sal_anchors")), false);
 });
 
 test("insforge sink suppresses allowSelfSigned warning in production", () => {

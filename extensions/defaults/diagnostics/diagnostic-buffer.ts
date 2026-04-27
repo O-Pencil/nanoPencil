@@ -37,6 +37,9 @@ export class DiagnosticBuffer {
 			existing.severity = maxSeverity(existing.severity, sanitized.severity);
 			existing.detail = sanitized.detail;
 			existing.context = { ...(existing.context ?? {}), ...(sanitized.context ?? {}) };
+			// New occurrences invalidate a prior auto-report so the next
+			// agent_end batch uploads the updated count.
+			existing.reported = false;
 			return existing;
 		}
 
@@ -47,6 +50,7 @@ export class DiagnosticBuffer {
 			last_seen_at: now,
 			occurrence_count: 1,
 			prompted: false,
+			reported: false,
 		};
 		this.records.set(fingerprint, record);
 		this.trim();
@@ -65,9 +69,18 @@ export class DiagnosticBuffer {
 		return this.all().find((record) => !record.prompted && shouldPrompt(record));
 	}
 
+	findUnreported(): DiagnosticRecord[] {
+		return this.all().filter((record) => !record.reported);
+	}
+
 	markPrompted(fingerprint: string): void {
 		const record = this.records.get(fingerprint);
 		if (record) record.prompted = true;
+	}
+
+	markReported(fingerprint: string): void {
+		const record = this.records.get(fingerprint);
+		if (record) record.reported = true;
 	}
 
 	private trim(): void {

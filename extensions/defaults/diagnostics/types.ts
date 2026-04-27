@@ -47,6 +47,7 @@ export interface DiagnosticRecord extends DiagnosticEvent {
 	last_seen_at: string;
 	occurrence_count: number;
 	prompted: boolean;
+	reported: boolean;
 }
 
 export interface DiagnosticReportPayload {

@@ -2,7 +2,7 @@
  * [WHO]: Provides InsForgeEvalSink (PostgREST-backed adapter)
  * [FROM]: Depends on node:https, node:http, node:url; ./types.js for EvalSink/EvalEventEnvelope/CreateEvalSinkOptions
  * [TO]: Constructed by eval/index.ts factory when adapter resolves to "insforge"
- * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version with legacy fallback), turn_anchor→eval_turns + eval_sal_anchors×2 only after parent run confirmation, tool_trace→eval_tool_traces with legacy-schema fallback, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
+ * [HERE]: extensions/defaults/sal/eval/insforge-sink.ts - InsForge-specific routing: run_start→eval_runs INSERT (merge-duplicates, includes pencil_version with legacy fallback), turn_anchor→eval_turns + eval_sal_anchors×2 with on_conflict-based upsert (suppresses benign 23505 retries) only after parent run confirmation, tool_trace→eval_tool_traces with legacy-schema fallback, memory_recalls→eval_memory_recalls, run_end→eval_runs PATCH
  *
  * Pluggable: nothing in this file may be imported from outside the eval/ directory.
  * To add a new backend, write a sibling file with the same EvalSink interface.
@@ -222,7 +222,11 @@ export class InsForgeEvalSink implements EvalSink {
 			? new Date(new Date(ev.ts).getTime() - durationMs).toISOString()
 			: ev.ts;
 
-		await this.postJson(`${this.base}/api/database/records/eval_turns`, [{
+		// Use merge-duplicates + on_conflict so the DB resolves the
+		// UNIQUE(run_id, turn_id) collision via ON CONFLICT DO UPDATE
+		// instead of returning 409/23505. ignore-duplicates only checks the
+		// primary key, which is auto-uuid here, so it never sees the conflict.
+		await this.postJson(`${this.base}/api/database/records/eval_turns?on_conflict=run_id,turn_id`, [{
 			run_id:                   ev.run_id,
 			turn_id:                  turnId,
 			event_id:                 ev.event_id,
@@ -230,11 +234,11 @@ export class InsForgeEvalSink implements EvalSink {
 			duration_ms:              durationMs ?? null,
 			started_at:               startedAt,
 			ended_at:                 endedAt,
-		}], { prefer: "resolution=ignore-duplicates" });
+		}], { prefer: "resolution=merge-duplicates" });
 
 		const taskAnchor = p.task_anchor as Record<string, unknown> | null;
 		if (taskAnchor) {
-			await this.postJson(`${this.base}/api/database/records/eval_sal_anchors`, [{
+			await this.postJson(`${this.base}/api/database/records/eval_sal_anchors?on_conflict=run_id,turn_id,anchor_type`, [{
 				run_id:             ev.run_id,
 				turn_id:            turnId,
 				event_id:           `${ev.event_id}-task`,
@@ -244,11 +248,11 @@ export class InsForgeEvalSink implements EvalSink {
 				confidence:         numOrNull(taskAnchor.confidence),
 				candidates:         p.task_candidates ?? null,
 				recorded_at:        ev.ts,
-			}], { prefer: "resolution=ignore-duplicates" });
+			}], { prefer: "resolution=merge-duplicates" });
 		}
 
 		const actionAnchor = p.action_anchor as Record<string, unknown> | null;
-		await this.postJson(`${this.base}/api/database/records/eval_sal_anchors`, [{
+		await this.postJson(`${this.base}/api/database/records/eval_sal_anchors?on_conflict=run_id,turn_id,anchor_type`, [{
 			run_id:             ev.run_id,
 			turn_id:            turnId,
 			event_id:           `${ev.event_id}-action`,
@@ -258,7 +262,7 @@ export class InsForgeEvalSink implements EvalSink {
 			confidence:         numOrNull(actionAnchor?.confidence),
 			touched_files:      p.action_files ?? null,
 			recorded_at:        ev.ts,
-		}], { prefer: "resolution=ignore-duplicates" });
+		}], { prefer: "resolution=merge-duplicates" });
 	}
 
 	// PATCH eval_runs — set status + final stats

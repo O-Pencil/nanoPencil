@@ -54,50 +54,85 @@ import { getBuiltinExtensionPaths } from "./builtin-extensions.js";
 // Check if running in development mode (not production)
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-// Wrap process.emitWarning so we can filter Node's terminal-noise warnings in
-// user mode. Node's built-in stderr warning printer also goes through this
-// path, so swallowing here is sufficient — no need to fiddle with the
-// 'warning' event listener list.
+// Belt-and-suspenders warning silencing for user mode. Two channels cover
+// every path Node uses to surface a warning:
+//   (1) wrap process.emitWarning so we can short-circuit BEFORE the 'warning'
+//       event ever fires. Catches the common path where Node internals call
+//       process.emitWarning(...).
+//   (2) replace Node's default 'warning' listener (the one that prints to
+//       stderr) with our own. Catches paths that emit the event directly
+//       without going through emitWarning, and makes sure no other library's
+//       ad-hoc warning listener can re-print what we suppressed.
 {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-	const originalEmitWarning: any = process.emitWarning;
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const originalEmitWarning = process.emitWarning.bind(process) as any;
+
+	type WarningOpts = { type?: string; name?: string; code?: string; detail?: string };
+	const isMaxListenersWarning = (warning: Error & { code?: string }, message?: unknown, opts?: WarningOpts): boolean => {
+		const name = warning?.name ?? opts?.name ?? "";
+		if (name === "MaxListenersExceededWarning") return true;
+		const text = String(warning?.message ?? message ?? "");
+		return (
+			text.startsWith("Possible EventTarget memory leak detected") ||
+			text.startsWith("Possible EventEmitter memory leak detected")
+		);
+	};
+	const isDep0190 = (opts?: WarningOpts): boolean =>
+		(opts?.type ?? "") === "DeprecationWarning" && (opts?.code ?? "") === "DEP0190";
+
+	// (1) emitWarning override
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	(process as any).emitWarning = (message: any, options?: any) => {
-		const warningType = typeof options === "object" && options !== null ? options.type : options;
-		const warningName = typeof options === "object" && options !== null ? options.name : undefined;
-		const warningCode = typeof options === "object" && options !== null ? options.code : undefined;
-		const messageStr = message instanceof Error ? message.message : String(message ?? "");
+		const opts: WarningOpts = typeof options === "object" && options !== null
+			? options
+			: { type: typeof options === "string" ? options : undefined };
+		const warning = message instanceof Error ? message : null;
 
-		// Existing: DEP0190 (shell option in child_process) — swallow in production.
-		if (!isDevelopment && warningType === "DeprecationWarning" && warningCode === "DEP0190") {
-			return;
-		}
+		if (!isDevelopment && isDep0190(opts)) return;
 
-		// MaxListenersExceededWarning fires when 11+ abort/event listeners stack
-		// on a single emitter. It's a real leak signal but the user can't act
-		// on it. In user mode swallow the terminal noise and route the event
-		// into the diagnostic bus so it still surfaces in dev console output
-		// and in pencil_issue_events for follow-up. In dev mode let it through.
-		const isMaxListeners =
-			warningName === "MaxListenersExceededWarning" ||
-			(message instanceof Error && message.name === "MaxListenersExceededWarning") ||
-			messageStr.startsWith("Possible EventTarget memory leak detected") ||
-			messageStr.startsWith("Possible EventEmitter memory leak detected");
-		if (isMaxListeners && !isDevRuntime()) {
-			reportDiagnostic({
-				source: "node.warning",
-				severity: "warning",
-				category: "fallback",
-				message: messageStr.slice(0, 240),
-				detail: { code: warningCode, type: warningType },
-				fingerprint: "node.warning:max-listeners-exceeded",
-			});
-			return;
+		if (isMaxListenersWarning(warning ?? (new Error() as any), message, opts)) {
+			if (!isDevRuntime()) {
+				const text = warning?.message ?? String(message ?? "");
+				reportDiagnostic({
+					source: "node.warning",
+					severity: "warning",
+					category: "fallback",
+					message: text.slice(0, 240),
+					detail: { code: opts.code, type: opts.type, name: opts.name },
+					fingerprint: "node.warning:max-listeners-exceeded",
+				});
+				return;
+			}
 		}
 
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 		return originalEmitWarning(message, options);
 	};
+
+	// (2) replace 'warning' event listeners. Node attaches a default printer
+	// on startup; if anything bypassed (1), this stops the printer from
+	// running. We only do this in user mode — dev keeps default behaviour.
+	if (!isDevRuntime()) {
+		for (const listener of process.listeners("warning")) {
+			process.off("warning", listener as (warning: Error) => void);
+		}
+		process.on("warning", (warning: Error & { code?: string }) => {
+			if (isMaxListenersWarning(warning)) {
+				reportDiagnostic({
+					source: "node.warning",
+					severity: "warning",
+					category: "fallback",
+					message: warning.message.slice(0, 240),
+					detail: { code: warning.code, name: warning.name },
+					fingerprint: "node.warning:max-listeners-exceeded",
+				});
+				return;
+			}
+			if (isDep0190({ type: "DeprecationWarning", code: warning.code })) return;
+			// Print everything else exactly like Node's default would.
+			process.stderr.write(`(node:${process.pid}) ${warning.stack ?? warning.message}\n`);
+		});
+	}
 }
 
 /**

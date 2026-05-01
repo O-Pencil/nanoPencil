@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.11] - 2026-05-01
+
+### Added
+- feat(agent-core): add turn and tool-call limits to agent loop
+- feat(diagnostics): wire issue auto-upload to shared SAL InsForge instance
+- feat(diagnostics): unified reportDiagnostic + isDevRuntime helper
+- feat(diagnostics,sal): silent auto-upload + on_conflict upserts
+- feat(diagnostics): add extension-owned issue reporting
+- feat(idle-think): add idle exploration extension with 3-phase architecture
+- feat(team,grub,sub-agent): harness streaming, auto-team, grub locale
+- feat(team): harness psyche presets dashboard and subagent hooks
+- feat: show session resume hint on exit
+- feat: add zai provider support with search and auto thinking level
+- feat(sal): add legacy-schema fallback for tool_trace on PGRST204 drift
+- feat(sal): add bounded tool trace analytics
+- feat(update): add confirmation dialog before auto-update on startup
+- feat(sal): avoid blocking startup with async eval maintenance
+- feat(sal): add build metadata to eval runs
+
+### Fixed
+- fix(team): improve runtime status streaming and dashboard rendering
+- fix(soul-core): atomic tmp+rename writes for concurrent SoulStore safety
+- fix(soul-core): silence corrupted-JSON load failures via diagnostic bus
+- fix(runtime,main): stronger MaxListeners silence + plug sleep() listener leak
+- fix(runtime,main): plug abort-listener leak + silence MaxListeners noise
+- fix(sdk): forward PencilAgent provider/model into createAgentSession
+- fix(soul,diagnostics): silence Soul evolution console flood, gate auto-upload by severity
+- fix(mem-core): route fallback noise through diagnostics
+- fix(diagnostics): reduce non-fatal background noise
+- fix(sal): harden eval reporting and gate ab sidecars
+- fix(sal): disable stale cleanup by default
+
+### Changed
+- refactor(footer): extract renderContextProgressBar with clamp-safe handling
+
+### Documentation
+- docs(sal): sync P2 eval/types.ts description with tool_trace event type
+
+### Maintenance
+- chore: update grub state
+- chore: update generated model list (kimi-k2.6, gemini context fix)
+
+
 ## [1.13.10] - 2026-04-27
 
 ### Added

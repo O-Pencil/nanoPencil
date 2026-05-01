@@ -1,6 +1,6 @@
 /**
  * [WHO]: extractMemories, extractWork, extractState
- * [FROM]: Depends on ./config.js, ./i18n.js, ./store.js, ./types.js
+ * [FROM]: Depends on ./config.js, ./diagnostics.js, ./i18n.js, ./llm-json.js, ./store.js, ./types.js
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/extraction.ts - dual-path extraction (LLM when available, regex heuristics fallback)
  */
@@ -9,6 +9,7 @@
 import type { NanomemConfig } from "./config.js";
 import { reportDiagnostic } from "./diagnostics.js";
 import { PROMPTS } from "./i18n.js";
+import { parseLlmJson } from "./llm-json.js";
 import { deriveNameFromContent, deriveSummaryFromContent } from "./store.js";
 import type { ExtractedItem, ExtractedWork, LlmFn } from "./types.js";
 
@@ -31,11 +32,8 @@ async function extractWithLLM(conversation: string, cfg: NanomemConfig, llmFn: L
 	const p = PROMPTS[cfg.locale] ?? PROMPTS.en;
 	try {
 		const raw = await llmFn(p.extractionSystem, conversation);
-		const cleaned = raw
-			.replace(/```json?\n?/g, "")
-			.replace(/```/g, "")
-			.trim();
-		const items = JSON.parse(cleaned) as ExtractedItem[];
+		const items = parseLlmJson<ExtractedItem[]>(raw);
+		if (!Array.isArray(items)) throw new Error("LLM extraction response must be a JSON array");
 		// Normalize: ensure name/summary/detail are populated (backward compat with old LLM responses)
 		return items.map((item) => {
 			const detail = item.detail || item.content || "";
@@ -199,11 +197,7 @@ export async function extractWork(
 	const p = PROMPTS[cfg.locale] ?? PROMPTS.en;
 	try {
 		const raw = await llmFn(p.workExtractionSystem, conversation);
-		const cleaned = raw
-			.replace(/```json?\n?/g, "")
-			.replace(/```/g, "")
-			.trim();
-		const result = JSON.parse(cleaned) as ExtractedWork;
+		const result = parseLlmJson<ExtractedWork>(raw);
 		if (!result.goal && !result.summary) return null;
 		return result;
 	} catch {

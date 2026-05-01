@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides generateInsightsReport, generateRecommendations, generateRulesBasedRecommendations
- * [FROM]: Depends on ./i18n.js for PROMPTS; ./types.js for memory types and insights
+ * [FROM]: Depends on ./i18n.js for PROMPTS; ./llm-json.js for tolerant structured parsing; ./types.js for memory types and insights
  * [TO]: Consumed by engine.ts (generateInsights)
  * [HERE]: packages/mem-core/src/engine-insights.ts - insights report generation (LLM + rules-based)
  */
 
 import { PROMPTS } from "./i18n.js";
+import { parseLlmJson } from "./llm-json.js";
 import type { InsightsReport, LlmFn, MemoryEntry, PatternInsight, StruggleInsight, Meta, WorkEntry, Episode } from "./types.js";
 
 export interface RuntimeMemoryView {
@@ -113,11 +114,7 @@ export async function generateRecommendations(
 				lessons: lessons.slice(0, 5).map((l) => l.summary || l.detail || l.content || ""),
 			});
 			const raw = await llmFn(p.insightsRecommendationSystem, input);
-			const cleaned = raw
-				.replace(/```json?\n?/g, "")
-				.replace(/```/g, "")
-				.trim();
-			const result = JSON.parse(cleaned) as string[];
+			const result = parseLlmJson<string[]>(raw);
 			if (Array.isArray(result) && result.length > 0) {
 				return result.slice(0, 5);
 			}

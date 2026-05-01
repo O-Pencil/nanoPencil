@@ -1,12 +1,13 @@
 /**
  * [WHO]: FullInsightsReport, generateFullInsights
- * [FROM]: Depends on ./i18n.js, ./types.js
+ * [FROM]: Depends on ./i18n.js, ./llm-json.js, ./types.js
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/full-insights.ts - aggregation + optional LLM for comprehensive insights report
  */
 
 
 import { PROMPTS } from "./i18n.js";
+import { parseLlmJson } from "./llm-json.js";
 import type {
 	Episode,
 	FullInsightsAtAGlance,
@@ -266,8 +267,7 @@ interface LlmFullInsightsPayload {
 
 function parseLlmPayload(raw: string): LlmFullInsightsPayload | null {
 	try {
-		const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-		const parsed = JSON.parse(cleaned) as LlmFullInsightsPayload;
+		const parsed = parseLlmJson<LlmFullInsightsPayload>(raw);
 		return parsed;
 	} catch {
 		return null;

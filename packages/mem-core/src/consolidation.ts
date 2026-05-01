@@ -1,6 +1,6 @@
 /**
  * [WHO]: consolidateEpisodes, extractFactsFromEpisodes, extractLessonsFromEpisodes
- * [FROM]: Depends on ./config.js, ./i18n.js, ./scoring.js, ./store.js, ./types.js
+ * [FROM]: Depends on ./config.js, ./diagnostics.js, ./i18n.js, ./llm-json.js, ./scoring.js, ./store.js, ./types.js
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/consolidation.ts - episodic→semantic consolidation, heart of multi-store memory model
  */
@@ -9,6 +9,7 @@
 import type { NanomemConfig } from "./config.js";
 import { reportDiagnostic } from "./diagnostics.js";
 import { PROMPTS } from "./i18n.js";
+import { parseLlmJson } from "./llm-json.js";
 import { extractTags } from "./scoring.js";
 import { deriveNameFromContent, deriveSummaryFromContent } from "./store.js";
 import type { Episode, LlmFn, MemoryEntry } from "./types.js";
@@ -62,14 +63,15 @@ async function llmConsolidation(
 	if (signal?.aborted) throw new Error("AbortError");
 
 	try {
-		const items = JSON.parse(raw) as Array<{
+		const items = parseLlmJson<Array<{
 			type: string;
 			name?: string;
 			summary?: string;
 			detail?: string;
 			content?: string;
 			importance?: number;
-		}>;
+		}>>(raw);
+		if (!Array.isArray(items)) throw new Error("LLM consolidation response must be a JSON array");
 		const now = new Date().toISOString();
 		return items.map((item) => {
 			const type: MemoryEntry["type"] =

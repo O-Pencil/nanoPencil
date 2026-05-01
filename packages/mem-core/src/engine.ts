@@ -1,6 +1,6 @@
 /**
  * [WHO]: NanoMemEngine class - unified facade for memory CRUD, injection, consolidation; delegates to engine-* modules
- * [FROM]: Depends on node:fs/promises, node:path; ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js; ./engine-scoring-v2.js, ./engine-injection-text.js, ./engine-v2-mapping.js, ./engine-archive.js, ./engine-links.js, ./engine-insights.js, ./engine-episode-sync.js, ./engine-reinforce.js, ./engine-recall-select.js
+ * [FROM]: Depends on node:fs/promises, node:path; ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./llm-json.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js; ./engine-scoring-v2.js, ./engine-injection-text.js, ./engine-v2-mapping.js, ./engine-archive.js, ./engine-links.js, ./engine-insights.js, ./engine-episode-sync.js, ./engine-reinforce.js, ./engine-recall-select.js
  * [TO]: Consumed by packages/mem-core/src/index.ts, extension.ts, cli.ts, test/*
  * [HERE]: packages/mem-core/src/engine.ts - facade layer composing all memory subsystems via thin delegation wrappers
  */
@@ -28,6 +28,7 @@ import {
 	reinforceRelations,
 	type GraphNeighbor,
 } from "./linking.js";
+import { parseLlmJson } from "./llm-json.js";
 import { evictExpiredEntries, evictExpiredWork, filterByScope, filterPII } from "./privacy.js";
 import { daysSince, extractTags, pickTop, scoreEntry, scoreEpisode, scoreWorkEntry, tagOverlap, tierEntries } from "./scoring.js";
 import {
@@ -2015,11 +2016,7 @@ export class NanoMemEngine {
 					lessons: lessons.slice(0, 5).map((l) => l.summary || l.detail || l.content || ""),
 				});
 				const raw = await this.llmFn(p.insightsRecommendationSystem, input);
-				const cleaned = raw
-					.replace(/```json?\n?/g, "")
-					.replace(/```/g, "")
-					.trim();
-				const result = JSON.parse(cleaned) as string[];
+				const result = parseLlmJson<string[]>(raw);
 				if (Array.isArray(result) && result.length > 0) {
 					return result.slice(0, 5);
 				}

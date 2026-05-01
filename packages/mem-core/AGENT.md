@@ -105,7 +105,8 @@ type FacetData =
 
 The system works with or without an LLM:
 1. **LLM path**: Uses `LlmFn` to extract structured memories from conversations
-2. **Heuristic fallback**: Pattern-based extraction when no LLM available
+2. **Structured response normalization**: `llm-json.ts` accepts strict JSON, fenced JSON, or a balanced JSON object/array embedded in prose before parsing
+3. **Heuristic fallback**: Pattern-based extraction when no LLM available or no parseable structured payload is present
 
 ### Privacy & Scoping (`privacy.ts`)
 

@@ -14,6 +14,8 @@ import {
 import { normalizeDiagnosticMessage, sanitizeDiagnosticValue } from "./redaction.js";
 
 const MAX_RECORDS = 100;
+const WARNING_REPORT_AGAIN_DELTA = 10;
+const ERROR_REPORT_AGAIN_DELTA = 3;
 
 export class DiagnosticBuffer {
 	private records = new Map<string, DiagnosticRecord>();
@@ -32,14 +34,13 @@ export class DiagnosticBuffer {
 		const fingerprint = event.fingerprint ?? buildFingerprint(sanitized);
 		const existing = this.records.get(fingerprint);
 		if (existing) {
+			const previousSeverity = existing.severity;
 			existing.last_seen_at = now;
 			existing.occurrence_count += 1;
 			existing.severity = maxSeverity(existing.severity, sanitized.severity);
 			existing.detail = sanitized.detail;
 			existing.context = { ...(existing.context ?? {}), ...(sanitized.context ?? {}) };
-			// New occurrences invalidate a prior auto-report so the next
-			// agent_end batch uploads the updated count.
-			existing.reported = false;
+			if (shouldReportAgain(existing, previousSeverity)) existing.reported = false;
 			return existing;
 		}
 
@@ -80,7 +81,10 @@ export class DiagnosticBuffer {
 
 	markReported(fingerprint: string): void {
 		const record = this.records.get(fingerprint);
-		if (record) record.reported = true;
+		if (record) {
+			record.reported = true;
+			record.reported_occurrence_count = record.occurrence_count;
+		}
 	}
 
 	private trim(): void {
@@ -116,6 +120,15 @@ function shouldPrompt(record: DiagnosticRecord): boolean {
 	if (record.severity === "error") return record.occurrence_count >= 3;
 	if (record.severity === "warning") return record.occurrence_count >= 5 || record.category === "fallback";
 	return false;
+}
+
+function shouldReportAgain(record: DiagnosticRecord, previousSeverity: DiagnosticSeverity): boolean {
+	if (!record.reported) return false;
+	if (record.severity !== previousSeverity) return true;
+	const reportedCount = record.reported_occurrence_count ?? record.occurrence_count;
+	const delta = record.occurrence_count - reportedCount;
+	const threshold = record.severity === "error" ? ERROR_REPORT_AGAIN_DELTA : WARNING_REPORT_AGAIN_DELTA;
+	return delta >= threshold;
 }
 
 function buildFingerprint(event: DiagnosticEvent): string {

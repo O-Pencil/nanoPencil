@@ -1,6 +1,6 @@
 /**
  * [WHO]: default export (Extension), nanomem extension for NanoPencil integration
- * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/nano-pencil
+ * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/nano-pencil, ./llm-json.js
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/extension.ts - thin adapter bridging NanoPencil events to host-agnostic NanoMemEngine
  */
@@ -16,6 +16,7 @@ import { NanoMemEngine } from "./engine.js";
 import { readDreamLockMtimeMs, rollbackDreamLock, stampDreamLock, tryAcquireDreamLock } from "./dream-lock.js";
 import { renderFullInsightsHtml } from "./full-insights-html.js";
 import { renderInsightsHtml } from "./insights-html.js";
+import { hasParseableLlmJson } from "./llm-json.js";
 import { extractTags } from "./scoring.js";
 import type { Episode, Meta, MemoryEntry, WorkEntry } from "./types.js";
 import { loadEntries, loadMeta } from "./store.js";
@@ -64,11 +65,7 @@ function inferDiagnosticSource(systemPrompt: string): MemoryDiagnosticSource {
 }
 
 function looksLikeJson(value: string): boolean {
-	const trimmed = value
-		.replace(/^```json\s*/i, "")
-		.replace(/^```\s*/i, "")
-		.trimStart();
-	return trimmed.startsWith("[") || trimmed.startsWith("{");
+	return hasParseableLlmJson(value);
 }
 
 function getProject(): string {

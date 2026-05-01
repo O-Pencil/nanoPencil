@@ -1,6 +1,6 @@
 /**
  * [WHO]: DeveloperPersona, HumanInsightsReport, generateHumanInsights
- * [FROM]: Depends on ./types.js, ./i18n.js
+ * [FROM]: Depends on ./llm-json.js, ./types.js
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/human-insights.ts - LLM-powered usage review generation with developer persona analysis
  */
@@ -16,6 +16,7 @@ import type {
 	RootCauseInsight,
 	WorkEntry,
 } from "./types.js";
+import { parseLlmJson } from "./llm-json.js";
 
 interface ExportAllResult {
 	knowledge: MemoryEntry[];
@@ -223,12 +224,11 @@ function parseHumanInsightsResponse(raw: string): {
 	rootCauses: RootCauseInsight[];
 } | null {
 	try {
-		const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-		const parsed = JSON.parse(cleaned) as {
+		const parsed = parseLlmJson<{
 			persona?: Record<string, unknown>;
 			insights?: Array<Record<string, unknown>>;
 			rootCauses?: Array<Record<string, unknown>>;
-		};
+		}>(raw);
 
 		if (typeof parsed !== "object" || parsed === null) {
 			return null;

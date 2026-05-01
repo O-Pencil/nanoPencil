@@ -134,6 +134,10 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 							return;
 						}
 
+						setTeamActivity(ctx, [
+							"Team: selecting agents for task...",
+							`Task: ${truncateForStatus(parsed.taskDescription)}`,
+						]);
 						api.sendMessage({
 							customType: TEAM_MESSAGE_TYPE,
 							content: `Selecting team for task...`,
@@ -146,7 +150,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 								teamRuntime,
 								parsed.taskDescription,
 								ctx.cwd,
-								(ctx as any).model,
+								ctx.model,
 								observer.onEvent,
 								ctx.completeSimple,
 							);
@@ -160,6 +164,14 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 						} catch (error: unknown) {
 							const message = error instanceof Error ? error.message : String(error);
 							ctx.ui.notify(`Failed to auto-select team: ${message}`, "error");
+							api.sendMessage({
+								customType: TEAM_MESSAGE_TYPE,
+								content: `Failed to auto-select team: ${message}`,
+								display: true,
+							});
+							updateTeamUi(ctx, teamRuntime);
+						} finally {
+							ctx.ui.setWorkingMessage();
 						}
 						break;
 					}
@@ -175,6 +187,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 							content: `Spawning ${parsed.role} teammate${parsed.name ? ` named "${parsed.name}"` : ""}...`,
 							display: true,
 						});
+						ctx.ui.setWorkingMessage(`Team: spawning ${parsed.role} teammate...`);
 
 						try {
 							const teammate = await teamRuntime.spawn({
@@ -203,6 +216,13 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 						} catch (error: unknown) {
 							const message = error instanceof Error ? error.message : String(error);
 							ctx.ui.notify(`Failed to spawn teammate: ${message}`, "error");
+							api.sendMessage({
+								customType: TEAM_MESSAGE_TYPE,
+								content: `Failed to spawn teammate: ${message}`,
+								display: true,
+							});
+						} finally {
+							ctx.ui.setWorkingMessage();
 						}
 						break;
 					}
@@ -213,13 +233,14 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 							return;
 						}
 
-						const model = (ctx as any).model;
+						const model = ctx.model;
 
 						api.sendMessage({
 							customType: TEAM_MESSAGE_TYPE,
 							content: `Sending message to ${parsed.target}...`,
 							display: true,
 						});
+						setTeamActivity(ctx, [`Team: sending task to ${parsed.target}...`]);
 
 						try {
 							const observer = createTeamObserver(api, ctx, teamRuntime);
@@ -245,10 +266,23 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 									`Teammate ${result.teammateName} failed: ${result.error ?? "Unknown error"}`,
 									"error",
 								);
+								api.sendMessage({
+									customType: TEAM_MESSAGE_TYPE,
+									content: `Teammate ${result.teammateName} failed: ${result.error ?? "Unknown error"}`,
+									display: true,
+								});
 							}
 						} catch (error: unknown) {
 							const message = error instanceof Error ? error.message : String(error);
 							ctx.ui.notify(`Failed to send message: ${message}`, "error");
+							api.sendMessage({
+								customType: TEAM_MESSAGE_TYPE,
+								content: `Failed to send message: ${message}`,
+								display: true,
+							});
+							updateTeamUi(ctx, teamRuntime);
+						} finally {
+							ctx.ui.setWorkingMessage();
 						}
 						break;
 					}
@@ -403,6 +437,10 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 							content: `Creating "${parsed.presetName}" preset...`,
 							display: true,
 						});
+						setTeamActivity(ctx, [
+							`Team: creating "${parsed.presetName}" preset...`,
+							`Task: ${truncateForStatus(parsed.taskDescription)}`,
+						]);
 
 						try {
 							const observer = createTeamObserver(api, ctx, teamRuntime);
@@ -411,7 +449,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 								parsed.presetName,
 								parsed.taskDescription,
 								ctx.cwd,
-								(ctx as any).model,
+								ctx.model,
 								observer.onEvent,
 							);
 							observer.flush();
@@ -424,6 +462,14 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 						} catch (error: unknown) {
 							const message = error instanceof Error ? error.message : String(error);
 							ctx.ui.notify(`Failed to execute preset: ${message}`, "error");
+							api.sendMessage({
+								customType: TEAM_MESSAGE_TYPE,
+								content: `Failed to execute preset: ${message}`,
+								display: true,
+							});
+							updateTeamUi(ctx, teamRuntime);
+						} finally {
+							ctx.ui.setWorkingMessage();
 						}
 						break;
 					}
@@ -524,7 +570,7 @@ function formatTeammateList(teammates: PersistedTeammate[]): string[] {
 	];
 
 	for (const t of teammates) {
-		const statusIcon = getStatusIcon(t.status);
+		const statusIcon = getStatusIconAscii(t.status);
 		const harness = t.harness?.enabled ? ` | harness:${t.harness.phase} ${t.harness.passedFeatures}/${t.harness.totalFeatures}` : "";
 		lines.push(`${statusIcon} ${t.identity.name} (${t.identity.role}) - ${t.mode} mode${harness}`);
 	}
@@ -591,43 +637,47 @@ function updateTeamUi(
 	}
 }
 
+function setTeamActivity(
+	ctx: {
+		ui: {
+			setStatus(key: string, text: string | undefined): void;
+			setWidget(key: string, content: string[] | undefined): void;
+			setWorkingMessage(message?: string): void;
+		};
+	},
+	lines: string[],
+): void {
+	const [firstLine] = lines;
+	ctx.ui.setStatus("team", firstLine ?? "Team: working...");
+	ctx.ui.setWidget("team-dashboard", ["Team Activity", "", ...lines]);
+	ctx.ui.setWorkingMessage(firstLine ?? "Team: working...");
+}
+
 function createTeamObserver(
 	api: ExtensionAPI,
-	ctx: { ui: { setStatus(key: string, text: string | undefined): void; setWidget(key: string, content: string[] | undefined): void } },
+	ctx: {
+		ui: {
+			setStatus(key: string, text: string | undefined): void;
+			setWidget(key: string, content: string[] | undefined): void;
+			setWorkingMessage(message?: string): void;
+		};
+	},
 	teamRuntime: TeamRuntime,
 ): { onEvent(event: TeamRuntimeEvent): void; flush(): void } {
 	let lastUiUpdate = 0;
-	let lastMessageAt = 0;
-	let lastPreview = "";
-	let lastTeammateName = "";
-
-	const flushPreview = () => {
-		const preview = singleLine(lastPreview).trim();
-		if (!preview || !lastTeammateName) return;
-		api.sendMessage({
-			customType: TEAM_MESSAGE_TYPE,
-			content: [`Streaming from ${lastTeammateName}:`, "", preview].join("\n"),
-			display: true,
-		});
-		lastMessageAt = Date.now();
-	};
 
 	return {
 		onEvent(event) {
 			const now = Date.now();
 			if (event.type === "teammate_live") {
-				lastTeammateName = event.teammate.identity.name;
-				if (event.event.type === "message_update" || event.event.type === "message_end") {
-					lastPreview = event.event.text.slice(-1200);
-					if (now - lastMessageAt > 1500) {
-						flushPreview();
-					}
-				} else if (event.event.type === "tool_start") {
-					lastPreview = `Running tool: ${event.event.toolName}`;
-					if (now - lastMessageAt > 1500) {
-						flushPreview();
-					}
-				}
+				ctx.ui.setWorkingMessage(formatLiveWorkingMessage(event));
+			} else if (event.type === "teammate_status") {
+				api.sendMessage({
+					customType: TEAM_MESSAGE_TYPE,
+					content: event.event,
+					display: true,
+				});
+				ctx.ui.setWorkingMessage(`Team: ${event.event}`);
 			} else {
 				api.sendMessage({
 					customType: TEAM_MESSAGE_TYPE,
@@ -636,20 +686,60 @@ function createTeamObserver(
 				});
 			}
 
-			if (now - lastUiUpdate > 250) {
+			if (event.type === "teammate_live" || now - lastUiUpdate > 80) {
 				updateTeamUi(ctx, teamRuntime);
 				lastUiUpdate = now;
 			}
 		},
 		flush() {
-			flushPreview();
 			updateTeamUi(ctx, teamRuntime);
 		},
 	};
 }
 
+function formatLiveWorkingMessage(event: Extract<TeamRuntimeEvent, { type: "teammate_live" }>): string {
+	const name = event.teammate.identity.name;
+	const live = event.teammate.live;
+	if (event.event.type === "tool_start") {
+		return `Team: ${name} running ${event.event.toolName}...`;
+	}
+	if (event.event.type === "tool_update" || event.event.type === "tool_end") {
+		return `Team: ${name} using ${event.event.toolName}...`;
+	}
+	if (live?.phase === "thinking") {
+		return `Team: ${name} streaming...`;
+	}
+	if (live?.phase === "finishing") {
+		return `Team: ${name} finishing...`;
+	}
+	return `Team: ${name} ${live?.phase ?? "working"}...`;
+}
+
 function singleLine(value: string): string {
 	return value.replace(/\s+/g, " ").trim();
+}
+
+function truncateForStatus(value: string, max = 100): string {
+	const single = singleLine(value);
+	if (single.length <= max) return single;
+	return `${single.slice(0, Math.max(0, max - 3))}...`;
+}
+
+function getStatusIconAscii(status: PersistedTeammate["status"]): string {
+	switch (status) {
+		case "idle":
+			return "o";
+		case "running":
+			return "*";
+		case "stopped":
+			return "!";
+		case "error":
+			return "x";
+		case "terminated":
+			return "-";
+		default:
+			return "?";
+	}
 }
 
 function getStatusIcon(status: PersistedTeammate["status"]): string {

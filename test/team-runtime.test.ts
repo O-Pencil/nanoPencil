@@ -181,7 +181,7 @@ test("team-runtime: forwards sub-agent realtime events and clears live state aft
 		});
 
 		assert.equal(result.success, true);
-		assert.deepEqual(events, ["agent_start", "message_update", "tool_start"]);
+		assert.deepEqual(events, ["teammate_status", "agent_start", "message_update", "tool_start", "teammate_status"]);
 		assert.equal(runtime.getTeammate("scout")?.live, undefined);
 	} finally {
 		await runtime.terminate("scout").catch(() => {});

@@ -13,7 +13,7 @@ export function renderTeamDashboard(teammates: PersistedTeammate[], width = 80):
 	const outerWidth = Math.max(60, Math.min(width, 120));
 	const cardWidth = outerWidth >= 110 ? Math.floor((outerWidth - 5) / 2) : outerWidth - 2;
 	const cards = teammates.map((teammate) => renderTeammateCard(teammate, cardWidth));
-	const lines = [`╭─ Team Dashboard ${"─".repeat(Math.max(0, outerWidth - 19))}╮`];
+	const lines = [`+ Team Dashboard ${"-".repeat(Math.max(0, outerWidth - 18))}+`];
 
 	if (outerWidth >= 110) {
 		for (let i = 0; i < cards.length; i += 2) {
@@ -23,18 +23,18 @@ export function renderTeamDashboard(teammates: PersistedTeammate[], width = 80):
 			for (let row = 0; row < height; row++) {
 				const leftLine = left[row] ?? " ".repeat(cardWidth);
 				const rightLine = right[row] ?? " ".repeat(cardWidth);
-				lines.push(`│ ${leftLine} ${rightLine} │`);
+				lines.push(`| ${leftLine} ${rightLine} |`);
 			}
 		}
 	} else {
 		for (const card of cards) {
 			for (const line of card) {
-				lines.push(`│ ${line} │`);
+				lines.push(`| ${line} |`);
 			}
 		}
 	}
 
-	lines.push(`╰${"─".repeat(Math.max(0, outerWidth - 2))}╯`);
+	lines.push(`+${"-".repeat(Math.max(0, outerWidth - 2))}+`);
 	return lines;
 }
 
@@ -63,15 +63,27 @@ function renderTeammateCard(teammate: PersistedTeammate, width: number): string[
 	const inner = Math.max(20, width - 2);
 
 	return [
-		`┌${pad(` ${truncate(title, inner - 2)} `, inner, "─")}┐`,
-		`│${pad(`${statusIcon(teammate.status)} ${teammate.status}  mode:${teammate.mode}  phase:${phase}`, inner)}│`,
-		`│${pad(`live: ${live ? `${live.phase}${live.toolName ? `:${live.toolName}` : ""}` : "idle"}`, inner)}│`,
-		`│${pad(renderPsycheBar(teammate.psyche), inner)}│`,
-		`│${pad(`feature: [${progress}] ${truncate(feature, Math.max(8, inner - 17))}`, inner)}│`,
-		`│${pad(`progress: ${renderProgressBar(percent, Math.max(8, inner - 15))}`, inner)}│`,
-		...(live?.preview ? [`│${pad(`stream: ${truncate(singleLine(live.preview), Math.max(8, inner - 8))}`, inner)}│`] : []),
-		`└${"─".repeat(inner)}┘`,
+		`+${pad(` ${truncate(title, inner - 2)} `, inner, "-")}+`,
+		`|${pad(`${statusIcon(teammate.status)} ${teammate.status}  mode:${teammate.mode}  phase:${phase}`, inner)}|`,
+		`|${pad(`live: ${live ? `${live.phase}${live.toolName ? `:${live.toolName}` : ""}` : "idle"}`, inner)}|`,
+		`|${pad(renderPsycheBar(teammate.psyche), inner)}|`,
+		`|${pad(`feature: [${progress}] ${truncate(feature, Math.max(8, inner - 17))}`, inner)}|`,
+		`|${pad(`progress: ${renderProgressBar(percent, Math.max(8, inner - 15))}`, inner)}|`,
+		...(live?.preview ? renderPreviewLines(live.preview, inner) : []),
+		`+${"-".repeat(inner)}+`,
 	];
+}
+
+function renderPreviewLines(preview: string, width: number): string[] {
+	const label = "stream: ";
+	const textWidth = Math.max(12, width - label.length);
+	const wrapped = wrapText(tailText(preview, textWidth * 4), textWidth).slice(-4);
+	if (wrapped.length === 0) return [];
+
+	return wrapped.map((line, index) => {
+		const prefix = index === 0 ? label : " ".repeat(label.length);
+		return `|${pad(`${prefix}${line}`, width)}|`;
+	});
 }
 
 function renderPsycheBar(weights: PsycheWeights | undefined): string {
@@ -93,25 +105,47 @@ function renderProgressBar(percent: number, width: number): string {
 function statusIcon(status: PersistedTeammate["status"]): string {
 	switch (status) {
 		case "idle":
-			return "○";
+			return "o";
 		case "running":
-			return "●";
+			return "*";
 		case "stopped":
-			return "◐";
+			return "!";
 		case "error":
 			return "x";
 		case "terminated":
-			return "⊗";
+			return "-";
 	}
 }
 
 function truncate(value: string, max: number): string {
 	if (value.length <= max) return value;
-	return `${value.slice(0, Math.max(0, max - 1))}…`;
+	return `${value.slice(0, Math.max(0, max - 3))}...`;
 }
 
 function singleLine(value: string): string {
 	return value.replace(/\s+/g, " ").trim();
+}
+
+function tailText(value: string, max: number): string {
+	if (value.length <= max) return value;
+	return value.slice(value.length - max);
+}
+
+function wrapText(value: string, width: number): string[] {
+	const normalized = singleLine(value);
+	if (!normalized) return [];
+
+	const lines: string[] = [];
+	let remaining = normalized;
+	while (remaining.length > width) {
+		const hardSlice = remaining.slice(0, width);
+		const breakAt = Math.max(hardSlice.lastIndexOf(" "), hardSlice.lastIndexOf("\t"));
+		const cut = breakAt > Math.floor(width * 0.5) ? breakAt : width;
+		lines.push(remaining.slice(0, cut).trim());
+		remaining = remaining.slice(cut).trimStart();
+	}
+	if (remaining) lines.push(remaining);
+	return lines;
 }
 
 function pad(value: string, width: number, fill = " "): string {

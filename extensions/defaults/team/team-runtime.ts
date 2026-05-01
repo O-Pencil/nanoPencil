@@ -66,6 +66,7 @@ export interface TeamSendOptions {
 
 export type TeamRuntimeEvent =
 	| { type: "teammate_live"; teammate: PersistedTeammate; event: SubAgentEvent }
+	| { type: "teammate_status"; teammate: PersistedTeammate; event: string }
 	| { type: "harness_event"; teammate: PersistedTeammate; event: string };
 
 /**
@@ -268,6 +269,11 @@ export class TeamRuntime {
 		teammate.state.status = "running";
 		teammate.state.lastActiveAt = startTime;
 		await this.store.save(teammate.state);
+		options.onEvent?.({
+			type: "teammate_status",
+			teammate: teammate.state,
+			event: `Started ${teammate.state.identity.name} (${teammate.state.identity.role}) in ${teammate.state.mode} mode.`,
+		});
 
 		this.mailbox.post({
 			teammateId: teammate.state.identity.id,
@@ -345,6 +351,13 @@ export class TeamRuntime {
 			teammate.state.lastActiveAt = Date.now();
 			teammate.state.live = undefined;
 			await this.store.save(teammate.state);
+			options.onEvent?.({
+				type: "teammate_status",
+				teammate: teammate.state,
+				event: result.success
+					? `Finished ${teammate.state.identity.name}.`
+					: `Failed ${teammate.state.identity.name}: ${result.error ?? "Unknown error"}`,
+			});
 
 			this.mailbox.post({
 				teammateId: teammate.state.identity.id,
@@ -391,6 +404,11 @@ export class TeamRuntime {
 			teammate.state.lastActiveAt = Date.now();
 			teammate.state.live = undefined;
 			await this.store.save(teammate.state);
+			options.onEvent?.({
+				type: "teammate_status",
+				teammate: teammate.state,
+				event: `Failed ${teammate.state.identity.name}: ${errorMsg}`,
+			});
 
 			this.mailbox.post({
 				teammateId: teammate.state.identity.id,

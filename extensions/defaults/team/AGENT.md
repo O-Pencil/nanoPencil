@@ -3,11 +3,15 @@
 > P2 | Parent: ../AGENT.md
 
 Member List
-- index.ts: AgentTeam extension entry, /team:/team:spawn/:send/:status/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer
-- team-types.ts: TeammateRole/TeammateMode/TeammateStatus/TeammateIdentity/TeammateMessage/PersistedTeammate/TeamSpawnSpec/TeamSendResult types
+- index.ts: AgentTeam extension entry, /team <task>, /team:spawn/:preset/:send/:status/:progress/:psyche/:dashboard/:stop/:terminate/:approve/:mode commands, TEAM_MESSAGE_TYPE renderer, realtime status/dashboard updates
+- team-types.ts: TeammateRole/TeammateMode/TeammateStatus/HarnessState/PsycheWeights/TeammateLiveState/TeammateIdentity/TeammateMessage/PersistedTeammate/TeamSpawnSpec/TeamSendResult types
 - team-state-store.ts: TeamStateStore class - durable teammate persistence via JSON files in <agentDir>/teams/
 - team-parser.ts: Team command parser - parseTeamCommand/buildTeamHelp for /team:* subcommands
-- team-runtime.ts: TeamRuntime class - teammate registry, lifecycle, mailbox + permission + transcript wiring; uses SubAgentRuntime for agent spawning
+- team-runtime.ts: TeamRuntime class - teammate registry, lifecycle, realtime status/live events, mailbox + permission + transcript wiring; uses SubAgentRuntime for agent spawning
+- team-harness.ts: Harness protocol helpers - context files, phase instructions, checkpoint/revert, feature validation
+- team-presets.ts: Preset definitions and executor - solo/duo/squad spawning, model-assisted auto team selection, heuristic fallback
+- team-dashboard.ts: Text dashboard/status rendering - teammate cards, live stream preview, progress bars, footer summary
+- team-psyche.ts: Psyche prompt layer - role/phase weighted Id/Ego/Superego prompt construction
 - team-permissions.ts: PermissionStore - pending permission request queue, approve/deny, path allowlists (B.4)
 - team-mailbox.ts: TeamMailbox - typed in-memory append-only message log for leader↔teammate (B.3)
 - team-transcript.ts: TeamTranscriptWriter - per-teammate JSONL transcripts under <storageDir>/transcripts/ (B.7)

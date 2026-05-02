@@ -25,6 +25,7 @@
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
 import type { ExtensionAPI } from "../../../core/extensions/types.js";
+import type { ThemeColor } from "../../../modes/interactive/theme/theme.js";
 import { TeamRuntime, type TeamRuntimeEvent } from "./team-runtime.js";
 import { buildTeamHelp, parseTeamCommand } from "./team-parser.js";
 import type { PersistedTeammate, TeamTask, TeamUtterance } from "./team-types.js";
@@ -85,12 +86,11 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 		const details = message.details as TeamMessageDetails | undefined;
 		if (details?.variant === "utterance") {
 			const { utterance } = details;
-			const prefix = theme.fg("customMessageLabel", `\x1b[1m${utterance.speakerLabel}:\x1b[22m `);
-			const box = new Box(1, 1, (t) => theme.bg("customMessageBg", t));
-			box.addChild(new Text(prefix + theme.fg("customMessageText", utterance.text), 0, 0));
+			const speaker = theme.fg(getTeamSpeakerColor(utterance.role), `\x1b[1m${utterance.speakerLabel}:\x1b[22m`);
+			const text = theme.fg(getTeamUtteranceColor(utterance.kind), utterance.text);
 			const container = new Container();
 			container.addChild(new Spacer(1));
-			container.addChild(box);
+			container.addChild(new Text(`${speaker} ${text}`, 1, 0));
 			return container;
 		}
 		const text =
@@ -180,7 +180,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 								model: ctx.model,
 								onRuntimeEvent: observer.onEvent,
 								completeSimple: ctx.completeSimple,
-								emitUtterance: (utterance) => emitTeamUtterance(api, utterance),
+								emitUtterance: (utterance, options) => emitTeamUtterance(api, utterance, options),
 							});
 							observer.flush();
 							updateTeamUi(ctx, teamRuntime);
@@ -822,6 +822,43 @@ function emitTeamUtterance(
 
 function formatSpeakerName(teammate: PersistedTeammate): string {
 	return teammate.identity.name;
+}
+
+function getTeamSpeakerColor(role: TeamUtterance["role"]): ThemeColor {
+	switch (role) {
+		case "leader":
+			return "accent";
+		case "pm":
+			return "warning";
+		case "architect":
+			return "mdHeading";
+		case "developer":
+		case "implementer":
+			return "success";
+		case "designer":
+			return "mdLink";
+		case "data-analyst":
+			return "syntaxNumber";
+		case "reviewer":
+			return "mdQuote";
+		case "researcher":
+			return "syntaxFunction";
+		default:
+			return "customMessageLabel";
+	}
+}
+
+function getTeamUtteranceColor(kind: TeamUtterance["kind"]): ThemeColor {
+	switch (kind) {
+		case "thought":
+			return "thinkingText";
+		case "handoff":
+			return "mdLink";
+		case "work":
+		case "result":
+		default:
+			return "text";
+	}
 }
 
 function updateTeamUi(

@@ -175,11 +175,7 @@ export async function runLeaderOrchestration(
 	let turns = 0;
 	const maxTurns = Math.max(6, teammates.length * 4);
 
-	while (queuedAssignments.length > 0 && turns < maxTurns) {
-		turns++;
-		const assignment = queuedAssignments.shift();
-		if (!assignment) break;
-
+	const runAssignment = async (assignment: PendingAssignment) => {
 		const subtask = assignment.subtaskId ? leaderPlan.subtasks.find((item) => item.id === assignment.subtaskId) : undefined;
 		if (subtask) subtask.status = "in_progress";
 
@@ -226,48 +222,65 @@ export async function runLeaderOrchestration(
 			subtask.status = sendResult.success ? "done" : "blocked";
 		}
 
-		for (const mention of mentions) {
-			const target = teammateById.get(mention.targetId);
-			if (!target) continue;
-			handoffs.push({
-				id: crypto.randomUUID(),
-				from: assignment.target.identity.name,
-				to: mention.targetName,
-				task: mention.task,
-				status: "pending",
-				timestamp: Date.now(),
-			});
-			enqueue({
-				target,
-				task: mention.task,
-				title: `Follow-up from ${assignment.target.identity.name}`,
-				kind: "handoff",
-				sourceLabel: assignment.target.identity.name,
-				sourceExcerpt: replyText,
-			});
-		}
+		return {
+			assignment,
+			subtask,
+			sendResult,
+			replyText,
+			mentions,
+		};
+	};
 
-		for (const dependent of leaderPlan.subtasks.filter(
-			(candidate) =>
-				candidate.status === "pending" &&
-				candidate.dependsOn.length > 0 &&
-				candidate.dependsOn.every((dependencyId) => leaderPlan.subtasks.find((item) => item.id === dependencyId)?.status === "done"),
-		)) {
-			const target = teammateById.get(dependent.ownerId);
-			if (!target) continue;
-			enqueue({
-				target,
-				task: dependent.task,
-				title: dependent.title,
-				kind: "work",
-				subtaskId: dependent.id,
-			});
+	while (queuedAssignments.length > 0 && turns < maxTurns) {
+		const batchSize = Math.min(queuedAssignments.length, maxTurns - turns);
+		const batch = queuedAssignments.splice(0, batchSize);
+		turns += batch.length;
+		const results = await Promise.all(batch.map((assignment) => runAssignment(assignment)));
+
+		for (const { assignment, replyText, mentions } of results) {
+			for (const mention of mentions) {
+				const target = teammateById.get(mention.targetId);
+				if (!target) continue;
+				handoffs.push({
+					id: crypto.randomUUID(),
+					from: assignment.target.identity.name,
+					to: mention.targetName,
+					task: mention.task,
+					status: "pending",
+					timestamp: Date.now(),
+				});
+				enqueue({
+					target,
+					task: mention.task,
+					title: `Follow-up from ${assignment.target.identity.name}`,
+					kind: "handoff",
+					sourceLabel: assignment.target.identity.name,
+					sourceExcerpt: replyText,
+				});
+			}
+
+			for (const dependent of leaderPlan.subtasks.filter(
+				(candidate) =>
+					candidate.status === "pending" &&
+					candidate.dependsOn.length > 0 &&
+					candidate.dependsOn.every((dependencyId) => leaderPlan.subtasks.find((item) => item.id === dependencyId)?.status === "done"),
+			)) {
+				const target = teammateById.get(dependent.ownerId);
+				if (!target) continue;
+				enqueue({
+					target,
+					task: dependent.task,
+					title: dependent.title,
+					kind: "work",
+					subtaskId: dependent.id,
+				});
+			}
 		}
 	}
 
 	for (const handoff of handoffs) {
 		handoff.status =
-			leaderPlan.subtasks.some((subtask) => subtask.ownerLabel === handoff.to && subtask.status === "blocked") ? "blocked" : "done";
+			leaderPlan.subtasks.some((subtask) => subtask.ownerName === handoff.to && subtask.status === "blocked") ? "blocked" : "done";
 	}
 
 	leaderPlan.phase = "summarize";

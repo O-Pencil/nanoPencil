@@ -99,16 +99,7 @@ export async function executePreset(
 	const teammates: PersistedTeammate[] = [];
 
 	for (const teammateSpec of preset.teammates) {
-		teammates.push(
-			await runtime.spawn({
-				role: teammateSpec.role,
-				name: teammateSpec.name,
-				mode: teammateSpec.mode,
-				baseCwd,
-				harnessEnabled: teammateSpec.harnessEnabled,
-				psycheOverrides: teammateSpec.psycheOverrides,
-			}),
-		);
+		teammates.push(await getOrSpawnPresetTeammate(runtime, teammateSpec, baseCwd));
 	}
 
 	const result: PresetResult = { preset, teammates };
@@ -157,9 +148,37 @@ export async function selectAutoTeamPlan(
 ): Promise<AutoTeamPlan> {
 	if (completeSimple) {
 		const modelPlan = await selectAutoTeamPlanWithModel(taskDescription, completeSimple);
-		if (modelPlan) return modelPlan;
+		if (modelPlan) {
+			const heuristicPlan = selectAutoTeamPlanHeuristic(taskDescription);
+			if (heuristicPlan.presetName === "squad" && modelPlan.presetName !== "squad" && hasWebsiteOrDesignDeliverySignal(taskDescription)) {
+				return {
+					...heuristicPlan,
+					rationale: "Website, clone, or design delivery tasks need the full PM, architecture, development, design, and validation squad.",
+				};
+			}
+			return modelPlan;
+		}
 	}
 	return selectAutoTeamPlanHeuristic(taskDescription);
+}
+
+async function getOrSpawnPresetTeammate(
+	runtime: TeamRuntime,
+	teammateSpec: PresetTeammateSpec,
+	baseCwd: string,
+): Promise<PersistedTeammate> {
+	const existing = teammateSpec.name ? runtime.getTeammate(teammateSpec.name) : undefined;
+	if (existing && existing.identity.role === teammateSpec.role) {
+		return existing;
+	}
+	return runtime.spawn({
+		role: teammateSpec.role,
+		name: teammateSpec.name,
+		mode: teammateSpec.mode,
+		baseCwd,
+		harnessEnabled: teammateSpec.harnessEnabled,
+		psycheOverrides: teammateSpec.psycheOverrides,
+	});
 }
 
 export function formatPresetResult(result: PresetResult): string[] {
@@ -204,6 +223,7 @@ async function selectAutoTeamPlanWithModel(
 				"solo: focused implementation or small/medium bugfix.",
 				"duo: implementation needs architecture reading, API mapping, or light decomposition before coding.",
 				"squad: tasks that need explicit handoff, product framing, design input, data validation, review, tests, or broader coordination.",
+				"squad: also use for websites, landing pages, website clones, browser research, design systems, frontend polish, and release-readiness checks.",
 			].join("\n"),
 			taskDescription,
 		);
@@ -240,11 +260,28 @@ function selectAutoTeamPlanHeuristic(taskDescription: string): AutoTeamPlan {
 		"end-to-end",
 		"e2e",
 		"large",
-		"完整",
-		"重构",
-		"架构",
-		"迁移",
-		"大型",
+		"\u5b8c\u6574",
+		"\u91cd\u6784",
+		"\u67b6\u6784",
+		"\u8fc1\u79fb",
+		"\u5927\u578b",
+	];
+	const websiteOrDesignSignals = [
+		"website",
+		"official site",
+		"site",
+		"homepage",
+		"landing",
+		"front-end",
+		"frontend",
+		"web page",
+		"clone",
+		"rebuild",
+		"design system",
+		"visual",
+		"ux",
+		"ui",
+		"browser",
 	];
 	const verifySignals = [
 		"test",
@@ -256,15 +293,20 @@ function selectAutoTeamPlanHeuristic(taskDescription: string): AutoTeamPlan {
 		"payment",
 		"release",
 		"bug",
-		"验证",
-		"测试",
-		"安全",
-		"登录",
-		"支付",
-		"发布",
+		"\u9a8c\u8bc1",
+		"\u6d4b\u8bd5",
+		"\u5b89\u5168",
+		"\u767b\u5f55",
+		"\u652f\u4ed8",
+		"\u53d1\u5e03",
 	];
 
-	if (largeSignals.some((signal) => text.includes(signal)) || taskDescription.length > 240) {
+	if (
+		largeSignals.some((signal) => text.includes(signal)) ||
+		websiteOrDesignSignals.some((signal) => text.includes(signal)) ||
+		hasWebsiteOrDesignDeliverySignal(taskDescription) ||
+		taskDescription.length > 240
+	) {
 		return {
 			presetName: "squad",
 			rationale: "Task looks broad or architectural, so PM, architect, developer, designer, and data analyst are safer.",
@@ -290,6 +332,12 @@ function selectAutoTeamPlanHeuristic(taskDescription: string): AutoTeamPlan {
 		rationale: "Task appears focused enough for one harnessed developer.",
 		startTargetRole: "developer",
 	};
+}
+
+function hasWebsiteOrDesignDeliverySignal(taskDescription: string): boolean {
+	return /(?:\u5b98\u7f51|\u9875\u9762|\u524d\u7aef|\u8bbe\u8ba1|\u590d\u523b|\u514b\u9686|\u89c6\u89c9|\u4ea4\u4e92)/.test(
+		taskDescription,
+	);
 }
 
 function extractJsonObject(value: string): string {

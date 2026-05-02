@@ -17,6 +17,7 @@
     "dist/**/*.d.ts",
     "dist/**/*.json",
     "dist/**/*.md",
+    "dist/**/*.py",
     "dist/**/*.html",
     "dist/**/*.css",
     "docs",

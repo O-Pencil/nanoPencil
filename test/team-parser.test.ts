@@ -118,6 +118,8 @@ test("team-presets: auto team selector falls back to heuristics", async () => {
 	assert.equal((await selectAutoTeamPlan("fix typo in help text")).presetName, "solo");
 	assert.equal((await selectAutoTeamPlan("implement auth with tests")).presetName, "squad");
 	assert.equal((await selectAutoTeamPlan("large architecture migration across modules")).presetName, "squad");
+	assert.equal((await selectAutoTeamPlan("analyze the Claude official website and build a frontend page")).presetName, "squad");
+	assert.equal((await selectAutoTeamPlan("\u5206\u6790Claude\u5b98\u7f51\u5e76\u5b9e\u73b0\u524d\u7aef\u9875\u9762")).presetName, "squad");
 	assert.equal((await selectAutoTeamPlan("analyze the API before implementation")).presetName, "duo");
 });
 

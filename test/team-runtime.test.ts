@@ -9,6 +9,7 @@ import type { SubAgentHandle, SubAgentResult } from "../core/sub-agent/index.js"
 import type { WorkspacePath } from "../core/workspace/index.js";
 import { TeamRuntime } from "../extensions/defaults/team/team-runtime.js";
 import { runLeaderOrchestration } from "../extensions/defaults/team/team-orchestrator.js";
+import { executePreset } from "../extensions/defaults/team/team-presets.js";
 
 function createTempDir(prefix: string): string {
 	return mkdtempSync(join(tmpdir(), prefix));
@@ -303,6 +304,37 @@ test("team-runtime: auto-generated names remain unique after reload", async () =
 	}
 });
 
+test("team-presets: reuses named preset teammates instead of generating transient role names", async () => {
+	const storageDir = createTempDir("nanopencil-team-preset-reuse-");
+	const workDir = createTempDir("nanopencil-team-preset-work-");
+	const runtime = new TeamRuntime({ storageDir });
+	(runtime as any).worktreeManager = {
+		createGitWorktree: async (): Promise<WorkspacePath> => ({
+			path: workDir,
+			type: "temp",
+		}),
+		dispose: async (): Promise<void> => {},
+	};
+
+	try {
+		await executePreset(runtime, "duo", "map the codebase before implementation", process.cwd(), undefined, undefined, false);
+		await executePreset(runtime, "duo", "map the codebase before implementation", process.cwd(), undefined, undefined, false);
+
+		const teammates = runtime.getAllTeammates();
+		assert.deepEqual(
+			teammates.map((teammate) => teammate.identity.name),
+			["Ada", "Theo"],
+		);
+		assert.equal(teammates.some((teammate) => /architect-\d+|developer-\d+/.test(teammate.identity.name)), false);
+	} finally {
+		await runtime.terminate("Ada").catch(() => {});
+		await runtime.terminate("Theo").catch(() => {});
+		await runtime.dispose();
+		cleanupDir(workDir);
+		cleanupDir(storageDir);
+	}
+});
+
 test("team-runtime: persists shared tasks and teammate mailbox across reload", async () => {
 	const storageDir = createTempDir("nanopencil-team-shared-");
 	const firstRuntime = new TeamRuntime({ storageDir });
@@ -462,6 +494,8 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 	const runtime = new TeamRuntime({ storageDir });
 	const utterances: string[] = [];
 	const startedAgents: string[] = [];
+	let activeAgents = 0;
+	let maxActiveAgents = 0;
 	(runtime as any).worktreeManager = {
 		createGitWorktree: async (): Promise<WorkspacePath> => ({
 			path: workDir,
@@ -477,16 +511,17 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 				id: `website-${name}`,
 				status: "running",
 				async result(): Promise<SubAgentResult> {
+					activeAgents++;
+					maxActiveAgents = Math.max(maxActiveAgents, activeAgents);
 					spec.onEvent?.({
 						type: "message_update",
 						subAgentId: `website-${name}`,
 						timestamp: Date.now(),
 						text: `${name} is working on the nanoPencil website delivery.`,
 					});
-					return {
-						success: true,
-						response: `${name} completed the assigned website step for the nanoPencil homepage.`,
-					};
+					await new Promise((resolve) => setTimeout(resolve, 10));
+					activeAgents--;
+					return { success: true, response: `${name} completed the assigned website step for the nanoPencil homepage.` };
 				},
 				async abort(): Promise<void> {},
 				async terminate(): Promise<void> {},
@@ -548,7 +583,8 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 
 		assert.equal(result.plan.completionState, "completed");
 		assert.deepEqual(result.plan.subtasks.map((subtask) => subtask.ownerName), ["Mason", "Ada", "Theo", "Iris", "Quinn"]);
-		assert.deepEqual(startedAgents, ["Mason", "Ada", "Theo", "Iris", "Quinn"]);
+		assert.deepEqual([...new Set(startedAgents)].sort(), ["Ada", "Iris", "Mason", "Quinn", "Theo"]);
+		assert.equal(maxActiveAgents > 1, true);
 		assert.match(utterances.join("\n"), /pencil: @Mason/);
 		assert.match(utterances.join("\n"), /Theo: Theo completed the assigned website step/);
 		assert.match(utterances.join("\n"), /Iris: Iris completed the assigned website step/);

@@ -199,6 +199,20 @@ function isExpandable(obj: unknown): obj is Expandable {
   );
 }
 
+function spawnNpm(args: string[]) {
+  if (process.platform === "win32") {
+    return spawn("cmd.exe", ["/d", "/s", "/c", "npm", ...args], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+    });
+  }
+
+  return spawn("npm", args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+  });
+}
+
 type CompactionQueuedMessage = {
   text: string;
   mode: "steer" | "followUp";
@@ -7419,14 +7433,8 @@ export class InteractiveMode {
     );
     this.ui.requestRender();
 
-    const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-
     // Step 1: Uninstall
-    const uninstall = spawn(npmCmd, ["uninstall", "-g", PACKAGE_NAME], {
-      stdio: ["ignore", "pipe", "pipe"],
-        shell: true,
-        env: process.env,
-    });
+    const uninstall = spawnNpm(["uninstall", "-g", PACKAGE_NAME]);
 
     uninstall.on("close", (code) => {
       if (code !== 0) {
@@ -7442,11 +7450,7 @@ export class InteractiveMode {
       );
       this.ui.requestRender();
 
-      const cacheClean = spawn(npmCmd, ["cache", "clean", "--force"], {
-        stdio: ["ignore", "pipe", "pipe"],
-        shell: true,
-        env: process.env,
-      });
+      const cacheClean = spawnNpm(["cache", "clean", "--force"]);
 
       cacheClean.on("close", () => {
         // Step 3: Reinstall
@@ -7455,11 +7459,7 @@ export class InteractiveMode {
         );
         this.ui.requestRender();
 
-        const install = spawn(npmCmd, ["install", "-g", "--force", `${PACKAGE_NAME}@latest`], {
-          stdio: ["ignore", "pipe", "pipe"],
-        shell: true,
-        env: process.env,
-        });
+        const install = spawnNpm(["install", "-g", "--force", `${PACKAGE_NAME}@latest`]);
 
         install.on("close", (installCode) => {
           if (installCode === 0) {
@@ -7524,12 +7524,7 @@ export class InteractiveMode {
     this.ui.requestRender();
 
     return new Promise((resolve) => {
-      const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-      const child = spawn(npmCmd, ["install", "-g", "--force", `${PACKAGE_NAME}@latest`], {
-        stdio: ["ignore", "pipe", "pipe"],
-        shell: true,
-        env: process.env,
-      });
+      const child = spawnNpm(["install", "-g", "--force", `${PACKAGE_NAME}@latest`]);
 
       let errorOutput = "";
 

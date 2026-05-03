@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.14] - 2026-05-03
+
+### Fixed
+- fix(workspace): unify browser/link-world workspace to global ~/.nanopencil/
+- fix(diagnostics): include package version in issue reports
+- fix(update): avoid shell args warning on windows
+- fix(team): improve collaboration stream and browser packaging
+
+
 ## [1.13.13] - 2026-05-02
 
 ### Added

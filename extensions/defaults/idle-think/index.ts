@@ -8,8 +8,8 @@
  * project and discover non-obvious patterns, architecture decisions, and knowledge worth
  * remembering. Insights are persisted to nanomem and injected into subsequent conversations.
  *
- * Default: ON. The agent thinks when idle — that's the point.
- * Disable via settings.idleThink.enabled = false if needed.
+ * Default: OFF. Enable via settings.idleThink.enabled = true.
+ * When enabled, the agent thinks when idle — exploring code and building knowledge.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "../../../core/extensions/types.js";
@@ -27,9 +27,9 @@ import {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const IDLE_POLL_MS = 60_000;
-const DEFAULT_IDLE_MINUTES = 10;
-const DEFAULT_DAILY_BUDGET = 999; // no practical limit
-const DEFAULT_MAX_DURATION_MINUTES = 30; // let it think deeply
+const DEFAULT_IDLE_MINUTES = 15; // 15min idle before first exploration (was 10)
+const DEFAULT_DAILY_BUDGET = 10; // cap daily explorations to control HTTP cost
+const DEFAULT_MAX_DURATION_MINUTES = 10; // shorter explorations, more focused (was 30)
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -124,8 +124,8 @@ async function maybeRunExploration(
 ): Promise<void> {
 	const settings = getSettings(ctx);
 
-	// Guard: must be explicitly disabled
-	if (settings.enabled === false) return;
+	// Guard: must be explicitly enabled (default OFF to control HTTP cost)
+	if (settings.enabled !== true) return;
 
 	// Guard: not already running
 	if (state.isRunning) return;
@@ -191,6 +191,10 @@ async function maybeRunExploration(
 	} finally {
 		state.isRunning = false;
 		state.abortController = undefined;
+		// Reset idle timer so the next exploration waits for a full idle cycle.
+		// Without this, lastActivityAt stays stale and the next 60s poll
+		// immediately triggers another exploration (the root cause of HTTP spikes).
+		touch(state);
 	}
 }
 
@@ -205,9 +209,9 @@ export default async function idleThinkExtension(api: ExtensionAPI): Promise<voi
 		// Only runs in TUI mode
 		if (!ctx.hasUI) return;
 
-		// Default: enabled. The agent should think when idle — that's the point.
+		// Default: disabled. Enable via settings.idleThink.enabled = true
 		const settings = getSettings(ctx);
-		if (settings.enabled === false) return;
+		if (settings.enabled !== true) return;
 
 		startIdleLoop(api, ctx, state);
 	});

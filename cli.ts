@@ -34,6 +34,10 @@ if (args.includes("--help") || args.includes("-h")) {
 	process.exit(0);
 }
 
-import { main } from "./main.js";
-
+// Dynamic import: ESM static imports are hoisted to the top of the module, so
+// `import { main } from "./main.js"` would pull main.js's entire dependency
+// graph (≈2.4k modules, including TUI, AI SDKs, highlight.js) before the
+// fast-path short-circuits above could run. With dynamic import, --version /
+// --help finish in <200 ms instead of paying the full 9-15 s boot cost.
+const { main } = await import("./main.js");
 main(args);

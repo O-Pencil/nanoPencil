@@ -7,12 +7,25 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { createRequire } from "node:module";
 import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@pencil-agent/tui";
 import { type Static, Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
-import { highlight, supportsLanguage } from "cli-highlight";
 import { getCustomThemesDir, getThemesDir } from "../../../config.js";
+
+// cli-highlight is loaded lazily: requiring it eagerly registers every
+// highlight.js language (≈165 ms self-time + ~700 transitive modules), and
+// none of that is needed until the user actually renders a markdown code
+// block. supportsLanguage / highlight are sync, so we use createRequire to
+// keep their callers' signatures unchanged.
+const lazyRequire = createRequire(import.meta.url);
+type CliHighlight = typeof import("cli-highlight");
+let cliHighlightCache: CliHighlight | undefined;
+function getHl(): CliHighlight {
+	if (!cliHighlightCache) cliHighlightCache = lazyRequire("cli-highlight") as CliHighlight;
+	return cliHighlightCache;
+}
 
 // ============================================================================
 // Types & Schema
@@ -970,15 +983,16 @@ function getCliHighlightTheme(t: Theme): CliHighlightTheme {
  * Returns array of highlighted lines.
  */
 export function highlightCode(code: string, lang?: string): string[] {
+	const hl = getHl();
 	// Validate language before highlighting to avoid stderr spam from cli-highlight
-	const validLang = lang && supportsLanguage(lang) ? lang : undefined;
+	const validLang = lang && hl.supportsLanguage(lang) ? lang : undefined;
 	const opts = {
 		language: validLang,
 		ignoreIllegals: true,
 		theme: getCliHighlightTheme(theme),
 	};
 	try {
-		return highlight(code, opts).split("\n");
+		return hl.highlight(code, opts).split("\n");
 	} catch {
 		return code.split("\n");
 	}
@@ -1072,15 +1086,16 @@ export function getMarkdownTheme(): MarkdownTheme {
 		underline: (text: string) => theme.underline(text),
 		strikethrough: (text: string) => chalk.strikethrough(text),
 		highlightCode: (code: string, lang?: string): string[] => {
+			const hl = getHl();
 			// Validate language before highlighting to avoid stderr spam from cli-highlight
-			const validLang = lang && supportsLanguage(lang) ? lang : undefined;
+			const validLang = lang && hl.supportsLanguage(lang) ? lang : undefined;
 			const opts = {
 				language: validLang,
 				ignoreIllegals: true,
 				theme: getCliHighlightTheme(theme),
 			};
 			try {
-				return highlight(code, opts).split("\n");
+				return hl.highlight(code, opts).split("\n");
 			} catch {
 				return code.split("\n").map((line) => theme.fg("mdCodeBlock", line));
 			}

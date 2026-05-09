@@ -8,24 +8,22 @@
  * "team-state-store 自己负责 teammate 历史 ... SessionManager 只负责主会话".
  */
 
-import { homedir } from "node:os";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getAgentDir } from "../../../config.js";
 import type { PersistedTeammate } from "./team-types.js";
 
 /**
- * Resolve the agent dir using the same convention as other extensions
- * (security-audit, etc.): NANOPENCIL_AGENT_DIR or ~/.nanopencil/agent.
+ * Resolve the agent dir using the canonical getAgentDir() from config.ts.
+ * Previously used NANOPENCIL_AGENT_DIR env directly (wrong name — should be
+ * NANOPENCIL_CODING_AGENT_DIR). Now reuses the single source of truth.
  */
-function resolveAgentDir(): string {
-  return process.env.NANOPENCIL_AGENT_DIR || join(homedir(), ".nanopencil", "agent");
-}
 
 export class TeamStateStore {
   private readonly dir: string;
 
   constructor(storageDir?: string) {
-    this.dir = storageDir ?? join(resolveAgentDir(), "teams");
+    this.dir = storageDir ?? join(getAgentDir(), "teams");
   }
 
   /** Absolute storage directory for teammates. */

@@ -52,3 +52,5 @@ agent-workspace/
 
 # Benchmark results (local baselines)
 .benchmarks/
+.history/
+.npmrc

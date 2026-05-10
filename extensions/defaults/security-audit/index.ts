@@ -18,10 +18,18 @@ import { homedir } from "node:os";
 import type {
 	ExtensionAPI,
 	ExtensionCommandContext,
-	ToolExecutionStartEvent,
+	ToolCallEvent,
+	ToolCallEventResult,
 } from "../../../core/extensions/types.js";
-import type { SecurityConfig, SecurityCheckResult, AuditEvent, LogQueryOptions, SecurityStats, SecurityLevel, AuditEventType, AuditEventStatus } from "./interface.js";
-import { DEFAULT_SECURITY_CONFIG } from "./interface.js";
+import type {
+	AuditEvent,
+	AuditEventStatus,
+	AuditEventType,
+	LogQueryOptions,
+	SecurityCheckResult,
+	SecurityLevel,
+	SecurityStats,
+} from "./interface.js";
 
 // ============================================================
 // Types
@@ -266,6 +274,81 @@ const SECURITY_MODE = process.env.SECURITY_MODE as string || "strict";
 
 const logger = new AuditLogger();
 
+function sendSecurityNotice(api: ExtensionAPI, content: string): void {
+	api.sendMessage(
+		{
+			customType: SECURITY_MESSAGE_TYPE,
+			content,
+			display: true,
+		},
+		{ triggerTurn: true },
+	);
+}
+
+function auditAndGateToolCall(api: ExtensionAPI, event: ToolCallEvent): ToolCallEventResult | void {
+	const toolName = event.toolName;
+	const args = event.input || {};
+
+	if (toolName === "bash" || toolName === "Bash") {
+		const command = (args as Record<string, unknown>).command as string | undefined;
+		if (!command) return;
+
+		const result = checkDangerousCommand(command);
+		const shouldBlock = result.level === "dangerous" && SECURITY_MODE === "strict";
+
+		logger.log({
+			type: "command",
+			operation: "bash",
+			target: command,
+			cwd: process.cwd(),
+			level: result.level,
+			status: shouldBlock ? "blocked" : result.level === "dangerous" ? "warning" : "allowed",
+			reason: result.reason,
+			pattern: result.pattern,
+		});
+
+		if (result.level !== "dangerous") return;
+
+		if (shouldBlock) {
+			const reason = `Security blocked bash command: ${result.reason}`;
+			sendSecurityNotice(api, `${reason}\n\nCommand: \`${command}\``);
+			return { block: true, reason };
+		}
+
+		sendSecurityNotice(
+			api,
+			`Security warning: ${result.reason}\n\nCommand: \`${command}\`\n\nThis will be logged to security audit.`,
+		);
+		return;
+	}
+
+	if (toolName === "write" || toolName === "Write" || toolName === "edit" || toolName === "Edit") {
+		const input = args as Record<string, unknown>;
+		const filePath = input.file_path || input.path || input.filePath;
+		if (!filePath) return;
+
+		const result = checkSensitiveFile(filePath as string);
+		const operation = toolName === "write" || toolName === "Write" ? "write" : "edit";
+		const shouldBlock = result.level === "dangerous";
+
+		logger.log({
+			type: `file_${operation}` as AuditEventType,
+			operation,
+			target: filePath as string,
+			cwd: process.cwd(),
+			level: result.level,
+			status: shouldBlock ? "blocked" : "allowed",
+			reason: result.reason,
+		});
+
+		if (!shouldBlock) return;
+
+		const reason = `Security blocked ${operation}: ${result.reason}`;
+		sendSecurityNotice(api, `${reason}\n\nPath: \`${filePath}\``);
+		return { block: true, reason };
+	}
+}
+
 export default function securityAuditExtension(api: ExtensionAPI) {
 	// /security - Show security dashboard
 	api.registerCommand("security", {
@@ -394,99 +477,7 @@ export default function securityAuditExtension(api: ExtensionAPI) {
 		},
 	});
 
-	// Tool execution start - log all operations
-	api.on("tool_execution_start", async (event: ToolExecutionStartEvent) => {
-		const toolName = event.toolName;
-		const args = event.args || {};
-
-		let level: SecurityLevel = "safe";
-		let status: AuditEventStatus = "allowed";
-		let reason: string | undefined;
-
-		// Check bash commands
-		if (toolName === "bash" || toolName === "Bash") {
-			const command = args.command as string;
-			if (command) {
-				const result = checkDangerousCommand(command);
-				level = result.level;
-				reason = result.reason;
-				if (result.level === "dangerous") {
-					status = "warning";
-				}
-
-				logger.log({
-					type: "command",
-					operation: "bash",
-					target: command,
-					cwd: process.cwd(),
-					level,
-					status,
-					reason,
-					pattern: result.pattern,
-				});
-
-				// Handle dangerous commands based on mode
-				if (result.level === "dangerous") {
-					if (SECURITY_MODE === "strict") {
-						// Strict mode: show blocking message
-						api.sendMessage(
-							{
-								customType: SECURITY_MESSAGE_TYPE,
-								content: `🔴 SECURITY BLOCKED: ${result.reason}\n\nCommand: \`${command}\`\n\n❌ This command was BLOCKED for security reasons.\n\nDo NOT execute this command. Find an alternative safer approach or ask the user for confirmation before proceeding.`,
-								display: true,
-							},
-							{ triggerTurn: true },
-						);
-					} else {
-						// Audit mode: just warn
-						api.sendMessage(
-							{
-								customType: SECURITY_MESSAGE_TYPE,
-								content: `⚠️  Security Warning: ${result.reason}\n\nCommand: \`${command}\`\n\nThis will be logged to security audit.`,
-								display: true,
-							},
-							{ triggerTurn: true },
-						);
-					}
-				}
-			}
-		}
-
-		// Check file operations
-		if (toolName === "write" || toolName === "Write" || toolName === "edit" || toolName === "Edit") {
-			const filePath = args.file_path || args.path || args.filePath;
-			if (filePath) {
-				const result = checkSensitiveFile(filePath as string);
-				level = result.level;
-				reason = result.reason;
-				if (result.level === "dangerous") {
-					status = "blocked";
-				}
-
-				const operation = toolName === "write" || toolName === "Write" ? "write" : "edit";
-
-				logger.log({
-					type: `file_${operation}` as AuditEventType,
-					operation,
-					target: filePath as string,
-					cwd: process.cwd(),
-					level,
-					status,
-					reason,
-				});
-
-				// Block access to sensitive files
-				if (result.level === "dangerous") {
-					api.sendMessage(
-						{
-							customType: SECURITY_MESSAGE_TYPE,
-							content: `🔴 Security Blocked: ${result.reason}\n\nPath: \`${filePath}\``,
-							display: true,
-						},
-						{ triggerTurn: true },
-					);
-				}
-			}
-		}
-	});
+	// Tool call is the authoritative pre-execution boundary. Returning
+	// `{ block: true }` here prevents the wrapped tool from running.
+	api.on("tool_call", (event: ToolCallEvent): ToolCallEventResult | void => auditAndGateToolCall(api, event));
 }

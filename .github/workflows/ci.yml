@@ -39,6 +39,11 @@ jobs:
         env:
           CI: true
 
+      - name: Run security boundary tests
+        run: npm run test:security
+        env:
+          CI: true
+
   # Optional: Run package-specific tests
   packages-test:
     name: Test Packages

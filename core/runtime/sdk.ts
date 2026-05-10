@@ -589,6 +589,7 @@ export async function createAgentSession(
     sessionManager,
     settingsManager,
     cwd,
+    agentDir,
     scopedModels: options.scopedModels,
     resourceLoader,
     customTools: staticCustomTools,

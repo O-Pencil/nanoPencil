@@ -139,7 +139,7 @@ import { t } from "../i18n/index.js";
 import { toSoulContext, extractSessionContext } from "../soul-integration.js";
 import { buildSystemPrompt } from "../prompt/system-prompt.js";
 import type { BashOperations } from "../tools/bash.js";
-import { createAllTools } from "../tools/index.js";
+import { createAllTools, createWorkspaceWriteGuard } from "../tools/index.js";
 import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } from "./retry-coordinator.js";
 import { createLogger, type AgentLogger } from "../utils/logger.js";
 
@@ -214,6 +214,8 @@ export interface AgentSessionConfig {
   sessionManager: SessionManager;
   settingsManager: SettingsManager;
   cwd: string;
+  /** Global agent config directory for user-scoped resources. */
+  agentDir: string;
   /** Models to cycle through with Ctrl+P (from --models flag) */
   scopedModels?: Array<{ model: Model<any>; thinkingLevel: ThinkingLevel }>;
   /** Resource loader for skills, prompts, themes, context files, system prompt */
@@ -387,6 +389,7 @@ export class AgentSession {
 
   // Model registry for API key resolution
   private _modelRegistry: ModelRegistry;
+  private _agentDir: string;
 
   // Tool registry for extension getTools/setTools
   private _toolRegistry: Map<string, AgentTool> = new Map();
@@ -410,6 +413,7 @@ export class AgentSession {
     this._soulManagerFactory = config.soulManagerFactory;
     this._customTools = [...this._staticCustomTools, ...(config.initialMcpTools ?? [])];
     this._cwd = config.cwd;
+    this._agentDir = config.agentDir;
     this._modelRegistry = config.modelRegistry;
     this._extensionRunnerRef = config.extensionRunnerRef;
     this._soulManager = config.soulManager;
@@ -522,6 +526,10 @@ export class AgentSession {
 
   get cwd(): string {
     return this._cwd;
+  }
+
+  get agentDir(): string {
+    return this._agentDir;
   }
 
   /**
@@ -2671,11 +2679,14 @@ export class AgentSession {
   }): void {
     const autoResizeImages = this.settingsManager.getImageAutoResize();
     const shellCommandPrefix = this.settingsManager.getShellCommandPrefix();
+    const workspaceWriteGuard = createWorkspaceWriteGuard(this._cwd);
     const baseTools = this._baseToolsOverride
       ? this._baseToolsOverride
       : createAllTools(this._cwd, {
           read: { autoResizeImages },
           bash: { commandPrefix: shellCommandPrefix },
+          edit: { beforeWrite: workspaceWriteGuard },
+          write: { beforeWrite: workspaceWriteGuard },
         });
 
     this._baseToolRegistry = new Map(

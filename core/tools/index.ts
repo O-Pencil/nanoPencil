@@ -75,6 +75,7 @@ export {
 	type WriteToolOptions,
 	writeTool,
 } from "./write.js";
+export { createWorkspaceWriteGuard, isPathWithinRoot } from "./write-guard.js";
 
 import type { AgentTool } from "@pencil-agent/agent-core";
 import { type BashToolOptions, bashTool, createBashTool } from "./bash.js";

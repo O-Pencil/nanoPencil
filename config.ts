@@ -323,7 +323,7 @@ export function resolveAgentDirContext(agentId?: string) {
 	const envDir = process.env[ENV_AGENT_DIR];
 	if (envDir && id === "default") {
 		const resolvedEnv = envDir.startsWith("~/") ? homedir() + envDir.slice(1) : envDir;
-		return { id: id as const, path: resolvedEnv };
+		return { id, path: resolvedEnv };
 	}
 
 	// 2. Check explicit per-agent env override

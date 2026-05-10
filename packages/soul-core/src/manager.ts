@@ -12,6 +12,8 @@ import type {
   SoulEvolution,
   InteractionContext,
   SoulOptions,
+  PersonalityDelta,
+  ValueDelta,
 } from "./types.js";
 import { getSoulConfig } from "./config.js";
 import { SoulStore } from "./store.js";
@@ -252,8 +254,8 @@ export class SoulManager {
     const patterns = this.evolution.detectPatterns(memory, profile);
 
     // Generate deltas from patterns
-    const personalityDelta: any = {};
-    const valueDelta: any = {};
+    const personalityDelta: PersonalityDelta = {};
+    const valueDelta: ValueDelta = {};
 
     for (const pattern of patterns) {
       if (pattern.type === "success" && pattern.delta) {
@@ -547,8 +549,8 @@ export class SoulManager {
   private generateEvolutionReasoning(
     _trigger: SoulEvolution["trigger"],
     outcome: "success" | "failure",
-    personalityDelta: any,
-    valueDelta: any,
+    personalityDelta: PersonalityDelta,
+    valueDelta: ValueDelta,
   ): string {
     const parts: string[] = [];
 

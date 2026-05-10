@@ -139,7 +139,7 @@ import { t } from "../i18n/index.js";
 import { toSoulContext, extractSessionContext } from "../soul-integration.js";
 import { buildSystemPrompt } from "../prompt/system-prompt.js";
 import type { BashOperations } from "../tools/bash.js";
-import { createAllTools, createWorkspaceWriteGuard } from "../tools/index.js";
+import { createDefaultRuntimeTools } from "./default-tools.js";
 import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } from "./retry-coordinator.js";
 import { createLogger, type AgentLogger } from "../utils/logger.js";
 
@@ -2677,17 +2677,9 @@ export class AgentSession {
     flagValues?: Map<string, boolean | string>;
     includeAllExtensionTools?: boolean;
   }): void {
-    const autoResizeImages = this.settingsManager.getImageAutoResize();
-    const shellCommandPrefix = this.settingsManager.getShellCommandPrefix();
-    const workspaceWriteGuard = createWorkspaceWriteGuard(this._cwd);
     const baseTools = this._baseToolsOverride
       ? this._baseToolsOverride
-      : createAllTools(this._cwd, {
-          read: { autoResizeImages },
-          bash: { commandPrefix: shellCommandPrefix },
-          edit: { beforeWrite: workspaceWriteGuard },
-          write: { beforeWrite: workspaceWriteGuard },
-        });
+      : createDefaultRuntimeTools(this._cwd, this.settingsManager);
 
     this._baseToolRegistry = new Map(
       Object.entries(baseTools).map(([name, tool]) => [

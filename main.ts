@@ -68,11 +68,24 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 //       without going through emitWarning, and makes sure no other library's
 //       ad-hoc warning listener can re-print what we suppressed.
 {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const originalEmitWarning = process.emitWarning.bind(process) as any;
-
 	type WarningOpts = { type?: string; name?: string; code?: string; detail?: string };
-	const isMaxListenersWarning = (warning: Error & { code?: string }, message?: unknown, opts?: WarningOpts): boolean => {
+	type EmitWarning = typeof process.emitWarning;
+	type EmitWarningArg = string | Error;
+	type EmitWarningSecondArg = string | NodeJS.EmitWarningOptions | Function;
+
+	const originalEmitWarning = process.emitWarning.bind(process) as EmitWarning;
+	const callOriginalEmitWarning = (...args: [EmitWarningArg, ...unknown[]]) =>
+		(originalEmitWarning as unknown as (...innerArgs: unknown[]) => void)(...args);
+
+	const normalizeWarningOptions = (options?: EmitWarningSecondArg, code?: string | Function): WarningOpts => {
+		if (typeof options === "object" && options !== null) return options;
+		return {
+			type: typeof options === "string" ? options : undefined,
+			code: typeof code === "string" ? code : undefined,
+		};
+	};
+
+	const isMaxListenersWarning = (warning: (Error & { code?: string }) | null, message?: unknown, opts?: WarningOpts): boolean => {
 		const name = warning?.name ?? opts?.name ?? "";
 		if (name === "MaxListenersExceededWarning") return true;
 		const text = String(warning?.message ?? message ?? "");
@@ -85,16 +98,13 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 		(opts?.type ?? "") === "DeprecationWarning" && (opts?.code ?? "") === "DEP0190";
 
 	// (1) emitWarning override
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	(process as any).emitWarning = (message: any, options?: any) => {
-		const opts: WarningOpts = typeof options === "object" && options !== null
-			? options
-			: { type: typeof options === "string" ? options : undefined };
+	process.emitWarning = ((message: EmitWarningArg, options?: EmitWarningSecondArg, code?: string | Function, ctor?: Function) => {
+		const opts = normalizeWarningOptions(options, code);
 		const warning = message instanceof Error ? message : null;
 
 		if (!isDevelopment && isDep0190(opts)) return;
 
-		if (isMaxListenersWarning(warning ?? (new Error() as any), message, opts)) {
+		if (isMaxListenersWarning(warning, message, opts)) {
 			if (!isDevRuntime()) {
 				const text = warning?.message ?? String(message ?? "");
 				reportDiagnostic({
@@ -109,9 +119,12 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 			}
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
-		return originalEmitWarning(message, options);
-	};
+		if (typeof options === "function") return callOriginalEmitWarning(message, options);
+		if (typeof code === "function") return callOriginalEmitWarning(message, typeof options === "string" ? options : undefined, code);
+		if (typeof ctor === "function") return callOriginalEmitWarning(message, typeof options === "string" ? options : undefined, code, ctor);
+		if (typeof options === "object" && options !== null) return callOriginalEmitWarning(message, options);
+		return callOriginalEmitWarning(message, options, code);
+	}) as EmitWarning;
 
 	// (2) replace 'warning' event listeners. Node attaches a default printer
 	// on startup; if anything bypassed (1), this stops the printer from

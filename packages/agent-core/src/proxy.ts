@@ -70,6 +70,16 @@ export interface ProxyStreamOptions extends SimpleStreamOptions {
 	proxyUrl: string;
 }
 
+type StreamingToolCall = ToolCall & { partialJson?: string };
+type ActiveStreamingToolCall = ToolCall & { partialJson: string };
+
+function isStreamingToolCall(content: AssistantMessage["content"][number] | undefined): content is ActiveStreamingToolCall {
+	return (
+		content?.type === "toolCall" &&
+		typeof (content as { partialJson?: unknown }).partialJson === "string"
+	);
+}
+
 /**
  * Stream function that proxies through a server instead of calling LLM providers directly.
  * The server strips the partial field from delta events to reduce bandwidth.
@@ -287,21 +297,23 @@ function processProxyEvent(
 			throw new Error("Received thinking_end for non-thinking content");
 		}
 
-		case "toolcall_start":
-			partial.content[proxyEvent.contentIndex] = {
+		case "toolcall_start": {
+			const toolCall: StreamingToolCall = {
 				type: "toolCall",
 				id: proxyEvent.id,
 				name: proxyEvent.toolName,
 				arguments: {},
 				partialJson: "",
-			} satisfies ToolCall & { partialJson: string } as ToolCall;
+			};
+			partial.content[proxyEvent.contentIndex] = toolCall;
 			return { type: "toolcall_start", contentIndex: proxyEvent.contentIndex, partial };
+		}
 
 		case "toolcall_delta": {
 			const content = partial.content[proxyEvent.contentIndex];
-			if (content?.type === "toolCall") {
-				(content as any).partialJson += proxyEvent.delta;
-				content.arguments = parseStreamingJson((content as any).partialJson) || {};
+			if (isStreamingToolCall(content)) {
+				content.partialJson += proxyEvent.delta;
+				content.arguments = parseStreamingJson(content.partialJson) || {};
 				partial.content[proxyEvent.contentIndex] = { ...content }; // Trigger reactivity
 				return {
 					type: "toolcall_delta",
@@ -315,12 +327,13 @@ function processProxyEvent(
 
 		case "toolcall_end": {
 			const content = partial.content[proxyEvent.contentIndex];
-			if (content?.type === "toolCall") {
-				delete (content as any).partialJson;
+			if (isStreamingToolCall(content)) {
+				const { partialJson: _partialJson, ...toolCall } = content;
+				partial.content[proxyEvent.contentIndex] = toolCall;
 				return {
 					type: "toolcall_end",
 					contentIndex: proxyEvent.contentIndex,
-					toolCall: content,
+					toolCall,
 					partial,
 				};
 			}

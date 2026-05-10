@@ -50,6 +50,11 @@ export interface LsToolOptions {
 	operations?: LsOperations;
 }
 
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	return String(error);
+}
+
 export function createLsTool(cwd: string, options?: LsToolOptions): AgentTool<typeof lsSchema> {
 	const ops = options?.operations ?? defaultLsOperations;
 
@@ -96,8 +101,8 @@ export function createLsTool(cwd: string, options?: LsToolOptions): AgentTool<ty
 						let entries: string[];
 						try {
 							entries = await ops.readdir(dirPath);
-						} catch (e: any) {
-							reject(new Error(`Cannot read directory: ${e.message}`));
+						} catch (e: unknown) {
+							reject(new Error(`Cannot read directory: ${getErrorMessage(e)}`));
 							return;
 						}
 
@@ -165,7 +170,7 @@ export function createLsTool(cwd: string, options?: LsToolOptions): AgentTool<ty
 							content: [{ type: "text", text: output }],
 							details: Object.keys(details).length > 0 ? details : undefined,
 						});
-					} catch (e: any) {
+					} catch (e: unknown) {
 						signal?.removeEventListener("abort", onAbort);
 						reject(e);
 					}

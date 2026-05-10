@@ -268,7 +268,7 @@ export function createFindTool(cwd: string, options?: FindToolOptions): AgentToo
 							content: [{ type: "text", text: resultOutput }],
 							details: Object.keys(details).length > 0 ? details : undefined,
 						});
-					} catch (e: any) {
+					} catch (e: unknown) {
 						signal?.removeEventListener("abort", onAbort);
 						reject(e);
 					}

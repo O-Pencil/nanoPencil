@@ -47,7 +47,7 @@
     "test:security": "node --test --import tsx test/security-audit.test.ts",
     "test:tools": "node --test --import tsx test/workspace-write-guard.test.ts test/read-tool.test.ts test/tool-window-validation.test.ts test/bash-sandbox.test.ts",
     "test:presence": "node --test --import tsx test/presence-opening.test.ts",
-    "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts",
+    "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts test/session-manager-header.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
     "prepublishOnly": "npm run build:release",
     "changelog": "node scripts/generate-changelog.js",

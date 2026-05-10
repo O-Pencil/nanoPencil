@@ -154,6 +154,15 @@ export type SessionEntry =
 /** Raw file entry (includes header) */
 export type FileEntry = SessionHeader | SessionEntry;
 
+function isSessionHeader(entry: unknown): entry is SessionHeader {
+	return (
+		typeof entry === "object" &&
+		entry !== null &&
+		(entry as { type?: unknown }).type === "session" &&
+		typeof (entry as { id?: unknown }).id === "string"
+	);
+}
+
 /** Tree node for getTree() - defensive copy of session structure */
 export interface SessionTreeNode {
 	entry: SessionEntry;
@@ -455,7 +464,7 @@ export function loadEntriesFromFile(filePath: string): FileEntry[] {
 	// Validate session header
 	if (entries.length === 0) return entries;
 	const header = entries[0];
-	if (header.type !== "session" || typeof (header as any).id !== "string") {
+	if (!isSessionHeader(header)) {
 		return [];
 	}
 
@@ -471,7 +480,7 @@ function isValidSessionFile(filePath: string): boolean {
 		const firstLine = buffer.toString("utf8", 0, bytesRead).split("\n")[0];
 		if (!firstLine) return false;
 		const header = JSON.parse(firstLine);
-		return header.type === "session" && typeof header.id === "string";
+		return isSessionHeader(header);
 	} catch {
 		return false;
 	}
@@ -563,7 +572,7 @@ async function buildSessionInfo(filePath: string): Promise<SessionInfo | null> {
 
 		if (entries.length === 0) return null;
 		const header = entries[0];
-		if (header.type !== "session") return null;
+		if (!isSessionHeader(header)) return null;
 
 		const stats = await stat(filePath);
 		let messageCount = 0;
@@ -596,18 +605,18 @@ async function buildSessionInfo(filePath: string): Promise<SessionInfo | null> {
 			}
 		}
 
-		const cwd = typeof (header as SessionHeader).cwd === "string" ? (header as SessionHeader).cwd : "";
-		const parentSessionPath = (header as SessionHeader).parentSession;
+		const cwd = typeof header.cwd === "string" ? header.cwd : "";
+		const parentSessionPath = header.parentSession;
 
-		const modified = getSessionModifiedDate(entries, header as SessionHeader, stats.mtime);
+		const modified = getSessionModifiedDate(entries, header, stats.mtime);
 
 		return {
 			path: filePath,
-			id: (header as SessionHeader).id,
+			id: header.id,
 			cwd,
 			name,
 			parentSessionPath,
-			created: new Date((header as SessionHeader).timestamp),
+			created: new Date(header.timestamp),
 			modified,
 			messageCount,
 			firstMessage: firstMessage || "(no messages)",

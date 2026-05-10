@@ -87,6 +87,7 @@ export interface AgentLogger {
 
 class LoggerImpl implements AgentLogger {
 	private _config: Required<Pick<LoggerConfig, "level">> & Omit<LoggerConfig, "level">;
+	private _extra: { turnId?: number; toolCallId?: string } = {};
 
 	constructor(config: LoggerConfig = {}) {
 		this._config = {
@@ -141,8 +142,7 @@ class LoggerImpl implements AgentLogger {
 	}
 
 	private _withExtra(extra: { turnId?: number; toolCallId?: string }): LoggerImpl {
-		// Store extra context for subsequent calls
-		(this as any)._extra = extra;
+		this._extra = extra;
 		return this;
 	}
 
@@ -155,7 +155,7 @@ class LoggerImpl implements AgentLogger {
 			message,
 			sessionId: this._config.sessionId,
 			component: this._config.component,
-			...((this as any)._extra ?? {}),
+			...this._extra,
 			...(data ?? {}),
 		};
 

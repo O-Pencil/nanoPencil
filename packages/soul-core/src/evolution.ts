@@ -296,7 +296,7 @@ export class SoulEvolutionEngine {
   private averagePersonality(
     snapshots: SoulProfile["personality"][],
   ): SoulProfile["personality"] {
-    const avg: any = {};
+    const avg = {} as PersonalityVector;
     for (const key of Object.keys(snapshots[0]) as Array<
       keyof SoulProfile["personality"]
     >) {
@@ -313,7 +313,7 @@ export class SoulEvolutionEngine {
     current: SoulProfile["personality"],
     target: SoulProfile["personality"],
   ): Partial<SoulProfile["personality"]> {
-    const diff: any = {};
+    const diff: PersonalityDelta = {};
     for (const key of Object.keys(current) as Array<
       keyof SoulProfile["personality"]
     >) {

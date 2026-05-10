@@ -41,11 +41,11 @@ test("read tool rejects invalid offset and limit windows", async () => {
 
 		await assert.rejects(
 			() => readTool.execute("bad-offset", { path: "sample.txt", offset: 0 }),
-			/offset must be a positive integer/,
+			/offset must be an integer greater than or equal to 1/,
 		);
 		await assert.rejects(
 			() => readTool.execute("bad-limit", { path: "sample.txt", limit: 1.5 }),
-			/limit must be a positive integer/,
+			/limit must be an integer greater than or equal to 1/,
 		);
 	} finally {
 		rmSync(cwd, { recursive: true, force: true });

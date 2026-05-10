@@ -11,6 +11,7 @@ import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile } from "fs/promises";
 import { formatDimensionNote, resizeImage } from "../../modes/utils/image-resize.js";
 import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
+import { validateIntegerWindowOption } from "./input-validation.js";
 import { resolveReadPath } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
@@ -52,13 +53,6 @@ export interface ReadToolOptions {
 	operations?: ReadOperations;
 }
 
-function validatePositiveInteger(value: number | undefined, name: string): void {
-	if (value === undefined) return;
-	if (!Number.isInteger(value) || value < 1) {
-		throw new Error(`${name} must be a positive integer`);
-	}
-}
-
 export function createReadTool(cwd: string, options?: ReadToolOptions): AgentTool<typeof readSchema> {
 	const autoResizeImages = options?.autoResizeImages ?? true;
 	const ops = options?.operations ?? defaultReadOperations;
@@ -73,8 +67,8 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 			{ path, offset, limit }: { path: string; offset?: number; limit?: number },
 			signal?: AbortSignal,
 		) => {
-			validatePositiveInteger(offset, "offset");
-			validatePositiveInteger(limit, "limit");
+			validateIntegerWindowOption({ name: "offset", value: offset, minimum: 1 });
+			validateIntegerWindowOption({ name: "limit", value: limit, minimum: 1 });
 
 			const absolutePath = resolveReadPath(path, cwd);
 

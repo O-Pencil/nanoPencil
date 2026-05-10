@@ -11,6 +11,7 @@ import { spawn } from "child_process";
 import { readFileSync, statSync } from "fs";
 import path from "path";
 import { ensureTool } from "../utils/tools-manager.js";
+import { validateIntegerWindowOption } from "./input-validation.js";
 import { resolveToCwd } from "./path-utils.js";
 import {
 	DEFAULT_MAX_BYTES,
@@ -30,9 +31,9 @@ const grepSchema = Type.Object({
 		Type.Boolean({ description: "Treat pattern as literal string instead of regex (default: false)" }),
 	),
 	context: Type.Optional(
-		Type.Number({ description: "Number of lines to show before and after each match (default: 0)" }),
+		Type.Integer({ minimum: 0, description: "Number of lines to show before and after each match (default: 0)" }),
 	),
-	limit: Type.Optional(Type.Number({ description: "Maximum number of matches to return (default: 100)" })),
+	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Maximum number of matches to return (default: 100)" })),
 });
 
 export type GrepToolInput = Static<typeof grepSchema>;
@@ -95,6 +96,9 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 			},
 			signal?: AbortSignal,
 		) => {
+			validateIntegerWindowOption({ name: "context", value: context, minimum: 0 });
+			validateIntegerWindowOption({ name: "limit", value: limit, minimum: 1 });
+
 			return new Promise((resolve, reject) => {
 				if (signal?.aborted) {
 					reject(new Error("Operation aborted"));
@@ -127,8 +131,8 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 							settle(() => reject(new Error(`Path not found: ${searchPath}`)));
 							return;
 						}
-						const contextValue = context && context > 0 ? context : 0;
-						const effectiveLimit = Math.max(1, limit ?? DEFAULT_LIMIT);
+						const contextValue = context ?? 0;
+						const effectiveLimit = limit ?? DEFAULT_LIMIT;
 
 						const formatPath = (filePath: string): string => {
 							if (isDirectory) {

@@ -8,12 +8,13 @@ import type { AgentTool } from "@pencil-agent/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { existsSync, readdirSync, statSync } from "fs";
 import nodePath from "path";
+import { validateIntegerWindowOption } from "./input-validation.js";
 import { resolveToCwd } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
 const lsSchema = Type.Object({
 	path: Type.Optional(Type.String({ description: "Directory to list (default: current directory)" })),
-	limit: Type.Optional(Type.Number({ description: "Maximum number of entries to return (default: 500)" })),
+	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Maximum number of entries to return (default: 500)" })),
 });
 
 export type LsToolInput = Static<typeof lsSchema>;
@@ -62,6 +63,8 @@ export function createLsTool(cwd: string, options?: LsToolOptions): AgentTool<ty
 			{ path, limit }: { path?: string; limit?: number },
 			signal?: AbortSignal,
 		) => {
+			validateIntegerWindowOption({ name: "limit", value: limit, minimum: 1 });
+
 			return new Promise((resolve, reject) => {
 				if (signal?.aborted) {
 					reject(new Error("Operation aborted"));

@@ -11,6 +11,7 @@ import { existsSync } from "fs";
 import { globSync } from "glob";
 import path from "path";
 import { ensureTool } from "../utils/tools-manager.js";
+import { validateIntegerWindowOption } from "./input-validation.js";
 import { resolveToCwd } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
@@ -19,7 +20,7 @@ const findSchema = Type.Object({
 		description: "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts'",
 	}),
 	path: Type.Optional(Type.String({ description: "Directory to search in (default: current directory)" })),
-	limit: Type.Optional(Type.Number({ description: "Maximum number of results (default: 1000)" })),
+	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Maximum number of results (default: 1000)" })),
 });
 
 export type FindToolInput = Static<typeof findSchema>;
@@ -68,6 +69,8 @@ export function createFindTool(cwd: string, options?: FindToolOptions): AgentToo
 			{ pattern, path: searchDir, limit }: { pattern: string; path?: string; limit?: number },
 			signal?: AbortSignal,
 		) => {
+			validateIntegerWindowOption({ name: "limit", value: limit, minimum: 1 });
+
 			return new Promise((resolve, reject) => {
 				if (signal?.aborted) {
 					reject(new Error("Operation aborted"));

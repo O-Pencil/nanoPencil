@@ -7,6 +7,7 @@
 
 import AjvModule from "ajv";
 import addFormatsModule from "ajv-formats";
+import type { ErrorObject } from "ajv";
 
 // Handle both default and named exports
 const Ajv = (AjvModule as any).default || AjvModule;
@@ -79,7 +80,7 @@ export function validateToolArguments(tool: Tool, toolCall: ToolCall): any {
 	// Format validation errors nicely
 	const errors =
 		validate.errors
-			?.map((err: any) => {
+			?.map((err: ErrorObject) => {
 				const path = err.instancePath ? err.instancePath.substring(1) : err.params.missingProperty || "root";
 				return `  - ${path}: ${err.message}`;
 			})

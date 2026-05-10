@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ExtensionRunner } from "../core/extensions/index.js";
 import type { PromptTemplate } from "../core/prompt/prompt-templates.js";
+import type { ResourceLoader } from "../core/config/resource-loader.js";
+import type { Skill } from "../core/skills.js";
 import {
 	buildExtensionSlashCommands,
 	buildSessionSlashCommands,
@@ -16,18 +18,21 @@ const promptTemplates = [
 	},
 ] as PromptTemplate[];
 
+const skill: Skill = {
+	name: "review",
+	description: "Review skill",
+	source: "user",
+	filePath: "/home/user/.nanopencil/skills/review/SKILL.md",
+	content: "",
+	disableModelInvocation: false,
+};
+
 const resourceLoader = {
 	getSkills: () => ({
-		skills: [
-			{
-				name: "review",
-				description: "Review skill",
-				source: "user",
-				filePath: "/home/user/.nanopencil/skills/review/SKILL.md",
-			},
-		],
+		skills: [skill],
+		diagnostics: [],
 	}),
-} as any;
+} satisfies Pick<ResourceLoader, "getSkills">;
 
 const extensionRunner = {
 	getRegisteredCommandsWithPaths: () => [

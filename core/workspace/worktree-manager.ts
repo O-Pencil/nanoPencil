@@ -21,6 +21,18 @@ export interface WorkspaceChange {
   status: "added" | "modified" | "deleted";
 }
 
+interface ExecFileErrorWithStdout {
+  stdout?: unknown;
+}
+
+function getStdoutFromExecError(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    const stdout = (error as ExecFileErrorWithStdout).stdout;
+    return typeof stdout === "string" ? stdout : "";
+  }
+  return "";
+}
+
 /**
  * Manager for creating and disposing workspaces for SubAgents.
  * Provides temporary directories and git worktrees.
@@ -190,8 +202,8 @@ export class WorktreeManager {
                   stdio: ["ignore", "pipe", "ignore"],
                 },
               );
-            } catch (error: any) {
-              return typeof error?.stdout === "string" ? error.stdout : "";
+            } catch (error: unknown) {
+              return getStdoutFromExecError(error);
             }
           }),
         );

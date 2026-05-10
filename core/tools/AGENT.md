@@ -8,7 +8,7 @@ source.ts: ToolSourceType, ToolSource interface, SourceTool, tool source abstrac
 find.ts: FindTool, findTool, createFindTool, FindToolInput, file pattern matching via glob, consumed by orchestrator
 orchestrator.ts: ToolInfo interface, ToolOrchestrator class, tool registration/lookup/management, coordinates builtin and extension tools
 path-utils.ts: resolveReadPath(), resolveToCwd(), path manipulation utilities for tools, handles Unicode spaces and macOS NFD normalization
-input-validation.ts: validateIntegerWindowOption(), shared numeric window invariants for tool inputs
+input-validation.ts: validateIntegerWindowOption(), validatePositiveNumberOption(), shared numeric invariants for tool inputs
 write-guard.ts: createWorkspaceWriteGuard(), isPathWithinRoot(), shared filesystem write boundary helpers for keeping write tools inside a workspace root
 ls.ts: LsTool, lsTool, createLsTool, LsToolInput, directory listing with metadata, consumed by orchestrator
 grep.ts: GrepTool, grepTool, createGrepTool, GrepToolInput, content search via ripgrep, consumed by orchestrator

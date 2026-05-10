@@ -3,7 +3,7 @@ import test from "node:test";
 import { createFindTool } from "../core/tools/find.js";
 import { createGrepTool } from "../core/tools/grep.js";
 import { createLsTool } from "../core/tools/ls.js";
-import { validateIntegerWindowOption } from "../core/tools/input-validation.js";
+import { validateIntegerWindowOption, validatePositiveNumberOption } from "../core/tools/input-validation.js";
 
 test("tool window validation rejects values outside integer bounds", () => {
 	assert.doesNotThrow(() => validateIntegerWindowOption({ name: "limit", value: 1, minimum: 1 }));
@@ -15,6 +15,11 @@ test("tool window validation rejects values outside integer bounds", () => {
 	assert.throws(
 		() => validateIntegerWindowOption({ name: "context", value: 0.5, minimum: 0 }),
 		/context must be an integer greater than or equal to 0/,
+	);
+	assert.doesNotThrow(() => validatePositiveNumberOption("timeout", 0.1));
+	assert.throws(
+		() => validatePositiveNumberOption("timeout", 0),
+		/timeout must be a positive number/,
 	);
 });
 

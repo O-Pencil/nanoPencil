@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSandboxHook } from "../core/tools/bash.js";
+import { createBashTool, createSandboxHook } from "../core/tools/bash.js";
 
 test("bash-sandbox: blocks common write operations", () => {
 	const hook = createSandboxHook();
@@ -83,4 +83,22 @@ test("bash-sandbox: rejects complex write shell syntax even with path allowlist"
 		const result = hook({ command, cwd: "/tmp/project", env: {} });
 		assert.match(result.command, /Write operations are not allowed in sandbox mode/);
 	}
+});
+
+test("bash tool rejects non-positive timeout before execution", async () => {
+	let executed = false;
+	const tool = createBashTool(process.cwd(), {
+		operations: {
+			exec: async () => {
+				executed = true;
+				return { exitCode: 0 };
+			},
+		},
+	});
+
+	await assert.rejects(
+		() => tool.execute("bad-timeout", { command: "echo ok", timeout: 0 }),
+		/timeout must be a positive number/,
+	);
+	assert.equal(executed, false);
 });

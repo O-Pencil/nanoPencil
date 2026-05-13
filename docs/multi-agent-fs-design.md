@@ -437,6 +437,125 @@ effective.policies     = Layer2.policies.json (write whitelist, etc.)
 
 ---
 
+## 7.5 Agent 三种形态分类（2026-05-13 增补）
+
+> 这一节区分**平台分发的 SuperAgent**、**用户基于其派生的 Derived Agent**、**用户自定义的 Custom Agent**。doc 16 之前用 template/profile 二分层暗示了这件事，但没显式分类。本节正式定义。
+
+### 7.5.1 三种形态的产品语义
+
+| 形态 | 谁创建 | Soul 可变性 | Memory 可变性 | 典型场景 |
+|---|---|---|---|---|
+| **SuperAgent** | 平台 / 厂商 | ❌ **immutable**（本地用户无法修改）| ✅ user 层可累积 | "韩寒"、"莫言" 这类厂商调教好的 persona，灵魂和文风是产品差异化的核心，不能被本地用户漂移污染 |
+| **Derived Agent** | 用户基于 SuperAgent 派生 | ✅ overridable（用户可加 patch，但 template 层不变）| ✅ user 层可累积 | "我的韩寒-写散文版"——保留韩寒的核心人格，用户加几条个人偏好 |
+| **Custom Agent** | 用户从零自创 | ✅ overridable（全权）| ✅ user 层可累积 + **可上传本地 memory** | "我自己的写作伙伴"——从空白开始，soul/memory 完全由用户掌控 |
+
+### 7.5.2 文件系统对照
+
+```text
+~/.pencils/agents/
+
+├── hanhan-super/                          ← 平台分发的 SuperAgent
+│   ├── agent.json
+│   │   {
+│   │     "kind": "super",
+│   │     "soulPolicy": "immutable",
+│   │     "origin": {"type": "platform", "platformId": "asgard"}
+│   │   }
+│   ├── soul/
+│   │   └── template.json                    ← 只读；平台同步；用户写入被拒
+│   └── memory/
+│       └── seed/                            ← 只读；平台同步
+│   （注意：NO profile.json, NO memory/user/ — soul policy 决定）
+│
+├── asgard-u1-hanhan-derived/              ← 用户从韩寒派生的
+│   ├── agent.json
+│   │   {
+│   │     "kind": "derived",
+│   │     "soulPolicy": "overridable",
+│   │     "parentTemplateId": "hanhan-super",
+│   │     "origin": {"type": "cloud-adopted", "asgard": {...}}
+│   │   }
+│   ├── soul/
+│   │   ├── template.json                    ← 引用父模板的副本，read-mostly
+│   │   ├── profile.json                     ← 用户个性化补丁
+│   │   └── evolutions/                      ← 演化日志
+│   └── memory/
+│       ├── seed/                            ← 父模板 seed 副本
+│       └── user/                            ← 这个用户的累积
+│
+└── asgard-u1-my-pencil/                   ← 完全自创
+    ├── agent.json
+    │   {
+    │     "kind": "custom",
+    │     "soulPolicy": "overridable",
+    │     "origin": {"type": "local"}
+    │   }
+    ├── soul/
+    │   ├── profile.json                     ← 唯一 source of truth
+    │   └── evolutions/
+    └── memory/
+        ├── user/                            ← 主要累积层
+        └── imported/                        ← 用户上传的（可选）
+```
+
+### 7.5.3 运行时 Soul/Memory merge 规则
+
+| 字段 | super | derived | custom |
+|---|---|---|---|
+| `systemPrompt` | `template.systemPrompt` | `template.systemPrompt` ⊕ `profile.appendOrPatch` | `profile.systemPrompt` |
+| `styleTags` | `template.styleTags` | `template.styleTags` ∪ `profile.styleTags`（去重）| `profile.styleTags` |
+| LLM context | + `memory/seed/` | + `memory/seed/` + `memory/user/` | + `memory/user/` + `memory/imported/` |
+
+**Soul policy 强制执行点**（Gateway nano-adapter）：
+
+```ts
+// 伪代码
+if (agent.kind === 'super' && writeTarget === 'soul/profile.json') {
+  throw new ForbiddenError('Soul of SuperAgent is immutable');
+}
+if (agent.kind === 'super' && writeTarget.startsWith('memory/seed/')) {
+  throw new ForbiddenError('Memory seed is platform-controlled');
+}
+```
+
+### 7.5.4 Asgard 数据库 schema 加 3 个字段
+
+```sql
+ALTER TABLE asgard_agents ADD COLUMN kind VARCHAR(16);
+    -- 'super' | 'derived' | 'custom'，默认 'custom'
+ALTER TABLE asgard_agents ADD COLUMN parent_template_id INTEGER NULL;
+    -- FK self-ref；derived 用，其他 NULL
+ALTER TABLE asgard_agents ADD COLUMN soul_policy VARCHAR(16);
+    -- 'immutable' | 'overridable'，super 默认 immutable，其他 overridable
+```
+
+**可见性规则**（Asgard 路由侧）：
+
+- `kind=super` + `is_public=true`：**所有用户可见**（出现在"市场 / SuperAgent 列表"）
+- `kind=derived` + `is_public=false`：仅创建者可见（"我的 Agent"列表）
+- `kind=custom` + `is_public=false`：同上
+
+### 7.5.5 用户操作流程
+
+```
+平台 admin 创建 SuperAgent
+   ↓
+   ASGARD UI：POST /api/v1/agents/pencil { kind: "super", soul_policy: "immutable", ... }
+   ↓
+   普通用户在"市场"看到「韩寒 SuperAgent」
+   ↓
+用户选择 → 三种动作：
+   ├─ "试用"           → Asgard 不复制记录，前端直接调 pencil/<super_id> 聊天
+   ├─ "派生到我的"     → POST /api/v1/agents/pencil/<super_id>/derive
+   │                       Asgard 复制 soul + memory_seed 到新记录
+   │                       新 agent: kind=derived, parent=<super_id>, soul_policy=overridable
+   │                       用户后续聊天累积到自己的 profile + memory/user/
+   └─ "完全自创"       → POST /api/v1/agents/pencil { kind: "custom", soul: {...} }
+                          可选附带 memory 文件上传
+```
+
+---
+
 ## 8. 长期维护原则
 
 > 一旦布局对用户可见，新增容易、删除难。
@@ -670,6 +789,38 @@ Step E  (nanoPencil)     N13–N15 WorkspaceManager + Sessions 双轴
 Step F  (nanoPencil)     N16–N19 Teams 切到统一 agents/ + workspace 黑板
 Step G  (清理)           Gateway 移除 env 兜底；editor 统一 connection schema
 ```
+
+### 10.4 SuperAgent / Derived / Custom 产品演进路线（P0–P5）
+
+> 为 §7.5 三种 Agent 形态分类落地的分阶段计划。P0 已在 commit `1df2380` 完成。
+
+| 阶段 | 改动 | 范围 | 状态 |
+|---|---|---|---|
+| **P0** | 每个 Agent 独立 `~/.pencils/agents/<id>/` 目录 + 写 `agent.json` 元数据。Gateway 端 default agentDir 派生从 `getAgentDir()` 改为 `~/.pencils/agents/<config.id>/`；register/update 时调用 `writeAgentMetadata()` 落 doc 16 §11.2.1 schema 的 agent.json | Gateway 单方 | ✅ 已落（2026-05-13, commit `1df2380`）|
+| **P0.5** | 修每个 agentDir 内**自动 seed** 一份 `.PENCIL.md`（基于 soul），或在 SDK 加 `noProjectContext` flag，避免 nano-pencil DefaultResourceLoader fallback 读 `process.cwd()` 的 AGENTS.md 污染 agent 身份 | Gateway 或 nanoPencil | ⏳ 待办 |
+| **P1** | Asgard schema 加 `kind` / `parent_template_id` / `soul_policy` 字段；UI 区分"市场 SuperAgent"和"我的 Agent"两个列表；不同可见性规则（super public、derived/custom private to creator） | Asgard | ⏳ 待办（业务侧排期）|
+| **P2** | 派生接口 `POST /api/v1/agents/pencil/<super_id>/derive`——Asgard 复制 super 的 soul template + memory seed 到新 agent 记录（kind=derived, parent=<super_id>）；Gateway 接收 origin metadata 写入 agent.json | Asgard + Gateway | ⏳ 待办 |
+| **P3** | Gateway 端 soul policy 强制：nano-adapter / agent metadata 读 `agent.json.soulPolicy`，immutable 时禁写 `soul/profile.json` 与 `memory/seed/`；任何破坏性写入返回 403 | Gateway | ⏳ 待办 |
+| **P4** | Custom Agent memory 上传——UI 文件上传组件 + Asgard 接 multipart 接口（限格式：JSONL / Markdown / 限大小）+ Gateway 落 `memory/imported/`；仅 custom/derived kind 可调用，super 拒绝 | Asgard UI + Asgard API + Gateway | ⏳ 待办 |
+| **P5** | SuperAgent 版本管理——`agent.json.origin.asgard.templateVersion` 字段 + 平台 push 新版本通知；用户在 UI 看到"新版本可用"，可选"采纳"（同步覆盖 `soul/template.json`、保留本地 profile）或"保持当前版本" | Asgard + UI + Gateway | ⏳ 待办 |
+
+### 10.5 P0 已落地的具体行为差异
+
+```
+Before commit 1df2380 (P0 之前)：
+  ~/.pencils/agents/default/          ← 所有 agent 共享这一个目录
+  ~/.pencils/gateway/agents/<id>.json ← Gateway 注册体（OK）
+
+After commit 1df2380 (P0 之后)：
+  ~/.pencils/agents/default/                  ← nano-pencil CLI 兼容槽
+  ~/.pencils/agents/asgard-u1-41c65fc9/       ← 你 UI 建的"Pencil Demo"
+  │   └── agent.json                            kind=custom（P1 起按平台标识）
+  ~/.pencils/agents/asgard-u1-5e3139d6/       ← 你 UI 建的"测试"
+  │   └── agent.json
+  ~/.pencils/gateway/agents/<id>.json         ← Gateway 注册体（不变）
+```
+
+每个 Agent 现在有"心智"目录的雏形——但里面只有 agent.json，soul/memory 等子目录还**没自动创建**（因为 Gateway 当前还用 in-memory SessionManager 跑，没有真持久化）。P0.5 + P1 之后逐步补齐。
 
 ---
 
@@ -912,3 +1063,4 @@ $ pencils migrate --apply              # 实际执行；默认使用拷贝模式
 | 2026-05-05 | **v2（本版）**| 合并 Pencil-Agent-Gateway 仓库 doc 16（完整设计 + 决策）+ doc 17（Step B 评估）；root 改 `~/.pencils/`；新增 agent.json / Workspace manifest / 三层 habits / 长期维护原则 / Gateway 与 nanoPencil 双仓库改造说明 / Teams 5 阶段重构。**自此本文为唯一权威源。** |
 | 2026-05-06 | v2.1 | 修正 callsite 数据（34/53/47 而非 72，经实际 grep 验证）；§0.4 新增分工总览表；§5.2 ws_id 派生加 URL 归一化；§15 待确认问题加建议答案。Gateway doc 16 改为行动手册、doc 17 归档。 |
 | 2026-05-09 | v2.2 | **Phase 1-3 任务（N1-N12）宣告完成**：正式支持 `--agent <id>`、`agent.json` 元数据、`pencils migrate` 安全拷贝工具；默认根目录切至 `~/.pencils/`；更新文档以符合 release 状态。 |
+| 2026-05-13 | v2.3 | 新增 §7.5「Agent 三种形态分类」——SuperAgent / Derived / Custom 的产品语义、文件系统对照、Soul/Memory merge 规则、Asgard schema 字段、用户操作流程。新增 §10.4「P0–P5 产品演进路线」明确分阶段计划。**P0（每 Agent 独立 agentDir + agent.json）已在 Pencil-Agent-Gateway commit `1df2380` 落地**。 |

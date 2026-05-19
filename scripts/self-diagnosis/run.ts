@@ -81,6 +81,11 @@ When done, write your report and finish with verbatim: ${SENTINEL}`;
 			NANOPENCIL_EVAL_ENABLED: "true",
 		},
 		stdio: ["pipe", "pipe", "pipe"],
+		// shell: true is required on Windows so spawn finds npx.cmd via PATH
+		// resolution; harmless on Linux/Mac (the args here are static strings
+		// and the user prompt flows through stdin, not argv, so no injection
+		// surface).
+		shell: true,
 	});
 
 	let outputData = "";

@@ -19,6 +19,15 @@ interface RunOptions {
 const SENTINEL = "SELF-STUDY COMPLETE";
 const MAX_POST_SENTINEL_TURNS = 2; // Allow some slack after sentinel
 
+/**
+ * Framework noise that pencil emits to stdout (where the model output also goes).
+ * Lines matching these prefixes are stripped from output.md so the markdown stays
+ * a clean record of the model's answer. The original noise is still preserved in
+ * run.log (stderr) AND visible in `run.log` via the same regex applied externally.
+ * Patterns are line-anchored — only entire lines starting with the prefix are removed.
+ */
+const STDOUT_NOISE_PATTERNS = /^(MCP tools loaded:.*|\[Cron-Scheduler\].*|\[sal\].*)\r?\n/gm;
+
 export function parseRunArgs(argv: string[]): RunOptions {
 	const { values } = parseArgs({
 		args: argv,
@@ -108,9 +117,11 @@ When done, write your report and finish with verbatim: ${SENTINEL}`;
 
 	return new Promise((resolve) => {
 		child.on("exit", (code) => {
-			writeFileSync(outputFile, outputData, "utf-8");
+			const cleanedOutput = outputData.replace(STDOUT_NOISE_PATTERNS, "");
+			writeFileSync(outputFile, cleanedOutput, "utf-8");
 			writeFileSync(logFile, logData, "utf-8");
-			console.error(`[self-diagnosis] Child exited with code ${code}. Variant tagging owned by SAL at run_start; no post-exit PATCH performed.`);
+			const strippedBytes = outputData.length - cleanedOutput.length;
+			console.error(`[self-diagnosis] Child exited with code ${code}. Stripped ${strippedBytes} bytes of framework noise from output.md. Variant tagging owned by SAL at run_start; no post-exit PATCH performed.`);
 			resolve(code ?? 0);
 		});
 

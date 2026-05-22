@@ -139,10 +139,12 @@ function createExtensionAPI(
 	extension: Extension,
 	runtime: ExtensionRuntime,
 	cwd: string,
+	agentDir: string,
 	eventBus: EventBus,
 ): ExtensionAPI {
 	const api = {
 		cwd,
+		agentDir,
 
 		// Registration methods - write to extension
 		on(event: string, handler: HandlerFn): void {
@@ -300,6 +302,7 @@ function createExtension(extensionPath: string, resolvedPath: string): Extension
 async function loadExtension(
 	extensionPath: string,
 	cwd: string,
+	agentDir: string,
 	eventBus: EventBus,
 	runtime: ExtensionRuntime,
 ): Promise<{ extension: Extension | null; error: string | null }> {
@@ -312,7 +315,7 @@ async function loadExtension(
 		}
 
 		const extension = createExtension(extensionPath, resolvedPath);
-		const api = createExtensionAPI(extension, runtime, cwd, eventBus);
+		const api = createExtensionAPI(extension, runtime, cwd, agentDir, eventBus);
 		await factory(api);
 
 		return { extension, error: null };
@@ -328,12 +331,13 @@ async function loadExtension(
 export async function loadExtensionFromFactory(
 	factory: ExtensionFactory,
 	cwd: string,
+	agentDir: string,
 	eventBus: EventBus,
 	runtime: ExtensionRuntime,
 	extensionPath = "<inline>",
 ): Promise<Extension> {
 	const extension = createExtension(extensionPath, extensionPath);
-	const api = createExtensionAPI(extension, runtime, cwd, eventBus);
+	const api = createExtensionAPI(extension, runtime, cwd, agentDir, eventBus);
 	await factory(api);
 	return extension;
 }
@@ -341,7 +345,7 @@ export async function loadExtensionFromFactory(
 /**
  * Load extensions from paths.
  */
-export async function loadExtensions(paths: string[], cwd: string, eventBus?: EventBus): Promise<LoadExtensionsResult> {
+export async function loadExtensions(paths: string[], cwd: string, agentDir: string, eventBus?: EventBus): Promise<LoadExtensionsResult> {
 	const extensions: Extension[] = [];
 	const errors: Array<{ path: string; error: string }> = [];
 	const resolvedEventBus = eventBus ?? createEventBus();
@@ -353,7 +357,7 @@ export async function loadExtensions(paths: string[], cwd: string, eventBus?: Ev
 	// all extensions to attempt loading so error reports are comprehensive, not truncated.
 	const results = await Promise.all(
 		paths.map((extPath) =>
-			loadExtension(extPath, cwd, resolvedEventBus, runtime).then((result) => ({
+			loadExtension(extPath, cwd, agentDir, resolvedEventBus, runtime).then((result) => ({
 				...result,
 				path: extPath,
 			})),
@@ -535,5 +539,5 @@ export async function discoverAndLoadExtensions(
 		addPaths([resolved]);
 	}
 
-	return loadExtensions(allPaths, cwd, eventBus);
+	return loadExtensions(allPaths, cwd, agentDir, eventBus);
 }

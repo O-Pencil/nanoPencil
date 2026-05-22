@@ -32,7 +32,7 @@ export function createCronListTool() {
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const tasks = await listCronTasks(ctx.cwd);
+				const tasks = await listCronTasks(ctx.agentDir);
 
 				if (tasks.length === 0) {
 					return {

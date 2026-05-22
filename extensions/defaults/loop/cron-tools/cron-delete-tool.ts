@@ -37,7 +37,7 @@ export function createCronDeleteTool() {
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const deleted = await deleteCronTask(ctx.cwd, params.id);
+				const deleted = await deleteCronTask(ctx.agentDir, params.id);
 
 				if (deleted) {
 					return {

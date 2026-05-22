@@ -201,9 +201,16 @@ function isExpandable(obj: unknown): obj is Expandable {
 
 function spawnNpm(args: string[]) {
   if (process.platform === "win32") {
-    return spawn("cmd.exe", ["/d", "/s", "/c", "npm", ...args], {
+    // On Windows, use shell mode with a single string to avoid DEP0190 warning.
+    // We quote arguments that contain spaces.
+    const fullCommand = ["npm", ...args]
+      .map((arg) => (arg.includes(" ") ? `"${arg}"` : arg))
+      .join(" ");
+
+    return spawn(fullCommand, {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
+      shell: true,
     });
   }
 
@@ -1415,6 +1422,7 @@ export class InteractiveMode {
       ui: this.createExtensionUIContext(),
       hasUI: true,
       cwd: this.session.cwd,
+      agentDir: this.session.agentDir,
       sessionManager: this.sessionManager,
       modelRegistry: this.session.modelRegistry,
       model: this.session.model,

@@ -48,7 +48,7 @@ export function createCronCreateTool() {
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const result = await addCronTask(ctx.cwd, {
+				const result = await addCronTask(ctx.agentDir, {
 					cron: params.cron,
 					prompt: params.prompt,
 					recurring: params.recurring,

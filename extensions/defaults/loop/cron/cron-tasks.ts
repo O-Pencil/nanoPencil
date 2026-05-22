@@ -79,11 +79,14 @@ export function getCronFilePath(root: string): string {
 }
 
 /**
- * Read durable cron tasks from the project directory.
+ * Read durable cron tasks from the agent directory.
  * Returns empty array on any error (file not found, JSON malformed, etc.).
  * Validates each task and skips invalid ones.
+ *
+ * When `legacyCwd` is provided and no tasks are found in `projectRoot`,
+ * attempts to migrate tasks from the legacy `{legacyCwd}/.nanopencil/` location.
  */
-export async function readCronTasks(projectRoot: string): Promise<CronTask[]> {
+export async function readCronTasks(projectRoot: string, legacyCwd?: string): Promise<CronTask[]> {
 	try {
 		const filePath = join(projectRoot, CRON_FILE_REL);
 		const content = await fs.readFile(filePath, "utf-8");
@@ -114,6 +117,50 @@ export async function readCronTasks(projectRoot: string): Promise<CronTask[]> {
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
 			console.error("[Cron-Tasks] Error reading tasks file:", error);
 		}
+
+		// Migration: check legacy cwd path for existing tasks
+		if (legacyCwd && (error as NodeJS.ErrnoException).code === "ENOENT") {
+			return tryMigrateLegacyTasks(projectRoot, legacyCwd);
+		}
+
+		return [];
+	}
+}
+
+/**
+ * Attempt to migrate tasks from legacy {cwd}/.nanopencil/ to {agentDir}/.nanopencil/.
+ * Returns migrated tasks on success, empty array otherwise.
+ */
+async function tryMigrateLegacyTasks(agentDir: string, legacyCwd: string): Promise<CronTask[]> {
+	const legacyPath = join(legacyCwd, CRON_FILE_REL);
+	try {
+		const content = await fs.readFile(legacyPath, "utf-8");
+		if (!content.trim()) return [];
+
+		const parsed = JSON.parse(content) as unknown;
+		let rawTasks: unknown[];
+		if (Array.isArray(parsed)) {
+			rawTasks = parsed;
+		} else if (typeof parsed === "object" && parsed !== null && "tasks" in parsed) {
+			rawTasks = (parsed as { tasks: unknown[] }).tasks;
+			if (!Array.isArray(rawTasks)) return [];
+		} else {
+			return [];
+		}
+
+		const validTasks: CronTask[] = [];
+		for (const item of rawTasks) {
+			const task = validateCronTask(item);
+			if (task) validTasks.push(task);
+		}
+
+		if (validTasks.length > 0) {
+			await writeCronTasks(agentDir, validTasks);
+			console.log(`[Cron-Tasks] Migrated ${validTasks.length} task(s) from legacy path to ${agentDir}`);
+		}
+
+		return validTasks;
+	} catch {
 		return [];
 	}
 }

@@ -2493,6 +2493,7 @@ export class AgentSession {
             extensionsResult.extensions,
             extensionsResult.runtime,
             this._cwd,
+            this._agentDir,
             this.sessionManager,
             this._modelRegistry,
           )

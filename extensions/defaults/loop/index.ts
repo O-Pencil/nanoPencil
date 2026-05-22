@@ -180,7 +180,7 @@ async function dispatchTask(api: ExtensionAPI, bus: EventBus, task: CronTask): P
 	// Mark as pending
 	task.pending = true;
 	if (task.durable) {
-		await updateCronTask(api.cwd, task);
+		await updateCronTask(api.agentDir, task);
 	} else {
 		const { updateSessionCronTask } = await import("./cron/index.js");
 		updateSessionCronTask(task);
@@ -191,7 +191,7 @@ async function dispatchTask(api: ExtensionAPI, bus: EventBus, task: CronTask): P
 		const handled = await api.executeCommand(task.prompt.trim());
 		if (!handled) {
 			scheduler.markSettled(task.id, "Unknown slash command.");
-			if (task.durable) await updateCronTask(api.cwd, { ...task, pending: false, lastError: "Unknown slash command." });
+			if (task.durable) await updateCronTask(api.agentDir, { ...task, pending: false, lastError: "Unknown slash command." });
 			publishLoopUpdate(api, bus, `[Loop] Failed to run ${label}: unknown slash command.`, "error");
 			return;
 		}
@@ -199,7 +199,7 @@ async function dispatchTask(api: ExtensionAPI, bus: EventBus, task: CronTask): P
 		// Capture output snippet after execution
 		if (api.isIdle()) {
 			scheduler.markSettled(task.id);
-			if (task.durable) await updateCronTask(api.cwd, { ...task, pending: false });
+			if (task.durable) await updateCronTask(api.agentDir, { ...task, pending: false });
 			await maybeAutoCancel(api, bus, task.id);
 		}
 	} else {
@@ -209,11 +209,11 @@ async function dispatchTask(api: ExtensionAPI, bus: EventBus, task: CronTask): P
 }
 
 async function maybeAutoCancel(api: ExtensionAPI, bus: EventBus, id: string): Promise<void> {
-	const task = await getCronTask(api.cwd, id);
+	const task = await getCronTask(api.agentDir, id);
 	if (!task || task.maxRuns === undefined) return;
 	if ((task.runCount ?? 0) < task.maxRuns) return;
 
-	const deleted = await deleteCronTask(api.cwd, id);
+	const deleted = await deleteCronTask(api.agentDir, id);
 	if (!deleted) return;
 
 	publishLoopUpdate(
@@ -277,7 +277,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 			}
 		},
 		onSettle: async (id: string, error?: string, outputSnippet?: string) => {
-			const task = await getCronTask(api.cwd, id);
+			const task = await getCronTask(api.agentDir, id);
 			if (!task) return;
 
 			task.pending = false;
@@ -287,7 +287,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 			}
 
 			if (task.durable) {
-				await updateCronTask(api.cwd, task);
+				await updateCronTask(api.agentDir, task);
 			} else {
 				const { updateSessionCronTask } = await import("./cron/index.js");
 				updateSessionCronTask(task);
@@ -295,7 +295,8 @@ export default async function loopExtension(api: ExtensionAPI) {
 
 			await maybeAutoCancel(api, bus, id);
 		},
-		dir: api.cwd,
+		dir: api.agentDir,
+			legacyCwd: api.cwd,
 	});
 	cronSchedulerByBus.set(bus, scheduler);
 
@@ -317,7 +318,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 		if (!scheduler) return;
 
 		// Check if there's a pending task that just completed
-		const tasks = await listCronTasks(api.cwd);
+		const tasks = await listCronTasks(api.agentDir);
 		const pendingTask = tasks.find((t) => t.pending);
 		if (!pendingTask) return;
 
@@ -356,7 +357,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 		}
 
 		if (parsed.type === "list") {
-			const tasks = await listCronTasks(api.cwd);
+			const tasks = await listCronTasks(api.agentDir);
 			const scheduler = getCronScheduler(bus);
 			const nextFireTimes = new Map<string, number>();
 			// Approximate next fire times from tasks
@@ -370,7 +371,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 		}
 
 		if (parsed.type === "status") {
-			const task = await resolveTask(api.cwd, parsed.ref);
+			const task = await resolveTask(api.agentDir, parsed.ref);
 			if (!task) {
 				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
@@ -383,15 +384,15 @@ export default async function loopExtension(api: ExtensionAPI) {
 
 		if (parsed.type === "clear") {
 			clearSessionCronTasks();
-			if (api.cwd) {
-				await import("./cron/index.js").then(({ writeCronTasks }) => writeCronTasks(api.cwd, []));
+			if (api.agentDir) {
+				await import("./cron/index.js").then(({ writeCronTasks }) => writeCronTasks(api.agentDir, []));
 			}
 			publishLoopUpdate(api, bus, "[Loop] Cleared all scheduled tasks.", "info");
 			return;
 		}
 
 		if (parsed.type === "cancel") {
-			const removed = await deleteCronTask(api.cwd, parsed.ref);
+			const removed = await deleteCronTask(api.agentDir, parsed.ref);
 			publishLoopUpdate(
 				api,
 				bus,
@@ -402,19 +403,19 @@ export default async function loopExtension(api: ExtensionAPI) {
 		}
 
 		if (parsed.type === "pause") {
-			const task = await resolveTask(api.cwd, parsed.ref);
+			const task = await resolveTask(api.agentDir, parsed.ref);
 			if (!task) {
 				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
 			}
 			task.paused = true;
-			await updateCronTask(api.cwd, task);
+			await updateCronTask(api.agentDir, task);
 			publishLoopUpdate(api, bus, `[Loop] Paused ${refLabel(task)}.`, "info");
 			return;
 		}
 
 		if (parsed.type === "resume") {
-			const task = await resolveTask(api.cwd, parsed.ref);
+			const task = await resolveTask(api.agentDir, parsed.ref);
 			if (!task) {
 				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
@@ -427,7 +428,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 				const scheduler = getCronScheduler(bus);
 				if (scheduler) scheduler.forceDue(task.id);
 			}
-			await updateCronTask(api.cwd, task);
+			await updateCronTask(api.agentDir, task);
 			const nextMs = nextCronRunMs(task.cron, Date.now());
 			const nextLabel = nextMs ? formatRelative(nextMs - Date.now()) : "scheduled";
 			publishLoopUpdate(api, bus, `[Loop] Resumed ${refLabel(task)}; next run in ${nextLabel}.`, "info");
@@ -435,7 +436,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 		}
 
 		if (parsed.type === "run") {
-			const task = await resolveTask(api.cwd, parsed.ref);
+			const task = await resolveTask(api.agentDir, parsed.ref);
 			if (!task) {
 				publishLoopUpdate(api, bus, `[Loop] No scheduled task matches "${parsed.ref}".`, "warning");
 				return;
@@ -455,7 +456,7 @@ export default async function loopExtension(api: ExtensionAPI) {
 				return;
 			}
 
-			const result = await addCronTask(ctx.cwd, {
+			const result = await addCronTask(ctx.agentDir, {
 				cron: cronExpr,
 				prompt: parsed.input,
 				recurring: true,
@@ -466,12 +467,12 @@ export default async function loopExtension(api: ExtensionAPI) {
 			});
 
 			// Immediately dispatch the first run (per refactoring plan requirement)
-			const task = await resolveTask(api.cwd, result.id);
+			const task = await resolveTask(api.agentDir, result.id);
 			if (task) {
 				void dispatchTask(api, bus, task);
 			}
 
-			const displayTask = await resolveTask(api.cwd, result.id);
+			const displayTask = await resolveTask(api.agentDir, result.id);
 			if (displayTask) {
 				const { nextCronRunMs } = await import("./cron/index.js");
 				const nextRun = nextCronRunMs(displayTask.cron, displayTask.lastFiredAt ?? displayTask.createdAt) ?? undefined;

@@ -25,6 +25,8 @@ export interface CronSchedulerOptions {
 	assistantMode?: boolean;
 	/** Project root directory. If provided, enables durable task watching. */
 	dir?: string;
+		/** Legacy cwd for migrating tasks from old {cwd}/.nanopencil/ location. */
+		legacyCwd?: string;
 	/** If true, scheduler stops checking. */
 	isKilled?: () => boolean;
 	/** Jitter config: max jitter in milliseconds. Default: 60000 (1 minute). */
@@ -81,6 +83,7 @@ export function createCronScheduler(options: CronSchedulerOptions): CronSchedule
 		assistantMode = false,
 		dir,
 		isKilled = () => killed,
+		legacyCwd,
 		jitterMs = 60_000,
 	} = options;
 
@@ -233,7 +236,7 @@ export function createCronScheduler(options: CronSchedulerOptions): CronSchedule
 		}
 
 		try {
-			const tasks = await readCronTasks(dir);
+			const tasks = await readCronTasks(dir, legacyCwd);
 			fileTasks = new Map();
 			for (const task of tasks) {
 				fileTasks.set(task.id, task);

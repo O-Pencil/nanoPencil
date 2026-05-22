@@ -267,6 +267,8 @@ export interface ExtensionContext {
 	hasUI: boolean;
 	/** Current working directory */
 	cwd: string;
+	/** Global agent config directory (e.g. ~/.pencils/agents/<id>) */
+	agentDir: string;
 	/** Session manager (read-only) */
 	sessionManager: ReadonlySessionManager;
 	/** Model registry for API key resolution */
@@ -956,6 +958,9 @@ export type ExtensionHandler<E, R = undefined> = (event: E, ctx: ExtensionContex
 export interface ExtensionAPI {
 	/** Working directory resolved for this extension load */
 	cwd: string;
+
+	/** Global agent config directory (e.g. ~/.pencils/agents/<id>) */
+	agentDir: string;
 
 	// =========================================================================
 	// Event Subscription

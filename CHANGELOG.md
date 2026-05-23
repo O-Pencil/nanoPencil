@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.1] - 2026-05-23
+
+### Added
+- feat(extensions): recap M2 — Free path becomes default, Smart via --smart
+- feat(extensions): recap M1 — on-demand ※ recap with cost-aware Smart synthesis
+- feat(extensions): add completeSimpleWithUsage for cost-aware LLM calls
+- feat: multi-agent infrastructure and auto-migration tool (N1-N12)
+- feat: add loop adaptation and token saving
+- feat: multi-agent infrastructure and migration tool (N1-N12)
+- feat(ai): update generated model definitions and costs
+- docs: 多 Agent 核心文档 v2.1 — 修正 callsite 数据 + 新增分工总览 + ws_id URL 归一化
+
+### Fixed
+- fix(test): use non-adaptive sonnet variant for interleaved-thinking test
+- fix(test): pass mock ExtensionContext to security-audit tool_call handler
+- fix(test): align github-copilot test with current model registry
+- fix(cron): unify durable task storage to agentDir instead of cwd
+- fix(self-diagnosis): add shell:true to npx spawn so Windows can resolve npx.cmd
+- fix(self-diagnosis): use pathToFileURL for cross-platform entry-point check
+- fix(self-diagnosis): strip framework noise from output.md, record MCP-on-host gap
+- fix(self-diagnosis): land variant via SAL whitelist, drop redundant PATCH, record gaps
+- fix(tools): validate bash timeout
+- fix(tools): validate search window inputs
+- fix(tools): validate read window inputs
+- fix(runtime): keep default write tools inside workspace
+- fix(security): block dangerous tool calls before execution
+- fix(team): use correct agent directory environment variable
+- fix(idle-think): default to OFF and reset idle timer after exploration
+- fix(workspace): unify browser/link-world workspace to global ~/.nanopencil/
+- fix(diagnostics): include package version in issue reports
+- fix(update): avoid shell args warning on windows
+- fix(team): improve collaboration stream and browser packaging
+
+### Changed
+- refactor(interactive): consolidate ExtensionContext for shortcut handlers
+- refactor(subagent): type runner model option
+- refactor(subagent): use typed context model
+- refactor(idle-think): use typed settings access
+- refactor(soul): type persisted state hydration
+- refactor(soul): type evolution reasoning deltas
+- refactor(soul): type personality deltas
+- refactor(ai): type aborted retry messages
+- refactor(mem): type host extension events
+- refactor(ai): type env provider lookup
+- refactor(agent-dir): tighten metadata extension state
+- refactor(cli): type warning interception
+- refactor(agent-core): type proxy tool call state
+- refactor(ai): type browser extension detection
+- refactor(ai): type validation errors
+- refactor(ai): type event stream completion
+- refactor(ai): type string enum schema
+- refactor(soul): type evolution updates
+- refactor(subagent): use session message accessor
+- refactor(workspace): type patch diff errors
+- refactor(mem): type structural file scoring
+- refactor(utils): type logger context
+- refactor(session): guard session headers
+- refactor(tools): type search tool errors
+- refactor(tools): type caught tool errors
+- refactor(runtime): type extension completions
+- refactor(runtime): share slash command catalog
+- refactor(runtime): isolate extension core bindings
+- refactor(runtime): isolate default tool wiring
+
+### Performance
+- perf(cli,theme): defer main.ts and cli-highlight imports until needed
+
+### Documentation
+- docs(charter): note that sync-notification automation is live
+- docs(recap): add Recap扩展.md design record (-f past .gitignore)
+- docs: charter — make nanoPencil the canonical source-of-truth for ecosystem
+- docs: propose RemoteToolTransport SDK contract (gateway v0.2 M-tools-2)
+- docs: v2.4 — P0.5 与 P1 落地，§10.4 路线表打 ✅、§10.5 补 P1 行为变化
+- docs: v2.3 — Agent 三种形态分类（SuperAgent/Derived/Custom）+ P0–P5 演进路线
+- docs: add project structure and build optimization plan
+- docs: add multi-agent local file system design spec
+
+### Maintenance
+- chore(dev-docs): bootstrap maintainer handbook and self-diagnosis scaffold
+- chore(dip): verify AGENT maps in CI
+- chore: add development and audit scripts
+- chore: update .gitignore to exclude .history and .npmrc
+- chore: remove legacy memory-experiments directory
+
+
 ## [1.14.0] - 2026-05-11
 
 ### Added

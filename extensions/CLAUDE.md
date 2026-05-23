@@ -88,6 +88,28 @@ Auto-loaded extensions available to all users.
     - [FROM]: core/extensions/types, @pencil-agent/ai
     - [HERE]: btw extension entry
 
+#### recap/ — On-Demand Situational Recap
+
+**P3 Contract:**
+`index.ts`: - [WHO]: Extension with /recap command (Smart by default), RECAP_MESSAGE_TYPE renderer with inline token/cost badge
+    - [FROM]: core/extensions/types, @pencil-agent/tui, ./recap-synthesizer, ./recap-renderer, ./recap-types
+    - [HERE]: recap extension entry
+
+`recap-types.ts`: RECAP_MESSAGE_TYPE constant, RecapEntry / RecapSource / RecapTriggerReason / RecapSettings types, RECAP_DEFAULTS budgets
+
+`recap-budget.ts`: estimateInputTokens() + checkPerCallBudget() — pre-call hard-cap (M1 scope: per-call only)
+
+`recap-synthesizer.ts`: buildRecapContext() + synthesizeSmartRecap() — runs completeSimpleWithUsage and surfaces real provider usage
+
+`recap-renderer.ts`: createRecapRenderer() — ※ recap header with `{in} in / {out} out · ~${cost}` accounting badge
+
+**Design (CRITICAL):**
+- `/recap` is Smart by default — explicit user invocation = explicit cost consent
+- Auto trigger NOT in M1 — defers to M4; will require `/recap auto on` opt-in
+- Every Smart call shows real provider token usage inline (no `~` estimate)
+- Per-call input cap rejects oversized prompts pre-flight; M3 adds session/daily caps
+- Message custom type is excluded from LLM context to prevent self-reference echo (core/messages.ts CUSTOM_MESSAGE_TYPES_EXCLUDED_FROM_CONTEXT)
+
 #### debug/ — System Diagnostics
 
 **P3 Contract:**

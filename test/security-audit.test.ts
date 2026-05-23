@@ -3,7 +3,7 @@ import { existsSync, readFileSync, rmSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after } from "node:test";
-import type { ExtensionAPI, ToolCallEvent, ToolCallEventResult } from "../core/extensions/types.js";
+import type { ExtensionAPI, ExtensionContext, ToolCallEvent, ToolCallEventResult } from "../core/extensions/types.js";
 
 const tempAgentDir = mkdtempSync(join(tmpdir(), "nanopencil-security-"));
 process.env.NANOPENCIL_AGENT_DIR = tempAgentDir;
@@ -29,9 +29,16 @@ function createHarness() {
 		},
 	} as unknown as ExtensionAPI;
 
+	// Minimum ExtensionContext that satisfies security-audit's getLogger():
+	// it reads `ctx.sessionManager.getAgentCtx?.()` and falls back to `ctx.agentDir`.
+	const ctx = {
+		sessionManager: {},
+		agentDir: tempAgentDir,
+	} as unknown as ExtensionContext;
+
 	const emitToolCall = async (event: ToolCallEvent): Promise<ToolCallEventResult | undefined> => {
 		for (const handler of handlers.get("tool_call") ?? []) {
-			const result = await handler(event);
+			const result = await (handler as (e: unknown, c: ExtensionContext) => unknown)(event, ctx);
 			if ((result as ToolCallEventResult | undefined)?.block) {
 				return result as ToolCallEventResult;
 			}

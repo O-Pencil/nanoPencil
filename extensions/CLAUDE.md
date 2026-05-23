@@ -91,23 +91,27 @@ Auto-loaded extensions available to all users.
 #### recap/ — On-Demand Situational Recap
 
 **P3 Contract:**
-`index.ts`: - [WHO]: Extension with /recap command (Smart by default), RECAP_MESSAGE_TYPE renderer with inline token/cost badge
-    - [FROM]: core/extensions/types, @pencil-agent/tui, ./recap-synthesizer, ./recap-renderer, ./recap-types
+`index.ts`: - [WHO]: Extension with /recap command (Free deterministic by default, --smart for LLM synthesis), RECAP_MESSAGE_TYPE renderer with inline token/cost badge (Smart only)
+    - [FROM]: core/extensions/types, @pencil-agent/tui, ./recap-extractor, ./recap-synthesizer, ./recap-renderer, ./recap-types
     - [HERE]: recap extension entry
 
 `recap-types.ts`: RECAP_MESSAGE_TYPE constant, RecapEntry / RecapSource / RecapTriggerReason / RecapSettings types, RECAP_DEFAULTS budgets
 
 `recap-budget.ts`: estimateInputTokens() + checkPerCallBudget() — pre-call hard-cap (M1 scope: per-call only)
 
-`recap-synthesizer.ts`: buildRecapContext() + synthesizeSmartRecap() — runs completeSimpleWithUsage and surfaces real provider usage
+`recap-extractor.ts`: walkSessionActivity() shared walker; extractFreeRecap()/formatFreeRecap() zero-LLM deterministic Free path
 
-`recap-renderer.ts`: createRecapRenderer() — ※ recap header with `{in} in / {out} out · ~${cost}` accounting badge
+`recap-synthesizer.ts`: buildRecapContext() returns prompt + activity counts (via shared walker); synthesizeSmartRecap() short-circuits empty sessions, then runs completeSimpleWithUsage and surfaces real provider usage
+
+`recap-renderer.ts`: createRecapRenderer() — italic dim ※ recap with `{in} in / {out} out · ~${cost}` badge, no background block (low-weight in-conversation hint)
 
 **Design (CRITICAL):**
-- `/recap` is Smart by default — explicit user invocation = explicit cost consent
-- Auto trigger NOT in M1 — defers to M4; will require `/recap auto on` opt-in
-- Every Smart call shows real provider token usage inline (no `~` estimate)
-- Per-call input cap rejects oversized prompts pre-flight; M3 adds session/daily caps
+- `/recap` is Free deterministic by default — zero token, zero wait, on-par quality with Smart for goal/next clauses (evaluated against real session shapes)
+- `/recap --smart` is explicit opt-in for LLM-polished facts; every Smart call shows real provider token usage inline (no `~` estimate)
+- Auto trigger NOT shipped — defers to a future milestone; will require explicit opt-in
+- No-activity guard: zero user messages + zero tool calls → notify only, no LLM call (fresh-session test was burning ~500 tokens per call)
+- Visually low-weight: italic dim text, no background block — recap is a quiet in-conversation hint, not a celebration card
+- Smart path: per-call input cap rejects oversized prompts pre-flight; session/daily caps deferred
 - Message custom type is excluded from LLM context to prevent self-reference echo (core/messages.ts CUSTOM_MESSAGE_TYPES_EXCLUDED_FROM_CONTEXT)
 
 #### debug/ — System Diagnostics

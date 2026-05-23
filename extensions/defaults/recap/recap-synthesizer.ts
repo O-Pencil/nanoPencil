@@ -1,11 +1,12 @@
 /**
- * [WHO]: synthesizeSmartRecap(), buildRecapContext(), SynthesizeResult
- * [FROM]: Depends on ./recap-budget, ./recap-types, core/extensions/types for ExtensionCommandContext + CompletionResult
+ * [WHO]: synthesizeSmartRecap(), buildRecapContext(), hasMeaningfulActivity(), SynthesizeResult
+ * [FROM]: Depends on ./recap-budget, ./recap-extractor (walkSessionActivity), ./recap-types, core/extensions/types for ExtensionCommandContext + CompletionResult
  * [TO]: Consumed by extensions/defaults/recap/index.ts
  * [HERE]: extensions/defaults/recap/recap-synthesizer.ts - Smart Recap synthesis: builds prompt from session, runs completeSimpleWithUsage, enforces per-call budget
  */
 import type { CompletionResult, ExtensionCommandContext } from "../../../core/extensions/types.js";
 import { checkPerCallBudget } from "./recap-budget.js";
+import { walkSessionActivity } from "./recap-extractor.js";
 import type { RecapSettings, RecapTriggerReason } from "./recap-types.js";
 
 const RECAP_SYSTEM_PROMPT = `You are producing a brief situational recap for the user mid-task.
@@ -22,65 +23,91 @@ Constraints:
 - 60 English words / 120 Chinese characters maximum across all three clauses combined.
 - Do not contradict facts in the conversation transcript.`;
 
-interface SessionMessageEntry {
-	type: "message";
-	message: {
-		role: "user" | "assistant" | "system";
-		content: string | Array<{ type: "text"; text: string }>;
-	};
-}
-
 const ASSISTANT_TURN_CHAR_BUDGET = 500;
 const RECENT_TURN_COUNT = 20;
 const RECENT_TOOL_COUNT = 8;
 
-function extractText(content: string | Array<{ type: "text"; text: string }>): string {
+function extractText(content: unknown): string {
 	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return "";
 	return content
-		.filter((part): part is { type: "text"; text: string } => part.type === "text")
+		.filter((part): part is { type: "text"; text: string } =>
+			typeof part === "object" && part !== null && (part as { type?: unknown }).type === "text",
+		)
 		.map((part) => part.text)
 		.join("\n");
 }
 
+interface RecapContext {
+	prompt: string;
+	userTurns: number;
+	assistantTurns: number;
+	toolCalls: number;
+}
+
 /**
  * Build the user-side payload fed to the synthesis model. Tight by design:
- * we walk the session backward and take only the most recent N message
- * turns + a tail of tool names. Tool *results* are intentionally excluded
- * because their bulk eats the per-call input budget without adding facts the
- * recap needs.
+ * we walk the session and take only the most recent N message turns + a tail
+ * of tool names. Tool *results* are intentionally excluded because their bulk
+ * eats the per-call input budget without adding facts the recap needs. Returns
+ * activity counts alongside the prompt so callers can short-circuit before
+ * spending tokens on an empty session.
+ *
+ * Tool counts come from walkSessionActivity() so Free and Smart see the same
+ * tool view (assistant content blocks with type === "toolCall").
  */
-export function buildRecapContext(ctx: ExtensionCommandContext): string {
+export function buildRecapContext(ctx: ExtensionCommandContext): RecapContext {
 	const entries = ctx.sessionManager.getEntries();
+	const activity = walkSessionActivity(entries);
 	const turns: string[] = [];
-	const tools: string[] = [];
+	let userTurns = 0;
+	let assistantTurns = 0;
 
 	for (const entry of entries) {
-		const e = entry as { type: string; message?: SessionMessageEntry["message"]; toolName?: string };
-		if (e.type === "message" && e.message) {
-			if (e.message.role === "user") {
-				const text = extractText(e.message.content);
-				if (text.trim()) turns.push(`User: ${text}`);
-			} else if (e.message.role === "assistant") {
-				const text = extractText(e.message.content);
-				if (text.trim()) turns.push(`Assistant: ${text.slice(0, ASSISTANT_TURN_CHAR_BUDGET)}`);
+		if (entry.type !== "message") continue;
+		const msg = entry.message;
+		if (msg.role === "user") {
+			const text = extractText(msg.content);
+			if (text.trim()) {
+				turns.push(`User: ${text}`);
+				userTurns += 1;
 			}
-		} else if (e.type === "toolCall" && e.toolName) {
-			tools.push(e.toolName);
+		} else if (msg.role === "assistant") {
+			const text = extractText(msg.content);
+			if (text.trim()) {
+				turns.push(`Assistant: ${text.slice(0, ASSISTANT_TURN_CHAR_BUDGET)}`);
+				assistantTurns += 1;
+			}
 		}
 	}
 
 	const recentTurns = turns.slice(-RECENT_TURN_COUNT).join("\n\n");
-	const recentTools = tools.slice(-RECENT_TOOL_COUNT).join(", ");
+	const recentTools = activity.tools.slice(-RECENT_TOOL_COUNT).join(", ");
 
 	const pieces: string[] = [];
 	if (recentTurns) pieces.push(`Recent conversation turns:\n${recentTurns}`);
 	if (recentTools) pieces.push(`Recent tool calls (names only): ${recentTools}`);
-	if (pieces.length === 0) return "(no recorded activity in this session yet — describe the situation as 'session just started')";
-	return pieces.join("\n\n");
+
+	return {
+		prompt: pieces.join("\n\n"),
+		userTurns,
+		assistantTurns,
+		toolCalls: activity.tools.length,
+	};
+}
+
+/**
+ * Cheap pre-check the command handler can run before showing "Synthesizing
+ * recap…" so empty sessions don't see a misleading progress notify.
+ */
+export function hasMeaningfulActivity(ctx: ExtensionCommandContext): boolean {
+	const context = buildRecapContext(ctx);
+	return context.userTurns > 0 || context.toolCalls > 0;
 }
 
 export type SynthesizeResult =
 	| { kind: "ok"; completion: CompletionResult }
+	| { kind: "empty_session" }
 	| { kind: "budget_blocked"; reason: string; estimatedInputTokens: number }
 	| { kind: "no_model" }
 	| { kind: "no_response" };
@@ -94,7 +121,14 @@ export async function synthesizeSmartRecap(
 	settings: RecapSettings,
 	_trigger: RecapTriggerReason,
 ): Promise<SynthesizeResult> {
-	const userMessage = buildRecapContext(ctx);
+	const context = buildRecapContext(ctx);
+	// No-activity guard: a session with zero user messages AND zero tool calls
+	// has nothing meaningful to recap. Short-circuit before spending tokens —
+	// users testing on a fresh session were burning ~500 tokens per call.
+	if (context.userTurns === 0 && context.toolCalls === 0) {
+		return { kind: "empty_session" };
+	}
+	const userMessage = context.prompt;
 	const verdict = checkPerCallBudget(RECAP_SYSTEM_PROMPT, userMessage, settings);
 	if (!verdict.allowed) {
 		return { kind: "budget_blocked", reason: verdict.reason, estimatedInputTokens: verdict.estimatedInputTokens };

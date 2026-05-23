@@ -31,11 +31,12 @@ loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSche
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
 btw/index.ts: BTW extension entry - /btw command for quick side questions without interrupting main task, uses completeSimple() for lightweight response, BTW_MESSAGE_TYPE renderer
-recap/index.ts: Recap extension entry - /recap command, Smart synthesis via completeSimpleWithUsage with three-clause goal/facts/next-step prompt, ※ recap message renderer with inline `{in} in / {out} out · ~${cost}` accounting badge, M1 manual-only (no auto trigger)
+recap/index.ts: Recap extension entry - /recap command (Free deterministic default, --smart for LLM-polished synthesis), Smart path uses completeSimpleWithUsage with three-clause goal/facts/next-step prompt, ※ recap message renderer with inline `{in} in / {out} out · ~${cost}` accounting badge for Smart only, manual-only (no auto trigger)
 recap/recap-types.ts: RECAP_MESSAGE_TYPE constant, RecapEntry/RecapSource/RecapTriggerReason/RecapSettings types, RECAP_DEFAULTS conservative budgets
 recap/recap-budget.ts: estimateInputTokens() char-count pre-flight, checkPerCallBudget() pre-call hard-cap enforcement (M1: per-call only; session/daily defer to M3)
-recap/recap-synthesizer.ts: buildRecapContext() compresses recent turns + tool names, synthesizeSmartRecap() runs completeSimpleWithUsage and surfaces real provider usage
-recap/recap-renderer.ts: createRecapRenderer() - ※ recap header with cost badge, body via Text (mode-agnostic, no Markdown coupling)
+recap/recap-extractor.ts: walkSessionActivity() shared pure walker over SessionEntry[], extractFreeRecap()/formatFreeRecap() zero-LLM deterministic recap (longest substantive user message as goal, tool/file frequency top-3 as facts, question-mark detection as next-step)
+recap/recap-synthesizer.ts: buildRecapContext() returns prompt + activity counts via walkSessionActivity, synthesizeSmartRecap() runs completeSimpleWithUsage and surfaces real provider usage, short-circuits with empty_session before any token spend when session has no user message and no tool call
+recap/recap-renderer.ts: createRecapRenderer() - italic dim ※ recap header + body, no background block (low-weight in-conversation hint), Text-only (mode-agnostic, no Markdown coupling)
 debug/index.ts: Debug extension entry - /debug command dispatches diagnostics through full agent loop (sendUserMessage + before_agent_start hook), three-layer analysis (Phenomenon/Essence/Philosophy), supports /debug env|session|model quick subcommands, DEBUG_MESSAGE_TYPE renderer
 debug/collectors.ts: Diagnostic data collectors for /debug command, collectSystemInfo/collectModelInfo/collectSessionInfo/collectConfigInfo/collectGitInfo/collectAgentState, sanitizeForLLM, formatDiagnosticData
 plan/index.ts: Plan Mode extension entry - registers /plan command, EnterPlanMode/ExitPlanMode tools, permission gating, workflow prompt injection

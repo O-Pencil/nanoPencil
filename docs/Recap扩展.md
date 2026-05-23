@@ -7,33 +7,34 @@
 Recap 是一个默认加载的内置扩展，提供 `※ recap:` 形态的元信息消息。在多轮、跨上下文的复杂任务中，用户可以通过 `/recap` 立刻看到一段三段式摘要：
 
 ```
-※ recap · 412 in / 89 out · ~$0.002
-  正在把 widgets-web 从 HSF 2 升级到 @ali/egg-hsfclient@3.15.4，文档已更新到 v1.2，
-  本机实测发现 Node 必须从 14 升到 18.20。
-  下一步：决定是否把 engines.install-node 也改了。
+※ recap · free
+  Current goal: 把 widgets-web 从 HSF 2 升级到 @ali/egg-hsfclient@3.15.4
+  Key facts: read(×5), edit(×3), bash(×2); files: package.json, src/config/hsf.ts
+  Next: respond to "是否还需要把 engines.install-node 也改了？"
 ```
 
 **位置**：`extensions/defaults/recap/`
 
 **特点**：
-- 默认 Smart 模式（调模型合成），体验优先
-- Free 模式（零 token，纯结构提取）作为降级出口
-- 自动触发**默认关闭**，需 `/recap auto on` 显式启用
-- 每次 Smart 调用在 UI 上行内显示真实 token 用量与估算费用
-- 单次 / 会话 / 日三级预算硬上限，超阈值自动降级到 Free 并通知用户
+- 默认 Free 模式（确定性提取），零 token、零等待
+- `/recap --smart` 显式触发 LLM 合成，行内展示真实 token 用量与估算费用
+- 自动触发未实现；保留为后续里程碑
+- 任何路径都受空会话守卫保护，无活动时不会渲染也不会调模型
+- Smart 路径仍保留单次 token 上限，作为反误伤保险
 
 ---
 
 ## 设计立场
 
-> 用户**显式输入**命令 = 显式同意付费；**隐式自动**触发必须显式开启。
+> **默认零成本零等待**；付费路径必须显式开启。
 
-这两条边界把"功能足够好用"和"不出现意料外消耗"分开来：
+经过 prototype 评估（见后文「设计权衡记录」），决策反转：
 
-- `/recap` 一敲就调模型，体验直接
-- 自动 recap 不会自己长出来，必须由用户开关打开
+- `/recap` 默认走 Free（确定性提取，零 token、零等待）
+- `/recap --smart` 显式走 LLM 合成，仅当用户需要更润色的 Facts 段时使用
+- 自动触发暂不开放，无论 Free 还是 Smart 都要用户主动调用
 
-成本透明化、预算保护是**反误伤**机制，不是省钱机制。
+成本透明化、预算保护对 Smart 路径仍生效，是**反误伤**机制。Free 路径根本不消耗 token，无需保护。
 
 ---
 
@@ -53,47 +54,45 @@ Recap 是一个默认加载的内置扩展，提供 `※ recap:` 形态的元信
 
 ## 双轨产物
 
-### Smart Recap（`/recap` 默认）
+### Free Recap（`/recap` 默认）
 
-调用 `ctx.completeSimple(system, user)` 让模型合成。
+纯结构提取，**不调模型**，耗时 < 10ms。当前实现：
+
+| 段位 | 抽取来源 |
+|---|---|
+| 当前目标 | user 消息中最长且 ≥30 字符且非斜杠命令的那一条；fallback 取最长 |
+| 关键事实 | 工具调用名字频次 top 3（`read(×N)`、`edit(×N)` …）+ 触达过的文件路径 top 3（从 edit/write/read 参数、bash 命令正则提取） |
+| 下一步 | 最近一条 user 消息含 `?/？` 或问句词头时输出 `respond to "<原句>"`；否则 `continue` |
+
+后续可接入 plan/grub 状态进一步增强"下一步"段。
+
+### Smart Recap（`/recap --smart`）
+
+调用 `ctx.completeSimpleWithUsage(system, user)` 让模型合成更润色的版本。
 
 输入构造（控制 token）：
 
 ```
-[骨架]            ← 先跑一次 Free 提取，作为压缩好的事实清单
-[最近 N=10 轮]    ← user + assistant，assistant 截断到 500 字
-[最近 5 个工具名] ← 只名字，不带结果
+[最近 N=20 轮]    ← user + assistant，assistant 截断到 500 字
+[最近 8 个工具名] ← 只名字，不带结果
 ```
 
-骨架做前置压缩是关键。模型不直接读全量会话，输入 token 通常 ≤ 800。
-
-### Free Recap（`/recap --free` 或预算耗尽时降级）
-
-纯结构提取，**不调模型**，耗时 < 10ms：
-
-| 段位 | 抽取来源 |
-|---|---|
-| 当前目标 | 最近一条 user 消息首句（去指令前缀）／plan 文件的标题段 |
-| 关键事实 | 自上次 recap 起触达的文件路径（去重，≤ 5）+ 成功 bash 命令（≤ 3，过滤 `ls/cat/echo`） |
-| 下一步 | plan 中最早未勾选 step ／ 最近 assistant 消息的疑问句 ／ 兜底 "Continue / 继续" |
-
-Free 是降级出口，不是默认。但它的存在让"预算用完 = 仍能 recap"成立。
+模型只看会话片段，输入 token 通常 ≤ 1200。每次调用 header 标注真实 in/out token + cost。Smart 主要赢在「关键事实」段——能从工具结果里提炼语义（如"Node 必须升级到 18.20"），Free 只能列调用统计。
 
 ---
 
 ## 触发模型
 
-| 触发 | 走 Smart | 走 Free | 默认状态 |
-|---|:---:|:---:|---|
-| `/recap` 用户主动 | ✅ | — | 永远可用 |
-| `/recap --free` 用户主动 | — | ✅ | 永远可用 |
-| `turn_end` 节流 | ✅ | — | **默认关闭**，需 `/recap auto on` |
-| `session_before_compact` | ✅ | — | **默认关闭**，需 `/recap auto on` |
-| 预算耗尽时的 Smart 请求 | — | ✅ | 自动降级 |
+| 触发 | 路径 | 默认状态 |
+|---|---|---|
+| `/recap` 用户主动 | Free（确定性） | 永远可用，零成本 |
+| `/recap --free` 用户主动 | Free | 永远可用，等价于 `/recap` |
+| `/recap --smart` 用户主动 | Smart（LLM） | 永远可用，按 token 计费 |
+| `turn_end` / `session_before_compact` 自动 | — | **未实现**，未来如开放需显式 opt-in |
 
-**关键不变量**：不存在任何"用户没显式开启的情况下自动调模型"的路径。
+**关键不变量**：不存在任何"用户没显式输入 `--smart` 的情况下调用模型"的路径。
 
-自动模式开启时的节流条件（OR 触发）：
+未来若开放自动触发的节流条件草案（仍待评估）：
 
 - 距上次 recap 已过 ≥ 6 轮 human turns
 - 上下文用量自上次 recap 起增长 ≥ 20 个百分点
@@ -103,17 +102,22 @@ Free 是降级出口，不是默认。但它的存在让"预算用完 = 仍能 r
 
 ## 命令面
 
+当前已实现：
+
 ```
-/recap                    # Smart，默认。每次调用都付费
-/recap --free             # Free，零 token
-/recap auto on            # 启用自动触发（首次会确认）
-/recap auto off           # 关闭自动触发
-/recap status             # 显示本会话/今日的 Smart 调用次数、token 累计、剩余预算
-/recap budget reset       # 重置本会话预算（需 confirm）
-/recap every <n>          # 调整自动模式的轮数阈值
+/recap                    # Free，默认。零 token、零等待
+/recap --free             # 同上，显式形式
+/recap --smart            # Smart 合成，调用 LLM、付费、需等待
 ```
 
-故意**不提供** `/recap auto smart`、`/recap auto free` 这种语法——`auto` 始终对应 Smart，让用户的心智模型简单。
+未来里程碑（未实现）：
+
+```
+/recap auto on            # 启用自动触发
+/recap auto off           # 关闭自动触发
+/recap status             # 显示 Smart 调用次数、token 累计
+/recap budget reset       # 重置 Smart 预算
+```
 
 ---
 
@@ -152,6 +156,7 @@ Free 是降级出口，不是默认。但它的存在让"预算用完 = 仍能 r
 Smart 流水线：
 
 ```
+[0] 活动量检查       → 0 user message + 0 tool call → notify 后直接返回，无 token 消耗
 [1] 节流 / 预算检查   → 命中预算 → 降级 Free
 [2] 构造 Free 骨架   → 0 token
 [3] UI 预公示       → ctx.ui.notify("Synthesizing recap (~{est} in tok)…", "info")
@@ -159,6 +164,8 @@ Smart 流水线：
 [5] 记账            → 累计到 RecapBudgetState，appendEntry 持久化
 [6] 渲染            → 标题行带真实 in/out token + ~$
 ```
+
+第 0 步的活动量守卫修复了 M1 早期测试发现的浪费：全新会话执行 `/recap` 会用占位文本喂模型，单次消耗 ~500 token。守卫零开销、可在 `buildRecapContext()` 中一并完成。
 
 第 3 步的预公示让用户在调用发起前就能看到"我正在花钱"，可以 Ctrl+C 取消。
 
@@ -323,37 +330,30 @@ edit, write, bash, bash, grep
 
 ## 渲染
 
-参照 `extensions/defaults/btw/index.ts` 的 renderer 实现：
+视觉刻意压低权重——recap 是"提醒用户别跑偏"的轻量提示，不是头条卡片：
 
 ```typescript
 api.registerMessageRenderer("recap", (msg, _opts, theme): Component => {
   const entry = msg.details as RecapEntry;
-  const body = typeof msg.content === "string"
-    ? msg.content
-    : msg.content
-        .filter(c => c.type === "text")
-        .map(c => c.text)
-        .join("\n");
-
+  const body = extractContentText(msg.content);
   const header = entry.source === "smart" && entry.usage
-    ? `※ recap · ${entry.usage.isEstimated ? "~" : ""}${entry.usage.tokensIn} in / ${entry.usage.tokensOut} out · ~$${entry.usage.estimatedCostUsd.toFixed(4)}`
+    ? `※ recap · ${entry.usage.input} in / ${entry.usage.output} out · ~$${entry.usage.cost.total.toFixed(4)}`
     : `※ recap · free`;
-
-  const box = new Box(1, 1, v => theme.bg("customMessageBg", v));
-  box.addChild(new Text(theme.fg("dim", header), 0, 0));
-  box.addChild(new Spacer(1));
-  box.addChild(new Markdown(body, 0, 0, getMarkdownTheme(), {
-    color: t => theme.fg("customMessageText", t),
-  }));
 
   const container = new Container();
   container.addChild(new Spacer(1));
-  container.addChild(box);
+  container.addChild(new Text(theme.italic(theme.fg("dim", header)), 0, 0));
+  if (body.trim()) {
+    container.addChild(new Text(theme.italic(theme.fg("dim", body)), 0, 0));
+  }
   return container;
 });
 ```
 
-`※` 是 U+203B REFERENCE MARK，等宽终端兼容良好。MVP 复用 `customMessageBg` 主题键；后续可引入独立 `recapBg`。
+- `※` 是 U+203B REFERENCE MARK，等宽终端兼容良好
+- 不使用 `Box` / `customMessageBg`：M1 早期测试反馈背景块过于显眼；recap 应作为会话中段提示存在，不该抢走焦点
+- 不使用 `Markdown`：避免反向依赖 `modes/interactive/theme` 拿 `getMarkdownTheme()`，保证扩展跨模式可用
+- 不渲染 body 段当内容为空（如未来 Free 路径的极简表示）
 
 ---
 
@@ -361,8 +361,8 @@ api.registerMessageRenderer("recap", (msg, _opts, theme): Component => {
 
 | 阶段 | 内容 | LLM 风险 |
 |---|---|---|
-| **M1** | `/recap` Smart 实现 + renderer + 排除 LLM 上下文 + builtin 注册 + 行内成本展示 + 单次预算硬上限 | 用户显式触发，单次有上限 |
-| **M2** | Free 路径（`/recap --free` + 预算耗尽降级）+ `recap-extractor` | 零（M2 不引入新 LLM 路径） |
+| **M1** | `/recap` Smart 实现 + renderer + 排除 LLM 上下文 + builtin 注册 + 行内成本展示 + 单次预算硬上限 + 空会话守卫 | 用户显式触发，单次有上限 |
+| **M2** | Free 路径 + `recap-extractor` + 离线 eval 脚本 + **默认翻转为 Free**（评估通过后），Smart 改为 `--smart` 显式触发 | 零（默认路径无 LLM） |
 | **M3** | 会话 / 日预算 + `/recap status` + `/recap budget reset` + 持久化 | 加固现有 Smart 路径 |
 | **M4** | 自动触发（`/recap auto on/off` + `recap-controller` + 节流） | 用户显式开启后才有，仍受预算约束 |
 | **M5** | 与 plan / grub 协同合成 + 主题色 `recapBg` | 零 |
@@ -389,11 +389,10 @@ api.registerMessageRenderer("recap", (msg, _opts, theme): Component => {
 
 | 选择 | 备选 | 取舍理由 |
 |---|---|---|
-| Smart 默认 | Free 默认 | 用户显式表态：体验优先于成本 |
-| 自动触发默认关 | 自动触发默认开 | 显式调用 = 显式同意；自动是隐式动作，必须显式开启 |
-| 行内 token 显示 | 仅 `/recap status` 集中显示 | 单次成本紧贴单次结果，认知负担最低 |
-| 三级预算 | 仅单次上限 | 防御反复触发；日上限防御跨会话累积 |
-| 骨架先行 + LLM 润色 | 直接喂全量历史 | 控制输入 token；骨架本身就是有用的中间产物（Free 复用） |
+| **Free 默认（决策反转）** | Smart 默认 | prototype 评估：Free 的 goal/next 段质量与 Smart 持平，Facts 段稍逊但非决策关键；零成本、零等待更契合"会话结尾自然出现"的目标 UX |
+| Smart 改为 `--smart` 显式 | 完全去掉 Smart | 部分场景（多轮、工具结果丰富）Smart 的 Facts 提炼仍有价值；保留按需付费的能力 |
+| 自动触发不实现 | 默认关 + 命令开启 | 当前 Free 已足够，自动触发的实现成本（去重、节流、降级）暂不值得 |
+| 行内 token 显示（Smart） | 仅 status 集中显示 | 单次成本紧贴单次结果，认知负担最低 |
 | 排除 LLM 上下文 | 进上下文供模型自参考 | 防止自我引用回声 |
 | `※` 前缀 | `>` 或其他 | 等宽终端兼容；与 Claude TUI 视觉一致 |
 

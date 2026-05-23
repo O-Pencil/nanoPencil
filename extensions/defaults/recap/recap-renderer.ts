@@ -1,10 +1,10 @@
 /**
  * [WHO]: createRecapRenderer() — MessageRenderer for RECAP_MESSAGE_TYPE custom messages
- * [FROM]: Depends on @pencil-agent/tui (Box, Container, Spacer, Text), ./recap-types
+ * [FROM]: Depends on @pencil-agent/tui (Container, Spacer, Text), ./recap-types
  * [TO]: Consumed by extensions/defaults/recap/index.ts via api.registerMessageRenderer
- * [HERE]: extensions/defaults/recap/recap-renderer.ts - ※ recap visual style + inline token/cost accounting badge
+ * [HERE]: extensions/defaults/recap/recap-renderer.ts - low-weight italic+dim ※ recap with inline token/cost accounting badge
  */
-import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Container, Spacer, Text, type Component } from "@pencil-agent/tui";
 import type { MessageRenderer } from "../../../core/extensions/types.js";
 import type { RecapEntry } from "./recap-types.js";
 
@@ -33,9 +33,14 @@ function extractContentText(content: unknown): string {
 /**
  * Renderer registered via `api.registerMessageRenderer("recap", …)`.
  *
- * Layout:
- *   ※ recap · 412 in / 89 out · ~$0.0021    <- dim header with cost badge
- *   <recap body>                              <- normal-weight body
+ * Layout (intentionally low-visual-weight — a recap is a *hint* to keep the
+ * user on track, not a celebration):
+ *
+ *   ※ recap · 412 in / 89 out · ~$0.0021    <- italic dim header
+ *   <recap body>                              <- italic dim body
+ *
+ * No background block, no border — just italic gray text so it reads as
+ * a quiet in-conversation note rather than a headline card.
  *
  * Body uses Text (not Markdown) so we don't have to reach into
  * modes/interactive/theme for getMarkdownTheme — extensions stay
@@ -43,17 +48,15 @@ function extractContentText(content: unknown): string {
  */
 export function createRecapRenderer(): MessageRenderer<RecapEntry> {
 	return (message, _options, theme): Component => {
-		const entry = (message.details ?? { source: "free", trigger: "manual", triggeredAt: Date.now() }) as RecapEntry;
+		const entry = (message.details ?? { source: "smart", trigger: "manual", triggeredAt: Date.now() }) as RecapEntry;
 		const body = extractContentText(message.content);
-
-		const box = new Box(1, 1, (t) => theme.bg("customMessageBg", t));
-		box.addChild(new Text(theme.fg("dim", formatHeader(entry)), 0, 0));
-		box.addChild(new Spacer(1));
-		box.addChild(new Text(theme.fg("customMessageText", body), 0, 0));
 
 		const container = new Container();
 		container.addChild(new Spacer(1));
-		container.addChild(box);
+		container.addChild(new Text(theme.italic(theme.fg("dim", formatHeader(entry))), 0, 0));
+		if (body.trim()) {
+			container.addChild(new Text(theme.italic(theme.fg("dim", body)), 0, 0));
+		}
 		return container;
 	};
 }

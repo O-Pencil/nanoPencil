@@ -25,6 +25,7 @@ Updated on 2026-05-26 after the first repair pass and structural follow-up:
 - Split `sal/index.ts` into `sal-config.ts`, `sal-context.ts`, `sal-runtime.ts`, and `sal-trace.ts`; the entry file is now 799 lines and delegates configuration, context formatting, runtime contracts, and tool_trace analytics.
 - Split `idle-think` lifecycle/state handling into `idle-think-runtime.ts`, added diagnostics for failed background exploration, and covered daily budget reset, abort cleanup, insight persistence, and failed-exploration diagnostics.
 - Scoped `/debug` full-diagnostic system prompt injection to the pending command-generated prompt and added cleanup coverage proving old/manual `[DEBUG:]` prompts do not keep diagnostic privileges after `agent_end`.
+- Added `recap` renderer accounting coverage proving Free recaps suppress token/cost badges while Smart recaps render input/output/cost and extract only text content parts.
 - Fixed `presence` memory locale detection to include the mem-core `preferences` store rather than only `knowledge`/`lessons`, and aligned the locale fixture with the `MemoryEntry` storage contract.
 - Fixed mem-core archive cooldown logic to evaluate `revivedAt` and age against the explicit archive run timestamp instead of the wall clock, making archive maintenance deterministic.
 - Fixed related test fragility in SAL batch ordering, Grub persisted-state fixture shape, and TUI viewport cursor movement.
@@ -33,7 +34,7 @@ Post-fix verification:
 
 - `npx tsc -p tsconfig.build.json --noEmit`: pass.
 - `npm run verify:dip`: pass, `418/418` files with valid P3 headers.
-- Node test suite, excluding Vitest-style files: `238/238` pass.
+- Node test suite, excluding Vitest-style files: `240/240` pass.
 - Vitest-style tests: `48` pass, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: pass.
 - `npm run build`: pass.
@@ -51,7 +52,7 @@ Current evidence:
 
 - `npm run verify:dip`: passed, `418/418` files with valid P3 headers and 30 P2 modules checked.
 - `npx tsc -p tsconfig.build.json --noEmit`: passed.
-- Node test suite excluding Vitest-style files: `238/238` passed.
+- Node test suite excluding Vitest-style files: `240/240` passed.
 - Vitest-style tests: `48` passed, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: passed.
 - `npm run build`: passed.
@@ -170,7 +171,7 @@ Resolution:
 | `mcp` | B- | Useful Figma setup workflow and resource discovery; command is long and provider-specific. | Split Figma auth/setup into a dedicated helper module with tests. |
 | `loop` | B- | Cron tools and scheduler are useful; parser/scheduler structure is reasonable. Tests emitted lock/ticker logs and long-running process behavior. | Make scheduler test mode quiet and ensure every interval is owned and stopped deterministically. |
 | `subagent` | B | Parser covered; runner isolates write mode via worktree flow. | Add integration tests for apply/cancel paths and failure cleanup. |
-| `recap` | B+ | Small command and deterministic extractor; Free and Smart command paths are now covered, including usage emission, budget-blocked preflight, and timeout cleanup. | Add renderer accounting tests. |
+| `recap` | A- | Small command and deterministic extractor; Free and Smart command paths are now covered, including usage emission, budget-blocked preflight, timeout cleanup, and renderer accounting for free versus smart usage badges. | Keep renderer tests aligned if recap content supports new non-text parts. |
 | `debug` | A- | Good operational intent; collectors are separated; command/renderer registration, no-model quick diagnostic behavior, nested credential redaction, and full diagnostic pending-prompt cleanup are covered by tests. | Keep full-turn prompt injection scoped to command-generated prompts. |
 | `interview` | B | Important behavior fixed: before-agent hook is lightweight, and `interview/index.ts` is now 422 lines after moving probe/grill/runtime heuristics to `interview-runtime.ts`. | Add more UI command-path tests if the interview renderer or schema surface changes. |
 | `presence` | B+ | Default-on user-visible extension now has deterministic locale/path behavior, fast tests, and memory/language helpers isolated in `presence-memory.ts`; entry file is 752 lines. It remains a background/UI subsystem, so lifecycle changes need targeted tests. | Keep timer and language behavior covered whenever changing memory or i18n integration. |
@@ -226,7 +227,7 @@ Next policy layers should enforce:
 
 The repair pass closed the high-priority defects and the known large-file hotspots. Remaining work is lower urgency and mostly architectural:
 
-1. Add deeper behavior tests beyond current coverage for recap renderer accounting and branch-heavy `export-html` output.
+1. Add deeper behavior tests beyond current coverage for branch-heavy `export-html` output.
 2. Expand metadata-based enforcement so background, external-process, and resource-discovery extensions must carry matching lifecycle/failure-mode tests.
 3. Keep `sal/index.ts` and `team-runtime.ts` from regrowing past the file-size guideline by extracting new setup, lifecycle, or persistence behavior into their existing helper boundaries.
 

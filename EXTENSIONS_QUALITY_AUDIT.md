@@ -23,6 +23,7 @@ Updated on 2026-05-26 after the first repair pass and structural follow-up:
 - Split `interview/index.ts` into an entry module plus `interview-runtime.ts`, reducing the entry file from ~1125 lines to 422 lines while keeping the probe/grill/runtime heuristics in a focused boundary.
 - Split `team/team-runtime.ts` by moving prompt construction, harness turn prep, live-event projection, tool selection, path guards, and label helpers into `team-runtime-helpers.ts`; `team-runtime.ts` is now 799 lines.
 - Split `sal/index.ts` into `sal-config.ts`, `sal-context.ts`, `sal-runtime.ts`, and `sal-trace.ts`; the entry file is now 799 lines and delegates configuration, context formatting, runtime contracts, and tool_trace analytics.
+- Split `idle-think` lifecycle/state handling into `idle-think-runtime.ts`, added diagnostics for failed background exploration, and covered daily budget reset, abort cleanup, insight persistence, and failed-exploration diagnostics.
 - Fixed `presence` memory locale detection to include the mem-core `preferences` store rather than only `knowledge`/`lessons`, and aligned the locale fixture with the `MemoryEntry` storage contract.
 - Fixed mem-core archive cooldown logic to evaluate `revivedAt` and age against the explicit archive run timestamp instead of the wall clock, making archive maintenance deterministic.
 - Fixed related test fragility in SAL batch ordering, Grub persisted-state fixture shape, and TUI viewport cursor movement.
@@ -30,12 +31,12 @@ Updated on 2026-05-26 after the first repair pass and structural follow-up:
 Post-fix verification:
 
 - `npx tsc -p tsconfig.build.json --noEmit`: pass.
-- `npm run verify:dip`: pass, `417/417` files with valid P3 headers.
-- Node test suite, excluding Vitest-style files: `233/233` pass.
+- `npm run verify:dip`: pass, `418/418` files with valid P3 headers.
+- Node test suite, excluding Vitest-style files: `237/237` pass.
 - Vitest-style tests: `48` pass, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: pass.
 - `npm run build`: pass.
-- Latest structural follow-up focused tests: interview `9/9` pass, team `28/28` pass, SAL `18/18` pass, plus TypeScript and DIP gates pass.
+- Latest structural follow-up focused tests: interview `9/9` pass, team `28/28` pass, SAL `18/18` pass, idle-think focused `19/19` pass, plus TypeScript and DIP gates pass.
 
 ## Executive Summary
 
@@ -43,13 +44,13 @@ Overall quality moved from uneven to release-candidate for the audited extension
 
 Quality grade after repair: **B+ overall**.
 
-Remaining risk is now concentrated in lifecycle-sensitive behavior rather than known file-size violations. The former large-file hotspots (`sal/index.ts`, `team-runtime.ts`, and `interview/index.ts`) have been split under DIP-visible module boundaries with focused regression tests.
+Remaining risk is now concentrated in lifecycle-sensitive behavior rather than known file-size violations. The former large-file hotspots (`sal/index.ts`, `team-runtime.ts`, and `interview/index.ts`) have been split under DIP-visible module boundaries with focused regression tests, and `idle-think` now has direct runtime tests for budget and cleanup behavior.
 
 Current evidence:
 
-- `npm run verify:dip`: passed, `417/417` files with valid P3 headers and 30 P2 modules checked.
+- `npm run verify:dip`: passed, `418/418` files with valid P3 headers and 30 P2 modules checked.
 - `npx tsc -p tsconfig.build.json --noEmit`: passed.
-- Node test suite excluding Vitest-style files: `233/233` passed.
+- Node test suite excluding Vitest-style files: `237/237` passed.
 - Vitest-style tests: `48` passed, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: passed.
 - `npm run build`: passed.
@@ -172,7 +173,7 @@ Resolution:
 | `debug` | B+ | Good operational intent; collectors are separated; command/renderer registration, no-model quick diagnostic behavior, and nested credential redaction are covered by tests. | Add pending prompt cleanup tests for the full diagnostic turn path. |
 | `interview` | B | Important behavior fixed: before-agent hook is lightweight, and `interview/index.ts` is now 422 lines after moving probe/grill/runtime heuristics to `interview-runtime.ts`. | Add more UI command-path tests if the interview renderer or schema surface changes. |
 | `presence` | B+ | Default-on user-visible extension now has deterministic locale/path behavior, fast tests, and memory/language helpers isolated in `presence-memory.ts`; entry file is 752 lines. It remains a background/UI subsystem, so lifecycle changes need targeted tests. | Keep timer and language behavior covered whenever changing memory or i18n integration. |
-| `idle-think` | B- | Default-loaded but default-disabled; guards budget and idle state; tests now prove disabled startup does not create timers and enabled startup clears its interval on shutdown. Silent catch still hides failures. | Add tests for budget reset, abort cleanup, and insight injection. |
+| `idle-think` | B | Default-loaded but default-disabled; guards budget and idle state; tests prove disabled startup does not create timers, enabled startup clears its interval on shutdown, daily budget resets at the day boundary, active runs abort on cleanup, insights persist with curiosity updates, and failed exploration emits diagnostics instead of being silently swallowed. | Keep runtime tests updated when changing idle scheduling, budgets, or insight persistence. |
 | `security-audit` | B | Active gate now uses `DangerDetector`, logs `ctx.cwd`, and has tests for dangerous/safe/warning/sensitive file paths. | Move config loading into the extension when user-facing policy configuration is introduced. |
 | `btw` | B | Small command, low blast radius; command/renderer registration, no-argument validation, no-tool prompt constraint, response emission, and timeout cleanup are covered. | Add explicit slow-timeout notification test with fake timers if the test harness gains timer control. |
 | `soul` | B | Thin compatibility shim; real implementation lives in `packages/soul-core`. | Keep it thin; audit `soul-core` separately. |
@@ -224,7 +225,7 @@ Next policy layers should enforce:
 
 The repair pass closed the high-priority defects and the known large-file hotspots. Remaining work is lower urgency and mostly architectural:
 
-1. Add deeper behavior tests beyond current coverage for debug pending cleanup, idle-think budget/abort/insight paths, recap renderer accounting, and branch-heavy `export-html` output.
+1. Add deeper behavior tests beyond current coverage for debug pending cleanup, recap renderer accounting, and branch-heavy `export-html` output.
 2. Expand metadata-based enforcement so background, external-process, and resource-discovery extensions must carry matching lifecycle/failure-mode tests.
 3. Keep `sal/index.ts` and `team-runtime.ts` from regrowing past the file-size guideline by extracting new setup, lifecycle, or persistence behavior into their existing helper boundaries.
 

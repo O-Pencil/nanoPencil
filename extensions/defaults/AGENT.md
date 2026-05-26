@@ -16,6 +16,11 @@ browser/interaction-skills/: Reusable Browser Harness mechanics guides for brows
 browser/agent-workspace/: Seed workspace copied to .nanopencil/browser-workspace for editable helpers and domain skills
 discipline/index.ts: Engineering discipline extension entry, registers skill tool, default workflow skills, and lightweight before_agent_start bootstrap prompt
 discipline/skills/: Built-in engineering workflow skills for brainstorming, debugging, TDD, verification, planning, code review, worktrees, and branch finishing
+idle-think/index.ts: IdleThink extension entry, session lifecycle registration, activity tracking, and persistent insight prompt injection
+idle-think/idle-think-runtime.ts: IdleThink runtime boundary - state, budget reset, interval ownership, abort cleanup, exploration orchestration, insight persistence, and diagnostic reporting
+idle-think/thinker.ts: IdleThink read-only SubAgent exploration runner, project context collection, network capability detection, and exploration prompt construction
+idle-think/insights.ts: IdleThink nanomem-backed project-scoped insight storage and system prompt injection
+idle-think/curiosity.ts: IdleThink curiosity queue persistence, topic selection, dedupe, and explored-topic pruning
 link-world/index.ts: Internet access integration entry, registers link_world_admin/link_world_exec/web_search/web_fetch tools, /link-world status/doctor/version/install commands, and bundled internet-search resources
 link-world/link-world-agent.md: Agent-facing skill that tells models to prefer web_search/web_fetch and link_world_admin/link_world_exec over bash for internet tasks
 link-world/network-routing.md: Routing skill that tells models when to use web_search/web_fetch/link-world versus browser automation

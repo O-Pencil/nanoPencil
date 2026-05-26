@@ -7,7 +7,8 @@ Member List
 - team-types.ts: TeammateRole/TeammateMode/TeammateStatus/TeamTask/HarnessState/PsycheWeights/TeamUtterance/Handoff/LeaderPlan/AgentLiveView/TeammateIdentity/PersistedTeammate/TeamSpawnSpec/TeamSendResult types
 - team-state-store.ts: TeamStateStore class - durable teammate persistence via JSON files in <agentDir>/teams/
 - team-parser.ts: Team command parser - parseTeamCommand/buildTeamHelp for /team:* subcommands
-- team-runtime.ts: TeamRuntime class - teammate registry, stable internal labels plus visible teammate names, per-teammate send queue, task/mailbox prompt context, lifecycle, realtime status/live events, mailbox + permission + transcript wiring; uses SubAgentRuntime for agent spawning
+- team-runtime.ts: TeamRuntime class - teammate registry, stable internal labels plus visible teammate names, per-teammate send queue, lifecycle, durable tasks, mailbox + permission + transcript wiring; uses SubAgentRuntime for agent spawning
+- team-runtime-helpers.ts: TeamRuntime helper boundary - teammate prompt construction, harness turn preparation, live event projection, tool selection, path guards, label/role/text helpers
 - team-ui.ts: Team message renderer, list/status/task formatting, dashboard visibility/timer ownership, realtime observer, and speaker-stream emission helpers used by index.ts
 - team-orchestrator.ts: Leader orchestration helpers - plan building, speaker utterance creation, @mention parsing, and handoff execution
 - team-task-store.ts: TeamTaskStore class - durable shared task list in <storageDir>/tasks.json with claim/status updates

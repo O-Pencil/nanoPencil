@@ -6,7 +6,7 @@ Scope: `extensions/defaults/*`, `extensions/optional/*`, and the built-in extens
 
 ## Remediation Status
 
-Updated on 2026-05-26 after the first repair pass:
+Updated on 2026-05-26 after the first repair pass and structural follow-up:
 
 - Fixed `presence` locale fallback, macOS realpath normalization, no-API fallback behavior, and slow/flaky timing tests.
 - Stopped default-loading `extensions/optional/*`; `simplify` and `export-html` now require explicit opt-in.
@@ -20,6 +20,9 @@ Updated on 2026-05-26 after the first repair pass:
 - Added behavior coverage for debug credential redaction, `recap` budget-blocked calls, `discipline` skill discovery/prompt injection, and `export-html` custom tool HTML pre-rendering.
 - Split AgentTeam UI/rendering/observer helpers from `team/index.ts` into `team-ui.ts`, reducing the entry file from ~1035 lines to 707 lines while preserving focused team tests.
 - Split `presence` memory/path/language highlight logic into `presence-memory.ts`, reducing `presence/index.ts` from ~932 lines to 752 lines while preserving focused presence tests.
+- Split `interview/index.ts` into an entry module plus `interview-runtime.ts`, reducing the entry file from ~1125 lines to 422 lines while keeping the probe/grill/runtime heuristics in a focused boundary.
+- Split `team/team-runtime.ts` by moving prompt construction, harness turn prep, live-event projection, tool selection, path guards, and label helpers into `team-runtime-helpers.ts`; `team-runtime.ts` is now 799 lines.
+- Split `sal/index.ts` into `sal-config.ts`, `sal-context.ts`, `sal-runtime.ts`, and `sal-trace.ts`; the entry file is now 799 lines and delegates configuration, context formatting, runtime contracts, and tool_trace analytics.
 - Fixed `presence` memory locale detection to include the mem-core `preferences` store rather than only `knowledge`/`lessons`, and aligned the locale fixture with the `MemoryEntry` storage contract.
 - Fixed mem-core archive cooldown logic to evaluate `revivedAt` and age against the explicit archive run timestamp instead of the wall clock, making archive maintenance deterministic.
 - Fixed related test fragility in SAL batch ordering, Grub persisted-state fixture shape, and TUI viewport cursor movement.
@@ -27,23 +30,24 @@ Updated on 2026-05-26 after the first repair pass:
 Post-fix verification:
 
 - `npx tsc -p tsconfig.build.json --noEmit`: pass.
-- `npm run verify:dip`: pass, `411/411` files with valid P3 headers.
+- `npm run verify:dip`: pass, `417/417` files with valid P3 headers.
 - Node test suite, excluding Vitest-style files: `233/233` pass.
 - Vitest-style tests: `48` pass, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: pass.
 - `npm run build`: pass.
+- Latest structural follow-up focused tests: interview `9/9` pass, team `28/28` pass, SAL `18/18` pass, plus TypeScript and DIP gates pass.
 
 ## Executive Summary
 
-Overall quality moved from uneven to release-candidate for the audited extension risks. The extension system has strong local contracts, good DIP hygiene, and several mature modules (`token-save`, `diagnostics`, `plan`, `grub`, `team`). The first repair pass resolved the operational blockers found in the audit: optional/default semantics, `presence` instability, `simplify` shell/write boundaries, duplicated `security-audit` detection, and missing smoke tests for lightly covered extensions.
+Overall quality moved from uneven to release-candidate for the audited extension risks. The extension system has strong local contracts, good DIP hygiene, and several mature modules (`token-save`, `diagnostics`, `plan`, `grub`, `team`). The repair work resolved the operational blockers found in the audit: optional/default semantics, `presence` instability, `simplify` shell/write boundaries, duplicated `security-audit` detection, missing smoke tests for lightly covered extensions, and the three largest extension file-size violations.
 
 Quality grade after repair: **B+ overall**.
 
-Remaining risk is structural rather than immediate correctness: three extension files still exceed the local ~800 line guideline (`sal/index.ts`, `team-runtime.ts`, and `interview/index.ts`). These should be split in follow-up work when there is a dedicated design pass for each module; the current repair pass avoided broad behavior-preserving moves in the most stateful extensions after all verification gates were green.
+Remaining risk is now concentrated in lifecycle-sensitive behavior rather than known file-size violations. The former large-file hotspots (`sal/index.ts`, `team-runtime.ts`, and `interview/index.ts`) have been split under DIP-visible module boundaries with focused regression tests.
 
 Current evidence:
 
-- `npm run verify:dip`: passed, `411/411` files with valid P3 headers and 30 P2 modules checked.
+- `npm run verify:dip`: passed, `417/417` files with valid P3 headers and 30 P2 modules checked.
 - `npx tsc -p tsconfig.build.json --noEmit`: passed.
 - Node test suite excluding Vitest-style files: `233/233` passed.
 - Vitest-style tests: `48` passed, `43` skipped.
@@ -157,8 +161,8 @@ Resolution:
 | `token-save` | A- | Strong pure helpers and recovery path; handles `tool_call`, `user_bash`, and `tool_result` at `token-save/index.ts:64-99`; broad direct tests pass. | Add failure-mode tests for bad user config regex and async config load race. |
 | `plan` | A- | Cohesive permission model, validation, tools, and commands; direct tests pass. | Keep plan-file write boundaries exact; avoid expanding allowlist without tests. |
 | `grub` | B+ | Durable state, feature-list gating, parser/controller tests pass; implementation is large but well decomposed. | Continue splitting entry orchestration from UI rendering as features grow. |
-| `team` | B+ | Rich persistence, mailbox, permissions, worktree controls, and strong tests. `team/index.ts` is now 707 lines after moving rendering/dashboard/observer helpers to `team-ui.ts`; remaining size risk is `team-runtime.ts` at ~1188 lines. | Split runtime permission/worktree/send orchestration from `team-runtime.ts` in a dedicated design pass. |
-| `sal` | B+ | Ambitious and mostly isolated; has eval adapter tests and DIP coverage command. Process signal hooks are now removed on `session_shutdown` and covered by `test/sal-lifecycle.test.ts`. Complexity remains high. | Split setup/eval lifecycle orchestration from the large entry file in a future design pass. |
+| `team` | B+ | Rich persistence, mailbox, permissions, worktree controls, and strong tests. `team/index.ts` is 707 lines after moving rendering/dashboard/observer helpers to `team-ui.ts`; `team-runtime.ts` is now 799 lines after helper extraction. | Keep runtime helper contracts covered when changing permission, tool selection, or teammate prompt behavior. |
+| `sal` | B+ | Ambitious and mostly isolated; has eval adapter tests, DIP coverage command, listener cleanup coverage, and now explicit config/context/runtime/trace boundaries. `sal/index.ts` is 799 lines after extraction. | Keep eval lifecycle and zero-I/O hook behavior covered as SAL evolves. |
 | `browser` | B | Good subprocess timeout/abort cleanup at `browser/index.ts:170-213`; resource discovery is explicit at `browser/index.ts:459-470`; registration tests pass. | Add tests for install/doctor failure formatting and workspace seeding. |
 | `link-world` | B | Uses `execFile` for agent-reach execution at `link-world/index.ts:165-177`; capability-gated tools at `link-world/index.ts:405-413`; registration tests pass. | Cache capability probing or make it async to avoid startup sync command cost. |
 | `mcp` | B- | Useful Figma setup workflow and resource discovery; command is long and provider-specific. | Split Figma auth/setup into a dedicated helper module with tests. |
@@ -166,7 +170,7 @@ Resolution:
 | `subagent` | B | Parser covered; runner isolates write mode via worktree flow. | Add integration tests for apply/cancel paths and failure cleanup. |
 | `recap` | B+ | Small command and deterministic extractor; Free and Smart command paths are now covered, including usage emission, budget-blocked preflight, and timeout cleanup. | Add renderer accounting tests. |
 | `debug` | B+ | Good operational intent; collectors are separated; command/renderer registration, no-model quick diagnostic behavior, and nested credential redaction are covered by tests. | Add pending prompt cleanup tests for the full diagnostic turn path. |
-| `interview` | C+ | Important behavior fixed: before-agent hook is lightweight at `interview/index.ts:1096-1118`. But the file is ~1125 lines. | Split heuristics, grill flow, UI, and tool schema into modules. |
+| `interview` | B | Important behavior fixed: before-agent hook is lightweight, and `interview/index.ts` is now 422 lines after moving probe/grill/runtime heuristics to `interview-runtime.ts`. | Add more UI command-path tests if the interview renderer or schema surface changes. |
 | `presence` | B+ | Default-on user-visible extension now has deterministic locale/path behavior, fast tests, and memory/language helpers isolated in `presence-memory.ts`; entry file is 752 lines. It remains a background/UI subsystem, so lifecycle changes need targeted tests. | Keep timer and language behavior covered whenever changing memory or i18n integration. |
 | `idle-think` | B- | Default-loaded but default-disabled; guards budget and idle state; tests now prove disabled startup does not create timers and enabled startup clears its interval on shutdown. Silent catch still hides failures. | Add tests for budget reset, abort cleanup, and insight injection. |
 | `security-audit` | B | Active gate now uses `DangerDetector`, logs `ctx.cwd`, and has tests for dangerous/safe/warning/sensitive file paths. | Move config loading into the extension when user-facing policy configuration is introduced. |
@@ -188,7 +192,7 @@ Resolution:
 
 - Runtime category semantics are not encoded. A path under `optional/` can still be default-loaded.
 - Default-on extensions can start timers, perform sync capability checks, or attach process hooks. These need stronger lifecycle contracts than ordinary command-only extensions.
-- Some modules exceed the local quality metric of ~800 lines per file, especially `sal/index.ts`, `team-runtime.ts`, and `interview/index.ts`.
+- Some modules sit close to the local ~800 line guideline after the split work, so future feature growth should continue extracting lifecycle, rendering, and persistence boundaries early.
 - Test coverage is concentrated around parsers and core helpers; command/UI/resource paths are thinner.
 
 ### Design direction
@@ -218,11 +222,11 @@ Next policy layers should enforce:
 
 ## Remaining Structural Work
 
-The repair pass closed the high-priority defects. Remaining work is lower urgency and mostly architectural:
+The repair pass closed the high-priority defects and the known large-file hotspots. Remaining work is lower urgency and mostly architectural:
 
-1. Split large extension files where command parsing, lifecycle, rendering, and persistence are mixed, especially `sal/index.ts`, `team-runtime.ts`, and `interview/index.ts`.
-2. Add deeper behavior tests beyond current coverage for debug pending cleanup, idle-think budget/abort/insight paths, recap renderer accounting, and branch-heavy `export-html` output.
-3. Expand metadata-based enforcement so background, external-process, and resource-discovery extensions must carry matching lifecycle/failure-mode tests.
+1. Add deeper behavior tests beyond current coverage for debug pending cleanup, idle-think budget/abort/insight paths, recap renderer accounting, and branch-heavy `export-html` output.
+2. Expand metadata-based enforcement so background, external-process, and resource-discovery extensions must carry matching lifecycle/failure-mode tests.
+3. Keep `sal/index.ts` and `team-runtime.ts` from regrowing past the file-size guideline by extracting new setup, lifecycle, or persistence behavior into their existing helper boundaries.
 
 ## Verification Log
 

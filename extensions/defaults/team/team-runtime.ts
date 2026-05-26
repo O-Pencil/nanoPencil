@@ -1,12 +1,8 @@
 /**
- * [WHO]: TeamRuntime - teammate registry and lifecycle management
- * [FROM]: Depends on ./team-types, ./team-state-store, core/sub-agent/*, core/workspace/*
+ * [WHO]: TeamRuntime - teammate registry, lifecycle, persistence, task/mailbox, permission, transcript, and send queue management
+ * [FROM]: Depends on ./team-types, stores, permissions, mailbox, transcript, team-runtime-helpers.ts, core/sub-agent/*, core/workspace/*
  * [TO]: Consumed by index.ts
  * [HERE]: extensions/defaults/team/team-runtime.ts
- *
- * Manages persistent teammates with durable state.
- * Each teammate has identity, mode, status, worktree, and message history.
- * Uses SubAgentRuntime for actual agent spawning.
  */
 
 import { SubAgentRuntime } from "../../../core/sub-agent/index.js";
@@ -14,30 +10,32 @@ import type { SubAgentEvent, SubAgentHandle, SubAgentSpec } from "../../../core/
 import { WorktreeManager } from "../../../core/workspace/index.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
 import { isAbsolute, join, resolve } from "node:path";
-import {
-	createBashTool,
-	createCodingTools,
-	createReadOnlyTools,
-	createSandboxHook,
-	type Tool,
-} from "../../../core/tools/index.js";
+import type { Tool } from "../../../core/tools/index.js";
 import type { Model } from "@pencil-agent/ai";
 import { TeamStateStore } from "./team-state-store.js";
 import { PermissionStore } from "./team-permissions.js";
 import { TeamMailbox } from "./team-mailbox.js";
 import { TeamTaskStore } from "./team-task-store.js";
 import { TeamTranscriptWriter } from "./team-transcript.js";
+import { createInitialHarnessState, inspectHarnessExit } from "./team-harness.js";
+import { computePsycheWeights } from "./team-psyche.js";
 import {
-	beginHarnessTurn,
-	buildHarnessInstructions,
-	createInitialHarnessState,
-	ensureHarnessFiles,
-	inspectHarnessExit,
-	prepareContextFiles,
-} from "./team-harness.js";
-import { buildPsychePrompt, computePsycheWeights, type SoulTraits } from "./team-psyche.js";
+	applyLiveEvent,
+	buildTeammatePrompt,
+	createWritePathGuard as createTeamWritePathGuard,
+	ensureLiveView,
+	getDefaultModeForRole,
+	indexFromLabel,
+	isBuilderRole,
+	labelFromIndex,
+	normalizePath,
+	prepareHarnessTurn,
+	selectToolsForMode,
+	singleLine,
+	summarizeTask,
+	tailText,
+} from "./team-runtime-helpers.js";
 import type {
-	AgentLiveView,
 	PersistedTeammate,
 	TeamTask,
 	TeamTaskStatus,
@@ -45,12 +43,10 @@ import type {
 	TeammateMessage,
 	TeammateMode,
 	TeammateRole,
-	TeammateStatus,
 	TeamSpawnSpec,
 	TeamSendResult,
 } from "./team-types.js";
 
-/** Runtime teammate handle - combines persisted state with runtime resources */
 export interface RuntimeTeammate {
 	state: PersistedTeammate;
 	abortController: AbortController;
@@ -59,7 +55,6 @@ export interface RuntimeTeammate {
 	worktree?: WorkspacePath;
 }
 
-/** Team runtime options */
 export interface TeamRuntimeOptions {
 	storageDir?: string;
 }
@@ -73,10 +68,6 @@ export type TeamRuntimeEvent =
 	| { type: "teammate_status"; teammate: PersistedTeammate; event: string }
 	| { type: "harness_event"; teammate: PersistedTeammate; event: string };
 
-/**
- * TeamRuntime manages persistent teammates.
- * Teammates survive across main session restarts via TeamStateStore.
- */
 export class TeamRuntime {
 	private store: TeamStateStore;
 	private worktreeManager: WorktreeManager;
@@ -104,30 +95,22 @@ export class TeamRuntime {
 		this.transcripts = new TeamTranscriptWriter(this.store.directory);
 	}
 
-	/** Permission store — used by index.ts for `/team:approve`. */
 	getPermissionStore(): PermissionStore {
 		return this.permissions;
 	}
 
-	/** Mailbox — used by index.ts for live observation. */
 	getMailbox(): TeamMailbox {
 		return this.mailbox;
 	}
 
-	/** Shared task list store. */
 	getTaskStore(): TeamTaskStore {
 		return this.tasks;
 	}
 
-	/** Soul manager from the session, used to tune psyche weights when available. */
 	setSoulManager(soulManager: unknown | undefined): void {
 		this.soulManager = soulManager;
 	}
 
-	/**
-	 * Load persisted teammates from disk.
-	 * Must be called before other operations.
-	 */
 	async load(): Promise<void> {
 		if (this.loaded) return;
 
@@ -143,7 +126,6 @@ export class TeamRuntime {
 			let worktree: WorkspacePath | undefined;
 			if (state.worktreePath) {
 				try {
-					// Verify worktree still exists by checking if directory exists
 					const { stat } = await import("node:fs/promises");
 					await stat(state.worktreePath);
 					worktree = {
@@ -165,7 +147,7 @@ export class TeamRuntime {
 			}
 			this.bumpNameCounter(state.identity.name, state.identity.role);
 			this.bumpLabelCounter(state.identity.label);
-			state.liveView = this.ensureLiveView(state.liveView, state.identity);
+			state.liveView = ensureLiveView(state.liveView, state.identity);
 
 			const teammate: RuntimeTeammate = {
 				state,
@@ -180,12 +162,6 @@ export class TeamRuntime {
 		this.loaded = true;
 	}
 
-	/**
-	 * Spawn a new teammate.
-	 *
-	 * Note: teammates do not pin a model. Each /team:send turn uses whichever
-	 * model is currently active in the main session, passed through send().
-	 */
 	async spawn(spec: TeamSpawnSpec): Promise<PersistedTeammate> {
 		await this.ensureLoaded();
 
@@ -210,7 +186,7 @@ export class TeamRuntime {
 		};
 
 		const mode: TeammateMode =
-			spec.mode ?? (spec.harnessEnabled && isBuilderRole(spec.role) ? "execute" : this.getDefaultModeForRole(spec.role));
+			spec.mode ?? (spec.harnessEnabled && isBuilderRole(spec.role) ? "execute" : getDefaultModeForRole(spec.role));
 
 		const state: PersistedTeammate = {
 			identity,
@@ -218,13 +194,11 @@ export class TeamRuntime {
 			status: "idle",
 			cwd: worktree?.path ?? spec.baseCwd,
 			worktreePath: worktree?.path,
-			// TODO(B.next): plumb branch name through WorkspacePath or query via
-			// `git -C <worktree> rev-parse --abbrev-ref HEAD` after creation.
 			worktreeBranch: undefined,
 			messages: [],
 			lastActiveAt: Date.now(),
 			psycheOverrides: spec.psycheOverrides,
-			liveView: this.ensureLiveView(undefined, identity),
+			liveView: ensureLiveView(undefined, identity),
 		};
 		if (spec.harnessEnabled) {
 			state.harness = createInitialHarnessState();
@@ -248,9 +222,6 @@ export class TeamRuntime {
 		return state;
 	}
 
-	/**
-	 * Send a message to a teammate.
-	 */
 	async send(name: string, message: string, model?: Model<any>, options: TeamSendOptions = {}): Promise<TeamSendResult> {
 		await this.ensureLoaded();
 
@@ -295,7 +266,7 @@ export class TeamRuntime {
 			};
 			teammate.state.messages.push(leaderMessage);
 			teammate.state.liveView = {
-				...this.ensureLiveView(teammate.state.liveView, teammate.state.identity),
+				...ensureLiveView(teammate.state.liveView, teammate.state.identity),
 				currentTask: summarizeTask(message),
 				progress: "assigned",
 			};
@@ -322,12 +293,26 @@ export class TeamRuntime {
 				content: message,
 			});
 
-			const prompt = await this.buildPrompt(teammate.state);
-			const harnessContext = await this.prepareHarnessTurn(teammate, message);
+			const prompt = buildTeammatePrompt({
+				state: teammate.state,
+				teammates: this.getAllTeammates(),
+				tasks: await this.tasks.list(),
+				mailboxMessages: this.mailbox.list(teammate.state.identity.id).slice(-12),
+			});
+			const harnessContext = await prepareHarnessTurn({
+				teammate,
+				taskDescription: message,
+				soulManager: this.soulManager,
+			});
 			const fullPrompt = harnessContext
 				? [prompt, harnessContext.psychePrompt, harnessContext.harnessInstructions].join("\n\n")
 				: prompt;
-			const tools = this.selectTools(teammate.state.mode, teammate.state.cwd);
+			const tools = selectToolsForMode({
+				mode: teammate.state.mode,
+				cwd: teammate.state.cwd,
+				getAllTeammates: () => this.getAllTeammates(),
+				isPathAllowed: (teammateId, absolutePath) => this.permissions.isPathAllowed(teammateId, absolutePath),
+			});
 
 			try {
 			const spec: SubAgentSpec = {
@@ -338,7 +323,7 @@ export class TeamRuntime {
 				model,
 				contextFiles: harnessContext?.contextFiles,
 				onEvent: (event) => {
-					this.applyLiveEvent(teammate, event);
+					applyLiveEvent(teammate, event);
 					options.onEvent?.({ type: "teammate_live", teammate: teammate.state, event });
 				},
 				exitHook: harnessContext
@@ -386,7 +371,7 @@ export class TeamRuntime {
 			teammate.state.lastActiveAt = Date.now();
 			teammate.state.live = undefined;
 			teammate.state.liveView = {
-				...this.ensureLiveView(teammate.state.liveView, teammate.state.identity),
+				...ensureLiveView(teammate.state.liveView, teammate.state.identity),
 				lastUtterance: tailText(singleLine(teammateResponse.content), 200),
 				progress: result.success ? "done" : teammateResponse.aborted ? "stopped" : "error",
 			};
@@ -444,7 +429,7 @@ export class TeamRuntime {
 			teammate.state.lastActiveAt = Date.now();
 			teammate.state.live = undefined;
 			teammate.state.liveView = {
-				...this.ensureLiveView(teammate.state.liveView, teammate.state.identity),
+				...ensureLiveView(teammate.state.liveView, teammate.state.identity),
 				lastUtterance: tailText(singleLine(errorMessage.content), 200),
 				progress: errorMsg === "Aborted" ? "stopped" : "error",
 			};
@@ -496,9 +481,6 @@ export class TeamRuntime {
 		return run;
 	}
 
-	/**
-	 * Stop the current turn of a teammate.
-	 */
 	async stop(name: string): Promise<boolean> {
 		await this.ensureLoaded();
 
@@ -517,16 +499,12 @@ export class TeamRuntime {
 		return true;
 	}
 
-	/**
-	 * Terminate a teammate completely.
-	 */
 	async terminate(name: string): Promise<boolean> {
 		await this.ensureLoaded();
 
 		const teammate = this.findByName(name);
 		if (!teammate) return false;
 
-		// Abort current turn
 		if (teammate.currentTurnAbortController) {
 			teammate.currentTurnAbortController.abort();
 		}
@@ -534,19 +512,15 @@ export class TeamRuntime {
 			await teammate.handle.terminate();
 		}
 
-		// Dispose worktree
 		if (teammate.worktree) {
 			await this.worktreeManager.dispose(teammate.worktree);
 		}
 
-		// Cancel any pending permission requests for this teammate so the
-		// awaiting promises resolve as denied rather than leaking.
 		this.permissions.cancelForTeammate(teammate.state.identity.id);
 		this.permissions.clearPaths(teammate.state.identity.id);
 		this.mailbox.clearTeammate(teammate.state.identity.id);
 		await this.transcripts.remove(teammate.state.identity.id);
 
-		// Mark terminated and remove
 		teammate.state.status = "terminated";
 		await this.store.save(teammate.state);
 		await this.store.remove(teammate.state.identity.id);
@@ -558,15 +532,6 @@ export class TeamRuntime {
 		return true;
 	}
 
-	/**
-	 * Change teammate mode.
-	 *
-	 * Escalating an `implementer` to `execute` mode is a privileged action:
-	 * it files a `permission_request` and resolves only after the leader
-	 * approves via `/team:approve <id>`. All other transitions apply
-	 * immediately. The returned object reports which path was taken so the
-	 * UI can tell the user "pending approval" vs "applied".
-	 */
 	async setMode(
 		name: string,
 		mode: TeammateMode,
@@ -606,8 +571,6 @@ export class TeamRuntime {
 			payload: { requestId, action: "mode_change_to_execute" },
 		});
 
-		// Resolve mode change asynchronously when leader approves; do not
-		// block the caller — they get the request id and can poll status.
 		void decision.then(async (approved) => {
 			if (approved) {
 				teammate.state.mode = mode;
@@ -634,15 +597,10 @@ export class TeamRuntime {
 		return { ok: true, pending: { requestId } };
 	}
 
-	/**
-	 * Approve a pending permission request. Returns true on success.
-	 * Thin wrapper so callers don't need to reach into PermissionStore.
-	 */
 	approvePermission(requestId: string): boolean {
 		return this.permissions.approve(requestId);
 	}
 
-	/** Deny a pending permission request. */
 	denyPermission(requestId: string): boolean {
 		return this.permissions.deny(requestId);
 	}
@@ -737,9 +695,6 @@ export class TeamRuntime {
 		return absolute;
 	}
 
-	/**
-	 * Get all teammates.
-	 */
 	getAllTeammates(): PersistedTeammate[] {
 		const seen = new Set<string>();
 		const result: PersistedTeammate[] = [];
@@ -754,16 +709,10 @@ export class TeamRuntime {
 		return result.sort((a, b) => a.identity.createdAt - b.identity.createdAt);
 	}
 
-	/**
-	 * Get a teammate by name.
-	 */
 	getTeammate(name: string): PersistedTeammate | undefined {
 		return this.findByName(name)?.state;
 	}
 
-	/**
-	 * Dispose all teammates and cleanup.
-	 */
 	async dispose(): Promise<void> {
 		for (const teammate of this.teammates.values()) {
 			if (teammate.currentTurnAbortController) {
@@ -831,358 +780,20 @@ export class TeamRuntime {
 		}
 	}
 
-	private getDefaultModeForRole(role: TeammateRole): TeammateMode {
-		switch (role) {
-			case "pm":
-			case "architect":
-				return "plan";
-			case "designer":
-			case "data-analyst":
-			case "researcher":
-				return "research";
-			case "developer":
-				return "plan";
-			case "reviewer":
-				return "review";
-			case "verifier":
-				return "review";
-			case "implementer":
-				return "plan";
-			case "planner":
-				return "plan";
-			case "generic":
-			default:
-				return "research";
-		}
-	}
-
-	private async buildPrompt(state: PersistedTeammate): Promise<string> {
-		const teammates = this.getAllTeammates();
-		const lines: string[] = [
-			"You are a persistent teammate in an AgentTeam.",
-			"",
-			"Identity:",
-			`  Label: ${state.identity.label}`,
-			`  Name: ${state.identity.name}`,
-			`  Role: ${state.identity.role}`,
-			`  Mode: ${state.mode}`,
-			`  Working directory: ${state.cwd}`,
-			"",
-			"Mode rules:",
-			`  - research: read-only exploration and reporting`,
-			`  - plan: read-only; produce a plan and wait for leader approval before executing`,
-			`  - execute: sandboxed write inside your working directory`,
-			`  - review: read-only review and feedback`,
-			"",
-			"Team roster:",
-			...teammates.map((teammate) => `  - ${teammate.identity.name} (${teammate.identity.role})`),
-			"",
-			"Mention rules:",
-			"  - Use @Name mentions only for concrete handoffs.",
-			"  - Every mention must include the next-step task after the mention.",
-			"  - Do not ping another teammate without actionable work.",
-			"",
-			"Conversation history with the leader:",
-		];
-
-		if (state.messages.length === 0) {
-			lines.push("  (none yet)");
-		} else {
-			for (const msg of state.messages) {
-				const prefix = msg.direction === "leader" ? "pencil" : state.identity.name;
-				lines.push(`${prefix}: ${msg.content}`);
-			}
-		}
-
-		const tasks = await this.tasks.list();
-		const ownedTasks = tasks.filter((task) => task.ownerId === state.identity.id);
-		const blockedTasks = tasks.filter((task) => task.status === "blocked");
-		const openTasks = tasks.filter((task) => task.status === "open").slice(0, 8);
-		lines.push("", "Shared team tasks:");
-		if (ownedTasks.length === 0 && blockedTasks.length === 0 && openTasks.length === 0) {
-			lines.push("  (none)");
-		} else {
-			if (ownedTasks.length > 0) {
-				lines.push("  Claimed by you:");
-				for (const task of ownedTasks) {
-					lines.push(`    ${formatTaskForPrompt(task)}`);
-				}
-			}
-			if (blockedTasks.length > 0) {
-				lines.push("  Blocked:");
-				for (const task of blockedTasks.slice(0, 6)) {
-					lines.push(`    ${formatTaskForPrompt(task)}`);
-				}
-			}
-			if (openTasks.length > 0) {
-				lines.push("  Open:");
-				for (const task of openTasks) {
-					lines.push(`    ${formatTaskForPrompt(task)}`);
-				}
-			}
-		}
-
-		const mailboxMessages = this.mailbox.list(state.identity.id).slice(-12);
-		lines.push("", "Recent team mailbox:");
-		if (mailboxMessages.length === 0) {
-			lines.push("  (none)");
-		} else {
-			for (const message of mailboxMessages) {
-				const from = message.teammateName;
-				const to = message.targetTeammateName ? ` -> ${message.targetTeammateName}` : "";
-				const content =
-					typeof message.payload.content === "string"
-						? message.payload.content
-						: typeof message.payload.action === "string"
-							? `${message.payload.action}`
-							: JSON.stringify(message.payload);
-				lines.push(`  [${message.type}] ${from}${to}: ${content}`);
-			}
-		}
-
-		lines.push("", "Respond to the leader's last message in your current mode.");
-		return lines.join("\n");
-	}
-
-	private async prepareHarnessTurn(
-		teammate: RuntimeTeammate,
-		taskDescription: string,
-	): Promise<
-		| {
-				psychePrompt: string;
-				harnessInstructions: string;
-				contextFiles: string[];
-		  }
-		| undefined
-	> {
-		const harness = teammate.state.harness;
-		if (!harness?.enabled) return undefined;
-
-		await ensureHarnessFiles(harness, teammate.state.cwd, taskDescription);
-		teammate.state.harness = await beginHarnessTurn(harness, teammate.state.cwd);
-		const soulTraits = await this.getSoulTraits();
-		const weights = computePsycheWeights(
-			teammate.state.harness.phase,
-			teammate.state.identity.role,
-			soulTraits,
-			teammate.state.psycheOverrides,
-		);
-		teammate.state.psyche = weights;
-		const psychePrompt = buildPsychePrompt(weights, teammate.state.harness.phase, teammate.state);
-		const harnessInstructions = await buildHarnessInstructions(teammate.state.harness, teammate.state.cwd, taskDescription);
-		return {
-			psychePrompt,
-			harnessInstructions,
-			contextFiles: prepareContextFiles(teammate.state.harness),
-		};
-	}
-
-	private async getSoulTraits(): Promise<SoulTraits | undefined> {
-		const manager = this.soulManager as
-			| {
-					getProfile?: () => unknown | Promise<unknown>;
-			  }
-			| undefined;
-		if (!manager?.getProfile) return undefined;
-
-		try {
-			const profile = (await manager.getProfile()) as { personality?: SoulTraits } | undefined;
-			return profile?.personality;
-		} catch {
-			return undefined;
-		}
-	}
-
-	private applyLiveEvent(teammate: RuntimeTeammate, event: SubAgentEvent): void {
-		const previous = teammate.state.live;
-		const liveView = this.ensureLiveView(teammate.state.liveView, teammate.state.identity);
-		switch (event.type) {
-			case "agent_start":
-				teammate.state.live = {
-					phase: "starting",
-					preview: "Sub-agent starting...",
-					toolName: null,
-					updatedAt: event.timestamp,
-				};
-				teammate.state.liveView = { ...liveView, progress: "starting" };
-				break;
-			case "message_update":
-				teammate.state.live = {
-					phase: event.text ? "thinking" : (previous?.phase ?? "thinking"),
-					preview: tailText(event.text || previous?.preview || "", 1200),
-					toolName: previous?.toolName ?? null,
-					updatedAt: event.timestamp,
-				};
-				teammate.state.liveView = {
-					...liveView,
-					lastUtterance: tailText(singleLine(event.text || previous?.preview || ""), 200),
-					progress: "thinking",
-				};
-				break;
-			case "message_end":
-				teammate.state.live = {
-					phase: "finishing",
-					preview: tailText(event.text || previous?.preview || "", 1200),
-					toolName: previous?.toolName ?? null,
-					updatedAt: event.timestamp,
-				};
-				teammate.state.liveView = {
-					...liveView,
-					lastUtterance: tailText(singleLine(event.text || previous?.preview || ""), 200),
-					progress: "finishing",
-				};
-				break;
-			case "tool_start":
-			case "tool_update":
-			case "tool_end":
-				teammate.state.live = {
-					phase: "tool",
-					preview:
-						event.type === "tool_update"
-							? tailText(String(event.partialResult ?? previous?.preview ?? ""), 1200)
-							: previous?.preview ?? "",
-					toolName: event.toolName,
-					updatedAt: event.timestamp,
-				};
-				teammate.state.liveView = { ...liveView, progress: `tool:${event.toolName}` };
-				break;
-			case "agent_end":
-				teammate.state.live = {
-					phase: event.success ? "done" : "error",
-					preview: event.error ?? previous?.preview ?? "",
-					toolName: null,
-					updatedAt: event.timestamp,
-				};
-				teammate.state.liveView = { ...liveView, progress: event.success ? "done" : "error" };
-				break;
-		}
-	}
-
-	private ensureLiveView(view: AgentLiveView | undefined, identity: TeammateIdentity): AgentLiveView {
-		return {
-			name: identity.name,
-			label: identity.label,
-			role: identity.role,
-			currentTask: view?.currentTask,
-			lastUtterance: view?.lastUtterance,
-			blockedOn: view?.blockedOn,
-			progress: view?.progress,
-		};
-	}
-
 	private selectTools(mode: TeammateMode, cwd: string): Tool[] {
-		switch (mode) {
-			case "research":
-			case "review":
-			case "plan":
-				return this.createReadOnlyTools(cwd);
-			case "execute":
-				return this.createSandboxedTools(cwd);
-			default:
-				return this.createReadOnlyTools(cwd);
-		}
-	}
-
-	private createReadOnlyTools(cwd: string): Tool[] {
-		const baseTools = createReadOnlyTools(cwd);
-		const sandboxBash = createBashTool(cwd, {
-			spawnHook: createSandboxHook(),
+		return selectToolsForMode({
+			mode,
+			cwd,
+			getAllTeammates: () => this.getAllTeammates(),
+			isPathAllowed: (teammateId, absolutePath) => this.permissions.isPathAllowed(teammateId, absolutePath),
 		});
-		return [...baseTools.filter((t) => t.name !== "bash"), sandboxBash];
-	}
-
-	private createSandboxedTools(cwd: string): Tool[] {
-		const guard = this.createWritePathGuard(cwd);
-		const baseTools = createCodingTools(cwd, {
-			edit: { beforeWrite: guard },
-			write: { beforeWrite: guard },
-		});
-		const sandboxBash = createBashTool(cwd, {
-			spawnHook: createSandboxHook({
-				allowWritePath: (path) => {
-					try {
-						guard(path);
-						return true;
-					} catch {
-						return false;
-					}
-				},
-				blockedMessage: `Write operations outside the teammate workspace are not allowed. Use /team:allow-path to grant a path prefix.`,
-			}),
-		});
-		return [...baseTools.filter((t) => t.name !== "bash"), sandboxBash];
 	}
 
 	private createWritePathGuard(cwd: string): (absolutePath: string) => void {
-		const workspaceRoot = normalizePath(cwd);
-		return (absolutePath: string) => {
-			const target = normalizePath(absolutePath);
-			const teammate = this.getAllTeammates().find((candidate) => normalizePath(candidate.cwd) === workspaceRoot);
-			if (isWithinPath(target, workspaceRoot)) return;
-			if (teammate && this.permissions.isPathAllowed(teammate.identity.id, target)) return;
-			throw new Error(
-				`Write denied for ${target}. Team execute mode may only write inside ${workspaceRoot} unless the leader grants a path allowlist.`,
-			);
-		};
+		return createTeamWritePathGuard({
+			cwd,
+			getAllTeammates: () => this.getAllTeammates(),
+			isPathAllowed: (teammateId, absolutePath) => this.permissions.isPathAllowed(teammateId, absolutePath),
+		});
 	}
-}
-
-function normalizePath(path: string): string {
-	return resolve(isAbsolute(path) ? path : path);
-}
-
-function isWithinPath(target: string, root: string): boolean {
-	const normalizedRoot = normalizeForComparison(root);
-	const normalizedTarget = normalizeForComparison(target);
-	return normalizedTarget === normalizedRoot || normalizedTarget.startsWith(`${normalizedRoot}/`);
-}
-
-function formatTaskForPrompt(task: TeamTask): string {
-	const owner = task.ownerName ? ` owner:${task.ownerName}` : "";
-	const deps = task.dependsOn.length ? ` deps:${task.dependsOn.join(",")}` : "";
-	const artifacts = task.artifactPaths.length ? ` artifacts:${task.artifactPaths.join(",")}` : "";
-	const detail = task.description ? ` - ${task.description}` : "";
-	return `${task.id} [${task.status}]${owner}${deps}${artifacts} ${task.title}${detail}`;
-}
-
-function summarizeTask(value: string): string {
-	return tailText(singleLine(value), 160);
-}
-
-function singleLine(value: string): string {
-	return value.replace(/\s+/g, " ").trim();
-}
-
-function tailText(value: string, maxLength: number): string {
-	if (value.length <= maxLength) return value;
-	return value.slice(value.length - maxLength);
-}
-
-function labelFromIndex(index: number): string {
-	let current = index;
-	let label = "";
-	while (current > 0) {
-		current--;
-		label = String.fromCharCode(65 + (current % 26)) + label;
-		current = Math.floor(current / 26);
-	}
-	return label || "A";
-}
-
-function indexFromLabel(label: string): number {
-	let result = 0;
-	for (const char of label.toUpperCase()) {
-		const code = char.charCodeAt(0);
-		if (code < 65 || code > 90) return 0;
-		result = result * 26 + (code - 64);
-	}
-	return result;
-}
-
-function isBuilderRole(role: TeammateRole): boolean {
-	return role === "implementer" || role === "developer";
-}
-
-function normalizeForComparison(value: string): string {
-	return normalizePath(value).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 }

@@ -37,7 +37,8 @@ subagent/index.ts: SubAgent extension entry, /subagent:/subagent:run/:stop/:stat
 subagent/subagent-parser.ts: SubAgent command parsing, parseSubAgentCommand/buildSubAgentHelp
 subagent/subagent-runner.ts: SubAgent orchestration — research (read-only) and implement (isolated worktree) roles, diff preview and apply flow
 subagent/subagent-types.ts: SubAgent extension types — SubAgentPhase, SubAgentWorkerInfo, SubAgentRunState, SubAgentRunReport
-interview/index.ts: Requirement clarification extension, /interview command, lightweight before_agent_start hook
+interview/index.ts: Requirement clarification extension entry, /interview and /grill-me commands, interview tool registration, custom message renderers, lightweight before_agent_start hook
+interview/interview-runtime.ts: Interview probe/runtime boundary - synchronous prompt heuristics, workspace context collection, LLM probe coercion, UI follow-up loop, refined intent injection text
 security-audit/interface.ts: Security audit interface, SecurityCheckResult/AuditEvent/SecurityEngine
 security-audit/index.ts: Security extension entry, audit logging and dangerous pattern detection
 security-audit/engine/interceptor.ts: Request/response interception, InterceptorResult confirmation flow
@@ -62,7 +63,11 @@ loop/scheduler-controller.ts: SchedulerController - in-memory recurring task sto
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet
 loop/scheduler-types.ts: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
 loop/README.md: Loop extension documentation - recurring scheduler usage and flags
-sal/index.ts: SAL extension entry, enabled by default, registers --nosal/--sal-ab/--sal-rebuild-terrain flags, /sal:coverage /sal:status /sal:setup commands, before_agent_start/tool_execution_start/agent_end hooks; /sal:setup writes ~/.memory-experiments/credentials.json with adapter inference (insforge/jsonl/noop); publishes structuralAnchor via core/runtime/turn-context (no SAL-specific globals); emits run_start/turn_anchor/run_end eval events through pluggable EvalSink with best-effort shutdown flushing; publishes SAL eval background failures to diagnostic:event; writes local .memory-experiments sidecar anchors only when --sal-ab or NANOPENCIL_SAL_AB=1 is enabled; runtime no-op when --nosal is set
+sal/index.ts: SAL extension entry, enabled by default, registers flags, /sal:* commands, lifecycle hooks, terrain snapshot refresh, eval event emission, and stale-run cleanup scheduling; delegates config, context, runtime contracts, and tool_trace analytics to focused SAL modules
+sal/sal-config.ts: SAL build metadata, eval environment constants, credential loading, truthy parsing, stale-cleanup/A-B flag resolution, experiment id normalization, and sidecar directory resolution
+sal/sal-context.ts: SAL anchor system-prompt injection formatting plus A/B sidecar turn-record persistence
+sal/sal-runtime.ts: SAL shared BuildMeta/TurnState/SalRuntime contracts used across config, context, trace, and entry modules
+sal/sal-trace.ts: SAL tool path extraction, task intent inference, and bounded tool_trace payload construction
 sal/terrain.ts: TerrainSnapshot/TerrainNode/TerrainEdge model, buildTerrainIndex(), checkDipCoverage(), isSnapshotStale(), moduleIdForPath(), parses P2 AGENT.md and P3 file headers
 sal/anchors.ts: StructuralAnchor/AnchorResolution model, locateTask(), locateAction(), evidence-driven scoring with tunable SalWeights, CJK bigram tokenization
 sal/weights.ts: SalWeights interface, SAL_DEFAULT_WEIGHTS, loadSalWeights() reads sal-config.json from workspace or .memory-experiments/sal/
@@ -77,7 +82,8 @@ team/team-ui.ts: AgentTeam message renderer, list/status/task formatting, dashbo
 team/team-types.ts: TeammateRole/TeammateMode/TeammateStatus/TeamTask/HarnessState/PsycheWeights/TeamUtterance/Handoff/LeaderPlan/AgentLiveView/TeammateIdentity/PersistedTeammate/TeamSpawnSpec/TeamSendResult types
 team/team-state-store.ts: TeamStateStore class - durable teammate persistence via JSON files in <agentDir>/teams/
 team/team-parser.ts: Team command parser - parseTeamCommand/buildTeamHelp for /team:* subcommands
-team/team-runtime.ts: TeamRuntime class - teammate registry, stable internal labels plus visible teammate names, per-teammate send queue, task/mailbox prompt context, lifecycle, realtime status/live events, durable tasks, mailbox + permission + transcript wiring
+team/team-runtime.ts: TeamRuntime class - teammate registry, stable internal labels plus visible teammate names, per-teammate send queue, lifecycle, durable tasks, mailbox + permission + transcript wiring
+team/team-runtime-helpers.ts: TeamRuntime helper boundary - teammate prompt construction, harness turn preparation, live event projection, tool selection, path guards, label/role/text helpers
 team/team-orchestrator.ts: Leader orchestration helpers - plan building, speaker utterance creation, @mention parsing, and handoff execution
 team/team-task-store.ts: TeamTaskStore class - durable shared task list in <storageDir>/tasks.json
 team/team-harness.ts: Harness protocol helpers - context files, phase instructions, checkpoint/revert, feature validation

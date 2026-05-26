@@ -225,7 +225,7 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 	});
 
 	api.on("before_agent_start", (event) => {
-		if (!isDebugPrompt(event.prompt)) return;
+		if (!isDebugPrompt(event.prompt) || event.prompt !== pendingDiagnosticPrompt) return;
 		return { appendSystemPrompt: DEBUG_SYSTEM_PROMPT };
 	});
 

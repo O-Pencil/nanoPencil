@@ -299,14 +299,31 @@ export function createCronScheduler(options: CronSchedulerOptions): CronSchedule
 	}
 
 	async function enable(): Promise<void> {
+		if (isKilled()) return;
 		enabled = true;
 
 		if (dir) {
 			await acquireLock();
+			if (isKilled()) {
+				await releaseLock();
+				return;
+			}
 			await loadTasks();
+			if (isKilled()) {
+				await releaseLock();
+				return;
+			}
 			startWatching();
 		}
 
+		if (isKilled()) {
+			if (watchIntervalId) {
+				clearInterval(watchIntervalId);
+				watchIntervalId = null;
+			}
+			await releaseLock();
+			return;
+		}
 		intervalId = setInterval(check, TICK_MS);
 		console.log("[Cron-Scheduler] Scheduler enabled and ticking");
 	}
@@ -339,6 +356,7 @@ export function createCronScheduler(options: CronSchedulerOptions): CronSchedule
 
 		stop(): void {
 			killed = true;
+			enabled = false;
 			if (intervalId) {
 				clearInterval(intervalId);
 				intervalId = null;

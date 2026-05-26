@@ -27,6 +27,9 @@ Updated on 2026-05-26 after the first repair pass and structural follow-up:
 - Scoped `/debug` full-diagnostic system prompt injection to the pending command-generated prompt and added cleanup coverage proving old/manual `[DEBUG:]` prompts do not keep diagnostic privileges after `agent_end`.
 - Added `recap` renderer accounting coverage proving Free recaps suppress token/cost badges while Smart recaps render input/output/cost and extract only text content parts.
 - Added `export-html` branch-navigation snapshot coverage against the standalone template's tree/path functions, including active-path ordering and newest-leaf navigation from a fork point.
+- Added metadata-level test contracts for lifecycle, external-process, resource-discovery, and write-guard risks, plus resource-discovery contract tests for browser, link-world, MCP, and discipline.
+- Fixed a `loop` scheduler start/shutdown race where async enablement could create an interval after `session_shutdown`, and added a lifecycle test proving all created intervals are cleared.
+- Added a structural boundary test keeping the split `sal/index.ts` and `team-runtime.ts` files at or below the 800-line guideline.
 - Fixed `presence` memory locale detection to include the mem-core `preferences` store rather than only `knowledge`/`lessons`, and aligned the locale fixture with the `MemoryEntry` storage contract.
 - Fixed mem-core archive cooldown logic to evaluate `revivedAt` and age against the explicit archive run timestamp instead of the wall clock, making archive maintenance deterministic.
 - Fixed related test fragility in SAL batch ordering, Grub persisted-state fixture shape, and TUI viewport cursor movement.
@@ -35,7 +38,7 @@ Post-fix verification:
 
 - `npx tsc -p tsconfig.build.json --noEmit`: pass.
 - `npm run verify:dip`: pass, `418/418` files with valid P3 headers.
-- Node test suite, excluding Vitest-style files: `242/242` pass.
+- Node test suite, excluding Vitest-style files: `246/246` pass.
 - Vitest-style tests: `48` pass, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: pass.
 - `npm run build`: pass.
@@ -53,7 +56,7 @@ Current evidence:
 
 - `npm run verify:dip`: passed, `418/418` files with valid P3 headers and 30 P2 modules checked.
 - `npx tsc -p tsconfig.build.json --noEmit`: passed.
-- Node test suite excluding Vitest-style files: `242/242` passed.
+- Node test suite excluding Vitest-style files: `246/246` passed.
 - Vitest-style tests: `48` passed, `43` skipped.
 - `packages/mem-core/test/extension-commands.test.ts`: passed.
 - `npm run build`: passed.
@@ -169,8 +172,8 @@ Resolution:
 | `sal` | B+ | Ambitious and mostly isolated; has eval adapter tests, DIP coverage command, listener cleanup coverage, and now explicit config/context/runtime/trace boundaries. `sal/index.ts` is 799 lines after extraction. | Keep eval lifecycle and zero-I/O hook behavior covered as SAL evolves. |
 | `browser` | B | Good subprocess timeout/abort cleanup at `browser/index.ts:170-213`; resource discovery is explicit at `browser/index.ts:459-470`; registration tests pass. | Add tests for install/doctor failure formatting and workspace seeding. |
 | `link-world` | B | Uses `execFile` for agent-reach execution at `link-world/index.ts:165-177`; capability-gated tools at `link-world/index.ts:405-413`; registration tests pass. | Cache capability probing or make it async to avoid startup sync command cost. |
-| `mcp` | B- | Useful Figma setup workflow and resource discovery; command is long and provider-specific. | Split Figma auth/setup into a dedicated helper module with tests. |
-| `loop` | B- | Cron tools and scheduler are useful; parser/scheduler structure is reasonable. Tests emitted lock/ticker logs and long-running process behavior. | Make scheduler test mode quiet and ensure every interval is owned and stopped deterministically. |
+| `mcp` | B | Useful Figma setup workflow and resource discovery; command is long and provider-specific. Resource-discovery contract coverage now proves advertised skill paths exist. | Split Figma auth/setup into a dedicated helper module with tests. |
+| `loop` | B | Cron tools and scheduler are useful; parser/scheduler structure is reasonable. Lifecycle coverage now proves session shutdown clears owned timers and guards the async start/shutdown race. | Make scheduler test output quieter and keep interval ownership covered when changing scheduling. |
 | `subagent` | B | Parser covered; runner isolates write mode via worktree flow. | Add integration tests for apply/cancel paths and failure cleanup. |
 | `recap` | A- | Small command and deterministic extractor; Free and Smart command paths are now covered, including usage emission, budget-blocked preflight, timeout cleanup, and renderer accounting for free versus smart usage badges. | Keep renderer tests aligned if recap content supports new non-text parts. |
 | `debug` | A- | Good operational intent; collectors are separated; command/renderer registration, no-model quick diagnostic behavior, nested credential redaction, and full diagnostic pending-prompt cleanup are covered by tests. | Keep full-turn prompt injection scoped to command-generated prompts. |
@@ -209,27 +212,25 @@ Use extension metadata as the invariant, not directory names or comments. The re
 - `startsTimers`: boolean
 - `writesWorkspace`: boolean
 - `externalProcess`: boolean
-- `testContract`: required smoke tests by risk level
+- `resourceDiscovery`: boolean
+- `testContracts`: required lifecycle/process/resource/write coverage by risk level
+- `testFiles`: concrete test files that carry those contracts
 
-The current registry tests enforce the first policy layer:
+The current registry tests enforce the policy layer:
 
 - default-on write-capable extensions require explicit approval;
 - every `extensions/defaults/*` directory has metadata;
 - every default-enabled default extension has a load path;
 - optional extensions are metadata-visible but not default-loaded.
-
-Next policy layers should enforce:
-
-- background extensions require shutdown tests;
-- external-process extensions require timeout/abort tests;
-- resource-discovery extensions require skill path smoke tests.
+- background or timer-owning extensions declare lifecycle coverage and existing test files;
+- external-process extensions declare process/failure-mode coverage and existing test files;
+- resource-discovery extensions declare discovery coverage and return existing skill paths;
+- write-capable extensions declare write-guard coverage;
+- split large-file boundaries are kept under the 800-line guideline by tests.
 
 ## Remaining Structural Work
 
-The repair pass closed the high-priority defects and the known large-file hotspots. Remaining work is lower urgency and mostly architectural:
-
-1. Expand metadata-based enforcement so background, external-process, and resource-discovery extensions must carry matching lifecycle/failure-mode tests.
-2. Keep `sal/index.ts` and `team-runtime.ts` from regrowing past the file-size guideline by extracting new setup, lifecycle, or persistence behavior into their existing helper boundaries.
+The repair pass closed the high-priority defects, the known large-file hotspots, and the listed follow-up coverage gaps. Remaining work is ongoing maintenance rather than an open blocker: keep new extension capabilities mapped to metadata contracts and extract new setup, lifecycle, or persistence behavior before `sal/index.ts` or `team-runtime.ts` approach the 800-line gate.
 
 ## Verification Log
 

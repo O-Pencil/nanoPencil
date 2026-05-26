@@ -53,9 +53,10 @@ setting `evidence`.
 
 - Each grub iteration is tagged with a `[GRUB:<id>:<n>]` prompt prefix so
   the extension can recognise its own injected turns.
-- On start, grub creates the harness directory, writes the initial
-  artifacts, and (if inside a git worktree) commits `.grub/<id>/` so
-  future agents have a clean revert point.
+- On start, grub creates the harness directory and writes the initial
+  artifacts without creating a git commit. The harness keeps durable state on
+  disk and leaves source changes visible in the working tree, avoiding noisy
+  `grub(...)` commits unless the user explicitly asks for them.
 - Two phase-specialized system prompts are injected via
   `before_agent_start`:
   - **Initializer prompt** (first successful turn): expand
@@ -63,11 +64,15 @@ setting `evidence`.
     seed `progress-log.md`. No broad implementation yet.
   - **Coding prompt** (remaining turns): run `init.sh`, pick exactly one
     pending feature, implement + verify end-to-end, flip `passes` +
-    `evidence`, append to `progress-log.md`, commit.
+    `evidence`, and append to `progress-log.md`.
 - At the end of every grub turn the assistant must emit a single
   `<loop-state>{"status":"continue|complete|blocked", "summary":"...", "nextStep":"..."}</loop-state>`
   block. The extension parses it and dispatches the next iteration or
   stops with a terminal status.
+- **Mutation guard**: after the initializer creates the first real
+  `feature-list.json`, each subsequent turn is diffed against the persisted
+  baseline. Rewriting feature ids, descriptions, categories, steps, count, or
+  order is rejected and retried; only `passes` and `evidence` may change.
 - **Completion guard**: if the decision says `complete` but
   `feature-list.json` still has `passes:false` entries, the controller
   rewrites the decision to `continue` with a synthetic `nextStep`

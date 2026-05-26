@@ -35,6 +35,7 @@ export interface GrubTaskState {
 	stateFilePath: string;
 	progressLogPath: string;
 	initScriptPath: string;
+	featureListBaseline?: FeatureList;
 	lastDecision?: GrubDecision;
 	lastError?: string;
 }

@@ -41,11 +41,19 @@ security-audit/engine/interceptor.ts: Request/response interception, Interceptor
 security-audit/engine/logger.ts: Security event logging, JSON file audit trail
 security-audit/engine/detector.ts: Vulnerability detection, pattern matching for dangerous commands
 soul/index.ts: AI personality evolution extension, persistent personality across sessions
-grub/index.ts: Grub extension entry - autonomous iterative task runner extracted from legacy loop, /grub command + GRUB_MESSAGE_TYPE renderer
-grub/grub-controller.ts: GrubController - drives autonomous grub iterations, state machine for LoopTaskState
+grub/index.ts: Grub extension entry - autonomous iterative task runner, /grub command, dual-phase prompt injection, feature-list guard dispatch, GRUB_MESSAGE_TYPE renderer
+grub/grub-controller.ts: GrubController - drives autonomous grub iterations, durable GrubTaskState, initializer baseline capture, feature-list mutation validation
+grub/grub-decision.ts: Grub assistant protocol parser, extracts validated loop-state decisions from assistant text
 grub/grub-parser.ts: Grub command parsing, parseGrubCommand/buildGrubHelp
-grub/grub-types.ts: Grub types, GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState/GrubTaskSnapshot
-grub/README.md: Grub extension documentation - autonomous "keep digging until done" runner
+grub/grub-prompts.ts: Grub prompt construction boundary, initializer/coding system prompts and per-task dispatch prompts
+grub/grub-harness.ts: Grub harness artifact boundary, .grub/<id>/ feature-list/progress-log/init.sh creation
+grub/grub-format.ts: Grub user-facing status/result formatter for readable TUI messages
+grub/grub-turn.ts: Grub turn-end coordinator, parsing assistant output, checklist gates, retry/terminal update events
+grub/grub-i18n.ts: Grub localization helper, English/Chinese prompts and TUI strings
+grub/grub-feature-list.ts: feature-list.json IO, initializer skeleton, legacy checklist migration, passes/evidence-only diff validation
+grub/grub-persistence.ts: Cross-session .grub/<id>/state.json persistence, active task discovery, stale harness pruning
+grub/grub-types.ts: Grub types, GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState/GrubTaskSnapshot/FeatureList/PersistedGrubState
+grub/README.md: Grub extension documentation - autonomous "keep digging until done" runner without default git commits
 loop/index.ts: Loop extension entry - session-scoped recurring prompt/command scheduler with pause/resume/run-now/max-runs/quiet, /loop command + LOOP_MESSAGE_TYPE renderer
 loop/scheduler-controller.ts: SchedulerController - in-memory recurring task store with pause/resume/run-now/max-runs, MAX_SCHEDULED_TASKS=50
 loop/scheduler-parser.ts: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp, --name/--max/--quiet

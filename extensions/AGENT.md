@@ -20,6 +20,11 @@ The `extensions/` module contains built-in extensions that extend nanoPencil's c
 
 Auto-loaded extensions available to all users.
 
+Current default extension directories:
+`browser/`, `btw/`, `debug/`, `diagnostics/`, `grub/`, `idle-think/`, `interview/`, `link-world/`, `loop/`, `mcp/`, `plan/`, `presence/`, `recap/`, `sal/`, `security-audit/`, `soul/`, `subagent/`, `team/`, `token-save/`.
+
+The complete file-level member list for defaults lives in `extensions/defaults/AGENT.md`; this parent map records category boundaries and high-level responsibilities.
+
 #### diagnostics/ — Extension-Owned Issue Reporting
 
 **P3 Contract:**
@@ -94,11 +99,27 @@ Auto-loaded extensions available to all users.
     - [FROM]: core/extensions/types, @pencil-agent/tui
     - [HERE]: grub extension entry
 
-`grub-controller.ts`: GrubController - state machine for autonomous iterations, LoopTaskState management
+`grub-controller.ts`: GrubController - state machine for autonomous iterations, durable GrubTaskState management, feature-list baseline validation
+
+`grub-decision.ts`: Grub assistant protocol parser for validated loop-state decisions
 
 `grub-parser.ts`: Grub command parsing, parseGrubCommand/buildGrubHelp
 
-`grub-types.ts`: Grub-specific type definitions (GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState)
+`grub-prompts.ts`: Grub prompt construction boundary for system prompts and per-task dispatch prompts
+
+`grub-harness.ts`: Grub harness artifact boundary for `.grub/<id>/` files
+
+`grub-format.ts`: Grub user-facing status/result formatter for readable TUI messages
+
+`grub-turn.ts`: Grub turn-end coordinator for parsing assistant output, enforcing checklist gates, and returning user-facing update events
+
+`grub-i18n.ts`: Grub localization helper for prompts and TUI messages
+
+`grub-feature-list.ts`: Structured feature-list.json IO and passes/evidence-only diff validation
+
+`grub-persistence.ts`: Cross-session .grub/<id>/state.json persistence and stale harness cleanup
+
+`grub-types.ts`: Grub-specific type definitions (GrubStatus/GrubDecisionStatus/GrubDecision/GrubTaskState/FeatureList)
 
 `README.md`: Usage documentation for autonomous "keep digging until done" runner
 
@@ -124,9 +145,9 @@ Auto-loaded extensions available to all users.
     - [FROM]: core/extensions/types
     - [HERE]: link-world entry
 
-`linkworld.ts`: Main link-world logic
+`index.ts`: Main link-world logic; registers `link_world_admin`, `link_world_exec`, optional `web_search`/`web_fetch`, `/link-world`, and resource discovery
 
-`internet-search/`: Internet search capability
+`internet-search/`: Internet search skill resource
 
 #### mcp/ — MCP Protocol Integration
 
@@ -171,15 +192,21 @@ Auto-loaded extensions available to all users.
     - [FROM]: core/extensions/types
     - [HERE]: team extension entry
 
-`team-controller.ts`: Multi-agent coordination logic
+`team-runtime.ts`: Teammate registry, queues, lifecycle, persistence, mailbox, permissions, and sub-agent execution
+
+`team-orchestrator.ts`: Leader planning, mention parsing, utterance formatting, and handoff execution
 
 `team-parser.ts`: Team command parsing
 
 `team-types.ts`: Team-specific types
 
+`team-*store.ts`, `team-mailbox.ts`, `team-permissions.ts`, `team-dashboard.ts`, `team-harness.ts`, `team-presets.ts`, `team-psyche.ts`, `team-transcript.ts`: Durable collaboration support modules
+
 ### Optional Extensions (`extensions/optional/`)
 
 Extensions that must be explicitly enabled.
+
+Optional extensions are not returned by `getBuiltinExtensionPaths()`; load them through explicit extension configuration or CLI extension paths.
 
 #### simplify/ — Simplification Extension
 

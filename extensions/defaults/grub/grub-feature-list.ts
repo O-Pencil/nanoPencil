@@ -1,5 +1,5 @@
 /**
- * [WHO]: Provides readFeatureList, writeFeatureList, validateFeatureListDiff, countPassing, allPassing, firstPending, createInitialFeatureList, migrateChecklistToFeatureList, FeatureListDiffError
+ * [WHO]: Provides readFeatureList, writeFeatureList, isFeatureList, validateFeatureListDiff, countPassing, allPassing, firstPending, createInitialFeatureList, migrateChecklistToFeatureList, FeatureListDiffError
  * [FROM]: Depends on node:fs, node:path, ./grub-types
  * [TO]: Consumed by ./grub-controller.ts, ./index.ts for structured feature tracking
  * [HERE]: extensions/defaults/grub/grub-feature-list.ts - JSON feature list IO with diff validation that limits agent mutations to passes/evidence fields
@@ -34,7 +34,7 @@ function isFeatureItem(value: unknown): value is FeatureItem {
 	return true;
 }
 
-function isFeatureList(value: unknown): value is FeatureList {
+export function isFeatureList(value: unknown): value is FeatureList {
 	if (!value || typeof value !== "object") return false;
 	const v = value as Record<string, unknown>;
 	if (v.version !== FEATURE_LIST_VERSION) return false;
@@ -85,11 +85,16 @@ export function validateFeatureListDiff(before: FeatureList, after: FeatureList)
 	}
 	const byId = new Map(before.features.map((f) => [f.id, f]));
 	const seen = new Set<string>();
-	for (const afterItem of after.features) {
+	for (let index = 0; index < after.features.length; index += 1) {
+		const afterItem = after.features[index];
+		const beforeAtIndex = before.features[index];
 		if (seen.has(afterItem.id)) {
 			throw new FeatureListDiffError(`duplicate feature id ${afterItem.id}`);
 		}
 		seen.add(afterItem.id);
+		if (beforeAtIndex?.id !== afterItem.id) {
+			throw new FeatureListDiffError(`feature order changed at index ${index}`);
+		}
 		const beforeItem = byId.get(afterItem.id);
 		if (!beforeItem) {
 			throw new FeatureListDiffError(`unknown feature id ${afterItem.id}`);

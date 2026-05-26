@@ -188,6 +188,7 @@ nanoPencil/
 ├── utils/                 # Shared utilities
 ├── cli/                   # CLI helpers
 ├── scripts/               # Build scripts
+├── llm-wiki/              # Verifiable LLM Wiki graph, Markdown pages, and generated site
 └── docs/                  # Documentation
 ```
 
@@ -204,6 +205,9 @@ node scripts/bundle-deps.js
 
 # Build (TypeScript compile + resource copy)
 npm run build
+
+# LLM Wiki (scan graph, update Markdown pages, verify isomorphism, render HTML)
+npm run wiki:all
 
 # Development (direct execution)
 npx tsx cli.ts [args...]
@@ -268,6 +272,7 @@ Extensions can:
 | Extension | Purpose |
 |-----------|---------|
 | `interview` | Requirement clarification through guided Q&A |
+| `grub` | `/grub` autonomous long-running task harness with feature-list validation |
 | `loop` | `/loop` session-scoped scheduled prompts |
 | `link-world` | Internet access via agent-reach |
 | `browser` | Direct browser automation via vendored Browser Harness CDP bridge |
@@ -336,7 +341,7 @@ Built-in commands (`core/slash-commands.ts`):
 | Command | Purpose |
 |---------|---------|
 | `/model` | Select model |
-| `/agent-loop` | Select high-intelligence or low-intelligence loop adaptation for the current session |
+| `/agent-loop` | Select standard or weak-model-compatible loop adaptation for the current session |
 | `/thinking` | Set thinking level |
 | `/clear` | Clear conversation |
 | `/fork` | Fork session |
@@ -348,6 +353,7 @@ Built-in commands (`core/slash-commands.ts`):
 | `/login` | Configure API keys |
 | `/settings` | Open settings |
 | `/link-world` | Install internet access extension |
+| `/grub` | Start/status/resume/stop an autonomous long-running task harness |
 
 ---
 

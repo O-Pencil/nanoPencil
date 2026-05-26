@@ -11,48 +11,84 @@ import { grubText, type GrubLocale } from "./grub-i18n.js";
 interface TokenizedArgs {
 	positional: string[];
 	flags: Record<string, string | boolean>;
-	goal: string;
+}
+
+function scanTokens(input: string): string[] {
+	const tokens: string[] = [];
+	let current = "";
+	let quote: "'" | '"' | undefined;
+	let escaping = false;
+
+	for (const char of input.trim()) {
+		if (escaping) {
+			current += char;
+			escaping = false;
+			continue;
+		}
+		if (char === "\\" && quote !== "'") {
+			escaping = true;
+			continue;
+		}
+		if ((char === "'" || char === '"') && !quote) {
+			quote = char;
+			continue;
+		}
+		if (char === quote) {
+			quote = undefined;
+			continue;
+		}
+		if (/\s/.test(char) && !quote) {
+			if (current) {
+				tokens.push(current);
+				current = "";
+			}
+			continue;
+		}
+		current += char;
+	}
+
+	if (escaping) current += "\\";
+	if (current) tokens.push(current);
+	return tokens;
 }
 
 function tokenize(input: string): TokenizedArgs {
-	const tokens = input.trim().split(/\s+/).filter(Boolean);
+	const tokens = scanTokens(input);
 	const positional: string[] = [];
 	const flags: Record<string, string | boolean> = {};
-	const remaining: string[] = [];
+	const knownValueFlags = new Set(["max-iter", "max-iterations", "max-fail", "max-failures"]);
 	for (let i = 0; i < tokens.length; i += 1) {
 		const tok = tokens[i];
+		if (tok === "--") {
+			positional.push(...tokens.slice(i + 1));
+			break;
+		}
 		if (tok.startsWith("--")) {
 			const eq = tok.indexOf("=");
 			if (eq !== -1) {
-				flags[tok.slice(2, eq)] = tok.slice(eq + 1);
-				remaining.push(tok);
+				const key = tok.slice(2, eq);
+				if (knownValueFlags.has(key) || key === "json") {
+					flags[key] = tok.slice(eq + 1);
+				} else {
+					positional.push(tok);
+				}
 				continue;
 			}
 			const key = tok.slice(2);
 			const next = tokens[i + 1];
-			if (next !== undefined && !next.startsWith("--")) {
+			if (knownValueFlags.has(key) && next !== undefined) {
 				flags[key] = next;
-				remaining.push(tok, next);
 				i += 1;
-			} else {
+			} else if (key === "json") {
 				flags[key] = true;
-				remaining.push(tok);
+			} else {
+				positional.push(tok);
 			}
 			continue;
 		}
 		positional.push(tok);
-		remaining.push(tok);
 	}
-	// Rebuild goal preserving original whitespace, stripping flag tokens.
-	const flagSet = new Set(remaining);
-	const raw = input.trim();
-	// Fast path: no flags detected, goal = raw input.
-	if (Object.keys(flags).length === 0) {
-		return { positional, flags, goal: raw };
-	}
-	// Strip flag tokens by splitting on whitespace again (tolerates simple cases).
-	const goal = tokens.filter((t) => !flagSet.has(t) || positional.includes(t)).join(" ");
-	return { positional, flags, goal };
+	return { positional, flags };
 }
 
 function parsePositiveInt(value: string | boolean | undefined): number | undefined {
@@ -85,22 +121,7 @@ export function parseGrubCommand(input: string): ParsedGrubCommand {
 		return { type: "help" };
 	}
 
-	// Treat as start; use tokens minus flags as goal.
-	const goalTokens: string[] = [];
-	const tokens = raw.split(/\s+/);
-	for (let i = 0; i < tokens.length; i += 1) {
-		const tok = tokens[i];
-		if (tok.startsWith("--")) {
-			if (tok.includes("=")) continue;
-			const next = tokens[i + 1];
-			if (next !== undefined && !next.startsWith("--")) {
-				i += 1;
-			}
-			continue;
-		}
-		goalTokens.push(tok);
-	}
-	const goal = goalTokens.join(" ").trim();
+	const goal = positional.join(" ").trim();
 	if (!goal) {
 		return { type: "help", reason: "empty" };
 	}

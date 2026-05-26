@@ -1,16 +1,18 @@
 /**
  * [WHO]: GrubController - drives autonomous iterative tasks with durable state and completion validation
- * [FROM]: Depends on node:crypto, node:path, ./grub-types, ./grub-persistence, ./grub-feature-list
+ * [FROM]: Depends on node:crypto, node:path, ./grub-types, ./grub-persistence, ./grub-feature-list, ./grub-prompts
  * [TO]: Consumed by extension entry point (./index.ts)
  * [HERE]: extensions/defaults/grub/grub-controller.ts - state machine for /grub iterations with cross-session persistence and feature-list-gated completion
  */
 
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
-import { allPassing, firstPending, readFeatureList } from "./grub-feature-list.js";
-import { languageName, grubText, type GrubLocale } from "./grub-i18n.js";
+import { allPassing, firstPending, readFeatureList, validateFeatureListDiff } from "./grub-feature-list.js";
+import { type GrubLocale } from "./grub-i18n.js";
 import { persistState, stateFilePathFor } from "./grub-persistence.js";
+import { buildGrubTaskPrompt, getPromptPrefix } from "./grub-prompts.js";
 import type {
+	FeatureList,
 	GrubControllerState,
 	GrubDecision,
 	GrubTaskSnapshot,
@@ -19,6 +21,8 @@ import type {
 
 const DEFAULT_MAX_ITERATIONS = 25;
 const DEFAULT_MAX_CONSECUTIVE_FAILURES = 3;
+const INITIALIZER_MIN_FEATURES = 15;
+const INITIALIZER_MAX_FEATURES = 40;
 
 export interface GrubStartOptions {
 	maxIterations?: number;
@@ -132,104 +136,14 @@ export class GrubController {
 	}
 
 	isGrubPrompt(prompt: string): boolean {
-		return this.activeTask !== undefined && prompt.startsWith(this.getPromptPrefix(this.activeTask.id));
+		return this.activeTask !== undefined && prompt.startsWith(getPromptPrefix(this.activeTask.id));
 	}
 
 	buildPrompt(): string {
 		if (!this.activeTask) {
 			throw new Error("No active grub task.");
 		}
-
-		const task = this.activeTask;
-		const text = grubText(task.locale);
-		const sections = [
-			`${this.getPromptPrefix(task.id)}${task.currentIteration}]`,
-			"",
-			task.locale === "zh" ? "自主 Grub 目标：" : "Autonomous grub goal:",
-			task.goal,
-			"",
-			task.locale === "zh"
-				? "你正在一个受控的 grub harness 中工作。请围绕同一个目标持续推进具体进展。"
-				: "You are inside a managed grub harness. Keep making concrete progress on the same goal.",
-			task.locale === "zh"
-				? "按需使用工具、编辑文件、运行检查并验证结果。所有面向用户的总结、进度和说明都必须使用中文。"
-				: "Use tools, edit files, run checks, and verify results as needed.",
-			`User language: ${languageName(task.locale)}.`,
-			"",
-			task.locale === "zh" ? "Harness 文件（每轮都必须保持最新）：" : "Harness files (must stay up to date every iteration):",
-			`- ${text.featureList}: ${task.featureListPath}`,
-			`- ${text.progressLog}: ${task.progressLogPath}`,
-			`- ${text.initScript}: ${task.initScriptPath}`,
-		];
-
-		if (task.phase === "initializer") {
-			sections.push(
-				"",
-				task.locale === "zh" ? "初始化阶段要求：" : "Initializer phase requirements:",
-				task.locale === "zh"
-					? "1. 将 feature-list.json 的占位内容替换为 15-40 个具体、可测试的切片。每项必须保持 {id, category, description, steps[], passes:false}。"
-					: "1. Replace the placeholder feature-list.json with 15-40 concrete, testable slices. Every entry MUST keep the schema {id, category, description, steps[], passes:false}.",
-				task.locale === "zh"
-					? "2. 确保 init.sh 包含可靠的启动检查，并设置为可执行。"
-					: "2. Ensure init.sh contains reliable startup checks and make it executable.",
-				task.locale === "zh"
-					? "3. 在 progress-log.md 中追加清晰的初始化总结。"
-					: "3. Append a clear initialization summary in progress-log.md.",
-				task.locale === "zh"
-					? "4. 先建立强 harness，不要开始大范围实现。"
-					: "4. Do not attempt broad implementation yet; prepare a strong harness first.",
-				task.locale === "zh"
-					? "5. 除非目标已经完成或阻塞，否则本轮以 loop-state status=continue 结束。"
-					: "5. End this turn with loop-state status=continue unless the goal is already complete/blocked.",
-			);
-		} else {
-			sections.push(
-				"",
-				task.locale === "zh" ? "执行阶段要求：" : "Execution phase requirements:",
-				task.locale === "zh"
-					? "1. 先运行 init.sh，再读取 feature-list.json 和 progress-log.md。"
-					: "1. Start by running the init script, then read feature-list.json and progress-log.md.",
-				task.locale === "zh"
-					? "2. 只选择一个 passes:false 的 feature，并端到端完成它。"
-					: "2. Pick exactly one feature with passes:false and execute it end-to-end.",
-				task.locale === "zh"
-					? "3. 运行相关验证（测试、烟测或运行时检查）。"
-					: "3. Run relevant verification (tests, smoke checks, or runtime checks).",
-				task.locale === "zh"
-					? "4. 只能修改该 feature 的 passes/evidence 字段；其他字段不可变。"
-					: "4. Flip ONLY the passes/evidence fields for that feature; other fields are immutable.",
-				task.locale === "zh"
-					? "5. 本轮结束前追加进度日志并 git commit。"
-					: "5. Append progress log and git-commit before finishing the turn.",
-				task.locale === "zh"
-					? "6. 每轮都保持增量、安全、可回退。"
-					: "6. Keep each iteration incremental and production-safe.",
-			);
-		}
-
-		if (task.lastDecision?.summary) {
-			sections.push("", task.locale === "zh" ? "上次总结：" : "Previous summary:", task.lastDecision.summary);
-		}
-
-		if (task.lastDecision?.nextStep) {
-			sections.push("", task.locale === "zh" ? "上次计划的下一步：" : "Previous planned next step:", task.lastDecision.nextStep);
-		}
-
-		if (task.lastError) {
-			sections.push("", task.locale === "zh" ? "恢复提示：" : "Recovery note:", task.lastError);
-		}
-
-		sections.push(
-			"",
-			task.locale === "zh"
-				? "不要因为一次查询结束就停止。只有 feature-list.json 中每个 feature 都 passes:true 时，才可以决定 `complete`。"
-				: "Do not stop just because one query finished. Only decide `complete` when every feature in feature-list.json has passes:true.",
-			task.locale === "zh"
-				? "如果还需要下一轮自主推进，请以有效的 <loop-state> 块结束，让系统自动继续。"
-				: "If you need another autonomous pass, end with a valid <loop-state> block so the system can continue automatically.",
-		);
-
-		return sections.join("\n");
+		return buildGrubTaskPrompt(this.activeTask);
 	}
 
 	markDispatched(): GrubTaskState {
@@ -240,6 +154,62 @@ export class GrubController {
 		this.activeTask.updatedAt = Date.now();
 		this.safePersist(this.activeTask);
 		return this.activeTask;
+	}
+
+	/**
+	 * Enforce the feature-list contract at the state-machine boundary. The
+	 * initializer may replace the placeholder with the first complete list; after
+	 * that, every turn may only change passes/evidence fields.
+	 */
+	validateFeatureListAfterTurn(): { ok: true } | { ok: false; message: string } {
+		if (!this.activeTask) {
+			return { ok: true };
+		}
+
+		const task = this.activeTask;
+		const list = readFeatureList(task.featureListPath);
+		if (!list) {
+			return {
+				ok: false,
+				message:
+					task.locale === "zh"
+						? "任务清单缺失或格式不正确，需要先修好清单再继续。"
+						: "The task checklist is missing or malformed. It needs to be fixed before continuing.",
+			};
+		}
+
+		if (task.phase === "initializer") {
+			const initializerError = this.validateInitializerFeatureList(list);
+			if (initializerError) {
+				return { ok: false, message: initializerError };
+			}
+			task.featureListBaseline = this.cloneFeatureList(list);
+			this.safePersist(task);
+			return { ok: true };
+		}
+
+		if (!task.featureListBaseline) {
+			task.featureListBaseline = this.cloneFeatureList(list);
+			this.safePersist(task);
+			return { ok: true };
+		}
+
+		try {
+			validateFeatureListDiff(task.featureListBaseline, list);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return {
+				ok: false,
+				message:
+					task.locale === "zh"
+						? `任务清单被改动得不安全：${message}`
+						: `The task checklist changed in an unsafe way: ${message}`,
+			};
+		}
+
+		task.featureListBaseline = this.cloneFeatureList(list);
+		this.safePersist(task);
+		return { ok: true };
 	}
 
 	/**
@@ -259,13 +229,13 @@ export class GrubController {
 				summary: decision.summary,
 				nextStep:
 					this.activeTask.locale === "zh"
-						? "feature-list.json 缺失或无效；初始化阶段必须先生成它，不能直接声明完成。"
-						: "feature-list.json is missing or invalid; the initializer must produce it before claiming complete.",
+						? "任务清单缺失或无效；必须先生成清单，不能直接结束。"
+						: "The task checklist is missing or invalid; it must be created before the task can finish.",
 			};
 			return {
 				decision: rewritten,
 				downgraded: true,
-				reason: this.activeTask.locale === "zh" ? "feature-list.json 缺失或无效" : "feature-list.json missing or invalid",
+				reason: this.activeTask.locale === "zh" ? "任务清单缺失或无效" : "the task checklist is missing or invalid",
 			};
 		}
 		if (allPassing(list)) {
@@ -286,11 +256,11 @@ export class GrubController {
 		return {
 			decision: rewritten,
 			downgraded: true,
-			reason:
-				this.activeTask.locale === "zh"
-					? `feature-list 仍有 ${list.features.length - list.features.filter((f) => f.passes).length} 个待处理条目`
-					: `feature-list still has ${list.features.length - list.features.filter((f) => f.passes).length} pending entries`,
-		};
+				reason:
+					this.activeTask.locale === "zh"
+						? `清单里还有 ${list.features.length - list.features.filter((f) => f.passes).length} 项未完成`
+						: `the checklist still has ${list.features.length - list.features.filter((f) => f.passes).length} unfinished items`,
+			};
 	}
 
 	finishTurn(decision: GrubDecision): { action: "continue" | "stop"; task?: GrubTaskState; snapshot?: GrubTaskSnapshot } {
@@ -378,12 +348,51 @@ export class GrubController {
 		return { action: "continue", task: { ...task } };
 	}
 
-	private getPromptPrefix(taskId: string): string {
-		return `[GRUB:${taskId}:`;
-	}
-
 	private generateTaskId(): string {
 		return randomBytes(4).toString("hex").slice(0, 8);
+	}
+
+	private validateInitializerFeatureList(list: FeatureList): string | undefined {
+		const task = this.activeTask;
+		const locale = task?.locale ?? "en";
+		if (task && list.goal !== task.goal) {
+			return locale === "zh" ? "任务清单里的目标必须保持用户原始目标。" : "The checklist goal must stay the same as the original task.";
+		}
+		if (list.features.length < INITIALIZER_MIN_FEATURES || list.features.length > INITIALIZER_MAX_FEATURES) {
+			return locale === "zh"
+				? `初始化阶段必须生成 ${INITIALIZER_MIN_FEATURES}-${INITIALIZER_MAX_FEATURES} 个 feature。`
+				: `Initializer must produce ${INITIALIZER_MIN_FEATURES}-${INITIALIZER_MAX_FEATURES} features.`;
+		}
+		const seen = new Set<string>();
+		for (const feature of list.features) {
+			if (feature.id === "placeholder-expand-features") {
+				return locale === "zh" ? "初始化阶段必须替换 placeholder feature。" : "Initializer must replace the placeholder feature.";
+			}
+			if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(feature.id)) {
+				return locale === "zh" ? `feature id 必须是 kebab-case：${feature.id}` : `feature id must be kebab-case: ${feature.id}`;
+			}
+			if (seen.has(feature.id)) {
+				return locale === "zh" ? `feature id 重复：${feature.id}` : `duplicate feature id: ${feature.id}`;
+			}
+			seen.add(feature.id);
+			if (feature.passes) {
+				return locale === "zh"
+					? `初始化阶段不能预设已通过 feature：${feature.id}`
+					: `Initializer must not pre-mark features as passing: ${feature.id}`;
+			}
+		}
+		return undefined;
+	}
+
+	private cloneFeatureList(list: FeatureList): FeatureList {
+		return {
+			version: list.version,
+			goal: list.goal,
+			features: list.features.map((feature) => ({
+				...feature,
+				steps: [...feature.steps],
+			})),
+		};
 	}
 
 	private safePersist(task: GrubTaskState): void {

@@ -29,6 +29,14 @@ const WORKSPACE_TEMPLATE_PATH = join(__dirname, "agent-workspace");
 
 const LINK_WORLD_CUSTOM_TYPE = "link-world-install";
 const DEFAULT_TIMEOUT_SECONDS = 120;
+const LINK_WORLD_COMMAND_COMPLETIONS = [
+	{ value: "status", label: "status", description: "Show installed internet-access capabilities" },
+	{ value: "doctor", label: "doctor", description: "Run agent-reach doctor diagnostics" },
+	{ value: "version", label: "version", description: "Show installed agent-reach version" },
+	{ value: "install", label: "install", description: "Show bundled installation guidance" },
+	{ value: "workspace", label: "workspace", description: "Show the link-world workspace path" },
+	{ value: "help", label: "help", description: "Show link-world commands" },
+];
 
 const LinkWorldAdminInputSchema = Type.Object(
 	{
@@ -418,11 +426,10 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 
 	api.registerCommand("link-world", {
 		description: "Set up or inspect internet access tools",
-		getArgumentCompletions: (argumentPrefix) => {
-			const prefix = argumentPrefix.trim();
-			const values = ["status", "doctor", "version", "install", "workspace", "help"]
-				.filter((value) => value.startsWith(prefix))
-				.map((value) => ({ value, label: value }));
+		getArgumentCompletions: (argumentPrefix, context) => {
+			if (context && context.tokenIndex > 0) return null;
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = LINK_WORLD_COMMAND_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
 			return values.length > 0 ? values : null;
 		},
 		handler: async (args: string, _ctx: ExtensionCommandContext) => {

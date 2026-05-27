@@ -28,6 +28,14 @@ const HARNESS_SRC_PATH = join(__dirname, "src");
 const INTERACTION_SKILLS_PATH = join(__dirname, "interaction-skills");
 const WORKSPACE_TEMPLATE_PATH = join(__dirname, "agent-workspace");
 const DEFAULT_TIMEOUT_SECONDS = 120;
+const BROWSER_COMMAND_COMPLETIONS = [
+	{ value: "install", label: "install", description: "Install Browser Harness Python dependencies" },
+	{ value: "status", label: "status", description: "Run doctor diagnostics" },
+	{ value: "setup", label: "setup", description: "Attach to the running browser" },
+	{ value: "reload", label: "reload", description: "Restart the Browser Harness daemon" },
+	{ value: "workspace", label: "workspace", description: "Show the helper workspace path" },
+	{ value: "help", label: "help", description: "Show Browser Harness commands" },
+];
 
 const BrowserRunInputSchema = Type.Object(
 	{
@@ -404,11 +412,10 @@ export default function browserExtension(api: ExtensionAPI) {
 
 	api.registerCommand("browser", {
 		description: "Set up or inspect browser automation tools",
-		getArgumentCompletions: (argumentPrefix) => {
-			const prefix = argumentPrefix.trim();
-			const values = ["install", "status", "setup", "reload", "workspace", "help"]
-				.filter((value) => value.startsWith(prefix))
-				.map((value) => ({ value, label: value }));
+		getArgumentCompletions: (argumentPrefix, context) => {
+			if (context && context.tokenIndex > 0) return null;
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = BROWSER_COMMAND_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
 			return values.length > 0 ? values : null;
 		},
 		handler: async (args: string, ctx: ExtensionCommandContext) => {

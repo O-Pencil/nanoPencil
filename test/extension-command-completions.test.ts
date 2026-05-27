@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import type { RegisteredCommand } from "../core/extensions/types.js";
+import browserExtension from "../extensions/defaults/browser/index.js";
 import debugExtension from "../extensions/defaults/debug/index.js";
 import diagnosticsExtension from "../extensions/defaults/diagnostics/index.js";
 import grubExtension from "../extensions/defaults/grub/index.js";
 import loopExtension from "../extensions/defaults/loop/index.js";
+import linkWorldExtension from "../extensions/defaults/link-world/index.js";
 import mcpExtension from "../extensions/defaults/mcp/index.js";
 import recapExtension from "../extensions/defaults/recap/index.js";
 import securityAuditExtension from "../extensions/defaults/security-audit/index.js";
@@ -97,6 +99,42 @@ test("tokensave command exposes first-argument completions", () => {
 	assert.match(tokensave.description ?? "", /shell output was shortened/);
 	assert.deepEqual(tokensave.getArgumentCompletions?.("hi")?.map((item) => item.value), ["history"]);
 	assert.deepEqual(tokensave.getArgumentCompletions?.("re")?.map((item) => item.value), ["reload"]);
+});
+
+test("browser and link-world commands expose readable first-argument completions", () => {
+	const browserHarness = createExtensionHarness();
+	browserExtension(browserHarness.api as never);
+	const browser = browserHarness.commands.get("browser");
+	assert.ok(browser);
+	assert.deepEqual(browser.getArgumentCompletions?.("sta")?.map((item) => item.value), ["status"]);
+	assert.match(browser.getArgumentCompletions?.("sta")?.[0]?.description ?? "", /doctor diagnostics/);
+	assert.equal(
+		browser.getArgumentCompletions?.("sta", {
+			commandName: "browser",
+			argumentText: "status sta",
+			argumentPrefix: "sta",
+			tokenIndex: 1,
+			previousTokens: ["status"],
+		}),
+		null,
+	);
+
+	const linkWorldHarness = createExtensionHarness();
+	linkWorldExtension(linkWorldHarness.api as never);
+	const linkWorld = linkWorldHarness.commands.get("link-world");
+	assert.ok(linkWorld);
+	assert.deepEqual(linkWorld.getArgumentCompletions?.("doc")?.map((item) => item.value), ["doctor"]);
+	assert.match(linkWorld.getArgumentCompletions?.("doc")?.[0]?.description ?? "", /agent-reach doctor/);
+	assert.equal(
+		linkWorld.getArgumentCompletions?.("doc", {
+			commandName: "link-world",
+			argumentText: "status doc",
+			argumentPrefix: "doc",
+			tokenIndex: 1,
+			previousTokens: ["status"],
+		}),
+		null,
+	);
 });
 
 test("loop command exposes scheduler subcommands and flags", async () => {

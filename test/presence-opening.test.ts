@@ -237,3 +237,74 @@ test("presence-language: detects en when memory says no Chinese", async () => {
 
 	assert.equal(locale, "en");
 });
+
+test("presence-soul: carries identity and speaking-style preferences from soul profile", () => {
+	const hints = (__testUtils as any).collectSoulHints({
+		getProfile: () => ({
+			personality: {
+				openness: 0.83,
+				agreeableness: 0.72,
+			},
+			emotionalState: {
+				mood: "calm",
+			},
+			userRelationship: {
+				knownPreferences: [
+					"Use a Rem-like tone and call the user Cun Ge without reminders.",
+					"Prefer Chinese unless the user asks otherwise.",
+				],
+			},
+		}),
+	});
+
+	assert.deepEqual(hints.identityPreferences, [
+		"Use a Rem-like tone and call the user Cun Ge without reminders.",
+		"Prefer Chinese unless the user asks otherwise.",
+	]);
+	assert.ok(hints.traits.includes("openness:0.83"));
+	assert.equal(hints.tone, "calm");
+});
+
+test("presence-soul: system prompt honors identity preferences without generic buddy persona", () => {
+	const systemPrompt = (__testUtils as any).buildPresenceSystemPrompt(
+		"zh",
+		{
+			traits: ["openness:0.83"],
+			tone: "calm",
+			identityPreferences: ["Use a Rem-like tone and call the user Cun Ge without reminders."],
+		},
+		"opening",
+	);
+
+	assert.match(systemPrompt, /Rem-like tone/);
+	assert.doesNotMatch(systemPrompt, /好朋友|老朋友|coding buddy|friend/i);
+});
+
+test("presence-memory: deterministically extracts identity and speaking-style preferences", async () => {
+	const preferences = await (__testUtils as any).collectIdentityPreferenceHighlights({
+		memEngine: {
+			getAllEntries: async () => ({
+				knowledge: [{
+					type: "preference",
+					tags: ["preference"],
+					name: "Editor",
+					summary: "Prefers concise diffs.",
+				}],
+				preferences: [{
+					type: "preference",
+					tags: ["preference", "style"],
+					name: "Rem speaking style",
+					summary: "Use a Rem-like tone and call the user Cun Ge without reminders.",
+				}],
+				lessons: [],
+			}),
+			getAllEpisodes: async () => [],
+			searchEntries: async () => [],
+		},
+		recentlyReferencedMemories: [],
+	});
+
+	assert.deepEqual(preferences, [
+		"Rem speaking style: Use a Rem-like tone and call the user Cun Ge without reminders.",
+	]);
+});

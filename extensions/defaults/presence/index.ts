@@ -2,7 +2,7 @@
  * [WHO]: Extension interface, AI-driven personalized greetings and idle cues
  * [FROM]: Depends on @pencil-agent/tui, core/extensions/types.js, core/i18n, node:path, node:url, node:fs
  * [TO]: Loaded by core/extensions/loader.ts as extension entry point
- * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled, canSendOpening guards against agent-is-busy race
+ * [HERE]: extensions/defaults/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits and identity/style preferences, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled, canSendOpening guards against agent-is-busy race
  */
 
 import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+	collectIdentityPreferenceHighlights,
 	collectMemoryHighlights,
 	detectLanguageFromMemory,
 	getMemoryDir,
@@ -158,8 +159,20 @@ async function importRuntimeModule<T>(
 	return undefined;
 }
 
-function collectSoulHints(soulManager: unknown): { traits: string[]; tone?: string } {
-	const out: { traits: string[]; tone?: string } = { traits: [] };
+type PresenceSoulHints = {
+	traits: string[];
+	tone?: string;
+	identityPreferences: string[];
+};
+
+function normalizePreferenceText(value: unknown): string | undefined {
+	if (typeof value !== "string") return undefined;
+	const text = value.trim().replace(/\s+/g, " ");
+	return text ? text.slice(0, 160) : undefined;
+}
+
+function collectSoulHints(soulManager: unknown): PresenceSoulHints {
+	const out: PresenceSoulHints = { traits: [], identityPreferences: [] };
 	if (!soulManager || typeof soulManager !== "object") return out;
 	try {
 		const profile = (soulManager as { getProfile?: () => unknown }).getProfile?.();
@@ -174,8 +187,32 @@ function collectSoulHints(soulManager: unknown): { traits: string[]; tone?: stri
 		}
 		const mood = (profile as any)?.emotionalState?.mood;
 		if (typeof mood === "string") out.tone = mood;
+		const knownPreferences = (profile as any)?.userRelationship?.knownPreferences;
+		if (Array.isArray(knownPreferences)) {
+			out.identityPreferences = knownPreferences
+				.map(normalizePreferenceText)
+				.filter((text): text is string => Boolean(text))
+				.slice(0, 5);
+		}
 	} catch {
 		/* fail-soft */
+	}
+	return out;
+}
+
+function mergeIdentityPreferences(...groups: readonly string[][]): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const group of groups) {
+		for (const value of group) {
+			const text = normalizePreferenceText(value);
+			if (!text) continue;
+			const key = text.toLowerCase();
+			if (seen.has(key)) continue;
+			seen.add(key);
+			out.push(text);
+			if (out.length >= 5) return out;
+		}
 	}
 	return out;
 }
@@ -266,7 +303,7 @@ async function collectProjectSnapshot(): Promise<ProjectSnapshot> {
 async function buildGreetingPrompt(
 	state: PresenceState,
 	detectedLocale: "en" | "zh",
-	soulHints: { traits: string[]; tone?: string },
+	soulHints: PresenceSoulHints,
 	kind: "opening" | "idle" = "opening",
 	lastUserMessage?: string,
 ): Promise<string | undefined> {
@@ -297,12 +334,12 @@ async function buildGreetingPrompt(
 					: "用户安静了几分钟。轻轻问候一下，别打扰他。一句话就够。",
 				"",
 				"要求:",
-				"- 像老朋友一样自然，不要太正式",
-				"- 简短随意",
+				"- 简短自然，不要太正式",
+				"- 如果有身份、语气、称呼或角色偏好，必须遵守",
 				kind === "idle" ? "- 不要重复你之前说过的开场白" : "- 如果有上下文，可以自然提一句",
 				"- 不要为了有话说而硬找话题",
 				"- 如果他只是在做很琐碎的事情，不需要特别提起，简单打个招呼就好",
-				"- 偏好和经验只是背景参考，不需要每次都引用，只在真正自然的时候带一句",
+				"- 普通偏好和经验只是背景参考；身份、语气、称呼和角色偏好不是背景，必须优先遵守",
 				"- 不要反复提同样的记忆或概念，要换着花样",
 				"",
 				"项目状态:",
@@ -323,6 +360,10 @@ async function buildGreetingPrompt(
 			if (highlights.preferences.length > 0) {
 				lines.push("", "你知道他的偏好:");
 				for (const p of highlights.preferences) lines.push(`- ${p}`);
+			}
+			if (soulHints.identityPreferences.length > 0) {
+				lines.push("", "高优先级身份/语气/称呼约束:");
+				for (const p of soulHints.identityPreferences) lines.push(`- ${p}`);
 			}
 			if (highlights.lessons.length > 0) {
 				lines.push("", "记下的经验:");
@@ -357,12 +398,12 @@ async function buildGreetingPrompt(
 					: "The user has been quiet for a few minutes. Drop a soft, non-pushy check-in. One short sentence.",
 				"",
 				"Requirements:",
-				"- Sound like a friend, not formal",
-				"- Short and casual",
+				"- Keep it short and natural, not formal",
+				"- If identity, tone, address, or role preferences are present, follow them",
 				kind === "idle" ? "- Do NOT repeat your earlier opening greeting" : "- If there's recent context, mention it naturally",
 				"- Don't force a topic just to have something to say",
 				"- If they're only doing trivial things (like creating an empty folder), don't mention it - just say hi",
-				"- Preferences and lessons are background context only - reference at most 1-2, only when it naturally fits",
+				"- Ordinary preferences and lessons are background context; identity, tone, address, and role preferences are high-priority constraints",
 				"- Don't keep bringing up the same memories or concepts repeatedly",
 				"",
 				"Project state:",
@@ -383,6 +424,10 @@ async function buildGreetingPrompt(
 			if (highlights.preferences.length > 0) {
 				lines.push("", "What you know about them:");
 				for (const p of highlights.preferences) lines.push(`- ${p}`);
+			}
+			if (soulHints.identityPreferences.length > 0) {
+				lines.push("", "High-priority identity/tone/address constraints:");
+				for (const p of soulHints.identityPreferences) lines.push(`- ${p}`);
 			}
 			if (highlights.lessons.length > 0) {
 				lines.push("", "Lessons remembered:");
@@ -414,6 +459,28 @@ async function buildGreetingPrompt(
 	} catch {
 		return undefined;
 	}
+}
+
+function buildPresenceSystemPrompt(
+	locale: "en" | "zh",
+	soulHints: PresenceSoulHints,
+	kind: "opening" | "idle",
+): string {
+	const traitsHint = soulHints.traits.length > 0
+		? ` ${locale === "zh" ? "人格倾向" : "Personality tilt"}: ${soulHints.traits.map((t) => t.split(":")[0]).join(", ")}.`
+		: "";
+	const identityHint = soulHints.identityPreferences.length > 0
+		? ` ${locale === "zh" ? "必须遵守这些身份/语气/称呼约束" : "Follow these identity/tone/address constraints"}: ${soulHints.identityPreferences.join(" | ")}.`
+		: "";
+
+	if (locale === "zh") {
+		return kind === "opening"
+			? `生成一句简短自然的开场问候。不要覆盖已知身份设定。${identityHint}${traitsHint}`
+			: `生成一句简短、轻声、不打扰的问候。不要覆盖已知身份设定。${identityHint}${traitsHint}`;
+	}
+	return kind === "opening"
+		? `Generate one brief, natural opening greeting. Do not override known identity settings.${identityHint}${traitsHint}`
+		: `Generate one brief, quiet, non-pushy check-in. Do not override known identity settings.${identityHint}${traitsHint}`;
 }
 
 function getLastUserMessage(ctx: ExtensionContext): string | undefined {
@@ -453,29 +520,24 @@ async function generatePresenceLine(
 
 	const lastUser = kind === "idle" ? getLastUserMessage(ctx) : undefined;
 	const soulHints = collectSoulHints(ctx.getSoulManager());
+	const memoryIdentityPreferences = await collectIdentityPreferenceHighlights(state);
+	const presenceHints: PresenceSoulHints = {
+		...soulHints,
+		identityPreferences: mergeIdentityPreferences(
+			soulHints.identityPreferences,
+			memoryIdentityPreferences,
+		),
+	};
 	const prompt = await buildGreetingPrompt(
 		state,
 		locale,
-		soulHints,
+		presenceHints,
 		kind,
 		lastUser,
 	);
 	if (!prompt) return fallback();
 
-	const systemPrompt = (() => {
-		const traitsHint = soulHints.traits.length > 0
-			? ` Your key traits: ${soulHints.traits.map((t) => t.split(":")[0]).join(", ")}.`
-			: "";
-
-		if (locale === "zh") {
-			return kind === "opening"
-				? `你是个程序员的好朋友，现在来打个招呼。说得随意自然点。${traitsHint}`
-				: `你是个程序员的好朋友。轻声问候，不打扰。一句话。${traitsHint}`;
-		}
-		return kind === "opening"
-			? `You're a developer's coding buddy saying hi. Keep it casual and human.${traitsHint}`
-			: `You're a developer's coding buddy doing a quiet check-in. One short, non-pushy line.${traitsHint}`;
-	})();
+	const systemPrompt = buildPresenceSystemPrompt(locale, presenceHints, kind);
 
 	try {
 		const line = await ctx.completeSimple(systemPrompt, prompt);
@@ -748,5 +810,8 @@ export const __testUtils = {
 	resolveBundledPackageEntry,
 	importRuntimeModule,
 	detectLanguageFromMemory,
+	collectIdentityPreferenceHighlights,
 	getOpeningDelayMs,
+	collectSoulHints,
+	buildPresenceSystemPrompt,
 };

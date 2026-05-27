@@ -1,5 +1,5 @@
 /**
- * [WHO]: PresenceMemoryEngine type, getMemoryDir(), getProject(), detectLanguageFromMemory(), collectMemoryHighlights()
+ * [WHO]: PresenceMemoryEngine type, getMemoryDir(), getProject(), detectLanguageFromMemory(), collectMemoryHighlights(), collectIdentityPreferenceHighlights()
  * [FROM]: Depends on node:os, node:path, node:fs for memory path discovery
  * [TO]: Consumed by extensions/defaults/presence/index.ts and presence tests
  * [HERE]: extensions/defaults/presence/presence-memory.ts - memory-derived locale and highlight selection for presence prompts
@@ -37,6 +37,9 @@ export type PresenceMemoryState = {
 };
 
 export type MemoryHighlights = { preferences: string[]; lessons: string[] };
+
+const IDENTITY_PREFERENCE_PATTERN =
+	/(tone|style|speaking|speak|call(?:s|ed)?\s+(?:me|user|them)?|address|persona|role|identity|character|扮演|角色|人设|身份|语气|口吻|说话方式|称呼|叫我|雷姆|rem-like|rem\b)/i;
 
 export function getMemoryDir(): string {
 	// Use the same memory directory as the main app.
@@ -187,6 +190,40 @@ export async function collectMemoryHighlights(state: PresenceMemoryState): Promi
 		// Presence is best-effort; malformed memory should not affect startup.
 	}
 	return out;
+}
+
+export async function collectIdentityPreferenceHighlights(state: PresenceMemoryState): Promise<string[]> {
+	if (!state.memEngine) return [];
+	try {
+		const entries = await state.memEngine.getAllEntries();
+		const prefPool = [
+			...(entries.preferences ?? []),
+			...entries.knowledge.filter((entry) => entry.type === "preference" || entry.tags.includes("preference")),
+			...entries.lessons.filter((entry) => entry.type === "preference" || entry.tags.includes("preference")),
+		].filter((entry) => entry.type === "preference" || entry.tags.includes("preference"));
+
+		const searchResults = await state.memEngine.searchEntries("tone style speaking call address persona role identity 称呼 语气 角色 扮演");
+		const candidates = [...prefPool, ...searchResults];
+		const seen = new Set<string>();
+		const out: string[] = [];
+
+		for (const entry of candidates) {
+			const text = (entry.summary || entry.detail || entry.content || "").toString().trim().replace(/\s+/g, " ");
+			const label = (entry.name || "preference").toString().trim();
+			const searchable = `${label} ${text} ${(entry.tags || []).join(" ")}`;
+			if (!text || !IDENTITY_PREFERENCE_PATTERN.test(searchable)) continue;
+			const line = `${label || "preference"}: ${text.slice(0, 160)}`;
+			const key = line.toLowerCase();
+			if (seen.has(key)) continue;
+			seen.add(key);
+			out.push(line);
+			if (out.length >= 5) break;
+		}
+
+		return out;
+	} catch {
+		return [];
+	}
 }
 
 /** Randomly pick `count` items from array without replacement. */

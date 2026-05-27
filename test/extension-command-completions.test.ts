@@ -8,6 +8,7 @@ import debugExtension from "../extensions/defaults/debug/index.js";
 import grubExtension from "../extensions/defaults/grub/index.js";
 import loopExtension from "../extensions/defaults/loop/index.js";
 import mcpExtension from "../extensions/defaults/mcp/index.js";
+import recapExtension from "../extensions/defaults/recap/index.js";
 import securityAuditExtension from "../extensions/defaults/security-audit/index.js";
 import subagentExtension from "../extensions/defaults/subagent/index.js";
 import tokenSaveExtension from "../extensions/defaults/token-save/index.js";
@@ -156,6 +157,16 @@ test("figma command exposes setup and authentication completions", async () => {
 	assert.deepEqual(figma.getArgumentCompletions?.("sta")?.map((item) => item.value), ["status"]);
 	assert.deepEqual(figma.getArgumentCompletions?.("auth")?.map((item) => item.value), ["auth"]);
 	assert.deepEqual(figma.getArgumentCompletions?.("rem")?.map((item) => item.value), ["remote"]);
+});
+
+test("recap command exposes free and smart mode completions", async () => {
+	const harness = createExtensionHarness();
+	await recapExtension(harness.api as never);
+
+	const recap = harness.commands.get("recap");
+	assert.ok(recap);
+	assert.deepEqual(recap.getArgumentCompletions?.("--s")?.map((item) => item.value), ["--smart"]);
+	assert.deepEqual(recap.getArgumentCompletions?.("--f")?.map((item) => item.value), ["--free"]);
 });
 
 test("subagent commands expose root actions and write flag completions", async () => {

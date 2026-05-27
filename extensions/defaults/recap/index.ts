@@ -11,6 +11,20 @@ import { hasMeaningfulActivity, synthesizeSmartRecap } from "./recap-synthesizer
 import { RECAP_DEFAULTS, RECAP_MESSAGE_TYPE, type RecapEntry } from "./recap-types.js";
 
 const RECAP_TIMEOUT_MS = 30_000;
+const RECAP_MODE_COMPLETIONS = [
+	{ value: "--free", label: "--free", description: "Use the instant zero-token recap" },
+	{ value: "--smart", label: "--smart", description: "Use an LLM-polished recap" },
+] as const;
+
+function getRecapArgumentCompletions(
+	argumentPrefix: string,
+	context?: { tokenIndex: number },
+): Array<{ value: string; label: string; description?: string }> | null {
+	if (context && context.tokenIndex > 0) return null;
+	const prefix = argumentPrefix.trim().toLowerCase();
+	const values = RECAP_MODE_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
+	return values.length > 0 ? values.map((item) => ({ ...item })) : null;
+}
 
 function emitFreeRecap(ctx: ExtensionCommandContext, api: ExtensionAPI): void {
 	const entries = ctx.sessionManager.getEntries();
@@ -121,6 +135,7 @@ export default async function recapExtension(api: ExtensionAPI): Promise<void> {
 
 	api.registerCommand("recap", {
 		description: "Show a brief situational recap of the current task (goal, key facts, next decision). Free by default; add --smart for LLM-polished synthesis (costs tokens).",
+		getArgumentCompletions: getRecapArgumentCompletions,
 		handler: (args, ctx) => handleRecapCommand(args, ctx, api),
 	});
 }

@@ -403,7 +403,7 @@ export default function browserExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("browser", {
-		description: "Browser Harness setup, status, reload, and workspace information",
+		description: "Set up or inspect browser automation tools",
 		getArgumentCompletions: (argumentPrefix) => {
 			const prefix = argumentPrefix.trim();
 			const values = ["install", "status", "setup", "reload", "workspace", "help"]

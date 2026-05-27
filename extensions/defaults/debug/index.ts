@@ -15,6 +15,7 @@ import {
 	collectConfigInfo,
 	collectGitInfo,
 	collectAgentState,
+	collectPreferencesInfo,
 	sanitizeForLLM,
 	formatDiagnosticData,
 } from "./collectors.js";
@@ -69,7 +70,7 @@ function isDebugPrompt(text: string): boolean {
 // Subcommand parsing
 // ============================================================================
 
-type DebugSubCommand = "full" | "env" | "session" | "model";
+type DebugSubCommand = "full" | "env" | "session" | "model" | "preferences";
 
 interface ParsedDebugArgs {
 	subcommand: DebugSubCommand;
@@ -81,6 +82,7 @@ function parseDebugArgs(args: string): ParsedDebugArgs {
 	if (trimmed === "env") return { subcommand: "env" };
 	if (trimmed === "session") return { subcommand: "session" };
 	if (trimmed === "model") return { subcommand: "model" };
+	if (trimmed === "preferences") return { subcommand: "preferences" };
 	return { subcommand: "full", issueDescription: args.trim() || undefined };
 }
 
@@ -144,7 +146,7 @@ async function handleFullDiagnostic(
 // ============================================================================
 
 async function handleQuickSub(
-	subcommand: "env" | "session" | "model",
+	subcommand: Exclude<DebugSubCommand, "full">,
 	ctx: ExtensionCommandContext,
 	api: ExtensionAPI,
 ): Promise<void> {
@@ -174,6 +176,15 @@ async function handleQuickSub(
 			result = info.data
 				? `| Model | |\n|---|---|\n${Object.entries(info.data)
 						.map(([k, v]) => `| ${k} | ${v} |`)
+						.join("\n")}`
+				: `> Collection failed: ${info.error}`;
+			break;
+		}
+		case "preferences": {
+			const info = await collectPreferencesInfo(ctx);
+			result = info.data
+				? `| Preferences | |\n|---|---|\n${Object.entries(info.data)
+						.map(([k, v]) => `| ${k} | ${typeof v === "string" ? v : JSON.stringify(v)} |`)
 						.join("\n")}`
 				: `> Collection failed: ${info.error}`;
 			break;
@@ -236,13 +247,27 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 	});
 
 	api.registerCommand("debug", {
-		description: "Run system diagnostics (/debug [env|session|model|preferences|<issue>])",
+		description: "Check NanoPencil health or investigate an issue. Usage: /debug [env|session|model|preferences|<issue>]",
+		getArgumentCompletions: (argumentPrefix) => {
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = ["env", "session", "model", "preferences"]
+				.filter((value) => value.startsWith(prefix))
+				.map((value) => ({ value, label: value }));
+			return values.length > 0 ? values : null;
+		},
 		handler: (args, ctx) => handleDebugCommand(args, ctx, api),
 	});
 
 	// Register /set-locale command
 	api.registerCommand("set-locale", {
 		description: "Set language preference (/set-locale zh|en)",
+		getArgumentCompletions: (argumentPrefix) => {
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = ["zh", "en"]
+				.filter((value) => value.startsWith(prefix))
+				.map((value) => ({ value, label: value }));
+			return values.length > 0 ? values : null;
+		},
 		handler: async (args, ctx) => {
 			const trimmed = args.trim().toLowerCase();
 			if (trimmed !== "zh" && trimmed !== "en") {

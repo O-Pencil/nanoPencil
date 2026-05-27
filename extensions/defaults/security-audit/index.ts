@@ -130,7 +130,7 @@ function auditAndGateToolCall(api: ExtensionAPI, event: ToolCallEvent, ctx: Exte
 export default function securityAuditExtension(api: ExtensionAPI) {
 	// /security - Show security dashboard
 	api.registerCommand("security", {
-		description: "Show security audit dashboard and logs",
+		description: "Show recent security warnings and blocked actions",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			const logger = getLogger(ctx);
 			const stats = logger.getStats();
@@ -172,7 +172,7 @@ export default function securityAuditExtension(api: ExtensionAPI) {
 
 	// /security-logs - Show detailed logs
 	api.registerCommand("security-logs", {
-		description: "Show detailed security audit logs",
+		description: "Show detailed security event history",
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const logger = getLogger(ctx);
 			const limit = parseInt(args) || 50;
@@ -204,7 +204,7 @@ export default function securityAuditExtension(api: ExtensionAPI) {
 
 	// /security-stats - Show statistics
 	api.registerCommand("security-stats", {
-		description: "Show security audit statistics",
+		description: "Show security event counts",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			const logger = getLogger(ctx);
 			const stats = logger.getStats();
@@ -244,7 +244,7 @@ export default function securityAuditExtension(api: ExtensionAPI) {
 
 	// /security-clear - Clear logs
 	api.registerCommand("security-clear", {
-		description: "Clear security audit logs",
+		description: "Clear saved security events",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			const logger = getLogger(ctx);
 			logger.clear();

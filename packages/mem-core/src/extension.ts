@@ -854,18 +854,18 @@ export default function nanomemExtension(api: ExtensionAPI) {
 			const message = error instanceof Error ? error.message : String(error);
 			ctx.ui.notify(`NanoMem: failed to generate insights report: ${message}`, "error");
 			throw error;
-			} finally {
-				ctx.ui.setStatus("nanomem", "");
-			}
-		};
+		} finally {
+			ctx.ui.setStatus("nanomem", "");
+		}
+	};
 
 	api.registerCommand("mem-insights", {
-		description: "Generate NanoMem full insights HTML report (uses LLM when available)",
+		description: "Create a readable NanoMem insights HTML report",
 		handler: runMemInsights,
 	});
 
 	api.registerCommand("mem-align", {
-		description: "Show which stable memories and current states are shaping the agent",
+		description: "Show which memories are shaping the current agent behavior",
 		handler: async (_args, ctx) => {
 			const snapshot = await engine.getAlignmentSnapshot();
 			const topIdentity = snapshot.identityCore
@@ -889,7 +889,7 @@ export default function nanomemExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("mem-review", {
-		description: "Review the highest-risk memory conflicts and suggested actions",
+		description: "Review memory conflicts and suggested actions",
 		handler: async (_args, ctx) => {
 			const snapshot = await engine.getAlignmentSnapshot();
 			const topConflicts = snapshot.conflicts.slice(0, 3);
@@ -905,7 +905,7 @@ export default function nanomemExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("mem-edit", {
-		description: "Edit a memory entry by ID. Usage: /mem-edit <id> <field> <value>",
+		description: "Edit one memory by ID. Usage: /mem-edit <id> <field> <value>",
 		handler: async (args, ctx) => {
 			const parts = (args || "").trim().split(/\s+/);
 			const [id, field, ...rest] = parts;

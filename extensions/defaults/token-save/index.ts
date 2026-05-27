@@ -40,7 +40,14 @@ export default function tokenSaveExtension(api: ExtensionAPI): void {
 	});
 
 	api.registerCommand("tokensave", {
-		description: "Show TokenSave token savings for this session (/tokensave [summary|history|plan <cmd>])",
+		description: "Show how much shell output was shortened. Usage: /tokensave [summary|history|reload|plan <cmd>]",
+		getArgumentCompletions: (argumentPrefix) => {
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = ["summary", "history", "reload", "plan"]
+				.filter((value) => value.startsWith(prefix))
+				.map((value) => ({ value, label: value }));
+			return values.length > 0 ? values : null;
+		},
 		async handler(args, ctx) {
 			const trimmed = args.trim();
 			if (trimmed === "reload") {

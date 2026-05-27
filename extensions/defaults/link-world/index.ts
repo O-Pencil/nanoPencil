@@ -417,7 +417,7 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("link-world", {
-		description: "Inspect, install, or troubleshoot the built-in internet access integration",
+		description: "Set up or inspect internet access tools",
 		getArgumentCompletions: (argumentPrefix) => {
 			const prefix = argumentPrefix.trim();
 			const values = ["status", "doctor", "version", "install", "workspace", "help"]

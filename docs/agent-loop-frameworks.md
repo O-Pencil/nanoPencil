@@ -6,8 +6,8 @@ nanoPencil supports per-model agent loop selection through `agentLoopFramework`.
 
 | Value | Best fit | Behavior |
 |-------|----------|----------|
-| `standard` | High-autonomy models that plan and recover well on their own | Uses the existing nanoPencil loop with lighter orchestration. |
-| `weak-model-compatible` | Lower-intelligence or unstable models, and stronger models that need tighter control | Uses the structured loop with ordered tool-result pairing, safe tool batching, tool permission gating, output-token recovery, stop hooks, usage summary, and request/result observability. |
+| `standard` | High-autonomy models that plan and recover well on their own | Uses serial tool execution with shared permission gates, tool-result budgets, non-blocking tool summaries, output-token recovery, stop hooks, usage summary, and request/result observability. |
+| `weak-model-compatible` | Lower-intelligence or unstable models, and stronger models that need tighter control | Uses the structured loop with ordered tool-result pairing, safe tool batching, streaming tool starts, and the same shared recovery/telemetry guards as `standard`. |
 
 `standard` is the default when a model does not specify a framework.
 
@@ -93,4 +93,6 @@ Programmatic callers can still override this per run with `maxToolConcurrency`.
 
 ## Recovery Behavior
 
-When a `weak-model-compatible` run stops because the model hit its output-token limit, the loop injects an automatic continuation turn and temporarily raises `maxTokens` for the recovery request. Request telemetry is emitted through `stream_request_start`, including the effective `maxTokens`.
+When a run stops because the model hit its output-token limit, the loop injects an automatic continuation turn and temporarily raises `maxTokens` for the recovery request. Request telemetry is emitted through `stream_request_start`, including the effective `maxTokens`.
+
+Both loops also support in-loop model error recovery, aggregate tool-result batch budgets, stop-hook continuation turns, and non-blocking tool-use summaries. `weak-model-compatible` adds safe tool concurrency and streamed tool starts for models that need more orchestration.

@@ -112,17 +112,17 @@ export interface AgentOptions {
 	agentLoopFramework?: AgentLoopFrameworkInput;
 
 	/**
-	 * Optional tool permission gate used by weak-model-compatible loop execution.
+	 * Optional tool permission gate used by loop execution.
 	 */
 	canUseTool?: AgentLoopConfig["canUseTool"];
 
 	/**
-	 * Optional aggregate tool-result batch budget used by weak-model-compatible loop execution.
+	 * Optional aggregate tool-result batch budget used by loop execution.
 	 */
 	maxToolResultBatchSizeChars?: AgentLoopConfig["maxToolResultBatchSizeChars"];
 
 	/**
-	 * Optional in-loop model error recovery hook used by weak-model-compatible loop execution.
+	 * Optional in-loop model error recovery hook used by loop execution.
 	 */
 	recoverModelError?: AgentLoopConfig["recoverModelError"];
 

@@ -43,6 +43,23 @@ const PLAN_ATTACHMENT_CONFIG = {
 	FULL_REMINDER_EVERY_N: 3,
 };
 
+const PLAN_ROOT_COMPLETIONS = [
+	{ value: "open", label: "open", description: "Edit the current plan" },
+	{ value: "exit", label: "exit", description: "Ask to leave plan mode" },
+	{ value: "validate", label: "validate", description: "Check the current plan" },
+	{ value: "approve", label: "approve", description: "Approve a teammate plan" },
+] as const;
+
+function getPlanArgumentCompletions(
+	argumentPrefix: string,
+	context?: { tokenIndex: number },
+): Array<{ value: string; label: string; description?: string }> | null {
+	if (context && context.tokenIndex > 0) return null;
+	const prefix = argumentPrefix.trim().toLowerCase();
+	const values = PLAN_ROOT_COMPLETIONS.filter((value) => value.value.startsWith(prefix));
+	return values.length > 0 ? values.map((value) => ({ ...value })) : null;
+}
+
 function countHumanTurns(ctx: ExtensionContext): number {
 	return ctx.sessionManager.getBranch().filter((entry) => {
 		if (entry.type !== "message") return false;
@@ -238,18 +255,6 @@ export default async function planExtension(api: ExtensionAPI) {
 		displayPlan(api, ctx);
 	};
 
-	api.registerCommand("plan", {
-		description: "Enable plan mode or view the current session plan",
-		getArgumentCompletions: (argumentPrefix) => {
-			const prefix = argumentPrefix.trim();
-			const values = ["open", "exit"]
-				.filter((value) => value.startsWith(prefix))
-				.map((value) => ({ value, label: value }));
-			return values.length > 0 ? values : null;
-		},
-		handler: handlePlanCommand,
-	});
-
 	// =========================================================================
 	// /plan:validate command - validate current plan structure
 	// =========================================================================
@@ -352,6 +357,23 @@ export default async function planExtension(api: ExtensionAPI) {
 	api.registerCommand("plan:approve", {
 		description: "Approve a teammate's plan (for team leaders)",
 		handler: handlePlanApproveCommand,
+	});
+
+	api.registerCommand("plan", {
+		description: "Plan, edit, validate, approve, or exit the current session plan",
+		getArgumentCompletions: getPlanArgumentCompletions,
+		handler: async (args: string, ctx: ExtensionCommandContext) => {
+			const [action, ...rest] = args.trim().split(/\s+/);
+			if (action === "validate") {
+				await handlePlanValidateCommand("", ctx);
+				return;
+			}
+			if (action === "approve") {
+				await handlePlanApproveCommand(rest.join(" "), ctx);
+				return;
+			}
+			await handlePlanCommand(args, ctx);
+		},
 	});
 
 	// =========================================================================

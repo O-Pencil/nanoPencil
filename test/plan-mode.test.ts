@@ -124,6 +124,27 @@ test("plan command sends the provided description as follow-up", async () => {
 	}
 });
 
+test("plan command exposes and routes root action completions", async () => {
+	const cwd = createTempProject();
+	try {
+		const harness = createCommandHarness(cwd);
+		await planExtension(harness.api);
+
+		const plan = harness.commands.get("plan");
+		assert.ok(plan);
+		assert.deepEqual(plan.getArgumentCompletions?.("val")?.map((item: { value: string }) => item.value), ["validate"]);
+		assert.deepEqual(plan.getArgumentCompletions?.("app")?.map((item: { value: string }) => item.value), ["approve"]);
+
+		await plan.handler("validate", harness.ctx);
+		assert.match(harness.notifications.at(-1) ?? "", /No plan found/);
+
+		await plan.handler("approve", harness.ctx);
+		assert.match(harness.notifications.at(-1) ?? "", /No pending plan approval requests/);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
 test("plan file path is stable and settings directory must stay inside project", () => {
 	const cwd = createTempProject();
 	try {

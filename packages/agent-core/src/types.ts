@@ -1,5 +1,5 @@
 /**
- * [WHO]: AgentLoopFramework, AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool
+ * [WHO]: AgentLoopFramework, AgentLoopTransition, AgentModelErrorRecoveryResult, AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool, AgentToolConcurrencySafety, AgentToolInterruptBehavior
  * [FROM]: No external dependencies
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/agent-core/src/types.ts -
@@ -31,6 +31,20 @@ export type AgentLoopFrameworkInput =
 	| "low-intelligence"
 	| "structured-adaptive";
 
+export type AgentLoopTransition =
+	| { reason: "start" }
+	| { reason: "tool_result"; toolCallCount: number }
+	| { reason: "follow_up" }
+	| { reason: "max_output_tokens_recovery"; attempt: number }
+	| { reason: "stop_hook_blocking"; continuationCount: number }
+	| { reason: "model_error_recovery"; subtype: string; attempt: number }
+	| {
+			reason: "token_budget_continuation";
+			continuationCount: number;
+			outputTokens: number;
+			targetTokens: number;
+	  };
+
 export function normalizeAgentLoopFramework(
 	value: AgentLoopFrameworkInput | undefined,
 ): AgentLoopFramework | undefined {
@@ -48,6 +62,14 @@ export interface AgentToolPermissionDenial {
 	toolName: string;
 	reason?: string;
 }
+
+export type AgentModelErrorRecoveryResult =
+	| { action: "stop" }
+	| {
+			action: "retry";
+			messages: AgentMessage[];
+			transition?: AgentLoopTransition;
+	  };
 
 /**
  * Configuration for the agent loop.
@@ -147,6 +169,40 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	}) => Promise<AgentToolPermissionDecision> | AgentToolPermissionDecision;
 
 	/**
+	 * Optional in-loop model error recovery hook.
+	 *
+	 * Hosts can use this to recover from context overflow or transient provider
+	 * errors before the loop reaches agent_end. Return retry with a replacement
+	 * AgentMessage context to make the next model call use recovered state.
+	 */
+	recoverModelError?: (event: {
+		message: AgentMessage;
+		messages: AgentMessage[];
+		errorSubtype: string;
+		attempt: number;
+	}) => Promise<AgentModelErrorRecoveryResult> | AgentModelErrorRecoveryResult;
+
+	/**
+	 * Optional non-blocking summary for completed tool batches.
+	 *
+	 * The weak-model-compatible loop starts this after a tool batch finishes.
+	 * If the summary is already settled at the start of a later turn, it is
+	 * emitted as a normal AgentMessage and included in that model request. If it
+	 * is still pending, the model request proceeds without waiting.
+	 */
+	createToolUseSummary?: (event: {
+		assistantMessage: AgentMessage;
+		toolResults: ToolResultMessage[];
+		contextMessages: AgentMessage[];
+		messages: AgentMessage[];
+	}) => AgentMessage | undefined | Promise<AgentMessage | undefined>;
+
+	/**
+	 * Maximum model-error recovery retries for one prompt. Defaults to 1.
+	 */
+	maxModelErrorRecoveryAttempts?: number;
+
+	/**
 	 * Maximum assistant turns allowed for one prompt/continue loop.
 	 *
 	 * Prevents runaway model/tool/follow-up cycles from consuming unbounded
@@ -174,6 +230,20 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * output-token limit in the weak-model-compatible loop. Defaults to 1.
 	 */
 	maxOutputTokenRecoveryAttempts?: number;
+
+	/**
+	 * Optional output-token budget target for long-form agent turns.
+	 *
+	 * If the assistant stops naturally before cumulative output reaches
+	 * thresholdPct * targetTokens, the weak-model-compatible loop injects a meta
+	 * continuation prompt. This is distinct from max-output-token recovery:
+	 * it handles under-complete answers, not hard length stops.
+	 */
+	outputTokenBudget?: {
+		targetTokens: number;
+		thresholdPct?: number;
+		maxContinuations?: number;
+	};
 
 	/**
 	 * Optional weak-model-compatible stop hook. Called when the assistant would stop
@@ -257,6 +327,15 @@ export interface AgentToolResult<T> {
 // Callback for streaming tool execution updates
 export type AgentToolUpdateCallback<T = any> = (partialResult: AgentToolResult<T>) => void;
 
+export type AgentToolConcurrencySafety<TParameters extends TSchema = TSchema> =
+	| boolean
+	| ((params: Static<TParameters>) => boolean);
+
+export type AgentToolInterruptBehavior<TParameters extends TSchema = TSchema> =
+	| "cancel"
+	| "block"
+	| ((params: Static<TParameters>) => "cancel" | "block");
+
 // AgentTool extends Tool but adds the execute function
 export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any> extends Tool<TParameters> {
 	// A human-readable label for the tool to be displayed in UI
@@ -268,8 +347,8 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 	 * The weak-model-compatible loop uses this to batch read-only work while keeping
 	 * stateful tools such as edit/write/bash serialized.
 	 */
-	isConcurrencySafe?: boolean;
-	interruptBehavior?: "cancel" | "block";
+	isConcurrencySafe?: AgentToolConcurrencySafety<TParameters>;
+	interruptBehavior?: AgentToolInterruptBehavior<TParameters>;
 	/** Optional semantic validation after schema validation and before execute. */
 	validateInput?: (params: Static<TParameters>) => void | string | Promise<void | string>;
 	/** Optional maximum text result size enforced by weak-model-compatible tool orchestration. */
@@ -306,6 +385,7 @@ export type AgentEvent =
 			usage?: Usage;
 			permissionDenialCount?: number;
 			permissionDenials?: AgentToolPermissionDenial[];
+			lastTransition?: AgentLoopTransition;
 			errorMessage?: string;
 			errorSubtype?: string;
 	  }

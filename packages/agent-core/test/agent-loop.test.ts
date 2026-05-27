@@ -688,6 +688,309 @@ describe("structuredAdaptiveAgentLoop", () => {
 		expect(toolEnds.every((event) => typeof event.durationMs === "number")).toBe(true);
 	});
 
+	it("should start concurrency-safe streaming tools before the assistant response is done", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		let toolStarted!: () => void;
+		const toolStartedPromise = new Promise<void>((resolve) => {
+			toolStarted = resolve;
+		});
+		let startedBeforeDone = false;
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "stream_read",
+			label: "Stream read",
+			description: "Safe tool that should start as soon as its streamed call is complete",
+			parameters: toolSchema,
+			isConcurrencySafe: true,
+			async execute(_toolCallId, params) {
+				toolStarted();
+				return {
+					content: [{ type: "text", text: params.value }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("stream read")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(async () => {
+				if (callIndex === 0) {
+					const toolCall = { type: "toolCall" as const, id: "tool-1", name: "stream_read", arguments: { value: "early" } };
+					const partial = createAssistantMessage([toolCall], "toolUse");
+					mockStream.push({ type: "start", partial });
+					mockStream.push({ type: "toolcall_start", contentIndex: 0, partial });
+					mockStream.push({ type: "toolcall_end", contentIndex: 0, toolCall, partial });
+					startedBeforeDone =
+						(await Promise.race([
+							toolStartedPromise.then(() => true),
+							new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 20)),
+						])) === true;
+					mockStream.push({
+						type: "done",
+						reason: "toolUse",
+						message: partial,
+					});
+				} else {
+					mockStream.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage([{ type: "text", text: "done" }]),
+					});
+				}
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(startedBeforeDone).toBe(true);
+		const toolResults = events
+			.filter(
+				(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+					event.type === "message_end" && event.message.role === "toolResult",
+			)
+			.map((event) => event.message.toolCallId);
+		expect(toolResults).toEqual(["tool-1"]);
+	});
+
+	it("should close streamed tools with error tool results when the assistant stream errors", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		let toolObservedAbort = false;
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "abortable_read",
+			label: "Abortable read",
+			description: "Safe tool that exits when its signal aborts",
+			parameters: toolSchema,
+			isConcurrencySafe: true,
+			async execute(_toolCallId, params, signal) {
+				await new Promise<void>((_resolve, reject) => {
+					signal?.addEventListener(
+						"abort",
+						() => {
+							toolObservedAbort = true;
+							reject(new Error("tool aborted after assistant stream error"));
+						},
+						{ once: true },
+					);
+				});
+				return {
+					content: [{ type: "text", text: params.value }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("stream read")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const toolCall = { type: "toolCall" as const, id: "tool-1", name: "abortable_read", arguments: { value: "early" } };
+				const partial = createAssistantMessage([toolCall], "toolUse");
+				mockStream.push({ type: "start", partial });
+				mockStream.push({ type: "toolcall_start", contentIndex: 0, partial });
+				mockStream.push({ type: "toolcall_end", contentIndex: 0, toolCall, partial });
+				const errorMessage = createAssistantMessage([{ type: "text", text: "" }], "error");
+				errorMessage.errorMessage = "upstream stream failed";
+				mockStream.push({ type: "error", reason: "error", error: errorMessage });
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(toolObservedAbort).toBe(true);
+		const toolResult = events.find(
+			(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+				event.type === "message_end" && event.message.role === "toolResult",
+		)?.message;
+		expect(toolResult?.toolCallId).toBe("tool-1");
+		expect(toolResult?.isError).toBe(true);
+		expect(toolResult?.content[0]?.type === "text" ? toolResult.content[0].text : "").toContain(
+			"assistant stream error",
+		);
+		const turnEnd = events.find((event): event is Extract<AgentEvent, { type: "turn_end" }> =>
+			event.type === "turn_end",
+		);
+		expect(turnEnd?.toolResults.map((result) => result.toolCallId)).toEqual(["tool-1"]);
+	});
+
+	it("should synthesize error results for queued streamed tools that never started", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		let releaseFirst!: () => void;
+		const firstGate = new Promise<void>((resolve) => {
+			releaseFirst = resolve;
+		});
+		const started: string[] = [];
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "exclusive_tool",
+			label: "Exclusive tool",
+			description: "Unsafe tool that blocks following streamed tools",
+			parameters: toolSchema,
+			isConcurrencySafe: false,
+			async execute(_toolCallId, params, signal) {
+				started.push(params.value);
+				signal?.addEventListener("abort", releaseFirst, { once: true });
+				await firstGate;
+				throw new Error(`aborted:${params.value}`);
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("stream exclusive")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const firstCall = { type: "toolCall" as const, id: "tool-1", name: "exclusive_tool", arguments: { value: "first" } };
+				const secondCall = { type: "toolCall" as const, id: "tool-2", name: "exclusive_tool", arguments: { value: "second" } };
+				const partial = createAssistantMessage([firstCall, secondCall], "toolUse");
+				mockStream.push({ type: "start", partial });
+				mockStream.push({ type: "toolcall_end", contentIndex: 0, toolCall: firstCall, partial });
+				mockStream.push({ type: "toolcall_end", contentIndex: 1, toolCall: secondCall, partial });
+				const errorMessage = createAssistantMessage([{ type: "text", text: "" }], "error");
+				errorMessage.errorMessage = "upstream stream failed";
+				mockStream.push({ type: "error", reason: "error", error: errorMessage });
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(started).toEqual(["first"]);
+		const toolResults = events
+			.filter(
+				(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+					event.type === "message_end" && event.message.role === "toolResult",
+			)
+			.map((event) => event.message);
+		expect(toolResults.map((result) => result.toolCallId)).toEqual(["tool-1", "tool-2"]);
+		expect(toolResults.every((result) => result.isError)).toBe(true);
+		expect(toolResults[1].content[0]?.type === "text" ? toolResults[1].content[0].text : "").toContain(
+			"assistant stream error",
+		);
+	});
+
+	it("should let streamed block-interrupt tools finish when the assistant stream aborts", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		let toolObservedAbort = false;
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "blocking_write",
+			label: "Blocking write",
+			description: "Stateful tool that must finish once started",
+			parameters: toolSchema,
+			isConcurrencySafe: false,
+			interruptBehavior: "block",
+			async execute(_toolCallId, params, signal) {
+				signal?.addEventListener("abort", () => {
+					toolObservedAbort = true;
+				});
+				await new Promise((resolve) => setTimeout(resolve, 5));
+				return {
+					content: [{ type: "text", text: `committed:${params.value}` }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("stream write")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const toolCall = { type: "toolCall" as const, id: "tool-1", name: "blocking_write", arguments: { value: "file" } };
+				const partial = createAssistantMessage([toolCall], "toolUse");
+				mockStream.push({ type: "start", partial });
+				mockStream.push({ type: "toolcall_end", contentIndex: 0, toolCall, partial });
+				const errorMessage = createAssistantMessage([{ type: "text", text: "" }], "aborted");
+				errorMessage.errorMessage = "assistant stream aborted";
+				mockStream.push({ type: "error", reason: "aborted", error: errorMessage });
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(toolObservedAbort).toBe(false);
+		const toolResult = events.find(
+			(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+				event.type === "message_end" && event.message.role === "toolResult",
+		)?.message;
+		expect(toolResult?.toolCallId).toBe("tool-1");
+		expect(toolResult?.isError).toBe(false);
+		expect(toolResult?.content[0]?.type === "text" ? toolResult.content[0].text : "").toContain(
+			"committed:file",
+		);
+	});
+
+	it("should evaluate concurrency safety with validated tool arguments", async () => {
+		const toolSchema = Type.Object({ readonly: Type.Boolean(), value: Type.String() });
+		const safeByValue: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "conditional_read",
+			label: "Conditional read",
+			description: "Only readonly calls can run concurrently",
+			parameters: toolSchema,
+			isConcurrencySafe: (params) => params.readonly,
+			async execute(_toolCallId, params) {
+				return {
+					content: [{ type: "text", text: params.value }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const calls: StructuredAdaptiveToolCall[] = [
+			{ type: "toolCall", id: "1", name: "conditional_read", arguments: { readonly: true, value: "a" } },
+			{ type: "toolCall", id: "2", name: "conditional_read", arguments: { readonly: false, value: "b" } },
+			{ type: "toolCall", id: "3", name: "conditional_read", arguments: { readonly: true, value: "c" } },
+		];
+
+		const batches = partitionStructuredAdaptiveToolCalls(calls, buildToolMap([safeByValue]));
+
+		expect(batches.map((batch) => batch.map((call) => call.id))).toEqual([["1"], ["2"], ["3"]]);
+	});
+
 	it("should append tool context messages only after ordered tool results", async () => {
 		const toolSchema = Type.Object({ value: Type.String() });
 		const tool: AgentTool<typeof toolSchema, { value: string }> = {
@@ -773,6 +1076,155 @@ describe("structuredAdaptiveAgentLoop", () => {
 			);
 		expect(endedMessages.slice(-4)).toEqual(["tool-1", "tool-2", "context:first", "context:second"]);
 		expect(sawContextAfterToolResults).toBe(true);
+	});
+
+	it("should start tool-use summaries without blocking the next model request", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "summary_read",
+			label: "Summary read",
+			description: "Read tool used to test non-blocking summaries",
+			parameters: toolSchema,
+			isConcurrencySafe: true,
+			async execute(_toolCallId, params) {
+				return {
+					content: [{ type: "text", text: params.value }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+
+		let summaryStartedAt = 0;
+		let summaryResolvedAt = 0;
+		let secondRequestStartedAt = 0;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			createToolUseSummary() {
+				summaryStartedAt = Date.now();
+				return new Promise<AgentMessage>((resolve) => {
+					setTimeout(() => {
+						summaryResolvedAt = Date.now();
+						resolve(createUserMessage("Tool summary: summary_read returned value."));
+					}, 40);
+				});
+			},
+		};
+
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("read")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			if (callIndex === 1) {
+				secondRequestStartedAt = Date.now();
+			}
+			queueMicrotask(() => {
+				if (callIndex === 0) {
+					mockStream.push({
+						type: "done",
+						reason: "toolUse",
+						message: createAssistantMessage(
+							[{ type: "toolCall", id: "tool-1", name: "summary_read", arguments: { value: "file" } }],
+							"toolUse",
+						),
+					});
+				} else {
+					mockStream.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage([{ type: "text", text: "done" }]),
+					});
+				}
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		for await (const _event of stream) {
+			// consume
+		}
+		await new Promise((resolve) => setTimeout(resolve, 60));
+
+		expect(summaryStartedAt).toBeGreaterThan(0);
+		expect(secondRequestStartedAt).toBeGreaterThan(0);
+		expect(summaryResolvedAt).toBeGreaterThan(0);
+		expect(secondRequestStartedAt).toBeLessThan(summaryResolvedAt);
+	});
+
+	it("should add ready tool-use summaries to the next model request context", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "ready_summary_read",
+			label: "Ready summary read",
+			description: "Read tool used to test settled summaries",
+			parameters: toolSchema,
+			isConcurrencySafe: true,
+			async execute(_toolCallId, params) {
+				return {
+					content: [{ type: "text", text: params.value }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+		const summaryMessage = createUserMessage("Tool summary: ready_summary_read returned file.");
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			createToolUseSummary() {
+				return summaryMessage;
+			},
+		};
+
+		let secondRequestSawSummary = false;
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("read")], context, config, undefined, (_model, ctx) => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				if (callIndex === 0) {
+					mockStream.push({
+						type: "done",
+						reason: "toolUse",
+						message: createAssistantMessage(
+							[{ type: "toolCall", id: "tool-1", name: "ready_summary_read", arguments: { value: "file" } }],
+							"toolUse",
+						),
+					});
+				} else {
+					secondRequestSawSummary = ctx.messages.includes(summaryMessage);
+					mockStream.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage([{ type: "text", text: "done" }]),
+					});
+				}
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(secondRequestSawSummary).toBe(true);
+		expect(
+			events.some(
+				(event) =>
+					event.type === "message_end" &&
+					event.message.role === "user" &&
+					event.message.content === "Tool summary: ready_summary_read returned file.",
+			),
+		).toBe(true);
 	});
 
 	it("should respect maxToolConcurrency for safe tool batches", async () => {
@@ -1273,6 +1725,116 @@ describe("structuredAdaptiveAgentLoop", () => {
 				event.type === "stream_request_start",
 		);
 		expect(requestStarts.map((event) => event.maxTokens)).toEqual([100, 150]);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.lastTransition).toEqual({ reason: "max_output_tokens_recovery", attempt: 1 });
+	});
+
+	it("should continue when a configured output token budget is underused", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			outputTokenBudget: {
+				targetTokens: 100,
+				thresholdPct: 0.9,
+				maxContinuations: 2,
+			},
+		};
+
+		let callIndex = 0;
+		let sawBudgetContinuation = false;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("write deeply")], context, config, undefined, (_model, ctx) => {
+			if (callIndex === 1) {
+				sawBudgetContinuation = ctx.messages.some((message) => {
+					if (message.role !== "user") return false;
+					if (typeof message.content === "string") return message.content.includes("output token budget");
+					return message.content.some(
+						(part) => part.type === "text" && part.text.includes("output token budget"),
+					);
+				});
+			}
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const message = createAssistantMessage([
+					{ type: "text", text: callIndex === 0 ? "partial" : "expanded" },
+				]);
+				message.usage.output = callIndex === 0 ? 30 : 70;
+				message.usage.totalTokens = message.usage.output;
+				mockStream.push({ type: "done", reason: "stop", message });
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(callIndex).toBe(2);
+		expect(sawBudgetContinuation).toBe(true);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.usage?.output).toBe(100);
+		expect(result?.lastTransition).toEqual({
+			reason: "token_budget_continuation",
+			continuationCount: 1,
+			outputTokens: 30,
+			targetTokens: 100,
+		});
+	});
+
+	it("should stop output token budget continuation at the configured limit", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			outputTokenBudget: {
+				targetTokens: 1000,
+				maxContinuations: 1,
+			},
+		};
+
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("write deeply")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const message = createAssistantMessage([{ type: "text", text: `chunk ${callIndex}` }]);
+				message.usage.output = 10;
+				message.usage.totalTokens = 10;
+				mockStream.push({ type: "done", reason: "stop", message });
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(callIndex).toBe(2);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.usage?.output).toBe(20);
+		expect(result?.lastTransition).toEqual({
+			reason: "token_budget_continuation",
+			continuationCount: 1,
+			outputTokens: 10,
+			targetTokens: 1000,
+		});
 	});
 
 	it("should emit a structured-adaptive agent_result summary before agent_end", async () => {
@@ -1374,6 +1936,79 @@ describe("structuredAdaptiveAgentLoop", () => {
 		expect(result?.stopReason).toBe("error");
 		expect(result?.errorSubtype).toBe("context_overflow");
 		expect(result?.errorMessage).toContain("maximum context length");
+	});
+
+	it("should let a recovery hook replace context and retry model errors inside the loop", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [createUserMessage("old context")],
+			tools: [],
+		};
+		let recoveryCalls = 0;
+		let sawRecoveredContext = false;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			recoverModelError: ({ errorSubtype, attempt }) => {
+				recoveryCalls += 1;
+				expect(errorSubtype).toBe("context_overflow");
+				expect(attempt).toBe(1);
+				return {
+					action: "retry",
+					messages: [createUserMessage("compacted context")],
+					transition: { reason: "model_error_recovery", subtype: errorSubtype, attempt },
+				};
+			},
+		};
+
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("too much context")], context, config, undefined, (_model, ctx) => {
+			if (callIndex === 1) {
+				sawRecoveredContext = ctx.messages.some(
+					(message) =>
+						message.role === "user" &&
+						typeof message.content === "string" &&
+						message.content === "compacted context",
+				);
+			}
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				if (callIndex === 0) {
+					const message = createAssistantMessage([], "error");
+					message.errorMessage = "maximum context length is 8192 tokens";
+					mockStream.push({
+						type: "done",
+						reason: "error",
+						message,
+					});
+				} else {
+					mockStream.push({
+						type: "done",
+						reason: "stop",
+						message: createAssistantMessage([{ type: "text", text: "recovered" }]),
+					});
+				}
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(recoveryCalls).toBe(1);
+		expect(sawRecoveredContext).toBe(true);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("stop");
+		expect(result?.lastTransition).toEqual({
+			reason: "model_error_recovery",
+			subtype: "context_overflow",
+			attempt: 1,
+		});
 	});
 
 	it("should allow stop hooks to inject a continuation turn", async () => {

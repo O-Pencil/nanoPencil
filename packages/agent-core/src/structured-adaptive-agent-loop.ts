@@ -5,7 +5,7 @@
  */
 /**
  * [WHO]: structuredAdaptiveAgentLoop, structuredAdaptiveAgentLoopContinue
- * [FROM]: Depends on @pencil-agent/ai, ./types, ./errors, ./structured-adaptive-tool-orchestration
+ * [FROM]: Depends on @pencil-agent/ai, ./types, ./errors, ./structured-adaptive-tool-orchestration, ./structured-adaptive-streaming-tool-executor
  * [TO]: Consumed by packages/agent-core/src/agent.ts and index.ts
  * [HERE]: packages/agent-core/src/structured-adaptive-agent-loop.ts - selectable structured-adaptive query loop framework
  */
@@ -16,34 +16,45 @@ import {
 	EventStream,
 	isContextOverflow,
 	streamSimple,
+	type ToolResultMessage,
 	type UserMessage,
 	type Usage,
 } from "@pencil-agent/ai";
 import type {
 	AgentContext,
 	AgentEvent,
+	AgentLoopTransition,
 	AgentLoopConfig,
 	AgentMessage,
 	AgentToolPermissionDenial,
 	StreamFn,
 } from "./types.js";
-import { runStructuredAdaptiveTools } from "./structured-adaptive-tool-orchestration.js";
+import {
+	resolveMaxToolConcurrency,
+	runStructuredAdaptiveTools,
+} from "./structured-adaptive-tool-orchestration.js";
+import { StructuredAdaptiveStreamingToolExecutor } from "./structured-adaptive-streaming-tool-executor.js";
 import { ValidationError } from "./errors.js";
 
 const DEFAULT_MAX_TURNS_PER_PROMPT = 64;
 const DEFAULT_MAX_TOOL_CALLS_PER_PROMPT = 128;
 const DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS = 1;
 const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
+const DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS = 1;
+const DEFAULT_OUTPUT_TOKEN_BUDGET_THRESHOLD_PCT = 0.9;
+const DEFAULT_OUTPUT_TOKEN_BUDGET_CONTINUATIONS = 3;
 
 interface QueryLoopState {
 	turnCount: number;
 	toolCallCount: number;
-	transition: "start" | "tool_result" | "follow_up";
+	transition: AgentLoopTransition;
 	pendingMessages: AgentMessage[];
-	pendingToolUseSummary?: string;
+	pendingToolUseSummaries: PendingToolUseSummary[];
 	stopHookActive: boolean;
 	stopHookContinuationCount: number;
 	maxOutputTokensRecoveryCount: number;
+	modelErrorRecoveryCount: number;
+	tokenBudgetContinuationCount: number;
 	hasAttemptedReactiveCompact: boolean;
 	maxOutputTokensOverride?: number;
 	startedAt: number;
@@ -53,6 +64,10 @@ interface QueryLoopState {
 	finalErrorMessage?: string;
 	finalErrorSubtype?: string;
 }
+
+type PendingToolUseSummary = {
+	read(): { settled: boolean; value?: AgentMessage };
+};
 
 export function structuredAdaptiveAgentLoop(
 	prompts: AgentMessage[],
@@ -139,14 +154,19 @@ async function runStructuredAdaptiveQueryLoop(
 	const maxOutputTokenRecoveryAttempts =
 		config.maxOutputTokenRecoveryAttempts ?? DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS;
 	const maxStopHookContinuations = config.maxStopHookContinuations ?? DEFAULT_MAX_STOP_HOOK_CONTINUATIONS;
+	const maxModelErrorRecoveryAttempts =
+		config.maxModelErrorRecoveryAttempts ?? DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS;
 	const state: QueryLoopState = {
 		turnCount: 0,
 		toolCallCount: 0,
-		transition: "start",
+		transition: { reason: "start" },
 		pendingMessages: (await config.getSteeringMessages?.()) || [],
+		pendingToolUseSummaries: [],
 		stopHookActive: false,
 		stopHookContinuationCount: 0,
 		maxOutputTokensRecoveryCount: 0,
+		modelErrorRecoveryCount: 0,
+		tokenBudgetContinuationCount: 0,
 		hasAttemptedReactiveCompact: false,
 		startedAt: Date.now(),
 		usage: emptyUsage(),
@@ -160,6 +180,8 @@ async function runStructuredAdaptiveQueryLoop(
 		} else {
 			firstTurn = false;
 		}
+
+		flushReadyToolUseSummaries(state, currentContext, newMessages, stream);
 
 		if (state.pendingMessages.length > 0) {
 			for (const message of state.pendingMessages) {
@@ -189,6 +211,13 @@ async function runStructuredAdaptiveQueryLoop(
 			return;
 		}
 
+		const streamingToolExecutor = new StructuredAdaptiveStreamingToolExecutor(
+			currentContext.tools,
+			signal,
+			stream,
+			resolveMaxToolConcurrency(config.maxToolConcurrency),
+			config.canUseTool,
+		);
 		const message = await streamAssistantResponse(
 			currentContext,
 			config,
@@ -196,21 +225,71 @@ async function runStructuredAdaptiveQueryLoop(
 			stream,
 			streamFn,
 			state.maxOutputTokensOverride,
+			streamingToolExecutor,
 		);
 		newMessages.push(message);
 		addUsage(state.usage, message.usage);
 		state.maxOutputTokensOverride = undefined;
 
 		if (message.stopReason === "error" || message.stopReason === "aborted") {
-			stream.push({ type: "turn_end", message, toolResults: [] });
-			state.finalStopReason = message.stopReason;
-			state.finalErrorMessage = message.errorMessage;
-			state.finalErrorSubtype =
+			const errorSubtype =
 				message.stopReason === "aborted"
 					? "aborted"
 					: isContextOverflow(message, config.model.contextWindow)
 						? "context_overflow"
 						: "model_error";
+			const failedToolExecution =
+				streamingToolExecutor.size > 0
+					? await streamingToolExecutor.discardAndDrain(
+							message.stopReason === "aborted" ? "assistant stream aborted" : "assistant stream error",
+							message.stopReason === "aborted" ? "cancel" : "all",
+						)
+					: { toolResults: [], contextMessages: [], permissionDenials: [] };
+			const toolResults = failedToolExecution.toolResults;
+			state.permissionDenials.push(...failedToolExecution.permissionDenials);
+			for (const result of toolResults) {
+				currentContext.messages.push(result);
+				newMessages.push(result);
+				stream.push({ type: "message_start", message: result });
+				stream.push({ type: "message_end", message: result });
+			}
+			for (const contextMessage of failedToolExecution.contextMessages) {
+				currentContext.messages.push(contextMessage);
+				newMessages.push(contextMessage);
+				stream.push({ type: "message_start", message: contextMessage });
+				stream.push({ type: "message_end", message: contextMessage });
+			}
+
+			if (
+				message.stopReason === "error" &&
+				config.recoverModelError &&
+				state.modelErrorRecoveryCount < maxModelErrorRecoveryAttempts
+			) {
+				const attempt = state.modelErrorRecoveryCount + 1;
+				const recovery = await config.recoverModelError({
+					message,
+					messages: currentContext.messages,
+					errorSubtype,
+					attempt,
+				});
+				if (recovery.action === "retry") {
+					stream.push({ type: "turn_end", message, toolResults });
+					state.modelErrorRecoveryCount = attempt;
+					currentContext.messages = recovery.messages;
+					state.transition =
+						recovery.transition ?? {
+							reason: "model_error_recovery",
+							subtype: errorSubtype,
+							attempt,
+						};
+					continue;
+				}
+			}
+
+			stream.push({ type: "turn_end", message, toolResults });
+			state.finalStopReason = message.stopReason;
+			state.finalErrorMessage = message.errorMessage;
+			state.finalErrorSubtype = errorSubtype;
 			finish(stream, newMessages, state);
 			return;
 		}
@@ -226,7 +305,10 @@ async function runStructuredAdaptiveQueryLoop(
 				state.maxOutputTokensRecoveryCount += 1;
 				state.maxOutputTokensOverride = computeRecoveryMaxTokens(config, message);
 				state.pendingMessages = [createOutputTokenRecoveryMessage(state.maxOutputTokensRecoveryCount)];
-				state.transition = "follow_up";
+				state.transition = {
+					reason: "max_output_tokens_recovery",
+					attempt: state.maxOutputTokensRecoveryCount,
+				};
 				continue;
 			}
 
@@ -256,9 +338,25 @@ async function runStructuredAdaptiveQueryLoop(
 					}
 					state.stopHookContinuationCount += 1;
 					state.pendingMessages = stopHookResult.messages;
-					state.transition = "follow_up";
+					state.transition = {
+						reason: "stop_hook_blocking",
+						continuationCount: state.stopHookContinuationCount,
+					};
 					continue;
 				}
+			}
+
+			const tokenBudgetContinuation = maybeCreateTokenBudgetContinuation(config, state);
+			if (tokenBudgetContinuation) {
+				state.tokenBudgetContinuationCount += 1;
+				state.pendingMessages = [tokenBudgetContinuation.message];
+				state.transition = {
+					reason: "token_budget_continuation",
+					continuationCount: state.tokenBudgetContinuationCount,
+					outputTokens: tokenBudgetContinuation.outputTokens,
+					targetTokens: tokenBudgetContinuation.targetTokens,
+				};
+				continue;
 			}
 
 			const followUpMessages = (await config.getFollowUpMessages?.()) || [];
@@ -266,7 +364,7 @@ async function runStructuredAdaptiveQueryLoop(
 				break;
 			}
 			state.pendingMessages = followUpMessages;
-			state.transition = "follow_up";
+			state.transition = { reason: "follow_up" };
 			continue;
 		}
 
@@ -290,16 +388,18 @@ async function runStructuredAdaptiveQueryLoop(
 		}
 
 		state.toolCallCount += toolCalls.length;
-		state.pendingToolUseSummary = toolCalls.map((call) => call.name).join(", ");
-		const toolExecution = await runStructuredAdaptiveTools(
-			toolCalls,
-			currentContext.tools,
-			signal,
-			stream,
-			config.getSteeringMessages,
-			config.maxToolConcurrency,
-			config.canUseTool,
-		);
+		const toolExecution =
+			streamingToolExecutor.size > 0
+				? await streamingToolExecutor.drain()
+				: await runStructuredAdaptiveTools(
+						toolCalls,
+						currentContext.tools,
+						signal,
+						stream,
+						config.getSteeringMessages,
+						config.maxToolConcurrency,
+						config.canUseTool,
+					);
 		const toolResults = toolExecution.toolResults;
 		state.permissionDenials.push(...toolExecution.permissionDenials);
 
@@ -316,6 +416,16 @@ async function runStructuredAdaptiveQueryLoop(
 			stream.push({ type: "message_end", message: contextMessage });
 		}
 
+		const pendingSummary = startToolUseSummary(config, {
+			assistantMessage: message,
+			toolResults,
+			contextMessages: toolExecution.contextMessages,
+			messages: currentContext.messages,
+		});
+		if (pendingSummary) {
+			state.pendingToolUseSummaries.push(pendingSummary);
+		}
+
 		stream.push({ type: "turn_end", message, toolResults });
 
 		if (toolExecution.steeringMessages && toolExecution.steeringMessages.length > 0) {
@@ -323,11 +433,93 @@ async function runStructuredAdaptiveQueryLoop(
 		} else {
 			state.pendingMessages = (await config.getSteeringMessages?.()) || [];
 		}
-		state.transition = "tool_result";
+		state.transition = { reason: "tool_result", toolCallCount: toolCalls.length };
 	}
 
 	state.finalStopReason = state.finalStopReason ?? inferStopReason(newMessages);
 	finish(stream, newMessages, state);
+}
+
+function flushReadyToolUseSummaries(
+	state: QueryLoopState,
+	currentContext: AgentContext,
+	newMessages: AgentMessage[],
+	stream: EventStream<AgentEvent, AgentMessage[]>,
+): void {
+	if (state.pendingToolUseSummaries.length === 0) {
+		return;
+	}
+
+	const pending: PendingToolUseSummary[] = [];
+	for (const summary of state.pendingToolUseSummaries) {
+		const result = summary.read();
+		if (!result.settled) {
+			pending.push(summary);
+			continue;
+		}
+		if (!result.value) {
+			continue;
+		}
+		currentContext.messages.push(result.value);
+		newMessages.push(result.value);
+		stream.push({ type: "message_start", message: result.value });
+		stream.push({ type: "message_end", message: result.value });
+	}
+	state.pendingToolUseSummaries = pending;
+}
+
+function startToolUseSummary(
+	config: AgentLoopConfig,
+	event: {
+		assistantMessage: AgentMessage;
+		toolResults: ToolResultMessage[];
+		contextMessages: AgentMessage[];
+		messages: AgentMessage[];
+	},
+): PendingToolUseSummary | undefined {
+	if (!config.createToolUseSummary) {
+		return undefined;
+	}
+
+	try {
+		const value = config.createToolUseSummary({
+			...event,
+			messages: [...event.messages],
+		});
+		return trackToolUseSummary(value);
+	} catch {
+		return undefined;
+	}
+}
+
+function trackToolUseSummary(
+	value: AgentMessage | undefined | Promise<AgentMessage | undefined>,
+): PendingToolUseSummary | undefined {
+	if (!value) {
+		return undefined;
+	}
+
+	if (typeof (value as Promise<AgentMessage | undefined>).then !== "function") {
+		return {
+			read: () => ({ settled: true, value: value as AgentMessage }),
+		};
+	}
+
+	let settled = false;
+	let settledValue: AgentMessage | undefined;
+	(value as Promise<AgentMessage | undefined>).then(
+		(summary) => {
+			settled = true;
+			settledValue = summary;
+		},
+		() => {
+			settled = true;
+			settledValue = undefined;
+		},
+	);
+	return {
+		read: () => ({ settled, value: settledValue }),
+	};
 }
 
 async function streamAssistantResponse(
@@ -337,6 +529,7 @@ async function streamAssistantResponse(
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	streamFn?: StreamFn,
 	maxTokensOverride?: number,
+	streamingToolExecutor?: StructuredAdaptiveStreamingToolExecutor,
 ): Promise<AssistantMessage> {
 	let messages = context.messages;
 	if (config.transformContext) {
@@ -389,6 +582,16 @@ async function streamAssistantResponse(
 			case "thinking_end":
 			case "toolcall_start":
 			case "toolcall_delta":
+				if (partialMessage) {
+					partialMessage = event.partial;
+					context.messages[context.messages.length - 1] = partialMessage;
+					stream.push({
+						type: "message_update",
+						assistantMessageEvent: event,
+						message: { ...partialMessage },
+					});
+				}
+				break;
 			case "toolcall_end":
 				if (partialMessage) {
 					partialMessage = event.partial;
@@ -398,6 +601,7 @@ async function streamAssistantResponse(
 						assistantMessageEvent: event,
 						message: { ...partialMessage },
 					});
+					streamingToolExecutor?.addTool(event.toolCall);
 				}
 				break;
 			case "done":
@@ -442,6 +646,49 @@ function createOutputTokenRecoveryMessage(attempt: number): UserMessage {
 	};
 }
 
+function maybeCreateTokenBudgetContinuation(
+	config: AgentLoopConfig,
+	state: QueryLoopState,
+): { message: UserMessage; outputTokens: number; targetTokens: number } | undefined {
+	const budget = config.outputTokenBudget;
+	if (!budget) return undefined;
+	const targetTokens = Math.max(1, Math.floor(budget.targetTokens));
+	const thresholdPct = clamp(
+		budget.thresholdPct ?? DEFAULT_OUTPUT_TOKEN_BUDGET_THRESHOLD_PCT,
+		0,
+		1,
+	);
+	const maxContinuations = Math.max(
+		0,
+		Math.floor(budget.maxContinuations ?? DEFAULT_OUTPUT_TOKEN_BUDGET_CONTINUATIONS),
+	);
+	if (maxContinuations <= state.tokenBudgetContinuationCount) return undefined;
+
+	const outputTokens = Math.max(0, Math.floor(state.usage.output));
+	const requiredTokens = Math.ceil(targetTokens * thresholdPct);
+	if (outputTokens >= requiredTokens) return undefined;
+
+	const message: UserMessage = {
+		role: "user",
+		content: [
+			{
+				type: "text",
+				text:
+					`Continue because the output token budget is underused ` +
+					`(${outputTokens}/${targetTokens} tokens). Add the missing useful detail directly; ` +
+					`do not recap or apologize.`,
+			},
+		],
+		timestamp: Date.now(),
+	};
+	return { message, outputTokens, targetTokens };
+}
+
+function clamp(value: number, min: number, max: number): number {
+	if (!Number.isFinite(value)) return min;
+	return Math.min(max, Math.max(min, value));
+}
+
 function createLoopLimitMessage(config: AgentLoopConfig, errorMessage: string): AssistantMessage {
 	return {
 		role: "assistant",
@@ -484,11 +731,14 @@ function endWithLoopError(
 	const state: QueryLoopState = {
 		turnCount: 0,
 		toolCallCount: 0,
-		transition: "start",
+		transition: { reason: "start" },
 		pendingMessages: [],
+		pendingToolUseSummaries: [],
 		stopHookActive: false,
 		stopHookContinuationCount: 0,
 		maxOutputTokensRecoveryCount: 0,
+		modelErrorRecoveryCount: 0,
+		tokenBudgetContinuationCount: 0,
 		hasAttemptedReactiveCompact: false,
 		startedAt: Date.now(),
 		usage: emptyUsage(),
@@ -514,6 +764,7 @@ function finish(
 		usage: state.usage,
 		permissionDenialCount: state.permissionDenials.length,
 		permissionDenials: state.permissionDenials,
+		lastTransition: state.transition,
 		errorMessage: state.finalErrorMessage,
 		errorSubtype: state.finalErrorSubtype,
 	});

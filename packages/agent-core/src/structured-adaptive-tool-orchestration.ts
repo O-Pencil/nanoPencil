@@ -126,7 +126,7 @@ async function runToolBatch<T, TResult>(
 	return results;
 }
 
-function resolveMaxToolConcurrency(maxConcurrency: number | undefined): number {
+export function resolveMaxToolConcurrency(maxConcurrency: number | undefined): number {
 	if (maxConcurrency !== undefined) {
 		return Math.max(1, Math.floor(maxConcurrency || DEFAULT_MAX_TOOL_CONCURRENCY));
 	}
@@ -160,7 +160,7 @@ export function partitionStructuredAdaptiveToolCalls(
 
 	for (const toolCall of toolCalls) {
 		const tool = toolByName.get(toolCall.name);
-		if (isConcurrencySafe(tool, toolCall.name)) {
+		if (isStructuredAdaptiveToolCallConcurrencySafe(toolCall, tool)) {
 			safeBatch.push(toolCall);
 			continue;
 		}
@@ -179,11 +179,39 @@ export function partitionStructuredAdaptiveToolCalls(
 	return batches;
 }
 
-function isConcurrencySafe(tool: AgentTool<any> | undefined, name: string): boolean {
-	return tool?.isConcurrencySafe ?? DEFAULT_SAFE_TOOL_NAMES.has(name);
+export function isStructuredAdaptiveToolCallConcurrencySafe(
+	toolCall: StructuredAdaptiveToolCall,
+	tool: AgentTool<any> | undefined,
+): boolean {
+	if (!tool) return DEFAULT_SAFE_TOOL_NAMES.has(toolCall.name);
+	const safety = tool.isConcurrencySafe;
+	if (typeof safety === "function") {
+		try {
+			return safety(validateToolArguments(tool, toolCall));
+		} catch {
+			return false;
+		}
+	}
+	return safety ?? DEFAULT_SAFE_TOOL_NAMES.has(toolCall.name);
 }
 
-async function runStructuredAdaptiveToolUse(
+export function resolveStructuredAdaptiveToolInterruptBehavior(
+	toolCall: StructuredAdaptiveToolCall,
+	tool: AgentTool<any> | undefined,
+): "cancel" | "block" {
+	if (!tool) return "block";
+	const behavior = tool?.interruptBehavior;
+	if (typeof behavior === "function") {
+		try {
+			return behavior(validateToolArguments(tool, toolCall));
+		} catch {
+			return "block";
+		}
+	}
+	return behavior ?? "block";
+}
+
+export async function runStructuredAdaptiveToolUse(
 	toolCall: StructuredAdaptiveToolCall,
 	tool: AgentTool<any> | undefined,
 	signal: AbortSignal | undefined,

@@ -1,5 +1,5 @@
 /**
- * [WHO]: AgentSession class, session lifecycle, event emission
+ * [WHO]: AgentSession class, session lifecycle, event emission, in-loop context-overflow recovery adapter
  * [FROM]: Depends on agent-core, ai, core/tools/*, core/session/*, core/config/*
  * [TO]: Consumed by core/index.ts, core/runtime/sdk.ts, modes/interactive/interactive-mode.ts, modes/print-mode.ts, modes/rpc/rpc-mode.ts, modes/acp/acp-mode.ts, modes/rpc/rpc-types.ts, modes/rpc/rpc-client.ts, modes/interactive/components/footer.ts, modes/interactive/components/skill-invocation-message.ts
  * [HERE]: Central runtime hub; all modes delegate to this class
@@ -10,6 +10,7 @@ import type {
   Agent,
   AgentEvent,
   AgentLoopFramework,
+  AgentModelErrorRecoveryResult,
   AgentMessage,
   AgentState,
   AgentTool,
@@ -405,6 +406,9 @@ export class AgentSession {
     this._soulManager = config.soulManager;
     this._initialActiveToolNames = config.initialActiveToolNames;
     this._baseToolsOverride = config.baseToolsOverride;
+    this.agent.setModelErrorRecovery((event) =>
+      this._recoverModelErrorInLoop(event),
+    );
 
     // Always subscribe to agent events for internal handling
     // (session persistence, extensions, auto-compaction, retry logic)
@@ -2117,15 +2121,91 @@ export class AgentSession {
     }
   }
 
+  private async _recoverModelErrorInLoop(event: {
+    message: AgentMessage;
+    messages: AgentMessage[];
+    errorSubtype: string;
+    attempt: number;
+  }): Promise<AgentModelErrorRecoveryResult> {
+    const settings = this.settingsManager.getCompactionSettings();
+    if (event.message.role !== "assistant") return { action: "stop" };
+
+    const assistantMessage = event.message as AssistantMessage;
+    if (event.errorSubtype !== "context_overflow") {
+      if (!this._retryCoordinator.isRetryableError(assistantMessage)) {
+        return { action: "stop" };
+      }
+      const shouldRetry =
+        await this._retryCoordinator.handleErrorInLoop(assistantMessage);
+      if (!shouldRetry) return { action: "stop" };
+      const messages = this.agent.state.messages;
+      const retryMessages =
+        messages.at(-1)?.role === "assistant" ? messages.slice(0, -1) : messages;
+      this.agent.replaceMessages(retryMessages);
+      return {
+        action: "retry",
+        messages: retryMessages,
+        transition: {
+          reason: "model_error_recovery",
+          subtype: event.errorSubtype,
+          attempt: event.attempt,
+        },
+      };
+    }
+
+    if (!settings.enabled) return { action: "stop" };
+
+    const contextWindow = this.model?.contextWindow ?? 0;
+    const sameModel =
+      this.model &&
+      assistantMessage.provider === this.model.provider &&
+      assistantMessage.model === this.model.id;
+    if (!sameModel || !isContextOverflow(assistantMessage, contextWindow)) {
+      return { action: "stop" };
+    }
+
+    const compactionEntry = getLatestCompactionEntry(
+      this.sessionManager.getBranch(),
+    );
+    const errorIsFromBeforeCompaction =
+      compactionEntry !== null &&
+      assistantMessage.timestamp < new Date(compactionEntry.timestamp).getTime();
+    if (errorIsFromBeforeCompaction) return { action: "stop" };
+
+    const messages = this.agent.state.messages;
+    if (
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "assistant"
+    ) {
+      this.agent.replaceMessages(messages.slice(0, -1));
+    }
+
+    const recoveredMessages = await this._runAutoCompaction("overflow", true, {
+      triggerContinue: false,
+    });
+    if (!recoveredMessages) return { action: "stop" };
+    return {
+      action: "retry",
+      messages: recoveredMessages,
+      transition: {
+        reason: "model_error_recovery",
+        subtype: event.errorSubtype,
+        attempt: event.attempt,
+      },
+    };
+  }
+
   /**
    * Internal: Run auto-compaction with events.
    */
   private async _runAutoCompaction(
     reason: "overflow" | "threshold",
     willRetry: boolean,
-  ): Promise<void> {
+    options?: { triggerContinue?: boolean },
+  ): Promise<AgentMessage[] | undefined> {
     this._logger.info("Auto-compaction triggered", { reason, willRetry });
     const settings = this.settingsManager.getCompactionSettings();
+    const triggerContinue = options?.triggerContinue ?? true;
 
     this._emit({ type: "auto_compaction_start", reason });
     this._autoCompactionAbortController = new AbortController();
@@ -2138,7 +2218,7 @@ export class AgentSession {
           aborted: false,
           willRetry: false,
         });
-        return;
+        return undefined;
       }
 
       const apiKey = await this._modelRegistry.getApiKey(this.model);
@@ -2149,7 +2229,7 @@ export class AgentSession {
           aborted: false,
           willRetry: false,
         });
-        return;
+        return undefined;
       }
 
       const pathEntries = this.sessionManager.getBranch();
@@ -2162,7 +2242,7 @@ export class AgentSession {
           aborted: false,
           willRetry: false,
         });
-        return;
+        return undefined;
       }
 
       let extensionCompaction: CompactionResult | undefined;
@@ -2184,7 +2264,7 @@ export class AgentSession {
             aborted: true,
             willRetry: false,
           });
-          return;
+          return undefined;
         }
 
         if (extensionResult?.compaction) {
@@ -2226,7 +2306,7 @@ export class AgentSession {
           aborted: true,
           willRetry: false,
         });
-        return;
+        return undefined;
       }
 
       this.sessionManager.appendCompaction(
@@ -2266,7 +2346,7 @@ export class AgentSession {
         willRetry,
       });
 
-      if (willRetry) {
+      if (willRetry && triggerContinue) {
         const messages = this.agent.state.messages;
         const lastMsg = messages[messages.length - 1];
         if (
@@ -2279,13 +2359,14 @@ export class AgentSession {
         setTimeout(() => {
           this.agent.continue().catch(() => {});
         }, 100);
-      } else if (this.agent.hasQueuedMessages()) {
+      } else if (!willRetry && this.agent.hasQueuedMessages()) {
         // Auto-compaction can complete while follow-up/steering/custom messages are waiting.
         // Kick the loop so queued messages are actually delivered.
         setTimeout(() => {
           this.agent.continue().catch(() => {});
         }, 100);
       }
+      return sessionContext.messages;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "compaction failed";
@@ -2299,6 +2380,7 @@ export class AgentSession {
             ? `Context overflow recovery failed: ${errorMessage}`
             : `Auto-compaction failed: ${errorMessage}`,
       });
+      return undefined;
     } finally {
       this._autoCompactionAbortController = undefined;
     }

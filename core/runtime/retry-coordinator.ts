@@ -1,5 +1,5 @@
 /**
- * [WHO]: RetryCoordinator class, auto-retry with exponential backoff
+ * [WHO]: RetryCoordinator class, auto-retry with exponential backoff, in-loop retry preparation
  * [FROM]: Depends on agent-core (AssistantMessage), ai (isContextOverflow), core/runtime/utils/sleep
  * [TO]: Consumed by core/runtime/agent-session.ts
  * [HERE]: core/runtime/retry-coordinator.ts - retry orchestration extracted from AgentSession
@@ -89,6 +89,29 @@ export class RetryCoordinator {
 	 * @returns true if retry was initiated, false if max retries exceeded or disabled
 	 */
 	async handleError(message: AssistantMessage): Promise<boolean> {
+		const shouldRetry = await this._prepareRetry(message);
+		if (!shouldRetry) return false;
+
+		// Remove error message from agent state
+		this._host.removeLastAssistantMessage();
+
+		// Trigger retry via continue()
+		this._host.triggerContinue();
+		return true;
+	}
+
+	/**
+	 * Handle a retryable error inside an active agent loop.
+	 *
+	 * Unlike handleError(), this does not mutate host messages and does not
+	 * schedule agent.continue(); the caller remains responsible for replacing
+	 * loop context and continuing in-place.
+	 */
+	async handleErrorInLoop(message: AssistantMessage): Promise<boolean> {
+		return this._prepareRetry(message);
+	}
+
+	private async _prepareRetry(message: AssistantMessage): Promise<boolean> {
 		const settings = this._host.getRetrySettings();
 		if (!settings.enabled) return false;
 
@@ -123,9 +146,6 @@ export class RetryCoordinator {
 			errorMessage: message.errorMessage || "Unknown error",
 		});
 
-		// Remove error message from agent state
-		this._host.removeLastAssistantMessage();
-
 		// Wait with exponential backoff (abortable)
 		this._retryAbortController = new AbortController();
 		try {
@@ -144,9 +164,6 @@ export class RetryCoordinator {
 			return false;
 		}
 		this._retryAbortController = undefined;
-
-		// Trigger retry via continue()
-		this._host.triggerContinue();
 		return true;
 	}
 

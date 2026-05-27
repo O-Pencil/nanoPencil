@@ -27,6 +27,7 @@ The `packages/` directory contains bundled npm packages that are compiled and in
 `agent-loop.ts`: Agent execution loop and state machine
 `structured-adaptive-agent-loop.ts`: weak-model-compatible loop implementation with scaffolded, stronger-control runs
 `structured-adaptive-tool-orchestration.ts`: weak-model-compatible tool batching/execution layer
+`structured-adaptive-streaming-tool-executor.ts`: streaming tool scheduler for weak-model-compatible loop
 `proxy.ts`: Agent proxy for session isolation
 `types.ts`: Agent-related type definitions
 

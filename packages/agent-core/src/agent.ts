@@ -3,7 +3,7 @@
  * No transport abstraction - calls streamSimple via the loop.
  */
 /**
- * [WHO]: AgentOptions, Agent
+ * [WHO]: AgentOptions, Agent, in-loop model error recovery option plumbing
  * [FROM]: Depends on ./agent-loop.js and ./structured-adaptive-agent-loop.js
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/agent-core/src/agent.ts -
@@ -115,6 +115,14 @@ export interface AgentOptions {
 	 * Optional tool permission gate used by weak-model-compatible loop execution.
 	 */
 	canUseTool?: AgentLoopConfig["canUseTool"];
+
+	/**
+	 * Optional in-loop model error recovery hook used by weak-model-compatible loop execution.
+	 */
+	recoverModelError?: AgentLoopConfig["recoverModelError"];
+
+	/** Maximum in-loop model error recoveries per prompt. */
+	maxModelErrorRecoveryAttempts?: number;
 }
 
 export class Agent {
@@ -148,6 +156,8 @@ export class Agent {
 	private _maxRetryDelayMs?: number;
 	private _agentLoopFramework?: AgentLoopFramework;
 	private canUseTool?: AgentLoopConfig["canUseTool"];
+	private recoverModelError?: AgentLoopConfig["recoverModelError"];
+	private maxModelErrorRecoveryAttempts?: number;
 
 	constructor(opts: AgentOptions = {}) {
 		this._state = { ...this._state, ...opts.initialState };
@@ -163,6 +173,8 @@ export class Agent {
 		this._maxRetryDelayMs = opts.maxRetryDelayMs;
 		this._agentLoopFramework = normalizeAgentLoopFramework(opts.agentLoopFramework);
 		this.canUseTool = opts.canUseTool;
+		this.recoverModelError = opts.recoverModelError;
+		this.maxModelErrorRecoveryAttempts = opts.maxModelErrorRecoveryAttempts;
 	}
 
 	/**
@@ -273,6 +285,10 @@ export class Agent {
 
 	setTools(t: AgentTool<any>[]) {
 		this._state.tools = t;
+	}
+
+	setModelErrorRecovery(recoverModelError: AgentLoopConfig["recoverModelError"] | undefined) {
+		this.recoverModelError = recoverModelError;
 	}
 
 	replaceMessages(ms: AgentMessage[]) {
@@ -475,6 +491,8 @@ export class Agent {
 			transformContext: this.transformContext,
 			getApiKey: this.getApiKey,
 			canUseTool: this.canUseTool,
+			recoverModelError: this.recoverModelError,
+			maxModelErrorRecoveryAttempts: this.maxModelErrorRecoveryAttempts,
 			getSteeringMessages: async () => {
 				if (skipInitialSteeringPoll) {
 					skipInitialSteeringPoll = false;

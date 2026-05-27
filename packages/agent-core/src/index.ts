@@ -1,6 +1,6 @@
 /**
  * [WHO]: agent-core barrel exports
- * [FROM]: Depends on agent.js, agent-loop.js, structured-adaptive-agent-loop.js, structured-adaptive-tool-orchestration.js, proxy.js, types.js
+ * [FROM]: Depends on agent.js, agent-loop.js, structured-adaptive-agent-loop.js, structured-adaptive-tool-orchestration.js, structured-adaptive-streaming-tool-executor.js, proxy.js, types.js
  * [TO]: Consumed by @pencil-agent/agent-core package consumers
  * [HERE]: packages/agent-core/src/index.ts - agent-core entry point
  */
@@ -10,6 +10,7 @@ export * from "./agent.js";
 export * from "./agent-loop.js";
 export * from "./structured-adaptive-agent-loop.js";
 export * from "./structured-adaptive-tool-orchestration.js";
+export * from "./structured-adaptive-streaming-tool-executor.js";
 // Proxy utilities
 export * from "./proxy.js";
 // Types

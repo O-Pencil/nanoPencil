@@ -37,6 +37,14 @@ function createAssistantMessage(text: string): AssistantMessage {
 	};
 }
 
+function createErrorMessage(message: string): AssistantMessage {
+	return {
+		...createAssistantMessage(""),
+		stopReason: "error",
+		errorMessage: message,
+	};
+}
+
 function createToolUseMessage(content: AssistantMessage["content"]): AssistantMessage {
 	return {
 		...createAssistantMessage(""),
@@ -225,6 +233,53 @@ describe("Agent", () => {
 		const toolResults = agent.state.messages.filter((message) => message.role === "toolResult");
 		expect(toolResults).toHaveLength(2);
 		expect(toolResults.every((message) => message.isError === false)).toBe(true);
+	});
+
+	it("should pass recoverModelError into the weak-model-compatible loop", async () => {
+		const model = {
+			...getModel("openai", "gpt-4o-mini"),
+			agentLoopFramework: "weak-model-compatible",
+			contextWindow: 8192,
+		} as Model<any> & { agentLoopFramework: "weak-model-compatible" };
+		let callIndex = 0;
+		let recoveryCalls = 0;
+		const agent = new Agent({
+			initialState: { model },
+			recoverModelError({ errorSubtype, attempt }) {
+				recoveryCalls++;
+				return {
+					action: "retry",
+					messages: [{ role: "user", content: "compacted", timestamp: Date.now() }],
+					transition: { reason: "model_error_recovery", subtype: errorSubtype, attempt },
+				};
+			},
+			streamFn: (_model, context) => {
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					if (callIndex === 0) {
+						stream.push({
+							type: "error",
+							reason: "error",
+							error: createErrorMessage("maximum context length is 8192 tokens"),
+						});
+					} else {
+						expect(context.messages.some((message) => message.role === "user" && message.content === "compacted")).toBe(
+							true,
+						);
+						stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered") });
+					}
+					callIndex++;
+				});
+				return stream;
+			},
+		});
+
+		await agent.prompt("too much");
+
+		expect(recoveryCalls).toBe(1);
+		const finalAssistant = agent.state.messages.filter((message) => message.role === "assistant").at(-1);
+		expect(finalAssistant?.role).toBe("assistant");
+		expect(finalAssistant?.stopReason).toBe("stop");
 	});
 
 	it("should subscribe to events", () => {

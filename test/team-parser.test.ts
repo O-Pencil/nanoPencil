@@ -4,6 +4,7 @@ import { buildTeamHelp, parseTeamCommand } from "../extensions/defaults/team/tea
 import { selectAutoTeamPlan } from "../extensions/defaults/team/team-presets.js";
 import { parseTeamMentions } from "../extensions/defaults/team/team-orchestrator.js";
 import { renderTeamDashboard } from "../extensions/defaults/team/team-dashboard.js";
+import { updateTeamUi } from "../extensions/defaults/team/team-ui.js";
 import type { PersistedTeammate } from "../extensions/defaults/team/team-types.js";
 
 test("team-parser: parses root list and help commands", () => {
@@ -237,4 +238,59 @@ test("team-dashboard: renders compact workbench with visible names", () => {
 	assert.match(lines.join("\n"), /Theo/);
 	assert.doesNotMatch(lines.join("\n"), /\bA:/);
 	assert.doesNotMatch(lines.join("\n"), /\bB:/);
+});
+
+test("team-ui: hides dashboard and footer status when teammates are idle", () => {
+	const teammates: PersistedTeammate[] = [
+		{
+			identity: { id: "dev", label: "A", name: "Theo", role: "developer", createdAt: 1 },
+			mode: "plan",
+			status: "idle",
+			cwd: process.cwd(),
+			messages: [],
+			lastActiveAt: 1,
+		},
+	];
+	const calls: Array<{ type: "status" | "widget"; key: string; value: string | string[] | undefined }> = [];
+	const ctx = {
+		ui: {
+			setStatus: (key: string, text: string | undefined) => calls.push({ type: "status", key, value: text }),
+			setWidget: (key: string, content: string[] | undefined) => calls.push({ type: "widget", key, value: content }),
+		},
+	};
+
+	updateTeamUi(ctx, { getAllTeammates: () => teammates } as any);
+
+	assert.deepEqual(calls, [
+		{ type: "status", key: "team", value: undefined },
+		{ type: "widget", key: "team-dashboard", value: undefined },
+	]);
+});
+
+test("team-ui: shows dashboard and footer status while a teammate is running", () => {
+	const teammates: PersistedTeammate[] = [
+		{
+			identity: { id: "dev", label: "A", name: "Theo", role: "developer", createdAt: 1 },
+			mode: "execute",
+			status: "running",
+			cwd: process.cwd(),
+			messages: [],
+			lastActiveAt: 1,
+		},
+	];
+	const calls: Array<{ type: "status" | "widget"; key: string; value: string | string[] | undefined }> = [];
+	const ctx = {
+		ui: {
+			setStatus: (key: string, text: string | undefined) => calls.push({ type: "status", key, value: text }),
+			setWidget: (key: string, content: string[] | undefined) => calls.push({ type: "widget", key, value: content }),
+		},
+	};
+
+	updateTeamUi(ctx, { getAllTeammates: () => teammates } as any);
+
+	assert.equal(calls[0]?.type, "status");
+	assert.match(String(calls[0]?.value), /team: 1 agents/);
+	assert.equal(calls[1]?.type, "widget");
+	assert.ok(Array.isArray(calls[1]?.value));
+	assert.match((calls[1]?.value as string[]).join("\n"), /Team Workbench/);
 });

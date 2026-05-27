@@ -1,6 +1,6 @@
 # @pencil-agent/tui
 
-> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (MIT License). Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
+> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (GPL-3.0). Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
 
 ## Features
 

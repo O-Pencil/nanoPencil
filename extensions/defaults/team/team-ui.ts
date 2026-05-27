@@ -25,13 +25,9 @@ interface TeamMessageDetails {
 }
 
 let dashboardVisible = false;
-let dashboardAutoHideTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function clearTeamDashboardTimer(): void {
-	if (dashboardAutoHideTimer) {
-		clearTimeout(dashboardAutoHideTimer);
-		dashboardAutoHideTimer = undefined;
-	}
+	// Kept for the extension shutdown contract; dashboard visibility is now explicit.
 }
 
 export function createTeamMessageRenderer(): MessageRenderer {
@@ -170,19 +166,13 @@ export function updateTeamUi(
 ): void {
 	const teammates = teamRuntime.getAllTeammates();
 	const hasRunning = teammates.some((teammate) => teammate.status === "running");
-	clearTeamDashboardTimer();
+	const shouldShowTeamUi = dashboardVisible || hasRunning;
 
-	ctx.ui.setStatus("team", renderTeamFooterStatus(teammates));
+	ctx.ui.setStatus("team", shouldShowTeamUi ? renderTeamFooterStatus(teammates) : undefined);
 	ctx.ui.setWidget(
 		"team-dashboard",
-		dashboardVisible || hasRunning || teammates.length > 0 ? renderTeamDashboard(teammates, 80, { expanded: dashboardVisible }) : undefined,
+		shouldShowTeamUi ? renderTeamDashboard(teammates, 80, { expanded: dashboardVisible }) : undefined,
 	);
-	if (!dashboardVisible && !hasRunning && teammates.length > 0) {
-		dashboardAutoHideTimer = setTimeout(() => {
-			ctx.ui.setWidget("team-dashboard", undefined);
-			dashboardAutoHideTimer = undefined;
-		}, 30_000);
-	}
 }
 
 export function setTeamActivity(

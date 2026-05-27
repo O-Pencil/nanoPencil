@@ -170,3 +170,95 @@ test("generateFullInsights merges Claude-style parallel section output", async (
 	assert.equal(report.usagePatterns[0]?.title, "Section first");
 	assert.equal(report.atAGlance.working, "Sectioned analysis is working.");
 });
+
+test("generateFullInsights prompts use a warm sharp long-term partner voice", async () => {
+	const calls: Array<{ system: string; user: string }> = [];
+	const all: ExportAllResult = {
+		knowledge: [],
+		lessons: [
+			makeFacet("lesson:scope", {
+				type: "lesson",
+				summary: "Keep insight reports grounded in evidence and next steps.",
+			}),
+		],
+		preferences: [],
+		facets: [
+			makeFacet("pattern:observer", {
+				type: "pattern",
+				facetData: {
+					kind: "pattern",
+					trigger: "reflecting on work",
+					behavior: "asks for a useful observing partner instead of a dry report",
+				},
+			}),
+		],
+		work: [makeWork()],
+		episodes: [makeEpisode()],
+		meta: { totalSessions: 1, version: 1 },
+	};
+
+	const llm = async (system: string, user: string): Promise<string> => {
+		calls.push({ system, user });
+		if (user.includes('"quickWins"')) {
+			return JSON.stringify({
+				working: "I can see the sectioned report becoming more personal without losing evidence.",
+				hindering: "The old wording still risks sounding like a dashboard instead of a partner.",
+				quickWins: "Name the observed pattern, then give one next move.",
+				ambitious: "Let the report read like a field note from a long-term coding partner.",
+			});
+		}
+		return "{}";
+	};
+
+	await buildFullInsightsReport(all, llm, "en");
+
+	assert.equal(calls.length, 7);
+	const joined = calls.map((call) => `${call.system}\n${call.user}`).join("\n---\n");
+	assert.match(joined, /warm but sharp long-term coding partner/i);
+	assert.match(joined, /observant agent keeping a private work diary/i);
+	assert.match(joined, /tie every claim to the provided data/i);
+	assert.match(joined, /no generic praise/i);
+	assert.match(joined, /next move/i);
+});
+
+test("generateFullInsights uses observed language preference over requested locale", async () => {
+	const calls: string[] = [];
+	const all: ExportAllResult = {
+		knowledge: [],
+		lessons: [
+			makeFacet("lesson:language", {
+				type: "lesson",
+				summary: "Insight reports should follow the user's observed language habits.",
+			}),
+		],
+		preferences: [
+			makeFacet("preference:chinese", {
+				type: "preference",
+				summary: "用户希望报告和建议默认使用中文。",
+				detail: "用户长期用中文描述需求，也明确希望输出语言根据语言习惯决定。",
+			}),
+		],
+		facets: [],
+		work: [makeWork()],
+		episodes: [makeEpisode()],
+		meta: { totalSessions: 1, version: 1 },
+	};
+
+	const llm = async (_system: string, user: string): Promise<string> => {
+		calls.push(user);
+		if (user.includes('"quickWins"')) {
+			return JSON.stringify({
+				working: "我看到报告语言已经开始跟随你的真实表达习惯。",
+				hindering: "如果只看 CLI locale，会错过长期记忆里的语言偏好。",
+				quickWins: "优先读取偏好记忆，再用近期内容兜底。",
+				ambitious: "以后可以把多语言标签也做成本地化。",
+			});
+		}
+		return "{}";
+	};
+
+	const report = await buildFullInsightsReport(all, llm, "en");
+
+	assert.equal(report.locale, "zh");
+	assert.match(calls.join("\n"), /Write the JSON string values in Chinese/i);
+});

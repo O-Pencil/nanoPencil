@@ -31,6 +31,7 @@ export interface FullInsightsSectionPayload {
 
 export interface FullInsightsSectionContext {
 	locale: string;
+	outputLanguage: string;
 	stats: {
 		totalSessions: number;
 		episodes: number;
@@ -63,9 +64,17 @@ interface SectionSpec {
 	prompt: string;
 }
 
+const OBSERVER_VOICE_RULES = `Voice rules:
+- Be a warm but sharp long-term coding partner: kind, direct, observant.
+- Write like an observant agent keeping a private work diary and a practical field report for the user.
+- Tie every claim to the provided data; if evidence is thin, say the signal is still thin.
+- No generic praise, personality diagnosis, therapy language, motivational fluff, or invented emotion.
+- Each item should name the observed pattern, explain why it matters, and offer one next move when the schema allows.`;
+
 function compactContext(context: FullInsightsSectionContext): Record<string, unknown> {
 	return {
 		locale: context.locale,
+		outputLanguage: context.outputLanguage,
 		stats: context.stats,
 		projectAreas: context.projectAreas.slice(0, 8).map((area) => ({
 			name: area.name,
@@ -91,50 +100,59 @@ function compactContext(context: FullInsightsSectionContext): Record<string, unk
 	};
 }
 
-function sectionSpecs(locale: string): SectionSpec[] {
-	const languageRule =
-		locale === "zh"
-			? "Write the JSON string values in concise natural Chinese."
-			: "Write the JSON string values in concise natural English.";
+function sectionSpecs(outputLanguage: string): SectionSpec[] {
+	const languageRule = `Write the JSON string values in ${outputLanguage}, matching the user's observed language habits.`;
 	return [
 		{
 			name: "project_areas",
-			prompt: `Identify the main project/work areas from this developer memory report.
+			prompt: `${OBSERVER_VOICE_RULES}
+
+Identify the main project/work areas from this developer memory report. Describe each area as something you have been watching the user return to, including what that investment suggests about their current work.
 ${languageRule}
 Return ONLY valid JSON:
 {"descriptions":["one description per provided project area, preserving order"]}`,
 		},
 		{
 			name: "wins",
-			prompt: `Find concrete workflows that are working well. Avoid generic praise; use evidence from tools, lessons, resolved struggles, or project areas.
+			prompt: `${OBSERVER_VOICE_RULES}
+
+Find concrete workflows that are working well. Make the wins feel seen, not flattered: recognize the user's effective habits with evidence from tools, lessons, resolved struggles, or project areas.
 ${languageRule}
 Return ONLY valid JSON:
 {"wins":[{"title":"3-7 word title","description":"2-3 specific sentences"}]}`,
 		},
 		{
 			name: "frictions",
-			prompt: `Find recurring friction. Prefer root causes over symptoms and include examples when available.
+			prompt: `${OBSERVER_VOICE_RULES}
+
+Find recurring friction. Be gentle with the user but incisive about the system of work: prefer root causes over symptoms, avoid blame, and include examples when available.
 ${languageRule}
 Return ONLY valid JSON:
 {"frictions":[{"title":"short category","description":"1-2 sentences","examples":["specific example"]}]}`,
 		},
 		{
 			name: "recommendations",
-			prompt: `Suggest direct behavior changes. Each recommendation should be actionable enough to try in the next session.
+			prompt: `${OBSERVER_VOICE_RULES}
+
+Suggest direct behavior changes. Each recommendation should read like a useful note from a partner who has watched the pattern before: observation, why it matters, next move for the next session.
 ${languageRule}
 Return ONLY valid JSON:
 {"recommendations":["recommendation sentence"]}`,
 		},
 		{
 			name: "features",
-			prompt: `Suggest NanoPencil features or workflows this user should try based on their actual usage. Prefer skills, MCP, hooks, headless commands, subagents, recap, memory, or token-save only when evidence supports it.
+			prompt: `${OBSERVER_VOICE_RULES}
+
+Suggest NanoPencil features or workflows this user should try based on their actual usage. Prefer skills, MCP, hooks, headless commands, subagents, recap, memory, or token-save only when evidence supports it; explain why it fits this user's observed habits.
 ${languageRule}
 Return ONLY valid JSON:
 {"featuresToTry":[{"title":"feature/workflow","oneLiner":"what it does","whyForYou":"why this user should try it","exampleCode":"optional command or config"}]}`,
 		},
 		{
 			name: "usage_patterns",
-			prompt: `Suggest reusable prompt/workflow patterns. Make each one copyable and grounded in the reported friction or wins.
+			prompt: `${OBSERVER_VOICE_RULES}
+
+Suggest reusable prompt/workflow patterns. Make each one copyable and grounded in the reported friction or wins, as if you are leaving the user a practical note for how to begin next time.
 ${languageRule}
 Return ONLY valid JSON:
 {"usagePatterns":[{"title":"pattern","summary":"short summary","detail":"how to apply it","pastePrompt":"copyable prompt"}]}`,
@@ -149,7 +167,7 @@ async function generateSection(
 ): Promise<{ name: SectionName; result: Record<string, unknown> | null }> {
 	try {
 		const raw = await llmFn(
-			"You write structured developer usage insights. Output only valid JSON matching the requested schema.",
+			"You write structured developer usage insights as a warm but sharp long-term coding partner. Output only valid JSON matching the requested schema.",
 			`${spec.prompt}\n\nDATA:\n${contextJson}`,
 		);
 		const parsed = parseLlmJson<Record<string, unknown>>(raw);
@@ -235,17 +253,16 @@ async function generateAtAGlance(
 	contextJson: string,
 	sections: FullInsightsSectionPayload,
 	llmFn: LlmFn,
-	locale: string,
+	outputLanguage: string,
 ): Promise<FullInsightsAtAGlance | undefined> {
-	const languageRule =
-		locale === "zh"
-			? "Write concise natural Chinese."
-			: "Write concise natural English.";
+	const languageRule = `Write concise natural ${outputLanguage}, matching the user's observed language habits.`;
 	try {
 		const raw = await llmFn(
 			"You write executive summaries for developer usage reports. Output only valid JSON.",
-			`${languageRule}
-Synthesize the section outputs into four short, candid coaching blurbs.
+			`${OBSERVER_VOICE_RULES}
+
+${languageRule}
+Synthesize the section outputs into four short, candid coaching blurbs. Make this read like the opening note of a private diary and field report from a long-term coding partner: intimate enough to feel observed, precise enough to be useful.
 Return ONLY valid JSON:
 {"working":"what is working","hindering":"what is hindering","quickWins":"quick wins to try","ambitious":"ambitious workflows to prepare for"}
 
@@ -280,9 +297,9 @@ export async function generateParallelFullInsightSections(
 	llmFn: LlmFn,
 ): Promise<FullInsightsSectionPayload> {
 	const contextJson = JSON.stringify(compactContext(context), null, 2);
-	const results = await Promise.all(sectionSpecs(context.locale).map((spec) => generateSection(spec, contextJson, llmFn)));
+	const results = await Promise.all(sectionSpecs(context.outputLanguage).map((spec) => generateSection(spec, contextJson, llmFn)));
 	const payload = mergeSectionPayload(results);
-	const atAGlance = await generateAtAGlance(contextJson, payload, llmFn, context.locale);
+	const atAGlance = await generateAtAGlance(contextJson, payload, llmFn, context.outputLanguage);
 	if (atAGlance) payload.atAGlance = atAGlance;
 	return payload;
 }

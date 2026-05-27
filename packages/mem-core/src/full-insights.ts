@@ -255,12 +255,76 @@ function fallbackFeaturesAndPatterns(
 	return { featuresToTry, usagePatterns };
 }
 
+interface ObservedReportLanguage {
+	code: string;
+	name: string;
+}
+
+function entryText(entry: MemoryEntry): string {
+	return [entry.name, entry.summary, entry.detail, entry.content, entry.tags.join(" ")].filter(Boolean).join("\n");
+}
+
+function languageFromExplicitPreference(text: string): ObservedReportLanguage | undefined {
+	if (/(中文|汉语|Chinese|Mandarin|用中文|中文输出|中文交流)/i.test(text)) return { code: "zh", name: "Chinese" };
+	if (/(英文|英语|English|use English|write in English)/i.test(text)) return { code: "en", name: "English" };
+	if (/(日文|日语|日本語|Japanese)/i.test(text)) return { code: "ja", name: "Japanese" };
+	if (/(韩文|韩语|한국어|Korean)/i.test(text)) return { code: "ko", name: "Korean" };
+	if (/(法文|法语|français|French)/i.test(text)) return { code: "fr", name: "French" };
+	if (/(西班牙文|西班牙语|español|Spanish)/i.test(text)) return { code: "es", name: "Spanish" };
+	if (/(德文|德语|Deutsch|German)/i.test(text)) return { code: "de", name: "German" };
+	return undefined;
+}
+
+function languageFromScript(text: string): ObservedReportLanguage | undefined {
+	const han = (text.match(/\p{Script=Han}/gu) ?? []).length;
+	const kana = (text.match(/[\p{Script=Hiragana}\p{Script=Katakana}]/gu) ?? []).length;
+	const hangul = (text.match(/\p{Script=Hangul}/gu) ?? []).length;
+	const cyrillic = (text.match(/\p{Script=Cyrillic}/gu) ?? []).length;
+	const arabic = (text.match(/\p{Script=Arabic}/gu) ?? []).length;
+	const latinWords = (text.match(/[A-Za-z]{3,}/g) ?? []).length;
+	if (kana >= 4) return { code: "ja", name: "Japanese" };
+	if (hangul >= 4) return { code: "ko", name: "Korean" };
+	if (han >= 8 && han >= latinWords) return { code: "zh", name: "Chinese" };
+	if (cyrillic >= 8) return { code: "ru", name: "Russian" };
+	if (arabic >= 8) return { code: "ar", name: "Arabic" };
+	if (latinWords >= 20 && han + kana + hangul + cyrillic + arabic === 0) return { code: "en", name: "English" };
+	return undefined;
+}
+
+function fallbackLanguage(locale: string): ObservedReportLanguage {
+	if (locale === "zh") return { code: "zh", name: "Chinese" };
+	if (locale === "en") return { code: "en", name: "English" };
+	return { code: locale, name: locale };
+}
+
+function inferObservedReportLanguage(all: ExportAllResult, locale: string): ObservedReportLanguage {
+	const preferenceText = all.preferences.map(entryText).join("\n");
+	const explicit = languageFromExplicitPreference(preferenceText);
+	if (explicit) return explicit;
+	const observedText = [
+		preferenceText,
+		...all.episodes.flatMap((episode) => [
+			episode.summary,
+			episode.userGoal ?? "",
+			...episode.keyObservations,
+			...episode.tags,
+		]),
+		...all.work.flatMap((work) => [work.goal, work.summary, work.detail ?? "", ...work.tags]),
+		...all.lessons.map(entryText),
+		...all.knowledge.map(entryText),
+		...all.facets.map(entryText),
+	].join("\n");
+	return languageFromScript(observedText) ?? fallbackLanguage(locale);
+}
+
 export async function buildFullInsightsReport(
 	all: ExportAllResult,
 	llmFn: LlmFn | undefined,
 	locale: string,
 ): Promise<FullInsightsReport> {
-	const p = PROMPTS[locale] ?? PROMPTS.en;
+	const reportLanguage = inferObservedReportLanguage(all, locale);
+	const reportLocale = reportLanguage.code;
+	const p = PROMPTS[reportLocale] ?? PROMPTS.en;
 	const { patterns, struggles } = buildPatternsAndStruggles(all.facets);
 	const sortLessons = [...all.lessons].sort(
 		(a, b) => b.importance * (b.accessCount + 1) - a.importance * (a.accessCount + 1),
@@ -295,22 +359,23 @@ export async function buildFullInsightsReport(
 		aggregateFileCount,
 	};
 
-	let atAGlance = fallbackAtAGlance(patterns, struggles, topLessons, locale);
+	let atAGlance = fallbackAtAGlance(patterns, struggles, topLessons, reportLocale);
 	let projectAreaDescriptions: string[] = projectAreas.map((a) => a.description);
 	let wins = fallbackWins(struggles, topLessons);
 	let frictions = fallbackFrictions(struggles);
-	let recommendations = fallbackRecommendations(patterns, struggles, topLessons, locale);
+	let recommendations = fallbackRecommendations(patterns, struggles, topLessons, reportLocale);
 	let { featuresToTry, usagePatterns } = fallbackFeaturesAndPatterns(
 		toolsChart.rows,
 		struggles,
-		locale,
+		reportLocale,
 	);
 
 	if (llmFn) {
 		try {
 			const payload = await generateParallelFullInsightSections(
 				{
-					locale,
+					locale: reportLocale,
+					outputLanguage: reportLanguage.name,
 					stats,
 					patterns,
 					struggles,
@@ -353,6 +418,6 @@ export async function buildFullInsightsReport(
 		featuresToTry,
 		usagePatterns,
 		generatedAt: new Date().toISOString(),
-		locale,
+		locale: reportLocale,
 	};
 }

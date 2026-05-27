@@ -2,10 +2,10 @@
  * Minimal TUI implementation with differential rendering
  */
 /**
- * [WHO]: Provides Component, Focusable, Container, TUI, CURSOR_MARKER, isFocusable
+ * [WHO]: Component, Focusable, isFocusable, CURSOR_MARKER, visibleWidth
  * [FROM]: Depends on node:fs, node:os, node:path, ./keys.js, ./terminal-image.js
  * [TO]: Consumed by packages/tui/src/index.ts
- * [HERE]: packages/tui/src/tui.ts - core terminal render loop and component tree
+ * [HERE]: packages/tui/src/tui.ts -
  */
 
 
@@ -43,7 +43,7 @@ export interface Component {
 	 * Invalidate any cached rendering state.
 	 * Called when theme changes or when component needs to re-render from scratch.
 	 */
-	invalidate?(): void;
+	invalidate(): void;
 }
 
 type InputListenerResult = { consume?: boolean; data?: string } | undefined;
@@ -248,8 +248,6 @@ export class TUI extends Container {
 	private fullRedrawCount = 0;
 	private stopped = false;
 	private synchronizedOutputEnabled = shouldUseSynchronizedOutput();
-	private strictWidthErrors = process.env.NANOPENCIL_TUI_STRICT_WIDTH === "1";
-	private widthViolationLogged = false;
 
 	// Overlay stack for modal components rendered on top of base content
 	private overlayStack: {
@@ -900,63 +898,6 @@ export class TUI extends Container {
 		return null;
 	}
 
-	private getWidthViolationError(lineIndex: number, lineWidth: number, width: number, crashLogPath: string): Error {
-		const errorMsg = [
-			`Rendered line ${lineIndex} exceeds terminal width (${lineWidth} > ${width}).`,
-			"",
-			"This is likely caused by a custom TUI component not truncating its output.",
-			"Use visibleWidth() to measure and truncateToWidth() to truncate lines.",
-			"",
-			`Debug log written to: ${crashLogPath}`,
-		].join("\n");
-		return new Error(errorMsg);
-	}
-
-	private logWidthViolation(lineIndex: number, lineWidth: number, width: number, lines: string[]): string {
-		const crashLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-crash.log");
-		if (!this.widthViolationLogged || this.strictWidthErrors) {
-			const crashData = [
-				`Render width violation at ${new Date().toISOString()}`,
-				`Terminal width: ${width}`,
-				`Line ${lineIndex} visible width: ${lineWidth}`,
-				`Mode: ${this.strictWidthErrors ? "strict" : "truncated"}`,
-				"",
-				"=== All rendered lines ===",
-				...lines.map((line, idx) => `[${idx}] (w=${visibleWidth(line)}) ${line}`),
-				"",
-			].join("\n");
-			try {
-				fs.mkdirSync(path.dirname(crashLogPath), { recursive: true });
-				fs.writeFileSync(crashLogPath, crashData);
-			} catch {
-				// Diagnostics must never take down the TUI render loop.
-			}
-			this.widthViolationLogged = true;
-		}
-		return crashLogPath;
-	}
-
-	private constrainRenderedLines(lines: string[], width: number): string[] {
-		if (width <= 0) return lines;
-		let constrained: string[] | undefined;
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			if (isImageLine(line)) continue;
-			const lineWidth = visibleWidth(line);
-			if (lineWidth <= width) continue;
-
-			const crashLogPath = this.logWidthViolation(i, lineWidth, width, lines);
-			if (this.strictWidthErrors) {
-				this.stop();
-				throw this.getWidthViolationError(i, lineWidth, width, crashLogPath);
-			}
-
-			if (!constrained) constrained = lines.slice();
-			constrained[i] = sliceByColumn(line, 0, width, true);
-		}
-		return constrained ?? lines;
-	}
-
 	private doRender(): void {
 		if (this.stopped) return;
 		const width = this.terminal.columns;
@@ -977,13 +918,10 @@ export class TUI extends Container {
 		if (this.overlayStack.length > 0) {
 			newLines = this.compositeOverlays(newLines, width, height);
 		}
-		const nextWorkingHeight = Math.max(this.maxLinesRendered, newLines.length);
-		viewportTop = Math.max(0, nextWorkingHeight - height);
 
 		// Extract cursor position before applying line resets (marker must be found first)
 		const cursorPos = this.extractCursorPosition(newLines, height);
 
-		newLines = this.constrainRenderedLines(newLines, width);
 		newLines = this.applyLineResets(newLines);
 
 		// Width changed - need full re-render (line wrapping changes)
@@ -1157,7 +1095,37 @@ export class TUI extends Container {
 		for (let i = firstChanged; i <= renderEnd; i++) {
 			if (i > firstChanged) buffer += "\r\n";
 			buffer += "\x1b[2K"; // Clear current line
-			buffer += newLines[i];
+			const line = newLines[i];
+			const isImage = isImageLine(line);
+			if (!isImage && visibleWidth(line) > width) {
+				// Log all lines to crash file for debugging
+				const crashLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-crash.log");
+				const crashData = [
+					`Crash at ${new Date().toISOString()}`,
+					`Terminal width: ${width}`,
+					`Line ${i} visible width: ${visibleWidth(line)}`,
+					"",
+					"=== All rendered lines ===",
+					...newLines.map((l, idx) => `[${idx}] (w=${visibleWidth(l)}) ${l}`),
+					"",
+				].join("\n");
+				fs.mkdirSync(path.dirname(crashLogPath), { recursive: true });
+				fs.writeFileSync(crashLogPath, crashData);
+
+				// Clean up terminal state before throwing
+				this.stop();
+
+				const errorMsg = [
+					`Rendered line ${i} exceeds terminal width (${visibleWidth(line)} > ${width}).`,
+					"",
+					"This is likely caused by a custom TUI component not truncating its output.",
+					"Use visibleWidth() to measure and truncateToWidth() to truncate lines.",
+					"",
+					`Debug log written to: ${crashLogPath}`,
+				].join("\n");
+				throw new Error(errorMsg);
+			}
+			buffer += line;
 		}
 
 		// Track where cursor ended up after rendering
@@ -1232,12 +1200,7 @@ export class TUI extends Container {
 	 * @param cursorPos The cursor position extracted from rendered output, or null
 	 * @param totalLines Total number of rendered lines
 	 */
-	private positionHardwareCursor(
-		cursorPos: { row: number; col: number } | null,
-		totalLines: number,
-		prevViewportTop: number = this.previousViewportTop,
-		viewportTop: number = Math.max(0, totalLines - this.terminal.rows),
-	): void {
+	private positionHardwareCursor(cursorPos: { row: number; col: number } | null, totalLines: number): void {
 		if (!cursorPos || totalLines <= 0) {
 			this.terminal.hideCursor();
 			return;
@@ -1246,18 +1209,9 @@ export class TUI extends Container {
 		// Clamp cursor position to valid range
 		const targetRow = Math.max(0, Math.min(cursorPos.row, totalLines - 1));
 		const targetCol = Math.max(0, cursorPos.col);
-		const terminalHeight = this.terminal.rows;
-		const currentScreenRow = Math.max(
-			0,
-			Math.min(this.hardwareCursorRow - prevViewportTop, terminalHeight - 1),
-		);
-		const targetScreenRow = Math.max(
-			0,
-			Math.min(targetRow - viewportTop, terminalHeight - 1),
-		);
 
 		// Move cursor from current position to target
-		const rowDelta = targetScreenRow - currentScreenRow;
+		const rowDelta = targetRow - this.hardwareCursorRow;
 		let buffer = "";
 		if (rowDelta > 0) {
 			buffer += `\x1b[${rowDelta}B`; // Move down

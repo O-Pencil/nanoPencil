@@ -1,66 +1,50 @@
 /**
  * [WHO]: TUI viewport render regression tests
- * [FROM]: Depends on node:test, packages/tui/src/tui.ts
+ * [FROM]: Depends on node:test, packages/tui/src/tui.ts, packages/tui/test/virtual-terminal.ts
  * [TO]: Consumed by repository test runner
- * [HERE]: test/tui-viewport-render.test.ts - verifies cursor movement stays aligned when viewport shifts after content growth
+ * [HERE]: test/tui-viewport-render.test.ts - verifies bottom input updates overwrite the same visible row instead of stacking
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { TUI } from "../packages/tui/src/tui.js";
-import type { Terminal } from "../packages/tui/src/terminal.js";
+import { CURSOR_MARKER, TUI, type Component } from "../packages/tui/src/tui.js";
+import { VirtualTerminal } from "../packages/tui/test/virtual-terminal.js";
 
-class FakeTerminal implements Terminal {
-	public writes: string[] = [];
-	public kittyProtocolActive = false;
-	public columns = 80;
-	public rows = 3;
+class TestComponent implements Component {
+	public lines: string[] = [];
 
-	start(): void {}
-	stop(): void {}
-	async drainInput(): Promise<void> {}
-	write(data: string): void {
-		this.writes.push(data);
+	render(): string[] {
+		return this.lines;
 	}
-	moveBy(): void {}
-	hideCursor(): void {}
-	showCursor(): void {}
-	clearLine(): void {}
-	clearFromCursor(): void {}
-	clearScreen(): void {}
-	setTitle(): void {}
+
+	invalidate(): void {}
 }
 
-test("tui cursor positioning uses screen rows when viewport shifts", () => {
-	const terminal = new FakeTerminal();
-	const tui = new TUI(terminal, false) as any;
+test("tui bottom input updates overwrite the same visible row while typing", async () => {
+	const terminal = new VirtualTerminal(40, 6);
+	const tui = new TUI(terminal);
+	const component = new TestComponent();
+	tui.addChild(component);
 
-	tui.hardwareCursorRow = 2;
-	tui.positionHardwareCursor(
-		{ row: 3, col: 0 },
-		4,
-		0,
-		1,
-		3,
-	);
+	const renderInput = (text: string) => {
+		component.lines = Array.from({ length: 12 }, (_, index) => (
+			index === 11 ? `${text}${CURSOR_MARKER}` : `L${index}`
+		));
+	};
 
-	assert.equal(terminal.writes.at(-1), "\x1b[1G");
-	assert.equal(tui.hardwareCursorRow, 3);
-});
+	renderInput("");
+	tui.start();
+	await terminal.flush();
 
-test("tui cursor positioning clamps offscreen logical rows to visible screen rows", () => {
-	const terminal = new FakeTerminal();
-	const tui = new TUI(terminal, false) as any;
+	for (const text of ["现", "现在", "现在几", "现在几点", "现在几点了"]) {
+		renderInput(text);
+		tui.requestRender();
+		await terminal.flush();
 
-	tui.hardwareCursorRow = 100;
-	tui.positionHardwareCursor(
-		{ row: 8, col: 0 },
-		11,
-		0,
-		6,
-		3,
-	);
+		const viewport = terminal.getViewport();
+		assert.deepEqual(viewport.slice(0, 5), ["L6", "L7", "L8", "L9", "L10"]);
+		assert.equal(viewport[5], text);
+	}
 
-	assert.equal(terminal.writes.at(-1), "\x1b[1G");
-	assert.equal(tui.hardwareCursorRow, 8);
+	tui.stop();
 });

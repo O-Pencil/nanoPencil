@@ -221,46 +221,6 @@ describe("TUI content shrinkage", () => {
 });
 
 describe("TUI differential rendering", () => {
-	it("truncates oversized lines before first full render reaches the terminal", async () => {
-		const terminal = new VirtualTerminal(10, 5);
-		const tui = new TUI(terminal);
-		const component = new TestComponent();
-		tui.addChild(component);
-
-		component.lines = ["ABCDEFGHIJKLMNO", "NEXT"];
-		tui.start();
-		await terminal.flush();
-
-		const viewport = terminal.getViewport();
-		assert.strictEqual(viewport[0], "ABCDEFGHIJ");
-		assert.strictEqual(viewport[1], "NEXT");
-		assert.strictEqual(viewport[2], "");
-
-		tui.stop();
-	});
-
-	it("truncates oversized lines during differential updates instead of corrupting following rows", async () => {
-		const terminal = new VirtualTerminal(10, 5);
-		const tui = new TUI(terminal);
-		const component = new TestComponent();
-		tui.addChild(component);
-
-		component.lines = ["short", "tail"];
-		tui.start();
-		await terminal.flush();
-
-		component.lines = ["123456789012345", "tail"];
-		tui.requestRender();
-		await terminal.flush();
-
-		const viewport = terminal.getViewport();
-		assert.strictEqual(viewport[0], "1234567890");
-		assert.strictEqual(viewport[1], "tail");
-		assert.strictEqual(viewport[2], "");
-
-		tui.stop();
-	});
-
 	it("tracks cursor correctly when content shrinks with unchanged remaining lines", async () => {
 		const terminal = new VirtualTerminal(40, 10);
 		const tui = new TUI(terminal);

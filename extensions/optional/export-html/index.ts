@@ -24,6 +24,13 @@ import { APP_NAME, getExportTemplateDir } from "../../../config.js";
 import { getResolvedThemeColors, getThemeExportColors } from "../../../modes/interactive/theme/theme.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const EXPORT_COMMAND_COMPLETIONS = [
+	{
+		value: "./nanopencil-session.html",
+		label: "./nanopencil-session.html",
+		description: "Choose the output file for this session export",
+	},
+];
 
 // Re-export core functions for use by AgentSession
 export { exportSessionToHtml, exportFromFile, type ToolHtmlRenderer, type ExportOptions } from "../../../core/export-html/index.js";
@@ -326,19 +333,26 @@ export async function extExportFromFile(inputPath: string, options?: ExtExportOp
 export default async function exportHtmlExtension(api: ExtensionAPI) {
 	// Register /export command
 	api.registerCommand("export", {
-		description: "Export session to HTML file",
-		handler: async (_args: string, ctx: ExtensionCommandContext) => {
+		description: "Save this session as a shareable HTML file",
+		getArgumentCompletions: (argumentPrefix, context) => {
+			if (context && context.tokenIndex > 0) return null;
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = EXPORT_COMMAND_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
+			return values.length > 0 ? values : null;
+		},
+		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			// Get session manager from context
 			const sessionManager = ctx.sessionManager;
 			if (!sessionManager) {
 				throw new Error("Session manager not available");
 			}
+			const outputPath = args.trim() || undefined;
 
-			// Export the session (use default output path)
-			// Pass undefined for state since we don't have access to it here
+			// Pass undefined for state since we don't have access to it here.
 			const filePath = await extExportSessionToHtml(
 				sessionManager as unknown as SessionManager,
 				undefined,
+				outputPath,
 			);
 
 			console.error(`Session exported to: ${filePath}`);

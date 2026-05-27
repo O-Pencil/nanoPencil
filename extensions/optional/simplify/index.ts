@@ -38,6 +38,11 @@ interface SimplifyOptions {
 	dryRun?: boolean;
 }
 
+const SIMPLIFY_COMMAND_COMPLETIONS = [
+	{ value: "--dry-run", label: "--dry-run", description: "Preview changes without writing files" },
+	{ value: "--no-test", label: "--no-test", description: "Skip the verification command after applying changes" },
+];
+
 // =============================================================================
 // Git Utilities
 // =============================================================================
@@ -522,11 +527,12 @@ async function executeSimplify(options: SimplifyOptions, ctx: ExtensionCommandCo
 
 export default function simplifyExtension(api: ExtensionAPI) {
 	api.registerCommand("simplify", {
-		description: "Simplify code to reduce cognitive load (Claude Code style)",
-		getArgumentCompletions: (prefix) => {
-			// Could add file completions here
-			const options = ["--dry-run", "--no-test"];
-			return options.filter((o) => o.startsWith(prefix)).map((o) => ({ value: o, label: o }));
+		description: "Suggest smaller code changes for files you choose",
+		getArgumentCompletions: (prefix, context) => {
+			if (context && context.tokenIndex > 0) return null;
+			const normalizedPrefix = prefix.trim().toLowerCase();
+			const options = SIMPLIFY_COMMAND_COMPLETIONS.filter((item) => item.value.startsWith(normalizedPrefix));
+			return options.length > 0 ? options : null;
 		},
 		handler: async (args, ctx) => {
 			const parts = args.trim().split(/\s+/).filter(Boolean);

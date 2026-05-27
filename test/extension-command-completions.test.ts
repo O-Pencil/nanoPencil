@@ -13,6 +13,8 @@ import interviewExtension from "../extensions/defaults/interview/index.js";
 import loopExtension from "../extensions/defaults/loop/index.js";
 import linkWorldExtension from "../extensions/defaults/link-world/index.js";
 import mcpExtension from "../extensions/defaults/mcp/index.js";
+import exportHtmlExtension from "../extensions/optional/export-html/index.js";
+import simplifyExtension from "../extensions/optional/simplify/index.js";
 import recapExtension from "../extensions/defaults/recap/index.js";
 import salExtension from "../extensions/defaults/sal/index.js";
 import securityAuditExtension from "../extensions/defaults/security-audit/index.js";
@@ -33,6 +35,7 @@ function createExtensionHarness() {
 		registerCommand: (name: string, options: CapturedCommand) => commands.set(name, options),
 		registerMessageRenderer: () => {},
 		registerTool: () => {},
+		registerShortcut: () => {},
 		registerFlag: () => {},
 		getFlag: () => false,
 		on: () => {},
@@ -255,6 +258,35 @@ test("sal commands use readable descriptions and setup hints", async () => {
 	assert.ok(status);
 	assert.match(status.description ?? "", /Show whether SAL is active/);
 	assert.doesNotMatch(status.description ?? "", /snapshot/);
+});
+
+test("optional export and simplify commands expose safe option hints", async () => {
+	const exportHarness = createExtensionHarness();
+	await exportHtmlExtension(exportHarness.api as never);
+	const exportCommand = exportHarness.commands.get("export");
+	assert.ok(exportCommand);
+	assert.match(exportCommand.description ?? "", /Save this session as a shareable HTML file/);
+	assert.deepEqual(exportCommand.getArgumentCompletions?.(".")?.map((item) => item.value), ["./nanopencil-session.html"]);
+	assert.match(exportCommand.getArgumentCompletions?.(".")?.[0]?.description ?? "", /Choose the output file/);
+
+	const simplifyHarness = createExtensionHarness();
+	simplifyExtension(simplifyHarness.api as never);
+	const simplify = simplifyHarness.commands.get("simplify");
+	assert.ok(simplify);
+	assert.match(simplify.description ?? "", /Suggest smaller code changes/);
+	assert.doesNotMatch(simplify.description ?? "", /Claude Code|cognitive load/i);
+	assert.deepEqual(simplify.getArgumentCompletions?.("--d")?.map((item) => item.value), ["--dry-run"]);
+	assert.match(simplify.getArgumentCompletions?.("--d")?.[0]?.description ?? "", /Preview changes without writing files/);
+	assert.equal(
+		simplify.getArgumentCompletions?.("--d", {
+			commandName: "simplify",
+			argumentText: "src/file.ts --d",
+			argumentPrefix: "--d",
+			tokenIndex: 1,
+			previousTokens: ["src/file.ts"],
+		}),
+		null,
+	);
 });
 
 test("figma command exposes setup and authentication completions", async () => {

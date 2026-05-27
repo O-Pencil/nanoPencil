@@ -8,7 +8,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@pencil-agent/agent-core";
+import type { AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
 import {
   type AssistantMessage,
   getOAuthProviders,
@@ -491,6 +491,21 @@ export class InteractiveMode {
           label: item.id,
           description: item.provider,
         }));
+      };
+    }
+
+    const thinkingCommand = slashCommands.find(
+      (command) => command.name === "thinking",
+    );
+    if (thinkingCommand) {
+      thinkingCommand.getArgumentCompletions = (
+        prefix: string,
+      ): AutocompleteItem[] | null => {
+        const lowerPrefix = prefix.trim().toLowerCase();
+        const levels = this.session.getAvailableThinkingLevels();
+        const matches = levels.filter((level) => level.startsWith(lowerPrefix));
+        if (matches.length === 0) return null;
+        return matches.map((level) => ({ value: level, label: level }));
       };
     }
 
@@ -2991,6 +3006,11 @@ export class InteractiveMode {
       await this.handleModelCommand(searchTerm);
       return true;
     }
+    if (text === "/thinking" || text.startsWith("/thinking ")) {
+      this.handleThinkingCommand(text);
+      clear();
+      return true;
+    }
     if (text === "/agent-loop" || text.startsWith("/agent-loop ")) {
       this.handleAgentLoopCommand(text);
       clear();
@@ -4112,6 +4132,28 @@ export class InteractiveMode {
       this.updateEditorBorderColor();
       this.showStatus(`Thinking level: ${newLevel}`);
     }
+  }
+
+  private handleThinkingCommand(text: string): void {
+    const arg = text.slice("/thinking".length).trim().toLowerCase();
+    const levels = this.session.getAvailableThinkingLevels();
+
+    if (!arg) {
+      this.showStatus(
+        `Thinking level: ${this.session.thinkingLevel} (available: ${levels.join(", ")})`,
+      );
+      return;
+    }
+
+    if (!levels.includes(arg as ThinkingLevel)) {
+      this.showStatus(`Unknown thinking level: ${arg} (available: ${levels.join(", ")})`);
+      return;
+    }
+
+    this.session.setThinkingLevel(arg as ThinkingLevel);
+    this.footer.invalidate();
+    this.updateEditorBorderColor();
+    this.showStatus(`Thinking level: ${this.session.thinkingLevel}`);
   }
 
   private handleAgentLoopCommand(text: string): void {

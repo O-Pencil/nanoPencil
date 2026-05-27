@@ -6,6 +6,7 @@ test("acp available commands: strips leading slash and filters unsupported built
 	const commands = __testUtils.buildAcpAvailableCommands([
 		{ name: "new", description: "Start a new session" },
 		{ name: "/model", description: "Switch models" },
+		{ name: "/thinking", description: "Set thinking level" },
 		{ name: "settings", description: "Open settings UI" },
 		{ name: "/memory", description: "Inspect memory" },
 		{ name: "review", description: "Run code review" },
@@ -14,11 +15,12 @@ test("acp available commands: strips leading slash and filters unsupported built
 
 	assert.deepEqual(
 		commands.map((command) => command.name),
-		["new", "model", "review"],
+		["new", "model", "thinking", "review"],
 	);
 	assert.equal(commands[0]?.input, undefined);
 	assert.deepEqual(commands[1]?.input, { hint: "provider/model or model id" });
-	assert.deepEqual(commands[2]?.input, { hint: "Enter command arguments" });
+	assert.deepEqual(commands[2]?.input, { hint: "Thinking level" });
+	assert.deepEqual(commands[3]?.input, { hint: "Enter command arguments" });
 });
 
 test("acp available commands: normalizes slash-prefixed names", () => {

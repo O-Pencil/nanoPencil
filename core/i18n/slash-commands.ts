@@ -18,6 +18,7 @@ export const slashCommands = {
 	},
 	settings: "Open settings menu",
 	model: "Select model (opens selector UI)",
+	thinking: "Choose reasoning depth for the current model",
 	"agent-loop": "Choose how the agent keeps working through a task",
 	"scoped-models": "Choose which models appear in quick switching",
 	apikey: "Update API key for current provider",

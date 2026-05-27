@@ -18,6 +18,7 @@ export const slashCommands = {
 	},
 	settings: "打开设置菜单",
 	model: "选择模型（打开选择器界面）",
+	thinking: "选择当前模型的推理深度",
 	"agent-loop": "选择 agent 推进任务的方式",
 	"scoped-models": "选择快速切换里出现的模型",
 	apikey: "更新当前提供商的 API 密钥",

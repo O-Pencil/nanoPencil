@@ -47,6 +47,58 @@ const requireFdPath = (): string => {
 };
 
 describe("CombinedAutocompleteProvider", () => {
+	describe("slash command arguments", () => {
+		it("completes only the current argument token", () => {
+			const provider = new CombinedAutocompleteProvider([
+				{
+					name: "mem-edit",
+					description: "Edit one memory",
+					getArgumentCompletions: (prefix) =>
+						["summary", "detail", "salience"]
+							.filter((value) => value.startsWith(prefix))
+							.map((value) => ({ value, label: value })),
+				},
+			]);
+
+			const lines = ["/mem-edit memory-123 su"];
+			const cursorCol = lines[0].length;
+			const result = provider.getSuggestions(lines, 0, cursorCol);
+
+			assert.notEqual(result, null);
+			assert.strictEqual(result?.prefix, "su");
+			assert.deepStrictEqual(result?.items.map((item) => item.value), ["summary"]);
+
+			const applied = provider.applyCompletion(lines, 0, cursorCol, result!.items[0]!, result!.prefix);
+			assert.deepStrictEqual(applied.lines, ["/mem-edit memory-123 summary"]);
+			assert.strictEqual(applied.cursorCol, "/mem-edit memory-123 summary".length);
+		});
+
+		it("completes an empty next argument without replacing previous arguments", () => {
+			const provider = new CombinedAutocompleteProvider([
+				{
+					name: "mem-resolve",
+					description: "Resolve memory conflict",
+					getArgumentCompletions: (prefix) =>
+						["merge", "demote", "forget", "mark-situational"]
+							.filter((value) => value.startsWith(prefix))
+							.map((value) => ({ value, label: value })),
+				},
+			]);
+
+			const lines = ["/mem-resolve a b "];
+			const cursorCol = lines[0].length;
+			const result = provider.getSuggestions(lines, 0, cursorCol);
+
+			assert.notEqual(result, null);
+			assert.strictEqual(result?.prefix, "");
+			assert.ok(result?.items.some((item) => item.value === "merge"));
+
+			const merge = result!.items.find((item) => item.value === "merge")!;
+			const applied = provider.applyCompletion(lines, 0, cursorCol, merge, result!.prefix);
+			assert.deepStrictEqual(applied.lines, ["/mem-resolve a b merge"]);
+		});
+	});
+
 	describe("extractPathPrefix", () => {
 		it("extracts / from 'hey /' when forced", () => {
 			const provider = new CombinedAutocompleteProvider([], "/tmp");

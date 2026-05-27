@@ -124,3 +124,17 @@ test("dream command exposes manual run status and stop path", async () => {
 		await rm(memoryDir, { recursive: true, force: true });
 	}
 });
+
+test("memory edit and resolve commands expose safe argument completions", () => {
+	const harness = createHarness();
+	nanomemExtension(harness.api as never);
+
+	const edit = harness.commands.get("mem-edit");
+	assert.ok(edit);
+	assert.deepEqual(edit.getArgumentCompletions?.("sal")?.map((item) => item.value), ["salience"]);
+
+	const resolve = harness.commands.get("mem-resolve");
+	assert.ok(resolve);
+	assert.deepEqual(resolve.getArgumentCompletions?.("mark")?.map((item) => item.value), ["mark-situational"]);
+	assert.ok(resolve.getArgumentCompletions?.("")?.some((item) => item.value === "merge"));
+});

@@ -107,6 +107,8 @@ type DreamTaskState = {
 };
 
 const dreamCommands = ["run", "status", "stop"] as const;
+const memoryEditFields = ["summary", "detail", "content", "salience", "ttl", "retention"] as const;
+const memoryResolveActions = ["merge", "demote", "forget", "mark-situational"] as const;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
 	return new Promise((resolve) => {
@@ -906,6 +908,13 @@ export default function nanomemExtension(api: ExtensionAPI) {
 
 	api.registerCommand("mem-edit", {
 		description: "Edit one memory by ID. Usage: /mem-edit <id> <field> <value>",
+		getArgumentCompletions: (argumentPrefix) => {
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = memoryEditFields
+				.filter((value) => value.startsWith(prefix))
+				.map((value) => ({ value, label: value }));
+			return values.length > 0 ? values : null;
+		},
 		handler: async (args, ctx) => {
 			const parts = (args || "").trim().split(/\s+/);
 			const [id, field, ...rest] = parts;
@@ -925,6 +934,13 @@ export default function nanomemExtension(api: ExtensionAPI) {
 
 	api.registerCommand("mem-resolve", {
 		description: "Resolve a memory conflict. Usage: /mem-resolve <aId> <bId> [merge|demote|forget|mark-situational]",
+		getArgumentCompletions: (argumentPrefix) => {
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = memoryResolveActions
+				.filter((value) => value.startsWith(prefix))
+				.map((value) => ({ value, label: value }));
+			return values.length > 0 ? values : null;
+		},
 		handler: async (args, ctx) => {
 			const [aId, bId, action] = (args || "").trim().split(/\s+/);
 			if (!aId || !bId) {

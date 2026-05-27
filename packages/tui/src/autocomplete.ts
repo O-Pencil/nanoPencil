@@ -75,6 +75,11 @@ function parsePathPrefix(prefix: string): { rawPrefix: string; isAtPrefix: boole
 	return { rawPrefix: prefix, isAtPrefix: false, isQuotedPrefix: false };
 }
 
+function getCurrentArgumentPrefix(argumentText: string): string {
+	const match = argumentText.match(/(?:^|\s)(\S*)$/);
+	return match?.[1] ?? argumentText;
+}
+
 function buildCompletionValue(
 	path: string,
 	options: { isDirectory: boolean; isAtPrefix: boolean; isQuotedPrefix: boolean },
@@ -273,6 +278,7 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 				// Space found - complete command arguments
 				const commandName = textBeforeCursor.slice(1, spaceIndex); // Command without "/"
 				const argumentText = textBeforeCursor.slice(spaceIndex + 1); // Text after space
+				const argumentPrefix = getCurrentArgumentPrefix(argumentText);
 
 				const command = this.commands.find((cmd) => {
 					const name = "name" in cmd ? cmd.name : cmd.value;
@@ -282,14 +288,14 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 					return null; // No argument completion for this command
 				}
 
-				const argumentSuggestions = command.getArgumentCompletions(argumentText);
+				const argumentSuggestions = command.getArgumentCompletions(argumentPrefix);
 				if (!argumentSuggestions || argumentSuggestions.length === 0) {
 					return null;
 				}
 
 				return {
 					items: argumentSuggestions,
-					prefix: argumentText,
+					prefix: argumentPrefix,
 				};
 			}
 		}

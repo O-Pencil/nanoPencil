@@ -19,6 +19,7 @@ import recapExtension from "../extensions/defaults/recap/index.js";
 import salExtension from "../extensions/defaults/sal/index.js";
 import securityAuditExtension from "../extensions/defaults/security-audit/index.js";
 import subagentExtension from "../extensions/defaults/subagent/index.js";
+import teamExtension from "../extensions/defaults/team/index.js";
 import tokenSaveExtension from "../extensions/defaults/token-save/index.js";
 
 type CapturedCommand = Omit<RegisteredCommand, "name">;
@@ -346,4 +347,48 @@ test("subagent commands expose root actions and write flag completions", async (
 	assert.ok(run);
 	assert.deepEqual(run.getArgumentCompletions?.("--w")?.map((item) => item.value), ["--write"]);
 	assert.equal(harness.commands.get("subagent:status")?.getArgumentCompletions?.("sta"), null);
+});
+
+test("team commands use readable labels in the command palette", async () => {
+	const previousAgentDir = process.env.NANOPENCIL_CODING_AGENT_DIR;
+	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-team-commands-"));
+	process.env.NANOPENCIL_CODING_AGENT_DIR = agentDir;
+
+	try {
+		const harness = createExtensionHarness();
+		await teamExtension(harness.api as never);
+
+		const team = harness.commands.get("team");
+		assert.ok(team);
+		assert.match(team.description ?? "", /Create or manage teammates/);
+		assert.doesNotMatch(team.description ?? "", /AgentTeam/);
+		assert.match(team.getArgumentCompletions?.("ps")?.[0]?.description ?? "", /decision settings/);
+
+		const progress = harness.commands.get("team:progress");
+		assert.ok(progress);
+		assert.match(progress.description ?? "", /Show teammate progress/);
+		assert.doesNotMatch(progress.description ?? "", /harness/i);
+
+		const terminate = harness.commands.get("team:terminate");
+		assert.ok(terminate);
+		assert.match(terminate.description ?? "", /Remove a teammate/);
+		assert.doesNotMatch(terminate.description ?? "", /Destroy/i);
+
+		const mail = harness.commands.get("team:mail");
+		assert.ok(mail);
+		assert.match(mail.description ?? "", /Send a note from one teammate to another/);
+		assert.doesNotMatch(mail.description ?? "", /mailbox/i);
+
+		const psyche = harness.commands.get("team:psyche");
+		assert.ok(psyche);
+		assert.match(psyche.description ?? "", /Show teammate decision settings/);
+		assert.doesNotMatch(psyche.description ?? "", /psyche/i);
+	} finally {
+		if (previousAgentDir === undefined) {
+			delete process.env.NANOPENCIL_CODING_AGENT_DIR;
+		} else {
+			process.env.NANOPENCIL_CODING_AGENT_DIR = previousAgentDir;
+		}
+		rmSync(agentDir, { recursive: true, force: true });
+	}
 });

@@ -111,6 +111,49 @@ export const VALID_MODES: TeammateMode[] = ["research", "plan", "execute", "revi
 export const VALID_PRESETS: PresetName[] = ["solo", "duo", "squad"];
 export const VALID_TASK_ACTIONS = ["add", "claim", "done", "block", "cancel", "list"] as const;
 const TEAM_SPAWN_FLAGS = ["--name", "--harness"] as const;
+const TEAM_COMPLETION_DESCRIPTIONS: Record<string, string> = {
+	help: "Show team commands",
+	spawn: "Create a teammate",
+	send: "Send work to a teammate",
+	status: "Show teammate status",
+	stop: "Stop a teammate's current turn",
+	terminate: "Remove a teammate",
+	approve: "Approve a teammate request",
+	mode: "Change how a teammate works",
+	preset: "Start with a preset team shape",
+	dashboard: "Show or hide the team panel",
+	progress: "Show teammate progress",
+	psyche: "Show teammate decision settings",
+	task: "Manage shared team tasks",
+	mail: "Send a teammate-to-teammate note",
+	"allow-path": "Allow a teammate to write in a path",
+	pm: "Plan priorities and coordinate work",
+	architect: "Design structure and break down trade-offs",
+	developer: "Have a teammate write code",
+	designer: "Review product and interaction details",
+	"data-analyst": "Check evidence, metrics, and results",
+	researcher: "Explore read-only context",
+	reviewer: "Review code or plans without writing",
+	implementer: "Have a teammate write code",
+	planner: "Have a teammate make a plan",
+	verifier: "Check whether the work is correct",
+	generic: "Use a flexible teammate role",
+	"--name": "Choose the teammate name",
+	"--harness": "Use structured progress tracking",
+	research: "Read and investigate without writing",
+	plan: "Write a plan before code changes",
+	execute: "Allow code changes",
+	review: "Review without writing",
+	solo: "Use one focused teammate",
+	duo: "Use two teammates with complementary roles",
+	squad: "Use a larger team for broader work",
+	add: "Add a shared task",
+	claim: "Assign a task to a teammate",
+	done: "Mark a task complete",
+	block: "Mark a task blocked",
+	cancel: "Cancel a task",
+	list: "List shared tasks",
+};
 
 type TeamArgumentCompletionContext = {
 	commandName: string;
@@ -145,11 +188,13 @@ export function getTeamArgumentCompletions(
 	commandName: string,
 	argumentPrefix: string,
 	context?: TeamArgumentCompletionContext,
-): Array<{ value: string; label: string }> | null {
+): Array<{ value: string; label: string; description?: string }> | null {
 	const prefix = argumentPrefix.trim().toLowerCase();
 	const values = getTeamCompletionValues(commandName, context);
 	const matches = values.filter((value) => value.startsWith(prefix));
-	return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
+	return matches.length > 0
+		? matches.map((value) => ({ value, label: value, description: TEAM_COMPLETION_DESCRIPTIONS[value] }))
+		: null;
 }
 
 /**

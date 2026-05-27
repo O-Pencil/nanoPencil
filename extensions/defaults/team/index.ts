@@ -677,32 +677,32 @@ function getCommandDescription(commandName: string): string {
 		case "team:spawn":
 			return "Create a persistent teammate (/team:spawn <role> [--name <name>])";
 		case "team:send":
-			return "Send message to a teammate (/team:send <name> <message>)";
+			return "Send work or a note to a teammate (/team:send <name> <message>)";
 		case "team:status":
 			return "Show team or teammate status";
 		case "team:stop":
 			return "Stop teammate's current turn";
 		case "team:terminate":
-			return "Destroy a teammate";
+			return "Remove a teammate";
 		case "team:approve":
-			return "Approve a permission request";
+			return "Approve a teammate request";
 		case "team:mode":
-			return "Switch teammate mode (/team:mode <name> <plan|execute|review>)";
+			return "Change how a teammate works (/team:mode <name> <plan|execute|review>)";
 		case "team:preset":
 			return "Create teammates from a preset";
 		case "team:dashboard":
 			return "Toggle the team dashboard";
 		case "team:progress":
-			return "Show harness progress";
+			return "Show teammate progress";
 		case "team:psyche":
-			return "Show psyche weights";
+			return "Show teammate decision settings";
 		case "team:task":
 			return "Manage shared team tasks";
 		case "team:mail":
-			return "Route teammate-to-teammate mailbox messages";
+			return "Send a note from one teammate to another";
 		case "team:allow-path":
 			return "Grant a teammate write access to a path prefix";
 		default:
-			return "AgentTeam management";
+			return "Create or manage teammates";
 	}
 }

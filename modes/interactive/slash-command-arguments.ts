@@ -1,11 +1,11 @@
 /**
- * [WHO]: getThinkingArgumentCompletions(), getMcpArgumentCompletions(), getLanguageArgumentCompletions()
+ * [WHO]: getAgentLoopArgumentCompletions(), getThinkingArgumentCompletions(), getMcpArgumentCompletions(), getLanguageArgumentCompletions()
  * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/i18n, core/mcp/mcp-client
  * [TO]: Consumed by modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/slash-command-arguments.ts - pure argument completion helpers for built-in TUI slash commands
  */
 
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import type { AgentLoopFramework, ThinkingLevel } from "@pencil-agent/agent-core";
 import type { ArgumentCompletionContext, AutocompleteItem } from "@pencil-agent/tui";
 import { AVAILABLE_LOCALES, LOCALE_NAMES, type Locale } from "../../core/i18n/index.js";
 import type { MCPServerConfig } from "../../core/mcp/mcp-client.js";
@@ -18,6 +18,19 @@ const THINKING_COMPLETIONS: Record<ThinkingLevel, string> = {
 	high: "Deeper reasoning for complex work",
 	xhigh: "Maximum reasoning when the model supports it",
 };
+
+const AGENT_LOOP_COMPLETIONS: ReadonlyArray<AutocompleteItem & { value: AgentLoopFramework }> = [
+	{
+		value: "standard",
+		label: "standard",
+		description: "Use the normal agent loop",
+	},
+	{
+		value: "weak-model-compatible",
+		label: "weak-model-compatible",
+		description: "Keep working with simpler models",
+	},
+];
 
 const MCP_ACTION_COMPLETIONS = [
 	{ value: "list", label: "list", description: "Show configured MCP servers" },
@@ -53,6 +66,14 @@ export function getThinkingArgumentCompletions(
 		})),
 		argumentPrefix,
 	);
+}
+
+export function getAgentLoopArgumentCompletions(
+	argumentPrefix: string,
+	context?: Pick<ArgumentCompletionContext, "tokenIndex">,
+): AutocompleteItem[] | null {
+	if (!isFirstToken(context)) return null;
+	return matchCompletions(AGENT_LOOP_COMPLETIONS, argumentPrefix);
 }
 
 export function getMcpArgumentCompletions(

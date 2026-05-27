@@ -189,6 +189,7 @@ import {
   theme,
 } from "./theme/theme.js";
 import {
+  getAgentLoopArgumentCompletions,
   getLanguageArgumentCompletions,
   getMcpArgumentCompletions,
   getThinkingArgumentCompletions,
@@ -512,6 +513,13 @@ export class InteractiveMode {
         context,
         this.session.getAvailableThinkingLevels(),
       );
+    }
+
+    const agentLoopCommand = slashCommands.find(
+      (command) => command.name === "agent-loop",
+    );
+    if (agentLoopCommand) {
+      agentLoopCommand.getArgumentCompletions = getAgentLoopArgumentCompletions;
     }
 
     const mcpCommand = slashCommands.find((command) => command.name === "mcp");

@@ -8,6 +8,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+	getAgentLoopArgumentCompletions,
 	getLanguageArgumentCompletions,
 	getMcpArgumentCompletions,
 	getThinkingArgumentCompletions,
@@ -18,6 +19,27 @@ test("thinking command completions explain the user-facing tradeoff", () => {
 
 	assert.deepEqual(completions?.map((item) => item.value), ["medium"]);
 	assert.match(completions?.[0]?.description ?? "", /Balanced reasoning/);
+});
+
+test("agent-loop command completions explain persistence behavior", () => {
+	const standard = getAgentLoopArgumentCompletions("st");
+	assert.deepEqual(standard?.map((item) => item.value), ["standard"]);
+	assert.match(standard?.[0]?.description ?? "", /Use the normal agent loop/);
+
+	const compatible = getAgentLoopArgumentCompletions("weak");
+	assert.deepEqual(compatible?.map((item) => item.value), ["weak-model-compatible"]);
+	assert.match(compatible?.[0]?.description ?? "", /Keep working with simpler models/);
+
+	assert.equal(
+		getAgentLoopArgumentCompletions("st", {
+			commandName: "agent-loop",
+			argumentText: "standard st",
+			argumentPrefix: "st",
+			tokenIndex: 1,
+			previousTokens: ["standard"],
+		}),
+		null,
+	);
 });
 
 test("mcp command completions expose readable actions and server targets", () => {

@@ -133,7 +133,8 @@ Shared base layer for insforge-backed telemetry sinks. Factored out of SAL's eva
 `insforge-base.ts`: InsforgeHttpClient (POST/PATCH, TLS allowSelfSigned, 5s timeout, source-scoped diagnostic fingerprints), parsePostgrestErrorCode, safeHost
 `batching-dispatcher.ts`: BatchingDispatcher<T> — generic debounced flush + reentrancy-safe drain + close-time flush
 `build-meta.ts`: loadBuildMeta() — location-independent version/commit/branch resolver shared by SAL eval and ext-events sinks
-`ext-events.ts`: ExtensionTelemetrySink interface + classifyArgsSignature() + createExtensionTelemetrySink() — P1 ext_command_events writer; one batched row per slash command invocation, noop sink when no credentials
+`ext-events.ts`: ExtensionTelemetrySink interface + classifyArgsSignature() + HOOK_SAMPLE_RATES + createExtensionTelemetrySink() — P1 ext_command_events writer (slash command invocations), P2 ext_llm_calls writer (LLM calls + caller attribution), P3 ext_hook_events writer (hook timings, tool_* sampled at 10%); single sink, tagged-union batching, noop when no credentials
+`caller-context.ts`: AsyncLocalStorage-backed ExtCallerContext bus + runWithExtCallerContext + getExtCallerContext — pushed by runner.invokeCommand (user_initiated=true) and runner.invokeHookHandler (user_initiated=false), read by extension-core-bindings LLM wrappers; the is_user_initiated flag is the explicit idle-thinking-class bug detector
 `index.ts`: Barrel — the only entry point external callers should import from
 
 ### Configuration (`core/config/`)

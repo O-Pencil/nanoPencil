@@ -17,6 +17,7 @@ import {
 	type CommandOutcome,
 	type ExtCallerContext,
 	type ExtensionTelemetrySink,
+	HOOK_SAMPLE_RATES,
 	type LlmCallEventInput,
 	runWithExtCallerContext,
 } from "../telemetry/index.js";
@@ -627,22 +628,63 @@ export class ExtensionRunner {
 	}
 
 	/**
-	 * Wrap an extension hook handler invocation in an AsyncLocalStorage frame
-	 * tagged with extension_name + hook name + isUserInitiated=false. Any
-	 * descendant LLM call placed by that handler reads this context and gets
-	 * properly attributed in ext_llm_calls. Used by all emit*() methods below.
+	 * Wrap an extension hook handler invocation in three layers:
+	 *
+	 *   1. AsyncLocalStorage frame so any LLM call placed by the handler gets
+	 *      attributed to this extension + hook + isUserInitiated=false in
+	 *      ext_llm_calls.
+	 *   2. Wall-clock timing measurement (only when the sample roll passes).
+	 *   3. One fire-and-forget ext_hook_events row per sampled invocation,
+	 *      capturing duration_ms + ok + error_code + sample_rate.
+	 *
+	 * High-frequency hooks (tool_*) are sampled at 10% so the table doesn't
+	 * drown in tool-execution rows; the sample_rate column on each row lets
+	 * dashboards extrapolate with `count(*) * 1/sample_rate`. Sampling decision
+	 * sits inside the AsyncLocalStorage frame so even skipped-emit hooks still
+	 * attribute their LLM calls.
 	 */
 	private invokeHookHandler<T>(
 		ext: Extension,
 		hookName: string,
 		fn: () => Promise<T> | T,
 	): Promise<T> {
+		const extensionName = this.deriveExtensionName(ext);
 		const ctx: ExtCallerContext = {
-			extensionName: this.deriveExtensionName(ext),
+			extensionName,
 			callerContext: `hook:${hookName}`,
 			isUserInitiated: false,
 		};
-		return runWithExtCallerContext(ctx, fn);
+		return runWithExtCallerContext(ctx, async () => {
+			const sampleRate = HOOK_SAMPLE_RATES[hookName] ?? 1.0;
+			if (sampleRate < 1.0 && Math.random() >= sampleRate) {
+				return await fn();
+			}
+			const recordedAt = new Date();
+			const startPerf = performance.now();
+			let ok = true;
+			let errorCode: string | null = null;
+			try {
+				return await fn();
+			} catch (err) {
+				ok = false;
+				errorCode = err instanceof Error ? err.constructor.name : "unknown";
+				throw err;
+			} finally {
+				try {
+					this.telemetrySink?.writeHookEvent({
+						extensionName,
+						hookName,
+						durationMs: Math.round(performance.now() - startPerf),
+						ok,
+						errorCode,
+						sampleRate,
+						recordedAt,
+					});
+				} catch {
+					// Telemetry never destabilizes hook dispatch.
+				}
+			}
+		});
 	}
 
 	/**

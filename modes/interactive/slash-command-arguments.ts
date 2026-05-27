@@ -1,5 +1,5 @@
 /**
- * [WHO]: getAgentLoopArgumentCompletions(), getThinkingArgumentCompletions(), getMcpArgumentCompletions(), getLanguageArgumentCompletions(), getPersonaArgumentCompletions(), getLoginArgumentCompletions()
+ * [WHO]: getModelArgumentCompletions(), getAgentLoopArgumentCompletions(), getThinkingArgumentCompletions(), getMcpArgumentCompletions(), getLanguageArgumentCompletions(), getPersonaArgumentCompletions(), getLoginArgumentCompletions()
  * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/i18n, core/mcp/mcp-client
  * [TO]: Consumed by modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/slash-command-arguments.ts - pure argument completion helpers for built-in TUI slash commands
@@ -50,6 +50,11 @@ type LoginCompletionProvider = {
 	name: string;
 	authType: "oauth" | "api_key";
 };
+type ModelCompletionEntry = {
+	id: string;
+	name: string;
+	provider: string;
+};
 
 function matchCompletions(items: readonly AutocompleteItem[], prefix: string): AutocompleteItem[] | null {
 	const lowerPrefix = prefix.trim().toLowerCase();
@@ -68,6 +73,22 @@ function matchCompletionsByValueOrLabelWord(items: readonly AutocompleteItem[], 
 
 function isFirstToken(context?: Pick<ArgumentCompletionContext, "tokenIndex">): boolean {
 	return !context || context.tokenIndex === 0;
+}
+
+export function getModelArgumentCompletions(
+	argumentPrefix: string,
+	context: Pick<ArgumentCompletionContext, "tokenIndex"> | undefined,
+	models: readonly ModelCompletionEntry[],
+): AutocompleteItem[] | null {
+	if (!isFirstToken(context)) return null;
+	return matchCompletionsByValueOrLabelWord(
+		models.map((model) => ({
+			value: `${model.provider}/${model.id}`,
+			label: model.name,
+			description: `${model.provider}/${model.id}`,
+		})),
+		argumentPrefix,
+	);
 }
 
 export function getThinkingArgumentCompletions(

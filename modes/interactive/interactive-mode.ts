@@ -33,7 +33,6 @@ import {
   CombinedAutocompleteProvider,
   type Component,
   Container,
-  fuzzyFilter,
   Loader,
   Markdown,
   matchesKey,
@@ -193,6 +192,7 @@ import {
   getLanguageArgumentCompletions,
   getLoginArgumentCompletions,
   getMcpArgumentCompletions,
+  getModelArgumentCompletions,
   getPersonaArgumentCompletions,
   getThinkingArgumentCompletions,
 } from "./slash-command-arguments.js";
@@ -470,36 +470,13 @@ export class InteractiveMode {
     if (modelCommand) {
       modelCommand.getArgumentCompletions = (
         prefix: string,
+        context,
       ): AutocompleteItem[] | null => {
-        // Get available models (scoped or from registry)
         const models =
           this.session.scopedModels.length > 0
             ? this.session.scopedModels.map((s) => s.model)
             : this.session.modelRegistry.getAvailable();
-
-        if (models.length === 0) return null;
-
-        // Create items with provider/id format
-        const items = models.map((m) => ({
-          id: m.id,
-          provider: m.provider,
-          label: `${m.provider}/${m.id}`,
-        }));
-
-        // Fuzzy filter by model ID + provider (allows cross-token model/provider matching)
-        const filtered = fuzzyFilter(
-          items,
-          prefix,
-          (item) => `${item.id} ${item.provider}`,
-        );
-
-        if (filtered.length === 0) return null;
-
-        return filtered.map((item) => ({
-          value: item.label,
-          label: item.id,
-          description: item.provider,
-        }));
+        return getModelArgumentCompletions(prefix, context, models);
       };
     }
 

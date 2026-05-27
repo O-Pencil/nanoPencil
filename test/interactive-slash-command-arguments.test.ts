@@ -12,9 +12,21 @@ import {
 	getLanguageArgumentCompletions,
 	getLoginArgumentCompletions,
 	getMcpArgumentCompletions,
+	getModelArgumentCompletions,
 	getPersonaArgumentCompletions,
 	getThinkingArgumentCompletions,
 } from "../modes/interactive/slash-command-arguments.js";
+
+test("model command completions match model display names", () => {
+	const completions = getModelArgumentCompletions("sonnet", undefined, [
+		{ id: "claude-4-5-20250929", name: "Claude Sonnet 4.5", provider: "anthropic" },
+		{ id: "gpt-5.1", name: "GPT 5.1", provider: "openai" },
+	]);
+
+	assert.deepEqual(completions?.map((item) => item.value), ["anthropic/claude-4-5-20250929"]);
+	assert.equal(completions?.[0]?.label, "Claude Sonnet 4.5");
+	assert.equal(completions?.[0]?.description, "anthropic/claude-4-5-20250929");
+});
 
 test("thinking command completions explain the user-facing tradeoff", () => {
 	const completions = getThinkingArgumentCompletions("m", undefined, ["off", "medium", "high"]);

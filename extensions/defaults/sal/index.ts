@@ -25,6 +25,7 @@ import type {
 	ToolExecutionEndEvent,
 } from "../../../core/extensions/types.js";
 import { getTurnContext, resetTurnContext, setTurnContext } from "../../../core/runtime/turn-context.js";
+import { loadInsforgeCredentials } from "../../../core/telemetry/index.js";
 import { locateAction, locateTask, type AnchorResolution } from "./anchors.js";
 import {
 	buildTerrainIndex,

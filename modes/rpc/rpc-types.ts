@@ -9,6 +9,7 @@ import type { ImageContent, Model } from "@pencil-agent/ai";
 import type { SessionStats } from "../../core/runtime/agent-session.js";
 import type { BashResult } from "../../core/bash-executor.js";
 import type { CompactionResult } from "../../core/session/compaction/index.js";
+import type { SlashCommandCategory } from "../../core/slash-commands.js";
 
 type AgentLoopFrameworkInput =
 	| AgentLoopFramework
@@ -86,6 +87,8 @@ export interface RpcSlashCommand {
 	description?: string;
 	/** What kind of command this is */
 	source: "extension" | "prompt" | "skill";
+	/** Human-facing command category for grouping and filtering */
+	category?: SlashCommandCategory;
 	/** Where the command was loaded from (undefined for extensions) */
 	location?: "user" | "project" | "path";
 	/** File path to the command source */

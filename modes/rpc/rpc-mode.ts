@@ -7,6 +7,8 @@
 import * as crypto from "node:crypto";
 import * as readline from "readline";
 import type { AgentSession } from "../../core/runtime/agent-session.js";
+import { buildExtensionSlashCommands } from "../../core/runtime/slash-command-catalog.js";
+import { inferSlashCommandCategory, type SlashCommandInfo } from "../../core/slash-commands.js";
 import type {
 	ExtensionUIContext,
 	ExtensionUIDialogOptions,
@@ -30,6 +32,48 @@ export type {
 	RpcResponse,
 	RpcSessionState,
 } from "./rpc-types.js";
+
+type RpcSlashCommandCatalogSession = Pick<AgentSession, "extensionRunner" | "promptTemplates" | "resourceLoader">;
+
+function toRpcSlashCommand(command: SlashCommandInfo): RpcSlashCommand {
+	return {
+		name: command.name,
+		description: command.description,
+		source: command.source,
+		category: command.category,
+		location: command.location as RpcSlashCommand["location"],
+		path: command.path,
+	};
+}
+
+export function buildRpcSlashCommands(session: RpcSlashCommandCatalogSession): RpcSlashCommand[] {
+	if (session.extensionRunner) {
+		return buildExtensionSlashCommands({
+			promptTemplates: session.promptTemplates,
+			resourceLoader: session.resourceLoader,
+			extensionRunner: session.extensionRunner,
+		}).map(toRpcSlashCommand);
+	}
+
+	return [
+		...session.promptTemplates.map((template) => ({
+			name: template.name,
+			description: template.description,
+			source: "prompt" as const,
+			category: inferSlashCommandCategory(template.name, "prompt"),
+			location: template.source as RpcSlashCommand["location"],
+			path: template.filePath,
+		})),
+		...session.resourceLoader.getSkills().skills.map((skill) => ({
+			name: `skill:${skill.name}`,
+			description: skill.description,
+			source: "skill" as const,
+			category: inferSlashCommandCategory(skill.name, "skill"),
+			location: skill.source as RpcSlashCommand["location"],
+			path: skill.filePath,
+		})),
+	];
+}
 
 /**
  * Run in RPC mode.
@@ -555,41 +599,7 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			// =================================================================
 
 			case "get_commands": {
-				const commands: RpcSlashCommand[] = [];
-
-				// Extension commands
-				for (const { command, extensionPath } of session.extensionRunner?.getRegisteredCommandsWithPaths() ?? []) {
-					commands.push({
-						name: command.name,
-						description: command.description,
-						source: "extension",
-						path: extensionPath,
-					});
-				}
-
-				// Prompt templates (source is always "user" | "project" | "path" in coding-agent)
-				for (const template of session.promptTemplates) {
-					commands.push({
-						name: template.name,
-						description: template.description,
-						source: "prompt",
-						location: template.source as RpcSlashCommand["location"],
-						path: template.filePath,
-					});
-				}
-
-				// Skills (source is always "user" | "project" | "path" in coding-agent)
-				for (const skill of session.resourceLoader.getSkills().skills) {
-					commands.push({
-						name: `skill:${skill.name}`,
-						description: skill.description,
-						source: "skill",
-						location: skill.source as RpcSlashCommand["location"],
-						path: skill.filePath,
-					});
-				}
-
-				return success(id, "get_commands", { commands });
+				return success(id, "get_commands", { commands: buildRpcSlashCommands(session) });
 			}
 
 			default: {

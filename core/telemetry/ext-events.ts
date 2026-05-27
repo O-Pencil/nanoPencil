@@ -14,6 +14,21 @@ const BUILD_META = loadBuildMeta();
 const TELEMETRY_SOURCE = "ext.telemetry";
 const EXT_COMMAND_EVENTS_TABLE = "ext_command_events";
 const EXT_LLM_CALLS_TABLE = "ext_llm_calls";
+const EXT_HOOK_EVENTS_TABLE = "ext_hook_events";
+
+/**
+ * Sample rates per hook name. Tool-related hooks fire many times per turn
+ * (one pair per tool call), so we record only 10% to avoid drowning the
+ * table; the sample_rate column lets dashboards extrapolate counts with
+ * `count(*) * (1.0 / avg(sample_rate))`. Everything else is rare enough
+ * to record in full.
+ */
+export const HOOK_SAMPLE_RATES: Readonly<Record<string, number>> = Object.freeze({
+	tool_call: 0.1,
+	tool_result: 0.1,
+	tool_execution_start: 0.1,
+	tool_execution_end: 0.1,
+});
 
 export type CommandOutcome = "ok" | "error" | "cancelled" | "no_match" | "unknown";
 
@@ -29,6 +44,20 @@ export interface CommandEventInput {
 	details?: Record<string, unknown> | null;
 	startedAt: Date;
 	endedAt: Date;
+	runId?: string | null;
+	sessionId?: string | null;
+	variant?: string | null;
+}
+
+export interface HookEventInput {
+	extensionName: string;
+	hookName: string;
+	durationMs: number;
+	ok: boolean;
+	errorCode?: string | null;
+	/** Sampling probability used to decide whether to emit. Stored on each row so dashboards can extrapolate counts. */
+	sampleRate: number;
+	recordedAt: Date;
 	runId?: string | null;
 	sessionId?: string | null;
 	variant?: string | null;
@@ -58,6 +87,7 @@ export interface LlmCallEventInput {
 export interface ExtensionTelemetrySink {
 	writeCommandEvent(input: CommandEventInput): void;
 	writeLlmCallEvent(input: LlmCallEventInput): void;
+	writeHookEvent(input: HookEventInput): void;
 	close(): Promise<void>;
 }
 
@@ -66,6 +96,9 @@ class NoopExtensionTelemetrySink implements ExtensionTelemetrySink {
 		// no-op
 	}
 	writeLlmCallEvent(): void {
+		// no-op
+	}
+	writeHookEvent(): void {
 		// no-op
 	}
 	async close(): Promise<void> {
@@ -86,7 +119,8 @@ interface InsforgeSinkInternalOptions {
 
 type SinkEvent =
 	| { type: "command"; payload: CommandEventInput }
-	| { type: "llm_call"; payload: LlmCallEventInput };
+	| { type: "llm_call"; payload: LlmCallEventInput }
+	| { type: "hook"; payload: HookEventInput };
 
 class InsforgeExtensionTelemetrySink implements ExtensionTelemetrySink {
 	private http: InsforgeHttpClient;
@@ -119,6 +153,10 @@ class InsforgeExtensionTelemetrySink implements ExtensionTelemetrySink {
 		this.dispatcher.enqueue({ type: "llm_call", payload: input });
 	}
 
+	writeHookEvent(input: HookEventInput): void {
+		this.dispatcher.enqueue({ type: "hook", payload: input });
+	}
+
 	async close(): Promise<void> {
 		await this.dispatcher.close();
 	}
@@ -126,8 +164,10 @@ class InsforgeExtensionTelemetrySink implements ExtensionTelemetrySink {
 	private async postEvent(event: SinkEvent): Promise<void> {
 		if (event.type === "command") {
 			await this.postCommandEvent(event.payload);
-		} else {
+		} else if (event.type === "llm_call") {
 			await this.postLlmCallEvent(event.payload);
+		} else {
+			await this.postHookEvent(event.payload);
 		}
 	}
 
@@ -174,6 +214,23 @@ class InsforgeExtensionTelemetrySink implements ExtensionTelemetrySink {
 			ended_at: input.endedAt.toISOString(),
 		};
 		await this.http.postJson(`${this.http.base}/api/database/records/${EXT_LLM_CALLS_TABLE}`, [row]);
+	}
+
+	private async postHookEvent(input: HookEventInput): Promise<void> {
+		const row = {
+			run_id: input.runId ?? null,
+			session_id: input.sessionId ?? null,
+			extension_name: input.extensionName,
+			hook_name: input.hookName,
+			duration_ms: input.durationMs,
+			ok: input.ok,
+			error_code: input.errorCode ?? null,
+			sample_rate: input.sampleRate,
+			pencil_version: BUILD_META.version,
+			variant: input.variant ?? null,
+			recorded_at: input.recordedAt.toISOString(),
+		};
+		await this.http.postJson(`${this.http.base}/api/database/records/${EXT_HOOK_EVENTS_TABLE}`, [row]);
 	}
 }
 

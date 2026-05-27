@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.4] - 2026-05-27
+
+### Added
+- feat(commands): describe persona completions
+- feat(commands): describe agent loop choices
+- feat(commands): clarify builtin argument hints
+- feat(runtime): enable default tool result budget
+- feat(commands): clarify loop completions
+- feat(commands): clarify subagent hints
+- feat(agent-core): cap aggregate tool results
+- feat(commands): clarify team command hints
+- feat(agent-core): strengthen structured adaptive loop
+- feat(commands): describe diagnostic completions
+- feat(commands): add optional command hints
+- feat(commands): clarify interview command labels
+- feat(commands): humanize sal command hints
+- feat(commands): describe browser link completions
+- feat(memory): personalize insights voice and language
+- feat(diagnostics): add report issue completions
+- feat(recap): add mode completions
+- feat(figma): add command completions
+- feat(memory): generate sectioned insights report
+- feat(plan): add root action completions
+- feat(security): add command completions
+- feat(grub): add command completions
+- feat(commands): pass argument completion context
+- feat(core): P3 — ext_hook_events writer + per-hook sampling
+- feat(core): P2 — ext_llm_calls writer + caller-context bus (idle-thinking detector)
+- feat(core): P1 — ext_command_events writer + invokeCommand chokepoint
+- feat(core): extract telemetry base layer (P0 of extension telemetry)
+- feat(team): add command completions
+- feat(subagent): add command completions
+- feat(loop): add scheduler command completions
+- feat(commands): restore thinking command
+
+### Fixed
+- fix(presence): preserve identity style preferences
+- fix(tui): clamp viewport cursor rows
+- fix(commands): preserve extension-backed completions
+- fix(rpc): share slash command catalog metadata
+- fix(commands): align debug and resources discovery
+
+### Documentation
+- docs(wiki): restructure as bilingual directory with en/zh-CN pages
+- docs(diagnosis): migrate runs out of gitignored docs/issues into tracked .dev-docs/
+- docs(diagnosis,arch-review): agent-driven SOP + architecture review handbook
+
+### Maintenance
+- chore(ai): refresh generated model catalog
+
+
 ## [1.14.3] - 2026-05-27
 
 ### Added

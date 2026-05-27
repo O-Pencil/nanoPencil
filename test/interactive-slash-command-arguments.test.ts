@@ -87,6 +87,26 @@ test("mcp command completions expose readable actions and server targets", () =>
 	assert.match(disableTargets?.[0]?.description ?? "", /Filesystem \(enabled\)/);
 });
 
+test("mcp command target completions match server display names", () => {
+	const targets = getMcpArgumentCompletions(
+		"files",
+		{
+			commandName: "mcp",
+			argumentText: "enable files",
+			argumentPrefix: "files",
+			tokenIndex: 1,
+			previousTokens: ["enable"],
+		},
+		[
+			{ id: "google-drive", name: "Drive Files", enabled: false },
+			{ id: "figma", name: "Figma", enabled: false },
+		],
+	);
+
+	assert.deepEqual(targets?.map((item) => item.value), ["google-drive"]);
+	assert.equal(targets?.[0]?.label, "Drive Files");
+});
+
 test("language command completions name available languages", () => {
 	const completions = getLanguageArgumentCompletions("z");
 

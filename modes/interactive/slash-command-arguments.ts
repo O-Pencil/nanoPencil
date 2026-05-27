@@ -57,6 +57,15 @@ function matchCompletions(items: readonly AutocompleteItem[], prefix: string): A
 	return matches.length > 0 ? matches.map((item) => ({ ...item })) : null;
 }
 
+function matchCompletionsByValueOrLabelWord(items: readonly AutocompleteItem[], prefix: string): AutocompleteItem[] | null {
+	const lowerPrefix = prefix.trim().toLowerCase();
+	const matches = items.filter((item) => {
+		if (item.value.toLowerCase().startsWith(lowerPrefix)) return true;
+		return item.label.toLowerCase().split(/[\s-]+/).some((part) => part.startsWith(lowerPrefix));
+	});
+	return matches.length > 0 ? matches.map((item) => ({ ...item })) : null;
+}
+
 function isFirstToken(context?: Pick<ArgumentCompletionContext, "tokenIndex">): boolean {
 	return !context || context.tokenIndex === 0;
 }
@@ -97,12 +106,12 @@ export function getMcpArgumentCompletions(
 	if (action !== "enable" && action !== "disable") return null;
 
 	const targetEnabledState = action === "disable";
-	return matchCompletions(
+	return matchCompletionsByValueOrLabelWord(
 		servers
 			.filter((server) => (server.enabled !== false) === targetEnabledState)
 			.map((server) => ({
 				value: server.id,
-				label: server.id,
+				label: server.name,
 				description: `${server.name} (${server.enabled === false ? "disabled" : "enabled"})`,
 			})),
 		argumentPrefix,
@@ -148,18 +157,14 @@ export function getLoginArgumentCompletions(
 	providers: readonly LoginCompletionProvider[] = [],
 ): AutocompleteItem[] | null {
 	if (!isFirstToken(context)) return null;
-	const lowerPrefix = argumentPrefix.trim().toLowerCase();
-	const matches = providers
-		.map((provider) => ({
+	return matchCompletionsByValueOrLabelWord(
+		providers.map((provider) => ({
 			value: provider.id,
 			label: provider.name,
 			description: provider.authType === "oauth"
 				? `Sign in with browser for ${provider.name}`
 				: `Set API key for ${provider.name}`,
-		}))
-		.filter((item) => {
-			if (item.value.toLowerCase().startsWith(lowerPrefix)) return true;
-			return item.label.toLowerCase().split(/[\s-]+/).some((part) => part.startsWith(lowerPrefix));
-		});
-	return matches.length > 0 ? matches : null;
+		})),
+		argumentPrefix,
+	);
 }

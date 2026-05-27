@@ -13,6 +13,20 @@ import { reportDiagnostics } from "./reporter.js";
 import { DIAGNOSTIC_EVENT_CHANNEL, type DiagnosticRecord } from "./types.js";
 
 const MESSAGE_TYPE = "diagnostics";
+const REPORT_ISSUE_COMPLETIONS = [
+	{ value: "last", label: "last", description: "Report the latest diagnostic" },
+	{ value: "all", label: "all", description: "Report all diagnostics from this session" },
+] as const;
+
+function getReportIssueArgumentCompletions(
+	argumentPrefix: string,
+	context?: { tokenIndex: number },
+): Array<{ value: string; label: string; description?: string }> | null {
+	if (context && context.tokenIndex > 0) return null;
+	const prefix = argumentPrefix.trim().toLowerCase();
+	const values = REPORT_ISSUE_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
+	return values.length > 0 ? values.map((item) => ({ ...item })) : null;
+}
 
 export default async function diagnosticsExtension(api: ExtensionAPI): Promise<void> {
 	const buffer = new DiagnosticBuffer();
@@ -56,6 +70,7 @@ export default async function diagnosticsExtension(api: ExtensionAPI): Promise<v
 
 	api.registerCommand("report-issue", {
 		description: "Report recent diagnostics (/report-issue [last|all|note])",
+		getArgumentCompletions: getReportIssueArgumentCompletions,
 		handler: (args, ctx) => handleReportIssue(args, ctx, buffer),
 	});
 }

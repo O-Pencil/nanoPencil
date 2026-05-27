@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import type { RegisteredCommand } from "../core/extensions/types.js";
 import debugExtension from "../extensions/defaults/debug/index.js";
+import diagnosticsExtension from "../extensions/defaults/diagnostics/index.js";
 import grubExtension from "../extensions/defaults/grub/index.js";
 import loopExtension from "../extensions/defaults/loop/index.js";
 import mcpExtension from "../extensions/defaults/mcp/index.js";
@@ -74,6 +75,17 @@ test("debug command advertises and runs quick preference diagnostics", async () 
 		}
 		rmSync(memoryDir, { recursive: true, force: true });
 	}
+});
+
+test("report-issue command exposes diagnostic scope completions", async () => {
+	const harness = createExtensionHarness();
+	await diagnosticsExtension(harness.api as never);
+
+	const reportIssue = harness.commands.get("report-issue");
+	assert.ok(reportIssue);
+	assert.match(reportIssue.description ?? "", /Report recent diagnostics/);
+	assert.deepEqual(reportIssue.getArgumentCompletions?.("la")?.map((item) => item.value), ["last"]);
+	assert.deepEqual(reportIssue.getArgumentCompletions?.("al")?.map((item) => item.value), ["all"]);
 });
 
 test("tokensave command exposes first-argument completions", () => {

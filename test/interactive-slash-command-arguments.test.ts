@@ -124,6 +124,13 @@ test("language command completions name available languages", () => {
 	);
 });
 
+test("language command completions match language display names", () => {
+	const completions = getLanguageArgumentCompletions("eng");
+
+	assert.deepEqual(completions?.map((item) => item.value), ["en"]);
+	assert.equal(completions?.[0]?.label, "English");
+});
+
 test("persona command completions guide list and use flows", () => {
 	const actions = getPersonaArgumentCompletions("u", undefined, ["builder", "reviewer"], "builder");
 	assert.deepEqual(actions?.map((item) => item.value), ["use"]);

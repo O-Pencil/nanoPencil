@@ -123,10 +123,10 @@ export function getLanguageArgumentCompletions(
 	context?: Pick<ArgumentCompletionContext, "tokenIndex">,
 ): AutocompleteItem[] | null {
 	if (!isFirstToken(context)) return null;
-	return matchCompletions(
+	return matchCompletionsByValueOrLabelWord(
 		AVAILABLE_LOCALES.map((locale: Locale) => ({
 			value: locale,
-			label: locale,
+			label: LOCALE_NAMES[locale],
 			description: LOCALE_NAMES[locale],
 		})),
 		argumentPrefix,

@@ -164,6 +164,7 @@ export class Agent {
 		isStreaming: false,
 		streamMessage: null,
 		pendingToolCalls: new Set<string>(),
+		lastResult: undefined,
 		error: undefined,
 	};
 
@@ -426,6 +427,7 @@ export class Agent {
 		this._state.isStreaming = false;
 		this._state.streamMessage = null;
 		this._state.pendingToolCalls = new Set<string>();
+		this._state.lastResult = undefined;
 		this._state.error = undefined;
 		this.steeringQueue = [];
 		this.followUpQueue = [];
@@ -514,6 +516,7 @@ export class Agent {
 		this.abortController = new AbortController();
 		this._state.isStreaming = true;
 		this._state.streamMessage = null;
+		this._state.lastResult = undefined;
 		this._state.error = undefined;
 
 		const reasoning = this._state.thinkingLevel === "off" ? undefined : this._state.thinkingLevel;
@@ -608,6 +611,21 @@ export class Agent {
 						if (event.message.role === "assistant" && (event.message as any).errorMessage) {
 							this._state.error = (event.message as any).errorMessage;
 						}
+						break;
+
+					case "agent_result":
+						this._state.lastResult = {
+							stopReason: event.stopReason,
+							turnCount: event.turnCount,
+							toolCallCount: event.toolCallCount,
+							durationMs: event.durationMs,
+							usage: event.usage,
+							permissionDenialCount: event.permissionDenialCount,
+							permissionDenials: event.permissionDenials,
+							lastTransition: event.lastTransition,
+							errorMessage: event.errorMessage,
+							errorSubtype: event.errorSubtype,
+						};
 						break;
 
 					case "agent_end":

@@ -67,6 +67,7 @@ describe("Agent", () => {
 		expect(agent.state.streamMessage).toBe(null);
 		expect(agent.state.pendingToolCalls).toEqual(new Set());
 		expect(agent.state.error).toBeUndefined();
+		expect(agent.state.lastResult).toBeUndefined();
 	});
 
 	it("should create an agent instance with custom initial state", () => {
@@ -233,6 +234,33 @@ describe("Agent", () => {
 		const toolResults = agent.state.messages.filter((message) => message.role === "toolResult");
 		expect(toolResults).toHaveLength(2);
 		expect(toolResults.every((message) => message.isError === false)).toBe(true);
+	});
+
+	it("should retain the last agent result summary in state", async () => {
+		const agent = new Agent({
+			streamFn: () => {
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					const message = createAssistantMessage("done");
+					message.usage.input = 4;
+					message.usage.output = 6;
+					message.usage.totalTokens = 10;
+					stream.push({ type: "done", reason: "stop", message });
+				});
+				return stream;
+			},
+		});
+
+		await agent.prompt("answer");
+
+		expect(agent.state.lastResult).toMatchObject({
+			stopReason: "stop",
+			turnCount: 1,
+			toolCallCount: 0,
+			usage: { input: 4, output: 6, totalTokens: 10 },
+			permissionDenialCount: 0,
+		});
+		expect(agent.state.lastResult?.durationMs).toEqual(expect.any(Number));
 	});
 
 	it("should pass recoverModelError into the weak-model-compatible loop", async () => {

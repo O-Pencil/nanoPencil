@@ -1,5 +1,5 @@
 /**
- * [WHO]: AgentLoopFramework, AgentLoopTransition, AgentModelErrorRecoveryResult, AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool, AgentToolConcurrencySafety, AgentToolInterruptBehavior
+ * [WHO]: AgentLoopFramework, AgentLoopTransition, AgentRunResult, AgentModelErrorRecoveryResult, AgentLoopConfig, CustomAgentMessages, AgentState, AgentToolResult, AgentTool, AgentToolConcurrencySafety, AgentToolInterruptBehavior
  * [FROM]: No external dependencies
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/agent-core/src/types.ts -
@@ -44,6 +44,19 @@ export type AgentLoopTransition =
 			outputTokens: number;
 			targetTokens: number;
 	  };
+
+export interface AgentRunResult {
+	stopReason: string;
+	turnCount: number;
+	toolCallCount: number;
+	durationMs: number;
+	usage?: Usage;
+	permissionDenialCount?: number;
+	permissionDenials?: AgentToolPermissionDenial[];
+	lastTransition?: AgentLoopTransition;
+	errorMessage?: string;
+	errorSubtype?: string;
+}
 
 export function normalizeAgentLoopFramework(
 	value: AgentLoopFrameworkInput | undefined,
@@ -319,6 +332,7 @@ export interface AgentState {
 	isStreaming: boolean;
 	streamMessage: AgentMessage | null;
 	pendingToolCalls: Set<string>;
+	lastResult?: AgentRunResult;
 	error?: string;
 }
 
@@ -387,19 +401,7 @@ export type AgentEvent =
 	// Agent lifecycle
 	| { type: "agent_start" }
 	| { type: "agent_end"; messages: AgentMessage[] }
-	| {
-			type: "agent_result";
-			stopReason: string;
-			turnCount: number;
-			toolCallCount: number;
-			durationMs: number;
-			usage?: Usage;
-			permissionDenialCount?: number;
-			permissionDenials?: AgentToolPermissionDenial[];
-			lastTransition?: AgentLoopTransition;
-			errorMessage?: string;
-			errorSubtype?: string;
-	  }
+	| ({ type: "agent_result" } & AgentRunResult)
 	| {
 			type: "stream_request_start";
 			model: string;

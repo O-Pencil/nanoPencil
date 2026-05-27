@@ -1,5 +1,5 @@
 /**
- * [WHO]: parseGrubCommand, buildGrubHelp
+ * [WHO]: parseGrubCommand, buildGrubHelp, getGrubArgumentCompletions
  * [FROM]: Depends on ./grub-types
  * [TO]: Consumed by extension entry point (./index.ts)
  * [HERE]: extensions/defaults/grub/grub-parser.ts - /grub command parser with resume/status --json/--max-iter/--max-fail flags
@@ -12,6 +12,36 @@ interface TokenizedArgs {
 	positional: string[];
 	flags: Record<string, string | boolean>;
 }
+
+type GrubArgumentCompletionContext = {
+	commandName: string;
+	argumentText: string;
+	argumentPrefix: string;
+	tokenIndex: number;
+	previousTokens: string[];
+};
+
+type GrubCompletionItem = {
+	value: string;
+	label: string;
+	description: string;
+};
+
+const ROOT_COMPLETIONS: readonly GrubCompletionItem[] = [
+	{ value: "status", label: "status", description: "Show current progress" },
+	{ value: "resume", label: "resume", description: "Continue a saved task" },
+	{ value: "stop", label: "stop", description: "Stop the current task" },
+	{ value: "help", label: "help", description: "Show usage help" },
+];
+
+const START_FLAG_COMPLETIONS: readonly GrubCompletionItem[] = [
+	{ value: "--max-iter", label: "--max-iter", description: "Limit total work rounds" },
+	{ value: "--max-fail", label: "--max-fail", description: "Stop after repeated failed rounds" },
+];
+
+const STATUS_FLAG_COMPLETIONS: readonly GrubCompletionItem[] = [
+	{ value: "--json", label: "--json", description: "Show full saved details" },
+];
 
 function scanTokens(input: string): string[] {
 	const tokens: string[] = [];
@@ -89,6 +119,36 @@ function tokenize(input: string): TokenizedArgs {
 		positional.push(tok);
 	}
 	return { positional, flags };
+}
+
+function filterCompletions(
+	items: readonly GrubCompletionItem[],
+	argumentPrefix: string,
+): GrubCompletionItem[] | null {
+	const prefix = argumentPrefix.trim().toLowerCase();
+	const matches = items.filter((item) => item.value.startsWith(prefix));
+	return matches.length > 0 ? [...matches] : null;
+}
+
+export function getGrubArgumentCompletions(
+	argumentPrefix: string,
+	context?: GrubArgumentCompletionContext,
+): GrubCompletionItem[] | null {
+	if (argumentPrefix.trim().startsWith("--")) {
+		const firstToken = context?.previousTokens[0]?.toLowerCase();
+		return filterCompletions(
+			firstToken === "status" || firstToken === "list"
+				? STATUS_FLAG_COMPLETIONS
+				: START_FLAG_COMPLETIONS,
+			argumentPrefix,
+		);
+	}
+
+	if (!context || context.tokenIndex === 0) {
+		return filterCompletions(ROOT_COMPLETIONS, argumentPrefix);
+	}
+
+	return null;
 }
 
 function parsePositiveInt(value: string | boolean | undefined): number | undefined {

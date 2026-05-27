@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import type { RegisteredCommand } from "../core/extensions/types.js";
 import debugExtension from "../extensions/defaults/debug/index.js";
+import grubExtension from "../extensions/defaults/grub/index.js";
 import loopExtension from "../extensions/defaults/loop/index.js";
 import subagentExtension from "../extensions/defaults/subagent/index.js";
 import tokenSaveExtension from "../extensions/defaults/token-save/index.js";
@@ -92,6 +93,40 @@ test("loop command exposes scheduler subcommands and flags", async () => {
 	assert.deepEqual(loop.getArgumentCompletions?.("sta")?.map((item) => item.value), ["status"]);
 	assert.deepEqual(loop.getArgumentCompletions?.("--q")?.map((item) => item.value), ["--quiet"]);
 	assert.ok(loop.getArgumentCompletions?.("")?.some((item) => item.value === "every"));
+});
+
+test("grub command exposes readable subcommand and flag completions", async () => {
+	const harness = createExtensionHarness();
+	await grubExtension(harness.api as never);
+
+	const grub = harness.commands.get("grub");
+	assert.ok(grub);
+	assert.match(grub.description ?? "", /Keep working/);
+	assert.deepEqual(grub.getArgumentCompletions?.("sta")?.map((item) => item.value), ["status"]);
+	assert.deepEqual(
+		grub
+			.getArgumentCompletions?.("--j", {
+				commandName: "grub",
+				argumentText: "status --j",
+				argumentPrefix: "--j",
+				tokenIndex: 1,
+				previousTokens: ["status"],
+			})
+			?.map((item) => item.value),
+		["--json"],
+	);
+	assert.deepEqual(
+		grub
+			.getArgumentCompletions?.("--max", {
+				commandName: "grub",
+				argumentText: "build command UX --max",
+				argumentPrefix: "--max",
+				tokenIndex: 3,
+				previousTokens: ["build", "command", "UX"],
+			})
+			?.map((item) => item.value),
+		["--max-iter", "--max-fail"],
+	);
 });
 
 test("subagent commands expose root actions and write flag completions", async () => {

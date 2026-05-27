@@ -1,5 +1,5 @@
 /**
- * [WHO]: grubExtension default export - registers /grub command, dual-phase prompts, resume support, feature-list validation, and grub renderer
+ * [WHO]: grubExtension default export - registers /grub command, completions, dual-phase prompts, resume support, feature-list validation, and grub renderer
  * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions/types, core/runtime/event-bus, ./grub-controller, ./grub-format, ./grub-parser, ./grub-types, ./grub-harness, ./grub-prompts, ./grub-persistence, ./grub-turn
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/defaults/grub/index.ts - autonomous iterative task runner with Anthropic-style long-running harness (feature-list.json + durable state + phase-specialized prompts)
@@ -18,7 +18,7 @@ import {
 } from "./grub-format.js";
 import { ensureHarnessArtifacts } from "./grub-harness.js";
 import { detectGrubLocale, grubText, languageName, type GrubLocale } from "./grub-i18n.js";
-import { buildGrubHelp, parseGrubCommand } from "./grub-parser.js";
+import { buildGrubHelp, getGrubArgumentCompletions, parseGrubCommand } from "./grub-parser.js";
 import { discoverActiveTasks, pruneStale } from "./grub-persistence.js";
 import { buildGrubCodingPrompt, buildGrubInitializerPrompt } from "./grub-prompts.js";
 import { resolveGrubTurn } from "./grub-turn.js";
@@ -328,7 +328,8 @@ export default async function grubExtension(api: ExtensionAPI) {
 	};
 
 	api.registerCommand("grub", {
-		description: "Dig through one autonomous task until it is complete, blocked, stopped, or fails.",
+		description: "Keep working on one task until it is done, stopped, or needs your help.",
+		getArgumentCompletions: getGrubArgumentCompletions,
 		handler: handleGrubCommand,
 	});
 }

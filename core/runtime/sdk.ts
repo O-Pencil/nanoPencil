@@ -1,5 +1,5 @@
 /**
- * [WHO]: createAgentSession(options) → AgentSession + load results
+ * [WHO]: createAgentSession(options) → AgentSession + load results, runtime loop setting wiring
  * [FROM]: Depends on agent-core, ai, core/config/*, core/tools/*, core/session/*, core/mcp-*, i18n/*
  * [TO]: Consumed by index.ts, main.ts, test/presence-opening.test.ts, extensions/defaults/team/index.ts
  * [HERE]: SDK factory; creates all services with DI, wires up extensions
@@ -451,6 +451,7 @@ export async function createAgentSession(
     agentLoopFramework: settingsManager.getAgentLoopFramework() as any,
     thinkingBudgets: settingsManager.getThinkingBudgets(),
     maxRetryDelayMs: settingsManager.getRetrySettings().maxDelayMs,
+    maxToolResultBatchSizeChars: settingsManager.getAgentLoopSettings().maxToolResultBatchSizeChars,
     getApiKey: async (provider) => {
       // Use the provider argument from the in-flight request;
       // agent.state.model may already be switched mid-turn.

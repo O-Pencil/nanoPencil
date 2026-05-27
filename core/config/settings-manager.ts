@@ -1,5 +1,5 @@
 /**
- * [WHO]: SettingsManager class, two-tier settings (global + project-local)
+ * [WHO]: SettingsManager class, two-tier settings (global + project-local), agent loop defaults
  * [FROM]: Depends on ai, node:fs, proper-lockfile, config.ts
  * [TO]: Consumed by index.ts, main.ts, core/runtime/sdk.ts, cli/config-selector.ts, extensions/defaults/team/index.ts, modes/interactive/components/model-selector.ts, modes/interactive/components/config-selector.ts, and test files
  * [HERE]: core/config/settings-manager.ts - user preferences aggregation
@@ -28,6 +28,12 @@ export interface RetrySettings {
 	baseDelayMs?: number; // default: 2000 (exponential backoff: 2s, 4s, 8s)
 	maxDelayMs?: number; // default: 60000 (max server-requested delay before failing)
 }
+
+export interface AgentLoopSettings {
+	maxToolResultBatchSizeChars?: number; // default: 200000
+}
+
+const DEFAULT_MAX_TOOL_RESULT_BATCH_SIZE_CHARS = 200_000;
 
 export interface TerminalSettings {
 	showImages?: boolean; // default: true (only relevant if terminal supports images)
@@ -93,6 +99,7 @@ export interface Settings {
 	defaultModel?: string;
 	defaultThinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 	agentLoopFramework?: AgentLoopFrameworkSettingInput;
+	agentLoop?: AgentLoopSettings;
 	transport?: TransportSetting; // default: "sse"
 	steeringMode?: "all" | "one-at-a-time";
 	followUpMode?: "all" | "one-at-a-time";
@@ -852,6 +859,16 @@ export class SettingsManager {
 
 	getAgentLoopFramework(): AgentLoopFrameworkSetting | undefined {
 		return normalizeAgentLoopFrameworkSetting(this.settings.agentLoopFramework);
+	}
+
+	getAgentLoopSettings(): { maxToolResultBatchSizeChars: number } {
+		const configured = this.settings.agentLoop?.maxToolResultBatchSizeChars;
+		return {
+			maxToolResultBatchSizeChars:
+				typeof configured === "number" && Number.isFinite(configured) && configured > 0
+					? Math.floor(configured)
+					: DEFAULT_MAX_TOOL_RESULT_BATCH_SIZE_CHARS,
+		};
 	}
 
 	setAgentLoopFramework(framework: AgentLoopFrameworkSettingInput | undefined): void {

@@ -120,7 +120,7 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 ### Configuration (`core/config/`)
 
-`settings-manager.ts`: Two-tier settings (global + project-local), merge logic
+`settings-manager.ts`: Two-tier settings (global + project-local), merge logic, agent loop defaults
 
 `resource-loader.ts`: Discovers and loads extensions, skills, prompts, themes
 

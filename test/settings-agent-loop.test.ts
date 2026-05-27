@@ -39,4 +39,18 @@ describe("SettingsManager agentLoopFramework", () => {
 		expect(settings.getAgentLoopFramework()).toBeUndefined();
 		expect(settings.getGlobalSettings().agentLoopFramework).toBeUndefined();
 	});
+
+	it("exposes aggregate tool-result budget defaults and overrides", () => {
+		expect(SettingsManager.inMemory().getAgentLoopSettings().maxToolResultBatchSizeChars).toBe(200_000);
+		expect(
+			SettingsManager.inMemory({
+				agentLoop: { maxToolResultBatchSizeChars: 123_456 },
+			}).getAgentLoopSettings().maxToolResultBatchSizeChars,
+		).toBe(123_456);
+		expect(
+			SettingsManager.inMemory({
+				agentLoop: { maxToolResultBatchSizeChars: -1 },
+			}).getAgentLoopSettings().maxToolResultBatchSizeChars,
+		).toBe(200_000);
+	});
 });

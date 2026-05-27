@@ -60,6 +60,17 @@ const NOSAL_FLAG = "nosal";
 const SAL_AB_FLAG = "sal-ab";
 const SAL_REBUILD_FLAG = "sal-rebuild-terrain";
 const DIAGNOSTIC_EVENT_CHANNEL = "diagnostic:event";
+const SAL_COVERAGE_COMPLETIONS = [
+	{ value: "core/", label: "core/", description: "Check the core runtime files" },
+	{ value: "extensions/", label: "extensions/", description: "Check extension files" },
+	{ value: "modes/", label: "modes/", description: "Check interactive, print, and RPC mode files" },
+	{ value: "packages/", label: "packages/", description: "Check bundled package files" },
+];
+const SAL_SETUP_ENDPOINT_COMPLETIONS = [
+	{ value: "https://", label: "https://", description: "Send evaluation records to a hosted endpoint" },
+	{ value: "file://", label: "file://", description: "Write evaluation records to a local JSONL file" },
+	{ value: "./", label: "./", description: "Write evaluation records to a file in this workspace" },
+];
 
 async function ensureSnapshot(runtime: SalRuntime, forceRebuild: boolean): Promise<TerrainSnapshot | undefined> {
 	if (runtime.snapshotErrored) return runtime.snapshot;
@@ -237,17 +248,17 @@ async function cleanupStaleRuns(runtime: SalRuntime): Promise<void> {
 export default async function salExtension(api: ExtensionAPI) {
 	api.registerFlag(NOSAL_FLAG, {
 		type: "boolean",
-		description: "Disable Structural Anchor Localization (SAL) - fall back to baseline memory mode",
+		description: "Turn off SAL workspace guidance for this run",
 		default: false,
 	});
 	api.registerFlag(SAL_AB_FLAG, {
 		type: "boolean",
-		description: "Enable SAL A/B experiment sidecar files under .memory-experiments",
+		description: "Save local SAL comparison records under .memory-experiments",
 		default: false,
 	});
 	api.registerFlag(SAL_REBUILD_FLAG, {
 		type: "boolean",
-		description: "Force SAL terrain index rebuild on next localization pass",
+		description: "Refresh SAL's workspace map before the next turn",
 		default: false,
 	});
 
@@ -372,7 +383,13 @@ export default async function salExtension(api: ExtensionAPI) {
 	const isSalAbEnabled = (): boolean => resolveSalAbEnabled(api.getFlag(SAL_AB_FLAG));
 
 	api.registerCommand("sal:coverage", {
-		description: "Report DIP P3 coverage for SAL prerequisite gating. Usage: /sal:coverage [module1 module2 ...]",
+		description: "Check whether folders have the file map headers SAL needs. Usage: /sal:coverage [folder ...]",
+		getArgumentCompletions: (argumentPrefix, context) => {
+			const used = new Set(context?.previousTokens ?? []);
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = SAL_COVERAGE_COMPLETIONS.filter((item) => !used.has(item.value) && item.value.startsWith(prefix));
+			return values.length > 0 ? values : null;
+		},
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const modules = (args ?? "")
 				.trim()
@@ -391,9 +408,14 @@ export default async function salExtension(api: ExtensionAPI) {
 
 	api.registerCommand("sal:setup", {
 		description:
-			"Configure SAL eval credentials. " +
-			"Usage: /sal:setup <endpoint> [api_key] [anon_key]  — adapter inferred from endpoint scheme " +
-			"(http/https → InsForge backend; file path or file:// → local JSONL log).",
+			"Connect evaluation records to a hosted endpoint or local JSONL file. " +
+			"Usage: /sal:setup <endpoint> [api_key] [anon_key].",
+		getArgumentCompletions: (argumentPrefix, context) => {
+			if (context && context.tokenIndex > 0) return null;
+			const prefix = argumentPrefix.trim().toLowerCase();
+			const values = SAL_SETUP_ENDPOINT_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
+			return values.length > 0 ? values : null;
+		},
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const tokens = (args ?? "").trim().split(/\s+/).filter((t) => t.length > 0);
 			const endpoint = tokens[0];
@@ -483,7 +505,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	});
 
 	api.registerCommand("sal:status", {
-		description: "Show current SAL configuration and snapshot status",
+		description: "Show whether SAL is active and where its records are going",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			const flagOn = isEnabled();
 			const snapshot = runtime.snapshot;

@@ -12,6 +12,7 @@ import loopExtension from "../extensions/defaults/loop/index.js";
 import linkWorldExtension from "../extensions/defaults/link-world/index.js";
 import mcpExtension from "../extensions/defaults/mcp/index.js";
 import recapExtension from "../extensions/defaults/recap/index.js";
+import salExtension from "../extensions/defaults/sal/index.js";
 import securityAuditExtension from "../extensions/defaults/security-audit/index.js";
 import subagentExtension from "../extensions/defaults/subagent/index.js";
 import tokenSaveExtension from "../extensions/defaults/token-save/index.js";
@@ -29,6 +30,8 @@ function createExtensionHarness() {
 		registerCommand: (name: string, options: CapturedCommand) => commands.set(name, options),
 		registerMessageRenderer: () => {},
 		registerTool: () => {},
+		registerFlag: () => {},
+		getFlag: () => false,
 		on: () => {},
 		appendEntry: () => {},
 		executeCommand: async () => false,
@@ -195,6 +198,29 @@ test("security commands expose dashboard actions and log limit completions", () 
 	const logs = harness.commands.get("security-logs");
 	assert.ok(logs);
 	assert.deepEqual(logs.getArgumentCompletions?.("1")?.map((item) => item.value), ["10", "100"]);
+});
+
+test("sal commands use readable descriptions and setup hints", async () => {
+	const harness = createExtensionHarness();
+	await salExtension(harness.api as never);
+
+	const coverage = harness.commands.get("sal:coverage");
+	assert.ok(coverage);
+	assert.match(coverage.description ?? "", /file map headers/);
+	assert.doesNotMatch(coverage.description ?? "", /DIP|P3|prerequisite gating/);
+	assert.deepEqual(coverage.getArgumentCompletions?.("ext")?.map((item) => item.value), ["extensions/"]);
+
+	const setup = harness.commands.get("sal:setup");
+	assert.ok(setup);
+	assert.match(setup.description ?? "", /Connect evaluation records/);
+	assert.doesNotMatch(setup.description ?? "", /eval credentials|adapter inferred/);
+	assert.deepEqual(setup.getArgumentCompletions?.("fi")?.map((item) => item.value), ["file://"]);
+	assert.match(setup.getArgumentCompletions?.("fi")?.[0]?.description ?? "", /local JSONL file/);
+
+	const status = harness.commands.get("sal:status");
+	assert.ok(status);
+	assert.match(status.description ?? "", /Show whether SAL is active/);
+	assert.doesNotMatch(status.description ?? "", /snapshot/);
 });
 
 test("figma command exposes setup and authentication completions", async () => {

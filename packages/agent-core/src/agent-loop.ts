@@ -32,6 +32,7 @@ import { ToolNotFoundError, ToolExecutionError, ValidationError } from "./errors
 
 const DEFAULT_MAX_TURNS_PER_PROMPT = 64;
 const DEFAULT_MAX_TOOL_CALLS_PER_PROMPT = 128;
+const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
 
 /**
  * Start an agent loop with a new prompt message.
@@ -177,6 +178,9 @@ async function runLoop(
 	let toolCallCount = 0;
 	const maxTurns = config.maxTurnsPerPrompt ?? DEFAULT_MAX_TURNS_PER_PROMPT;
 	const maxToolCalls = config.maxToolCallsPerPrompt ?? DEFAULT_MAX_TOOL_CALLS_PER_PROMPT;
+	const maxStopHookContinuations = config.maxStopHookContinuations ?? DEFAULT_MAX_STOP_HOOK_CONTINUATIONS;
+	let stopHookActive = false;
+	let stopHookContinuationCount = 0;
 	// Check for steering messages at start (user may have typed while waiting)
 	let pendingMessages: AgentMessage[] = (await config.getSteeringMessages?.()) || [];
 
@@ -276,6 +280,34 @@ async function runLoop(
 			}
 
 			stream.push({ type: "turn_end", message, toolResults });
+
+			if (!hasMoreToolCalls && config.runStopHooks && !stopHookActive) {
+				stopHookActive = true;
+				const stopHookResult = await config.runStopHooks({
+					message,
+					messages: currentContext.messages,
+				});
+				stopHookActive = false;
+				if (stopHookResult.action === "continue" && stopHookResult.messages.length > 0) {
+					if (stopHookContinuationCount >= maxStopHookContinuations) {
+						const limitMessage = createLoopLimitMessage(
+							config,
+							`stop_hook_limit_reached: stopped after ${maxStopHookContinuations} stop-hook continuation turns.`,
+						);
+						currentContext.messages.push(limitMessage);
+						newMessages.push(limitMessage);
+						stream.push({ type: "message_start", message: { ...limitMessage } });
+						stream.push({ type: "message_end", message: limitMessage });
+						stream.push({ type: "turn_end", message: limitMessage, toolResults: [] });
+						stream.push({ type: "agent_end", messages: newMessages });
+						stream.end(newMessages);
+						return;
+					}
+					stopHookContinuationCount += 1;
+					pendingMessages = stopHookResult.messages;
+					continue;
+				}
+			}
 
 			// Get steering messages after turn completes
 			if (steeringAfterTools && steeringAfterTools.length > 0) {

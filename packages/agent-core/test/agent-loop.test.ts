@@ -713,6 +713,100 @@ describe("agentLoop with AgentMessage", () => {
 		expect(toolResultEnd?.message.isError).toBe(true);
 		expect(readToolResultText(toolResultEnd!.message)).toContain("Permission denied: outside workspace");
 	});
+
+	it("should allow standard loop stop hooks to inject a continuation turn", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		let stopHookCalls = 0;
+		let sawStopHookMessage = false;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			runStopHooks: () => {
+				stopHookCalls++;
+				if (stopHookCalls === 1) {
+					return { action: "continue", messages: [createUserMessage("Please verify the final answer.")] };
+				}
+				return { action: "stop" };
+			},
+		};
+
+		let callIndex = 0;
+		const stream = agentLoop([createUserMessage("answer")], context, config, undefined, (_model, ctx) => {
+			if (callIndex === 1) {
+				sawStopHookMessage = ctx.messages.some(
+					(message) => message.role === "user" && message.content === "Please verify the final answer.",
+				);
+			}
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([{ type: "text", text: callIndex === 0 ? "draft" : "verified" }]),
+				});
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		for await (const _event of stream) {
+			// consume
+		}
+
+		expect(callIndex).toBe(2);
+		expect(stopHookCalls).toBe(2);
+		expect(sawStopHookMessage).toBe(true);
+	});
+
+	it("should stop standard loop stop-hook continuations at the configured limit", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			maxStopHookContinuations: 1,
+			runStopHooks: () => ({
+				action: "continue",
+				messages: [createUserMessage("Try again.")],
+			}),
+		};
+
+		let callIndex = 0;
+		const stream = agentLoop([createUserMessage("answer")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([{ type: "text", text: `draft ${callIndex}` }]),
+				});
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(callIndex).toBe(2);
+		const assistantEnds = events.filter(
+			(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+				event.type === "message_end" && event.message.role === "assistant",
+		);
+		expect((assistantEnds.at(-1)?.message as AssistantMessage | undefined)?.stopReason).toBe("error");
+		expect((assistantEnds.at(-1)?.message as AssistantMessage | undefined)?.errorMessage).toContain(
+			"stop_hook_limit_reached",
+		);
+	});
 });
 
 describe("structuredAdaptiveAgentLoop", () => {

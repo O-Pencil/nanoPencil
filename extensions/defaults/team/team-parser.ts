@@ -77,7 +77,24 @@ export interface ParsedTeamCommand {
 	path?: string;
 }
 
-const VALID_ROLES: TeammateRole[] = [
+export const TEAM_ROOT_COMPLETIONS = [
+	"help",
+	"spawn",
+	"send",
+	"status",
+	"stop",
+	"terminate",
+	"approve",
+	"mode",
+	"preset",
+	"dashboard",
+	"progress",
+	"psyche",
+	"task",
+	"mail",
+	"allow-path",
+] as const;
+export const VALID_ROLES: TeammateRole[] = [
 	"pm",
 	"architect",
 	"developer",
@@ -90,8 +107,26 @@ const VALID_ROLES: TeammateRole[] = [
 	"verifier",
 	"generic",
 ];
-const VALID_MODES: TeammateMode[] = ["research", "plan", "execute", "review"];
-const VALID_PRESETS: PresetName[] = ["solo", "duo", "squad"];
+export const VALID_MODES: TeammateMode[] = ["research", "plan", "execute", "review"];
+export const VALID_PRESETS: PresetName[] = ["solo", "duo", "squad"];
+export const VALID_TASK_ACTIONS = ["add", "claim", "done", "block", "cancel", "list"] as const;
+const TEAM_SPAWN_FLAGS = ["--name", "--harness"] as const;
+
+export function getTeamArgumentCompletions(commandName: string, argumentPrefix: string): Array<{ value: string; label: string }> | null {
+	const prefix = argumentPrefix.trim().toLowerCase();
+	const values =
+		commandName === "team"
+			? TEAM_ROOT_COMPLETIONS
+			: commandName === "team:spawn"
+				? [...VALID_ROLES, ...TEAM_SPAWN_FLAGS]
+				: commandName === "team:preset"
+					? VALID_PRESETS
+					: commandName === "team:task"
+						? VALID_TASK_ACTIONS
+						: [];
+	const matches = values.filter((value) => value.startsWith(prefix));
+	return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
+}
 
 /**
  * Parse a /team command invocation.

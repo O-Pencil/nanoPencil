@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildTeamHelp, parseTeamCommand } from "../extensions/defaults/team/team-parser.js";
+import { buildTeamHelp, getTeamArgumentCompletions, parseTeamCommand } from "../extensions/defaults/team/team-parser.js";
 import { selectAutoTeamPlan } from "../extensions/defaults/team/team-presets.js";
 import { parseTeamMentions } from "../extensions/defaults/team/team-orchestrator.js";
 import { renderTeamDashboard } from "../extensions/defaults/team/team-dashboard.js";
@@ -97,6 +97,15 @@ test("team-parser: help text advertises list and approve flow", () => {
 	assert.match(help, /\/team <task>/);
 	assert.match(help, /\/team:approve <request-id>/);
 	assert.match(help, /\/team:task add <title>/);
+});
+
+test("team-parser: exposes safe enum completions for team command family", () => {
+	assert.deepEqual(getTeamArgumentCompletions("team", "sp")?.map((item) => item.value), ["spawn"]);
+	assert.deepEqual(getTeamArgumentCompletions("team:spawn", "dev")?.map((item) => item.value), ["developer"]);
+	assert.deepEqual(getTeamArgumentCompletions("team:spawn", "--h")?.map((item) => item.value), ["--harness"]);
+	assert.deepEqual(getTeamArgumentCompletions("team:preset", "sq")?.map((item) => item.value), ["squad"]);
+	assert.deepEqual(getTeamArgumentCompletions("team:task", "cl")?.map((item) => item.value), ["claim"]);
+	assert.equal(getTeamArgumentCompletions("team:status", "sta"), null);
 });
 
 test("team-presets: auto team selector uses model JSON when available", async () => {

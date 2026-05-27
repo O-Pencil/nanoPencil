@@ -25,7 +25,7 @@
 
 import type { ExtensionAPI } from "../../../core/extensions/types.js";
 import { TeamRuntime } from "./team-runtime.js";
-import { buildTeamHelp, parseTeamCommand } from "./team-parser.js";
+import { buildTeamHelp, getTeamArgumentCompletions, parseTeamCommand } from "./team-parser.js";
 import type { PersistedTeammate } from "./team-types.js";
 import { executePreset, formatPresetResult } from "./team-presets.js";
 import { formatHarnessProgress } from "./team-harness.js";
@@ -104,6 +104,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 	for (const commandName of commandNames) {
 		api.registerCommand(commandName, {
 			description: getCommandDescription(commandName),
+			getArgumentCompletions: (argumentPrefix) => getTeamArgumentCompletions(commandName, argumentPrefix),
 			handler: async (args: string, ctx) => {
 				const parsed = parseTeamCommand(commandName, args);
 

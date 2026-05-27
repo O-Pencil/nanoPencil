@@ -3,7 +3,7 @@
  * No transport abstraction - calls streamSimple via the loop.
  */
 /**
- * [WHO]: AgentOptions, Agent, in-loop model error recovery and loop budget option plumbing
+ * [WHO]: AgentOptions, Agent, and loop policy option plumbing
  * [FROM]: Depends on ./agent-loop.js and ./structured-adaptive-agent-loop.js
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/agent-core/src/agent.ts -
@@ -128,6 +128,30 @@ export interface AgentOptions {
 
 	/** Maximum in-loop model error recoveries per prompt. */
 	maxModelErrorRecoveryAttempts?: number;
+
+	/** Maximum automatic output-token recovery turns per prompt. */
+	maxOutputTokenRecoveryAttempts?: number;
+
+	/** Optional target for automatic continuation when output is under-complete. */
+	outputTokenBudget?: AgentLoopConfig["outputTokenBudget"];
+
+	/** Optional stop hook for validation/correction continuation turns. */
+	runStopHooks?: AgentLoopConfig["runStopHooks"];
+
+	/** Maximum stop-hook continuation turns per prompt. */
+	maxStopHookContinuations?: number;
+
+	/** Optional non-blocking summary hook for completed tool batches. */
+	createToolUseSummary?: AgentLoopConfig["createToolUseSummary"];
+
+	/** Maximum concurrency for concurrency-safe tool batches. */
+	maxToolConcurrency?: number;
+
+	/** Maximum assistant turns allowed for one prompt/continue loop. */
+	maxTurnsPerPrompt?: number;
+
+	/** Maximum tool calls allowed for one prompt/continue loop. */
+	maxToolCallsPerPrompt?: number;
 }
 
 export class Agent {
@@ -164,6 +188,14 @@ export class Agent {
 	private maxToolResultBatchSizeChars?: AgentLoopConfig["maxToolResultBatchSizeChars"];
 	private recoverModelError?: AgentLoopConfig["recoverModelError"];
 	private maxModelErrorRecoveryAttempts?: number;
+	private maxOutputTokenRecoveryAttempts?: number;
+	private outputTokenBudget?: AgentLoopConfig["outputTokenBudget"];
+	private runStopHooks?: AgentLoopConfig["runStopHooks"];
+	private maxStopHookContinuations?: number;
+	private createToolUseSummary?: AgentLoopConfig["createToolUseSummary"];
+	private maxToolConcurrency?: number;
+	private maxTurnsPerPrompt?: number;
+	private maxToolCallsPerPrompt?: number;
 
 	constructor(opts: AgentOptions = {}) {
 		this._state = { ...this._state, ...opts.initialState };
@@ -182,6 +214,14 @@ export class Agent {
 		this.maxToolResultBatchSizeChars = opts.maxToolResultBatchSizeChars;
 		this.recoverModelError = opts.recoverModelError;
 		this.maxModelErrorRecoveryAttempts = opts.maxModelErrorRecoveryAttempts;
+		this.maxOutputTokenRecoveryAttempts = opts.maxOutputTokenRecoveryAttempts;
+		this.outputTokenBudget = opts.outputTokenBudget;
+		this.runStopHooks = opts.runStopHooks;
+		this.maxStopHookContinuations = opts.maxStopHookContinuations;
+		this.createToolUseSummary = opts.createToolUseSummary;
+		this.maxToolConcurrency = opts.maxToolConcurrency;
+		this.maxTurnsPerPrompt = opts.maxTurnsPerPrompt;
+		this.maxToolCallsPerPrompt = opts.maxToolCallsPerPrompt;
 	}
 
 	/**
@@ -501,6 +541,14 @@ export class Agent {
 			maxToolResultBatchSizeChars: this.maxToolResultBatchSizeChars,
 			recoverModelError: this.recoverModelError,
 			maxModelErrorRecoveryAttempts: this.maxModelErrorRecoveryAttempts,
+			maxOutputTokenRecoveryAttempts: this.maxOutputTokenRecoveryAttempts,
+			outputTokenBudget: this.outputTokenBudget,
+			runStopHooks: this.runStopHooks,
+			maxStopHookContinuations: this.maxStopHookContinuations,
+			createToolUseSummary: this.createToolUseSummary,
+			maxToolConcurrency: this.maxToolConcurrency,
+			maxTurnsPerPrompt: this.maxTurnsPerPrompt,
+			maxToolCallsPerPrompt: this.maxToolCallsPerPrompt,
 			getSteeringMessages: async () => {
 				if (skipInitialSteeringPoll) {
 					skipInitialSteeringPoll = false;

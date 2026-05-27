@@ -1,7 +1,7 @@
 import { type AssistantMessage, type AssistantMessageEvent, EventStream, getModel, type Model } from "@pencil-agent/ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
-import { Agent, type AgentTool } from "../src/index.js";
+import { Agent, type AgentMessage, type AgentTool } from "../src/index.js";
 
 // Mock stream that mimics AssistantMessageEventStream
 class MockAssistantStream extends EventStream<AssistantMessageEvent, AssistantMessage> {
@@ -332,6 +332,75 @@ describe("Agent", () => {
 		const text = toolResult?.content[0]?.type === "text" ? toolResult.content[0].text : "";
 		expect(text.length).toBeLessThanOrEqual(80);
 		expect(text).toContain("Tool result truncated by batch budget");
+	});
+
+	it("should pass standard loop summary and output budget options", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		const tool: AgentTool<typeof toolSchema, { value: string }> = {
+			name: "read_notes",
+			label: "Read notes",
+			description: "Returns note content",
+			parameters: toolSchema,
+			async execute(_toolCallId, params) {
+				return {
+					content: [{ type: "text", text: params.value }],
+					details: { value: params.value },
+				};
+			},
+		};
+		const summaryMessage: AgentMessage = {
+			role: "user",
+			content: "Tool summary: read_notes returned concise context.",
+			timestamp: Date.now(),
+		};
+		let callIndex = 0;
+		let secondRequestSawSummary = false;
+		const agent = new Agent({
+			initialState: { tools: [tool] },
+			createToolUseSummary() {
+				return summaryMessage;
+			},
+			outputTokenBudget: {
+				targetTokens: 100,
+				maxContinuations: 1,
+			},
+			streamFn: (_model, context) => {
+				const stream = new MockAssistantStream();
+				if (callIndex === 1) {
+					secondRequestSawSummary = context.messages.includes(summaryMessage);
+				}
+				queueMicrotask(() => {
+					if (callIndex === 0) {
+						stream.push({
+							type: "done",
+							reason: "toolUse",
+							message: createToolUseMessage([
+								{ type: "toolCall", id: "tool-1", name: "read_notes", arguments: { value: "notes" } },
+							]),
+						});
+					} else {
+						const message = createAssistantMessage(callIndex === 1 ? "short answer" : "expanded answer");
+						message.usage.output = 10;
+						message.usage.totalTokens = 10;
+						stream.push({ type: "done", reason: "stop", message });
+					}
+					callIndex++;
+				});
+				return stream;
+			},
+		});
+
+		await agent.prompt("read and answer");
+
+		expect(secondRequestSawSummary).toBe(true);
+		expect(callIndex).toBe(3);
+		expect(
+			agent.state.messages.some(
+				(message) =>
+					message.role === "user" &&
+					message.content === "Tool summary: read_notes returned concise context.",
+			),
+		).toBe(true);
 	});
 
 	it("should subscribe to events", () => {

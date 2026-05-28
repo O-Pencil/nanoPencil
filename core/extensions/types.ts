@@ -6,6 +6,7 @@
  */
 import type {
 	AgentMessage,
+	AgentRunResult,
 	AgentToolResult,
 	AgentToolUpdateCallback,
 	AgentLoopFramework,
@@ -568,6 +569,11 @@ export interface AgentEndEvent {
 	messages: AgentMessage[];
 }
 
+/** Fired with structured loop outcome metadata before agent_end */
+export interface AgentResultEvent extends AgentRunResult {
+	type: "agent_result";
+}
+
 /** Fired at the start of each turn */
 export interface TurnStartEvent {
 	type: "turn_start";
@@ -866,6 +872,7 @@ export type ExtensionEvent =
 	| BeforeAgentStartEvent
 	| AgentStartEvent
 	| AgentEndEvent
+	| AgentResultEvent
 	| TurnStartEvent
 	| TurnEndEvent
 	| MessageStartEvent
@@ -1024,6 +1031,7 @@ export interface ExtensionAPI {
 	on(event: "context", handler: ExtensionHandler<ContextEvent, ContextEventResult>): void;
 	on(event: "before_agent_start", handler: ExtensionHandler<BeforeAgentStartEvent, BeforeAgentStartEventResult>): void;
 	on(event: "agent_start", handler: ExtensionHandler<AgentStartEvent>): void;
+	on(event: "agent_result", handler: ExtensionHandler<AgentResultEvent>): void;
 	on(event: "agent_end", handler: ExtensionHandler<AgentEndEvent>): void;
 	on(event: "turn_start", handler: ExtensionHandler<TurnStartEvent>): void;
 	on(event: "turn_end", handler: ExtensionHandler<TurnEndEvent>): void;

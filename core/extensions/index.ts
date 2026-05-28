@@ -23,6 +23,7 @@ export type {
 export { ExtensionRunner } from "./runner.js";
 export type {
 	AgentEndEvent,
+	AgentResultEvent,
 	AgentStartEvent,
 	// Re-exports
 	AgentToolResult,

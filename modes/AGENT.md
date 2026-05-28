@@ -26,6 +26,12 @@ The `modes/` module contains the three distinct execution modes for nanoPencil. 
 - [TO]: Consumed by main.ts
 - [HERE]: modes/index.ts - mode router
 
+`agent-loop-result-format.ts`: Shared agent loop result policy formatter
+- [WHO]: Provides formatLoopPolicySummary()
+- [FROM]: Depends on agent-core AgentRunPolicy
+- [TO]: Consumed by interactive and ACP status formatters
+- [HERE]: modes/agent-loop-result-format.ts - shared run-result display helpers
+
 ### Interactive Mode (`modes/interactive/`)
 
 Primary TUI mode for terminal-based interaction.

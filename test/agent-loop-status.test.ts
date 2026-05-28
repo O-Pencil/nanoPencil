@@ -51,3 +51,34 @@ test("agent loop status highlights limits and permission denials", () => {
 		],
 	);
 });
+
+test("agent loop status formats framework and policy used by the last run", () => {
+	assert.deepEqual(
+		formatAgentLoopStatusLines({
+			stopReason: "stop",
+			loopFramework: "weak-model-compatible",
+			loopPolicy: {
+				maxTurnsPerPrompt: 3,
+				maxToolCallsPerPrompt: 8,
+				maxToolConcurrency: 2,
+				maxToolResultBatchSizeChars: 64_000,
+				maxModelErrorRecoveryAttempts: 4,
+				maxOutputTokenRecoveryAttempts: 3,
+				outputTokenBudget: {
+					targetTokens: 1200,
+					thresholdPct: 0.75,
+					maxContinuations: 2,
+				},
+				maxStopHookContinuations: 2,
+			},
+			turnCount: 1,
+			toolCallCount: 0,
+			durationMs: 50,
+		}),
+		[
+			"Last loop:            stop, 1 turn, 0 tools, 50ms",
+			"Loop framework:       weak-model-compatible",
+			"Loop policy:          turns=3, tools=8, concurrency=2, toolResultChars=64000, modelRecoveries=4, outputRecoveries=3, outputBudget=1200@75%/2, stopHooks=2",
+		],
+	);
+});

@@ -5,6 +5,7 @@
  * [HERE]: modes/interactive/agent-loop-status.ts - /status loop outcome formatting
  */
 import type { AgentLoopTransition, AgentRunResult } from "@pencil-agent/agent-core";
+import { formatLoopPolicySummary } from "../agent-loop-result-format.js";
 
 const LABEL_WIDTH = 22;
 
@@ -55,6 +56,15 @@ export function formatAgentLoopStatusLines(result: AgentRunResult | undefined): 
 			`${result.stopReason}, ${plural(result.turnCount, "turn")}, ${plural(result.toolCallCount, "tool")}, ${formatDuration(result.durationMs)}`,
 		),
 	];
+
+	if (result.loopFramework) {
+		lines.push(formatLine("Loop framework:", result.loopFramework));
+	}
+
+	const policySummary = formatLoopPolicySummary(result.loopPolicy);
+	if (policySummary) {
+		lines.push(formatLine("Loop policy:", policySummary));
+	}
 
 	if (result.lastTransition) {
 		lines.push(formatLine("Loop transition:", formatTransition(result.lastTransition)));

@@ -43,6 +43,7 @@ import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
 import { SessionManager } from "../../core/session/session-manager.js";
 import { randomUUID } from "node:crypto";
 import { Readable, Writable } from "node:stream";
+import { formatLoopPolicySummary } from "../agent-loop-result-format.js";
 import { theme } from "../interactive/theme/theme.js";
 
 type AcpModeId = "ask" | "read-only" | "bypass";
@@ -240,6 +241,13 @@ function formatAcpLoopResultLines(result: AgentRunResult | undefined): string[] 
 	const lines = [
 		`Last loop: ${result.stopReason}, ${plural(result.turnCount, "turn")}, ${plural(result.toolCallCount, "tool")}, ${formatAcpDuration(result.durationMs)}`,
 	];
+	if (result.loopFramework) {
+		lines.push(`Loop framework: ${result.loopFramework}`);
+	}
+	const policySummary = formatLoopPolicySummary(result.loopPolicy);
+	if (policySummary) {
+		lines.push(`Loop policy: ${policySummary}`);
+	}
 	if (result.lastTransition) {
 		lines.push(`Loop transition: ${result.lastTransition.reason}`);
 	}

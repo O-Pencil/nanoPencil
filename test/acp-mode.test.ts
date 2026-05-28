@@ -48,6 +48,12 @@ test("acp loop result lines summarize the last agent result", () => {
 	assert.deepEqual(
 		__testUtils.formatAcpLoopResultLines({
 			stopReason: "toolUse",
+			loopFramework: "weak-model-compatible",
+			loopPolicy: {
+				maxTurnsPerPrompt: 3,
+				maxToolCallsPerPrompt: 8,
+				maxToolConcurrency: 2,
+			},
 			turnCount: 4,
 			toolCallCount: 7,
 			durationMs: 1200,
@@ -61,6 +67,8 @@ test("acp loop result lines summarize the last agent result", () => {
 		}),
 		[
 			"Last loop: toolUse, 4 turns, 7 tools, 1.2s",
+			"Loop framework: weak-model-compatible",
+			"Loop policy: turns=3, tools=8, concurrency=2",
 			"Loop transition: tool_call_limit_reached",
 			"Tool denials: 1",
 		],

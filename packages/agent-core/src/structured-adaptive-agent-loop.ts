@@ -50,6 +50,7 @@ import {
 	startToolUseSummary,
 } from "./agent-loop-tool-summaries.js";
 import { buildAgentRunPolicy, resolveAgentRunLoopFramework } from "./agent-run-result.js";
+import { waitForAssistantStreamEvent } from "./agent-loop-stream-events.js";
 
 const DEFAULT_MAX_TURNS_PER_PROMPT = 64;
 const DEFAULT_MAX_TOOL_CALLS_PER_PROMPT = 128;
@@ -546,8 +547,27 @@ async function streamAssistantResponse(
 
 	let partialMessage: AssistantMessage | null = null;
 	let addedPartial = false;
+	const responseIterator = response[Symbol.asyncIterator]();
 
-	for await (const event of response) {
+	while (true) {
+		const nextEvent = await waitForAssistantStreamEvent(responseIterator, signal);
+		if (nextEvent === "aborted") {
+			void responseIterator.return?.();
+			const finalMessage = createLoopLimitMessage(config, "Request was aborted");
+			finalMessage.stopReason = "aborted";
+			if (addedPartial) {
+				context.messages[context.messages.length - 1] = finalMessage;
+			} else {
+				context.messages.push(finalMessage);
+				stream.push({ type: "message_start", message: { ...finalMessage } });
+			}
+			stream.push({ type: "message_end", message: finalMessage });
+			return finalMessage;
+		}
+		if (nextEvent.done) {
+			break;
+		}
+		const event = nextEvent.value;
 		switch (event.type) {
 			case "start":
 				partialMessage = event.partial;

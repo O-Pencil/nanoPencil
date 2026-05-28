@@ -1,8 +1,8 @@
 /**
- * [WHO]: transformMessages
+ * [WHO]: Provides transformMessages
  * [FROM]: No external dependencies
- * [TO]: Consumed by packages/ai/src/index.ts
- * [HERE]: packages/ai/src/providers/transform-messages.ts -
+ * [TO]: Consumed by provider stream implementations and packages/ai/src/index.ts
+ * [HERE]: packages/ai/src/providers/transform-messages.ts - cross-provider message replay normalization
  */
 
 import type { Api, AssistantMessage, Message, Model, ToolCall, ToolResultMessage } from "../types.js";
@@ -107,6 +107,7 @@ export function transformMessages<TApi extends Api>(
 	const result: Message[] = [];
 	let pendingToolCalls: ToolCall[] = [];
 	let existingToolResultIds = new Set<string>();
+	const skippedInterruptedToolCallIds = new Set<string>();
 
 	for (let i = 0; i < transformed.length; i++) {
 		const msg = transformed[i];
@@ -137,6 +138,11 @@ export function transformMessages<TApi extends Api>(
 			// - The model should retry from the last valid state
 			const assistantMsg = msg as AssistantMessage;
 			if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
+				for (const block of assistantMsg.content) {
+					if (block.type === "toolCall") {
+						skippedInterruptedToolCallIds.add(block.id);
+					}
+				}
 				continue;
 			}
 
@@ -149,6 +155,10 @@ export function transformMessages<TApi extends Api>(
 
 			result.push(msg);
 		} else if (msg.role === "toolResult") {
+			if (skippedInterruptedToolCallIds.has(msg.toolCallId)) {
+				skippedInterruptedToolCallIds.delete(msg.toolCallId);
+				continue;
+			}
 			existingToolResultIds.add(msg.toolCallId);
 			result.push(msg);
 		} else if (msg.role === "user") {

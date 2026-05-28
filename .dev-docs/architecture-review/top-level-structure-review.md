@@ -487,7 +487,31 @@ Pencil/                                  ← ecosystem 顶层
 
 > **"独立可发布身份"是 packages/ 的唯一入场券。无外部消费者 + 无发布纪律的包，全部退回 `core/lib/`**。
 >
-> **核心能力（Memory / Soul）协议化**，让默认实现可被替换，符合 README D3 "Extensible" 承诺。
+> **Memory / Soul 是 PencilAgent 的器官级基础能力**：官方保留连续性内核（canonical state、provenance、merge policy、prompt injection policy），mem-core / soul-core 提供官方基础实现；第三方通过 provider / adapter / candidate seam 接入存储、检索、人格侧面和派生认知模型，而不是直接替换 Pencil 的长期自我解释机制。
+
+#### 6.D.1.1 上位抽象：Pencil Agent Runtime Protocol（PARP）
+
+grilling 后新增一个独立但与候选 D 集成的解释层：**Pencil Agent Runtime Protocol（PARP）**。
+
+PARP 的一句话定义：
+
+> nanoPencil 不只是一个 CLI agent，而是一套可宿主、可组合、可扩展的 Agent Runtime Protocol；CLI、Browser、Gateway、Editor 都是这套协议在不同 host adapter、tool runtime、agent profile 下的形态。
+
+PARP 不替代候选 D；候选 D 是目录与发布边界，PARP 是候选 D 之上的产品架构解释：
+
+```text
+PencilAgent =
+  Agent Loop
+  + Tool Runtime
+  + Agent Profile
+  + Continuity
+  + Host Adapter
+  + Permission Policy
+```
+
+因此，`extensions/optional/browser/` 不只是一个普通插件，而是 **Browser Tool Runtime**；`browser-agent` 则是一个 Agent Profile（browser tools + browser loop policy + browser permission policy + continuity）。CLI 同理是默认 `cli-agent` profile，而 Gateway / editor 是不同 host adapter 与 tool runtime 的组合。
+
+短期约束：PARP 只作为候选 D 的命名原则与协议边界，不新增一整套平台化批次。B0 只需要给 `packages/extension-sdk/` 和 `core/agent-profile/` 留出最小 schema / protocol 落点。
 
 ### 6.D.2 选择性归类（5 个现 packages 重新分类）
 
@@ -496,9 +520,9 @@ Pencil/                                  ← ecosystem 顶层
 | `ai` | 0 外部消费者 + 0.0.1 不动 + 无可见独立路线 | **退到 `core/lib/ai/`** | 当前是 nanoPencil 内部库 |
 | `agent-core` | 0 外部消费者 + 0.0.1 不动 | **退到 `core/lib/agent-core/`** | 同上 |
 | `tui` | 0 外部消费者 + 0.0.1 不动 | **退到 `core/lib/tui/`** | 同上 |
-| `mem-core` | README 力推 + maintainer 明确想保 + 已发 1.1.0 + 未来可插拔 | **保 `packages/mem-core/`** | 真发布的"能力" |
-| `soul-core` | README 力推 + maintainer 明确想保 | **保 `packages/soul-core/`** | 真发布的"能力"（需补发 npm） |
-| `extension-sdk`（**新增**）| 第三方扩展协议 + Memory/Soul Provider 协议 | **新建 `packages/extension-sdk/`** | 等同 Continue.dev 的 continue-sdk |
+| `mem-core` | README 力推 + maintainer 明确想保 + 已发 1.1.0 + 未来可接外部 store/provider | **保 `packages/mem-core/`** | 真发布的官方基础记忆实现 |
+| `soul-core` | README 力推 + maintainer 明确想保 | **保 `packages/soul-core/`** | 真发布的官方基础灵魂实现（需补发 npm） |
+| `extension-sdk`（**新增**）| 第三方扩展协议 + Memory/Soul 低层 provider/adapter 协议 | **新建 `packages/extension-sdk/`** | 等同 Continue.dev 的 continue-sdk，但不外包连续性内核 |
 
 ### 6.D.3 最终目标顶层结构
 
@@ -513,6 +537,8 @@ nanoPencil/
 │   ├── mcp/                            ← MCP 协议适配
 │   ├── session/  prompt/  model/  persona/  workspace/  export-html/  agent-dir/
 │   ├── extensions-host/                ← 扩展运行时（4-tier loader）
+│   ├── continuity/                     ← ★ 连续性内核：canonical state / merge policy / prompt injection policy
+│   ├── agent-profile/                  ← ★ PARP：profile schema / built-in profiles / resolver
 │   │
 │   │  ━━━ 通用库（多管一层）━━━
 │   ├── lib/
@@ -530,8 +556,8 @@ nanoPencil/
 │
 ├── extensions/                         ← 第一方扩展（dev 时直接加载）
 │   ├── builtin/                        ← rename "defaults" → "builtin"
-│   │   ├── memory-binding/             ← ★ MemoryProvider 桥接
-│   │   ├── soul-binding/               ← ★ SoulProvider 桥接
+│   │   ├── memory-binding/             ← ★ 官方 MemoryEngine ↔ continuity 桥接
+│   │   ├── soul-binding/               ← ★ 官方 SoulEngine ↔ continuity 桥接
 │   │   ├── sal/  mcp/  loop/  ...      ← 现有
 │   ├── optional/
 │   │   └── browser/                    ← F07 迁来
@@ -542,19 +568,24 @@ nanoPencil/
 │   ├── extension-sdk/                  ← 协议 + 类型契约
 │   │   ├── src/
 │   │   │   ├── index.ts
+│   │   │   ├── agent-profile.ts        ← Agent Profile 协议
+│   │   │   ├── host-adapter.ts         ← Host Adapter 协议
 │   │   │   ├── tools.ts                ← Tool 协议
+│   │   │   ├── tool-runtime.ts         ← Tool Runtime 协议
 │   │   │   ├── themes.ts               ← Theme 协议
 │   │   │   ├── hooks.ts                ← Hook 协议
 │   │   │   ├── commands.ts             ← SlashCommand 协议
-│   │   │   ├── memory-provider.ts      ← ★ Memory 可插拔基础
-│   │   │   ├── soul-provider.ts        ← ★ Soul 可插拔基础
+│   │   │   ├── memory-store.ts         ← ★ 存储介质/外部记忆后端
+│   │   │   ├── memory-candidate.ts     ← ★ 插件提交记忆候选更新
+│   │   │   ├── soul-facet-provider.ts  ← ★ 外部人格侧面/偏好信号
+│   │   │   ├── cognitive-model-provider.ts ← ★ SAL/认知地图等派生模型
 │   │   │   ├── permissions.ts
 │   │   │   └── lifecycle.ts            ← Extension / Context / Factory
 │   │   ├── package.json                ← @pencil-agent/extension-sdk
 │   │   └── README.md
-│   ├── mem-core/                       ← NanoMem 默认实现
+│   ├── mem-core/                       ← NanoMem 官方基础实现
 │   │   └── package.json                ← depends on @pencil-agent/extension-sdk
-│   └── soul-core/                      ← NanoSoul 默认实现
+│   └── soul-core/                      ← NanoSoul 官方基础实现
 │       └── package.json                ← depends on @pencil-agent/extension-sdk
 │
 └── scripts/
@@ -569,10 +600,11 @@ nanoPencil/
 |------|------|----------------|
 | 顶层目录命名 | **保留 `core/`** | Continue.dev 同样选 `core/`；语义诚实 |
 | core 内部分层 | **多管一层**：业务子目录 + `lib/` + `platform/` | 一次性架构决策防止再变杂物间 |
+| 上位抽象 | **PARP：Pencil Agent Runtime Protocol** | CLI / Browser / Gateway / Editor 都是 profile + runtime + host adapter 的组合 |
 | ai/agent-core/tui 归属 | 退到 `core/lib/` | 当前 0 外部消费者；无发布纪律 |
 | 未来发布 ai-core | **设计 4**（手工挪 30 分钟 + 可选 promote 脚本） | Continue 历史也是手工挪过 |
 | 真发布的包数量 | 3 个（extension-sdk + mem-core + soul-core） | Continue 用 8 个，3 个起步可扩 |
-| Memory/Soul 可插拔 | **粒度 3 协议化**（first-class interface） | OpenClaw plugin-sdk 模式 |
+| Memory/Soul 可插拔 | **连续性内核官方定义；provider/adapter/candidate 可插拔** | 不把 PencilAgent 长期自我叙事外包给插件 |
 | 扩展运行时位置 | `core/extensions-host/` | Continue 类似 |
 | 第一方扩展位置 | `extensions/builtin/` + `optional/` 顶层 | OpenClaw + Continue 都顶层 |
 | host dependencies | 真依赖 3 个真包（`workspace:^`）| 标准 npm workspaces 玩法 |
@@ -600,43 +632,82 @@ nanoPencil/
 - 发 `extension-sdk@1.0.0` → 发 `mem-core@1.x` → 发 `soul-core@1.x` → 发 `nano-pencil@1.15`
 - 消费者 `npm i -g @pencil-agent/nano-pencil` 自动拉这 4 个包
 
-### 6.D.6 Memory/Soul 协议化（nanomem 可插拔）
+### 6.D.6 Memory/Soul 协议化（连续性内核 + 技术层可插拔）
+
+grilling 后修订：原先的 "MemoryProvider / SoulProvider 可替换默认实现" 表述过粗，容易把 PencilAgent 的长期自我解释权外包给第三方插件。新的边界是：
+
+- **官方定义连续性内核**：`core/continuity/` 保存 canonical state contract、provenance、merge policy、prompt injection policy。它定义 Pencil 如何形成、更新、合并和解释"我是谁"，但不预先写死每个 agent 的身份内容。
+- **官方提供基础实现**：`packages/mem-core/` 是 NanoMem 默认记忆 engine；`packages/soul-core/` 是 NanoSoul 默认灵魂 engine。它们是 Pencil 的基础能力，不是普通 optional extension。
+- **第三方可插拔技术层**：插件可以提供存储介质、检索候选、人格侧面、认知地图、外部知识 adapter；但不能绕过官方 engine 直接改写 canonical memory / soul。
+- **SAL 认知地图归类**：SAL 若只分析/可视化，继续是 builtin extension；若参与 recall / planning / reflection，则实现 `CognitiveModelProvider`，作为 derived cognitive model 被连续性内核消费，不直接成为 canonical state。
 
 ```ts
-// packages/extension-sdk/src/memory-provider.ts
-export interface MemoryProvider {
-  remember(episode: Episode): Promise<void>;
-  recall(query: string, k?: number): Promise<MemoryEntry[]>;
-  consolidate(): Promise<ConsolidationResult>;
-  forget(predicate: ForgetPredicate): Promise<number>;
+// packages/extension-sdk/src/memory-store.ts
+export interface MemoryStore {
+  put(entry: MemoryEntry): Promise<void>;
+  search(query: MemoryQuery): Promise<MemoryEntry[]>;
+  delete(id: string): Promise<void>;
   meta: { name: string; version: string; capabilities: MemoryCapability[] };
 }
 
-// packages/mem-core/src/index.ts （默认实现）
-import type { MemoryProvider } from "@pencil-agent/extension-sdk";
-export class NanoMemEngine implements MemoryProvider { ... }
+// packages/extension-sdk/src/soul-facet-provider.ts
+export interface SoulFacetProvider {
+  proposeFacet(input: SoulFacetInput): Promise<SoulFacetCandidate[]>;
+}
+
+// packages/extension-sdk/src/cognitive-model-provider.ts
+export interface CognitiveModelProvider {
+  derive(input: CognitiveModelInput): Promise<DerivedCognitiveModel>;
+}
+
+// core/continuity/merge-policy.ts（官方解释权）
+export interface ContinuityMergePolicy {
+  acceptMemoryCandidate(candidate: MemoryCandidate): MergeDecision;
+  acceptSoulFacet(candidate: SoulFacetCandidate): MergeDecision;
+  attachDerivedModel(model: DerivedCognitiveModel): MergeDecision;
+}
+
+// packages/mem-core/src/index.ts（官方基础实现）
+import type { MemoryStore } from "@pencil-agent/extension-sdk";
+export class NanoMemEngine {
+  constructor(private store: MemoryStore) {}
+  remember(episode: Episode): Promise<MemoryCandidate[]> { ... }
+  recall(query: string): Promise<MemoryEntry[]> { ... }
+  consolidate(): Promise<MemoryCandidate[]> { ... }
+}
 
 // extensions/builtin/memory-binding/index.ts （桥接）
 import { defineExtension } from "@pencil-agent/extension-sdk";
 import { NanoMemEngine } from "@pencil-agent/mem-core";
 export default defineExtension({
   id: "memory-binding",
-  registerMemoryProvider: (ctx) => new NanoMemEngine(ctx),
+  registerMemoryEngine: (ctx) => new NanoMemEngine(ctx.memoryStore),
 });
 
-// 第三方/未来可能（替换默认）
-class Mem0Adapter implements MemoryProvider { ... }       // mem0.ai
-class ZepAdapter implements MemoryProvider { ... }        // zep.us
-class CorporateMemory implements MemoryProvider { ... }   // 企业私有
+// 第三方/未来可能（替换技术层，不替换连续性内核）
+class Mem0Store implements MemoryStore { ... }            // mem0.ai
+class ZepStore implements MemoryStore { ... }             // zep.us
+class CorporateGraph implements CognitiveModelProvider { ... }
 
-// core/runtime/agent-session.ts （host 通过协议消费）
-import type { MemoryProvider } from "@pencil-agent/extension-sdk";
+// core/runtime/agent-session.ts（host 通过官方 continuity 消费）
 class AgentSession {
-  constructor(private memory: MemoryProvider) {} // ← 不锁定 NanoMem
+  constructor(private continuity: ContinuityKernel) {}
 }
 ```
 
-`SoulProvider` 同理。
+`Soul` 同理：第三方提供 `SoulFacetCandidate`，官方 `SoulEngine + ContinuityMergePolicy` 决定是否进入长期 self model。
+
+面向人的说法与技术解释对应如下：
+
+| 面向人的说法 | 技术层面的定义 |
+|--------------|----------------|
+| 记忆 | `MemoryEngine` + `MemoryStore` + `RecallPolicy` |
+| 灵魂 / 性格 | `SoulEngine` + `SelfModel` + `BehaviorProfile` |
+| 经验沉淀 | `Episode` → `Consolidation` → `LongTermMemory` |
+| 性格变化 | `ReflectionEvent` → `SoulUpdateCandidate` → `MergePolicy` |
+| 认知地图 | `DerivedCognitiveModel` / `CognitiveModelProvider` |
+| 身体器官 | `Provider` / `Store` / `Adapter` |
+| 自我连续性 | `CanonicalAgentState` + `VersionedMergePolicy` + `PromptInjectionPolicy` |
 
 ### 6.D.7 未来发布机制（设计 4 + 可选辅助工具）
 
@@ -666,9 +737,11 @@ node scripts/promote-to-package.ts ai
 | 删 bundle-deps.js | ✅ | 走 npm 自然解析 |
 | ai/agent-core/tui 不假装独立 | ✅ | 退 `core/lib/`，不发包 |
 | 未来想发 ai-core 不挪来挪去 | ⚠️ 接受 30 分钟成本 + 可选 promote 脚本 | 6.D.7 |
-| nanomem 可插拔 | ✅ | MemoryProvider 协议 |
+| nanomem 可插拔 | ✅ | MemoryStore / MemoryCandidate provider；官方 MemoryEngine + ContinuityKernel 保留合并权 |
+| 配置出不同 PencilAgent | ✅ | PARP + `core/agent-profile/`：CLI / Browser / Remote / Editor profile |
+| Browser agent 插件化 | ✅ | Browser capability 作为 optional Browser Tool Runtime；Browser Agent 是 profile，不是普通插件 |
 | 修 U3 反向依赖 | ✅ | mem-core depends on extension-sdk |
-| 第三方扩展能力真兑现 | ✅ | 4-tier loader + extension-sdk + Memory/Soul 协议 |
+| 第三方扩展能力真兑现 | ✅ | 4-tier loader + extension-sdk + provider/adapter/candidate seam |
 | 与 README 三层对齐 | ✅ | Cognitive=packages/mem+soul · Tool=core/runtime+tools+mcp · Interface=modes+core/lib/tui |
 | 编译时间 | ✅ 改善 | 删 4 个子 tsc，单一主 tsc + 3 个真包 build |
 | install 影响 | ⚠️ 增 2-3MB | 仅 4 个 tarball；maintainer 已接受 |
@@ -720,7 +793,7 @@ target-architecture.md 当前 9 个决策点 Q1–Q9 状态更新：
 |---|------|----------------|
 | **Q10** | 顶层结构选哪个候选？（取代 Q1） | **候选 D** Selective Packages + 真发布 + 协议化 |
 | **Q11** | `cognitive/` 目录命名是否合理？ | 不需要 cognitive/，mem+soul 直接放 `packages/`；name 暂时搁置 |
-| **Q12** | 第三方扩展做到什么程度？ | **粒度 3 协议化**（first-class MemoryProvider/SoulProvider/Tool/Theme/Hook 协议） |
+| **Q12** | 第三方扩展做到什么程度？ | **粒度 3 协议化**，但 D5 收窄为 provider/adapter/candidate seam：Memory/Soul 的连续性内核和最终 merge 解释权仍由官方定义 |
 | **Q14** | `core/` 杂物间是否拆开？ | **拆开**：业务子目录 + `core/lib/` + `core/platform/` 多管一层 |
 | **未来发布机制** | ai-core 何时发布、怎么不挪来挪去？ | **设计 4** 接受 30 分钟手工成本 + 可选 `promote-to-package.ts` 脚本 |
 

@@ -96,8 +96,10 @@ Q1/Q4/Q9 被 Q10 覆盖或吸收；Q5 在候选 A 下权重降低；Q2/Q3/Q6/Q7/
 - ✅ 顶层保留 `core/`（与 Continue.dev 一致）+ `modes/` + `extensions/` + `packages/`
 - ✅ **core 内部多管一层**：业务子目录 + `core/lib/` + `core/platform/`
 - ✅ `packages/ai/` `agent-core/` `tui/` **退到 `core/lib/`**（0 外部消费者，不假装独立）
-- ✅ `packages/mem-core/` `soul-core/` **保独立发布身份** + 协议化（MemoryProvider / SoulProvider）
-- ✅ **新增 `packages/extension-sdk/`** 作为协议契约稳定家（等同 Continue 的 continue-sdk）
+- ✅ `packages/mem-core/` `soul-core/` **保独立发布身份** + 官方基础实现定位；可插拔收窄为 provider / adapter / candidate seam
+- ✅ **新增 `packages/extension-sdk/`** 作为协议契约稳定家（等同 Continue 的 continue-sdk），定义 MemoryStore / MemoryCandidate / SoulFacet / CognitiveModel 等低层协议
+- ✅ **新增 `core/continuity/`** 作为连续性内核：canonical state / provenance / merge policy / prompt injection policy
+- ✅ **新增 PARP 上位抽象**：Pencil Agent Runtime Protocol；CLI / Browser / Gateway / Editor 都是 Agent Profile + Tool Runtime + Host Adapter + Continuity 的组合
 - ✅ `core/extensions/` rename → `core/extensions-host/`；`extensions/defaults/` rename → `extensions/builtin/`
 - ✅ 删 `bundle-deps.js`，走 npm workspace 真依赖
 - ✅ 新建 `scripts/promote-to-package.ts` 支撑未来 lib → packages 自动迁移
@@ -105,7 +107,9 @@ Q1/Q4/Q9 被 Q10 覆盖或吸收；Q5 在候选 A 下权重降低；Q2/Q3/Q6/Q7/
 **已决议 Q**：Q1 / Q4 / Q7 / Q9 / Q10 / Q11 / Q12 / Q14 → 8 个
 **剩余待 grilling Q**：Q2 / Q3 / Q5 / Q6 / Q8 / Q13 → 6 个
 
-**新增执行批次 B0**：顶层骨架重组（< 2 天，纯机械迁移，用 ts-morph codemod），是 B1–B6 的前置批次。**详见 `target-architecture.md §7`**。
+**新增执行批次 B0**：顶层骨架重组 + D5 连续性内核最小落点 + PARP 最小协议落点。路径迁移可用 ts-morph codemod，但 `core/continuity/` 的 canonical state / merge policy / prompt injection policy 与 `core/agent-profile/` 的 profile schema 是语义新增，不能按纯机械迁移估算。B0 是 B1–B6 的前置批次。**详见 `target-architecture.md §7`**。
+
+**PARP 执行约束**：PARP 是命名原则和协议边界，不新增完整平台化批次。B0 只落 `packages/extension-sdk/{agent-profile,host-adapter,tool-runtime}.ts` 与 `core/agent-profile/` 的最小 schema / built-in profile 草案；Browser 只重新归类为 optional Browser Tool Runtime，不在本轮实现 Browser Agent marketplace / UI。
 
 
 
@@ -117,9 +121,10 @@ Q1/Q4/Q9 被 Q10 覆盖或吸收；Q5 在候选 A 下权重降低；Q2/Q3/Q6/Q7/
 |---|----------|-------|
 | Q10 顶层骨架 | **候选 D** | Selective Packages + 真发布 + 协议化（详见 top-level-structure-review §6.D）|
 | Q11 cognitive 命名 | **不用 cognitive** | mem/soul 直接放 packages |
-| Q12 第三方扩展深度 | **协议化（粒度 3）** | first-class MemoryProvider/SoulProvider/Tool/Theme/Hook 协议 |
+| Q12 第三方扩展深度 | **协议化（粒度 3）** | Tool/Theme/Hook 可 first-class；Memory/Soul 收窄为 provider/adapter/candidate seam，最终 merge 与自我连续性解释权由官方 `core/continuity/` 定义 |
+| PARP 上位抽象 | **采用为候选 D 的解释层** | 不替代候选 D；只约束 extension-sdk 命名、Tool Runtime / Host Adapter / Agent Profile 边界 |
 | Q14 core/ 杂物间 | **拆 + 多管一层** | `core/lib/` + `core/platform/` |
-| Q1 mem/soul package 身份 | **保独立 + 协议化** | mem-core 改 import @pencil-agent/extension-sdk |
+| Q1 mem/soul package 身份 | **保独立 + 协议化** | mem/soul 是官方基础实现包；mem-core 改 import @pencil-agent/extension-sdk 的低层协议 |
 | Q4 SAL 走向 | **保扩展** | 通过 core/platform/telemetry 通道 |
 | Q7 modes/_shell 粒度 | **只抽 cancellation** | prompt loop 各 mode 自维护 |
 | Q9 platform 集中化 | **集中到 core/platform/** | 多管一层 |

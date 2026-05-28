@@ -81,12 +81,12 @@ audience: pencil maintainer
 | **D2** | **扩展运行时** | 让产品保持薄但能力可扩；MCP、grub、loop、team 等行为都靠它 | hook contract 稳定；不向用户态写入（charter §1） | `core/extensions/`、`builtin-extensions.ts`、`extensions/defaults/`、`extensions/optional/` |
 | **D3** | **AI Provider 抽象** | 用户不锁厂；多 provider 是 charter §"模型自由" | OpenAI-style 接口契约；新 provider 加入零侵入；可独立发布 | `packages/ai/` |
 | **D4** | **存储 / 持久化** | 会话连续性 + 凭据安全 + 设置生效；charter §"Privacy First" | 用户态结构稳定（向后兼容）；凭据零泄漏；多 agent 隔离 | `core/session/`、`core/config/`、`core/agent-dir/`、用户 `~/.pencils/agents/` |
-| **D5** | **认知 / 记忆 / 性格** | NanoMem + NanoSoul 是 README 力推的差异化 | mem/soul 持久化格式稳定；与 SAL 数据契约清晰 | `packages/mem-core/`、`packages/soul-core/`、`extensions/defaults/sal/`、`core/soul-integration.ts` |
+| **D5** | **认知 / 记忆 / 性格 / 连续性** | NanoMem + NanoSoul 是 README 力推的差异化；PencilAgent 要像"同一个人"持续成长，靠的是记忆、性格和自我解释机制的连续性 | 官方定义 canonical state、provenance、merge policy、prompt injection policy；可插拔模块只能提供存储/检索/候选更新/派生模型，不能绕过官方 engine 直接改写长期自我叙事 | `packages/mem-core/`、`packages/soul-core/`、`extensions/defaults/sal/`、`core/soul-integration.ts` |
 | **D6** | **UI / 入口形态** | 4 种 mode：interactive TUI（产品旗舰）、print（CI/管道）、rpc（IDE）、acp（外部 agent 协议） | TUI 行为零回归（charter §人格契约）；mode 之间可独立演化 | `modes/`、`packages/tui/` |
 | **D7** | **遥测 / 自我观察** | 1.14.3 后的 ext_* 三表 + SAL eval + diagnostics；handbook 三 Agent 程序的数据底座 | 用户态零写入；凭据缺失→noop；隐私字段白名单 | `core/telemetry/`、`extensions/defaults/{diagnostics,sal}/`、`scripts/self-diagnosis/` |
 | **D8** | **平台基础设施** | i18n、theme、keybinding、CLI args、migrations、package detection —— 共享低层工具 | 跨域无业务知识；只提供原语 | 散落：`core/i18n/`、`config.ts`、`migrations.ts`、`modes/interactive/theme/`、`utils/`、`core/keybindings.ts`、`core/utils/` |
 
-**关键观察 1**：**D5 认知域跨越了 `packages/`、`extensions/defaults/`、`core/` 三个目录**。`packages/mem-core` 是包，`soul-integration.ts` 是 core 桥接器，`extensions/defaults/sal` 是扩展 —— 三种不同的"集成方式"对应同一类功能。这暗示**集成方式没有遵循"为什么这样集成"的规则**，而是历史遗留。
+**关键观察 1**：**D5 认知域跨越了 `packages/`、`extensions/defaults/`、`core/` 三个目录**。`packages/mem-core` 是包，`soul-integration.ts` 是 core 桥接器，`extensions/defaults/sal` 是扩展 —— 三种不同的"集成方式"对应同一类功能。grilling 后对 D5 的解释进一步收窄：官方不预先规定 PencilAgent 的全部"核心身份内容"，但必须规定它如何形成、更新、合并和解释长期状态。换言之，官方拥有 **Continuity Kernel（连续性内核）**，插件只进入受控的 provider / adapter / candidate update seam。
 
 **关键观察 2**：**D6 UI 域里"产品旗舰"interactive TUI 占了 god 文件**，但 print/rpc/acp 三个**非旗舰但 SDK 嵌入更常用**的 mode 反而拆得相对干净。这暗示 god 文件不是"功能多"造成的，而是**"演进时没有同步重构"**。
 
@@ -114,6 +114,90 @@ audience: pencil maintainer
 - 现状是**两者都做了一半**：有 workspace 包 + bundle-deps，但 package 边界并不真的隔离
 
 这是 Phase 3 grilling 的核心议题之一（见 §6.Q1）。
+
+---
+
+## 3.5 上位抽象：Pencil Agent Runtime Protocol（PARP）
+
+候选 D 解决"代码应该怎么摆"；PARP 解释"这些目录共同抽象出什么"。
+
+**定义**：Pencil 的底层不是单一 CLI，而是一套可宿主、可组合、可扩展的 **Agent Runtime Protocol**。CLI 是默认 host profile；Browser 是 browser tool runtime + browser agent profile；Gateway 是 remote host adapter；Editor 是 caller-owned tool runtime。nanoPencil 的长期定位不是"一个 CLI + 插件"，而是 Pencil 生态里能配置出多类 PencilAgent 的 runtime 内核。
+
+### 3.5.1 PARP 的组合公式
+
+```text
+PencilAgent =
+  Agent Loop
+  + Tool Runtime
+  + Agent Profile
+  + Continuity
+  + Host Adapter
+  + Permission Policy
+```
+
+不同形态只是 profile 与 runtime 组合不同：
+
+```text
+CLI PencilAgent
+  = local shell/file/edit/grep tools
+  + terminal host surface
+  + local workspace
+  + default continuity
+
+Browser PencilAgent
+  = browser tool runtime（open/click/type/screenshot/extract/waitFor）
+  + browser session state
+  + browser-specific loop policy
+  + browser permission policy
+
+Gateway PencilAgent
+  = remote tool transport
+  + HTTP/SSE host adapter
+  + multi-agent isolation
+  + usage/billing boundary
+
+Editor PencilAgent
+  = caller-owned workspace tools
+  + ACP / Remote HTTP bridge
+  + document/context runtime
+```
+
+### 3.5.2 五层协议边界
+
+| PARP 层 | 责任 | 目标目录 |
+|---------|------|----------|
+| Agent Loop | 模型 → 工具 → 观察 → 下一步；不关心具体 host | `core/runtime/` + `core/lib/agent-core/` |
+| Tool Runtime | CLI / Browser / Editor / MCP / Remote 等工具执行环境 | `core/tools/` + `extensions/*` + `packages/extension-sdk/tools.ts` |
+| Agent Profile | 把 loop policy、tool runtime、continuity、权限组合成一种 PencilAgent | `core/agent-profile/` |
+| Host Adapter | CLI / ACP / Gateway HTTP / Editor / Browser session 等宿主适配 | `modes/` + Gateway SDK 嵌入 + ACP |
+| Continuity | 记忆、灵魂、认知地图、长期状态合并 | `core/continuity/` + `packages/mem-core/` + `packages/soul-core/` |
+
+### 3.5.3 工具也是协议化 endpoint
+
+工具不应只是散落的函数，而是 Agent Loop 可调用的协议化 endpoint：
+
+```ts
+interface AgentToolProtocol {
+  name: string;
+  schema: JsonSchema;
+  invoke(input: unknown, context: ToolInvocationContext): Promise<ToolResult>;
+  permissions: PermissionSpec;
+  runtime: "local" | "remote" | "browser" | "mcp" | "hosted";
+}
+```
+
+在这个模型下，`bash`、`read_file`、`edit`、`browser.click`、`browser.open`、`editor.insert_text`、MCP tools、remote tools 都是同一套 Tool Protocol 的不同实现。Browser 能力可以作为 `extensions/optional/browser/` 提供的 **Browser Tool Runtime**，而 Browser Agent 则是一个使用该 runtime 的 **Agent Profile**，不是把整个 browser agent 塞进普通插件。
+
+### 3.5.4 与候选 D 的关系
+
+PARP 不替代候选 D，也不新增一个必须立即完成的大批次。它是候选 D 的命名原则和抽象边界：
+
+- `packages/extension-sdk/` 不只是 plugin SDK，而是公开 runtime protocol 的稳定入口
+- `extensions/optional/browser/` 从"低频大资产扩展"重新归类为 Browser Tool Runtime
+- 新增 `core/agent-profile/`，先承载 profile schema / built-in profiles，不急于做 marketplace 或 UI
+- `core/continuity/` 继续保留 Memory/Soul 的官方连续性解释权，profile 只能选择或配置 continuity 策略，不能绕过 merge policy
+
+短期落地只要求类型命名和目录语义向 PARP 对齐；完整多 Agent Profile 平台化留给后续阶段。
 
 ---
 
@@ -162,22 +246,31 @@ nanoPencil/
 │   │   ├── runner.ts
 │   │   ├── loader.ts                    ← 4-tier loader（Q12 协议化）
 │   │   ├── wrapper.ts
-│   │   ├── registry.ts                  ← 【新】tool/theme/command/hook/memory/soul 注册中心
+│   │   ├── registry.ts                  ← 【新】tool/theme/command/hook/provider 注册中心
 │   │   ├── sandbox.ts                   ← 【新】risk-level 沙箱
 │   │   ├── permissions.ts               ← 【新】第三方扩展权限提示
-│   │   └── memory-provider-bridge.ts    ← 【新】MemoryProvider 协议桥接（消费 mem-core）
+│   │   └── cognitive-provider-bridge.ts ← 【新】MemoryStore / SoulFacet / CognitiveModel provider 桥接
+│   │
+│   ├── continuity/                       ← ★ 【新 D5】连续性内核（官方解释权）
+│   │   ├── canonical-state.ts            ← Memory/Soul/SAL 可引用的长期状态 schema
+│   │   ├── provenance.ts                 ← 状态来源、confidence、scope、版本
+│   │   ├── merge-policy.ts               ← 插件候选更新如何进入 canonical state
+│   │   ├── prompt-injection-policy.ts    ← 哪些状态可进入 system prompt / recall prompt
+│   │   ├── cognitive-model-contract.ts   ← SAL 等派生认知模型的只读/候选更新边界
+│   │   └── README.md                     ← 面向人/技术的双层解释映射
 │   │
 │   ├── session/                         ← 不变
 │   ├── prompt/                          ← 不变
 │   ├── model/                           ← 不变
+│   ├── agent-profile/                   ← ★ 【新 PARP】Agent Profile schema / built-in profiles / profile resolver
 │   ├── sub-agent/                       ← 不变
 │   ├── agent-dir/                       ← 不变
 │   ├── persona/                         ← 不变
 │   ├── workspace/                       ← 不变
 │   ├── export-html/                     ← 不变
 │   ├── slash-commands.ts                ← 不变
-│   ├── soul-integration.ts              ← 【F04 修】不再 import sdk.ts；改 import @pencil-agent/extension-sdk 的 SoulProvider
-│   ├── soul-options-contract.ts         ← 【新】soul ↔ sdk 共享契约
+│   ├── soul-integration.ts              ← 【F04 修】不再 import sdk.ts；改走 continuity + soul-core 官方 engine
+│   ├── soul-options-contract.ts         ← 【新】soul ↔ sdk 共享契约（低层 option，不承载身份解释权）
 │   ├── model-registry.ts                ← 不变
 │   ├── model-resolver.ts                ← 不变
 │   ├── package-manager.ts               ← 1795 行（候选 D 不强制拆，但建议）
@@ -235,8 +328,8 @@ nanoPencil/
 │
 ├── extensions/                          ← 第一方扩展（dev 时直接加载，OpenClaw 风）
 │   ├── builtin/                         ← 【rename】"defaults" → "builtin"
-│   │   ├── memory-binding/              ← ★ 【新】把 mem-core 接到 host（实现 MemoryProvider 协议）
-│   │   ├── soul-binding/                ← ★ 【新】把 soul-core 接到 host（实现 SoulProvider 协议）
+│   │   ├── memory-binding/              ← ★ 【新】把 mem-core 官方 engine 接到 continuity
+│   │   ├── soul-binding/                ← ★ 【新】把 soul-core 官方 engine 接到 continuity
 │   │   ├── sal/  mcp/  loop/  diagnostics/  soul/  presence/
 │   │   ├── grub/  team/  subagent/  plan/  recap/
 │   │   ├── discipline/  interview/  idle-think/
@@ -253,12 +346,17 @@ nanoPencil/
 │   ├── extension-sdk/                   ← ★ 【新】协议 + 类型契约（等同 Continue 的 continue-sdk）
 │   │   ├── src/
 │   │   │   ├── index.ts                 ← 总入口
+│   │   │   ├── agent-profile.ts         ← ★ Agent Profile 协议（loop + tools + continuity + permissions）
+│   │   │   ├── host-adapter.ts          ← ★ Host Adapter 协议（CLI / ACP / Gateway / Editor）
 │   │   │   ├── tools.ts                 ← Tool 协议
+│   │   │   ├── tool-runtime.ts          ← ★ Tool Runtime 协议（local/remote/browser/mcp/hosted）
 │   │   │   ├── themes.ts                ← Theme 协议
 │   │   │   ├── hooks.ts                 ← Hook 协议
 │   │   │   ├── commands.ts              ← SlashCommand 协议
-│   │   │   ├── memory-provider.ts       ← ★ Memory 可插拔基础协议
-│   │   │   ├── soul-provider.ts         ← ★ Soul 可插拔基础协议
+│   │   │   ├── memory-store.ts          ← ★ Memory 存储介质协议（jsonl/sqlite/vector/mem0/zep）
+│   │   │   ├── memory-candidate.ts      ← ★ 插件提交 memory 候选更新，不直接写 canonical state
+│   │   │   ├── soul-facet-provider.ts   ← ★ 外部人格侧面/偏好信号 provider
+│   │   │   ├── cognitive-model-provider.ts ← ★ SAL/认知地图等派生模型 provider
 │   │   │   ├── permissions.ts
 │   │   │   └── lifecycle.ts             ← Extension / Context / Factory
 │   │   ├── package.json                 ← @pencil-agent/extension-sdk
@@ -267,14 +365,15 @@ nanoPencil/
 │   │
 │   ├── mem-core/                        ← NanoMem 默认实现，真发布 npm（已 1.1.0）
 │   │   ├── src/
-│   │   │   ├── index.ts                 ← export NanoMemEngine implements MemoryProvider
-│   │   │   ├── extension.ts             ← 不再 import host；只 import @pencil-agent/extension-sdk（修 U3）
+│   │   │   ├── index.ts                 ← export NanoMemEngine（官方基础记忆实现）
+│   │   │   ├── stores/                  ← 默认本地 store + 可选外部 store adapter
+│   │   │   ├── extension.ts             ← 不再 import host；只 import extension-sdk 的低层协议（修 U3）
 │   │   │   └── ...
 │   │   ├── package.json                 ← peerDependencies: @pencil-agent/extension-sdk
 │   │   └── tsconfig.build.json
 │   │
-│   └── soul-core/                       ← NanoSoul 默认实现，需补 npm 发布（当前 0.1.0 npm 404）
-│       ├── src/                         ← implements SoulProvider
+│   └── soul-core/                       ← NanoSoul 官方基础实现，需补 npm 发布（当前 0.1.0 npm 404）
+│       ├── src/                         ← SoulEngine + facet merge candidates；不把整套 soul 解释权外包
 │       ├── package.json
 │       └── tsconfig.build.json
 │
@@ -324,6 +423,7 @@ nanoPencil/
 | `packages/soul-core/` | `packages/soul-core/` | 不变（保独立发布身份） |
 | — | `packages/extension-sdk/` | ★ 新增 |
 | `core/extensions/` | `core/extensions-host/` | rename，避免与 `extensions/` 顶层撞名 |
+| — | `core/agent-profile/` | ★ 新增（PARP：profile schema / built-in profiles / resolver） |
 | `core/i18n/` | `core/platform/i18n/` | 升到 platform/ 横切 |
 | `core/telemetry/` | `core/platform/telemetry/` | 同上 |
 | `core/utils/` | `core/platform/utils/` | 同上 |
@@ -331,8 +431,8 @@ nanoPencil/
 | `core/keybindings.ts` | `core/platform/keybindings.ts` | 同上 |
 | `extensions/defaults/` | `extensions/builtin/` | rename（更准确） |
 | `extensions/defaults/browser/` | `extensions/optional/browser/` | F07 迁移 |
-| — | `extensions/builtin/memory-binding/` | ★ 新增（MemoryProvider 桥接） |
-| — | `extensions/builtin/soul-binding/` | ★ 新增（SoulProvider 桥接） |
+| — | `extensions/builtin/memory-binding/` | ★ 新增（官方 MemoryEngine ↔ continuity 桥接） |
+| — | `extensions/builtin/soul-binding/` | ★ 新增（官方 SoulEngine ↔ continuity 桥接） |
 | `scripts/bundle-deps.js` | (删除) | 走 npm 自然解析 |
 
 ---
@@ -345,7 +445,8 @@ nanoPencil/
 
 - `core/lib/agent-core/`：**纯 Agent loop 抽象**（model → tool → output），不知道 pencil 业务；**当前 0 外部消费者 → 退 lib 不发布**。若未来真出现外部消费者，跑 `promote-to-package.ts agent-core` 升回 `packages/agent-core/` 即可
 - `core/runtime/`：pencil 业务的 "Composition Root" 层 —— 把 agent-core + tools + session + extensions-host 黏在一起
-- `core/tools/`：内置工具实现；不在 lib 是因为它绑定 pencil 的"信任模型"（bash 沙箱、edit 行号、ls 截断）
+- `core/tools/`：内置工具实现；在 PARP 下它们是 Tool Runtime 的本地实现，不在 lib 是因为它绑定 pencil 的"信任模型"（bash 沙箱、edit 行号、ls 截断）
+- `core/agent-profile/`：PARP 的 profile 层，负责把 loop policy、tool runtime、continuity、permissions 组合成 CLI / Browser / Remote / Editor 等 PencilAgent 形态；B0 只要求 schema + 内置 profile，完整 marketplace 不在本轮范围
 - **拆 F01 后**：`runtime/` 内 7 个子模块各自 < 400 行，`agent-session.ts` 是装配壳
 
 ### D2 扩展运行时 → `core/extensions-host/` + `extensions/{builtin,optional}/`
@@ -354,7 +455,7 @@ nanoPencil/
 - `extensions/builtin/`：用户大概率用到的扩展，启动时 eager load；**rename** "defaults" → "builtin"（更准确）
 - `extensions/optional/`：用户**需要时才启用**的扩展（资产重、影响隐私、需配置）
 - **拆 F05 后**：扩展类型按消费域分 4 个文件（生命周期 / 工具 / UI / 命令）
-- **F07 后**：browser 从 builtin 迁到 optional —— 不是"功能降级"，是"诚实地表达成本"
+- **F07 后**：browser 从 builtin 迁到 optional —— 不是"功能降级"，是"诚实地表达成本"；在 PARP 下它应被标注为 Browser Tool Runtime，供 `browser-agent` profile 组合使用
 - **Q12 协议化后**：`extensions/builtin/memory-binding/` 是 Memory 默认绑定；`soul-binding/` 是 Soul 默认绑定；第三方实现走 user-dir 或 npm tier
 
 ### D3 AI Provider 抽象 → `core/lib/ai/`
@@ -371,14 +472,27 @@ nanoPencil/
 - `core/platform/config/`：settings / auth / resource-loader；SOP §3.3 stability contract，**任何变更走 REVIEW**
 - 用户态 `~/.pencils/agents/<id>/`：charter "Privacy First"、**任何 refactor 不可破坏向后兼容**
 
-### D5 认知域 → `packages/mem-core/` + `packages/soul-core/` + `extensions/builtin/{memory,soul}-binding/` + `extensions/builtin/sal/`
+### D5 认知域 → `core/continuity/` + `packages/mem-core/` + `packages/soul-core/` + `extensions/builtin/{memory,soul}-binding/` + `extensions/builtin/sal/`
 
-- `packages/mem-core/` `packages/soul-core/`：**两个真发布的能力包**，对应 README 力推的 NanoMem / NanoSoul
-- 为什么是 packages 而非 core/lib：**maintainer 明确战略保留独立发布身份**，且未来可能跨 Pencil 子项目复用
-- `extensions/builtin/memory-binding/` `soul-binding/`：把 mem-core / soul-core 接入 host 的桥接扩展；**实现 `@pencil-agent/extension-sdk` 的 `MemoryProvider` / `SoulProvider` 协议**
-- **Q12 协议化关键**：第三方可写 `@thirdparty/mem0-adapter` `@thirdparty/zep-adapter` 实现相同协议，**完全替换默认 mem-core**。Pencil 生态级"可插拔记忆"愿景由此落地
-- `extensions/builtin/sal/`：留在扩展形态（不升包），通过 `core/platform/telemetry/` 通道写 `eval_*` 表
-- **修 U3 反向依赖**：mem-core 不再 import `@pencil-agent/nano-pencil`，只 import `@pencil-agent/extension-sdk` 的协议契约
+- `core/continuity/`：**官方连续性内核**，定义 canonical state、provenance、merge policy、prompt injection policy。它不是"预先写死的核心身份内容"，而是 PencilAgent 如何形成、更新、解释"我是谁"的机制边界
+- `packages/mem-core/` `packages/soul-core/`：**两个真发布的官方基础实现包**，对应 README 力推的 NanoMem / NanoSoul。它们是 Pencil 的默认器官级能力，不是普通可选插件
+- 为什么是 packages 而非 core/lib：**maintainer 明确战略保留独立发布身份**，且未来可能跨 Pencil 子项目复用；但它们仍通过 `core/continuity/` 的规则进入 host
+- `extensions/builtin/memory-binding/` `soul-binding/`：把 mem-core / soul-core 接入 host 的桥接扩展；桥接的是官方 engine 与低层 provider / store，不把长期人格解释权交给扩展
+- **Q12 协议化关键（修订）**：第三方可写 `MemoryStore`、`MemoryCandidateProvider`、`SoulFacetProvider`、`CognitiveModelProvider` 等 provider/adapter，提供存储介质、检索候选、人格侧面或认知地图；最终是否 merge、是否长期保存、是否进入 prompt，仍由 `core/continuity/` + 官方 engine 决定
+- `extensions/builtin/sal/`：留在扩展形态（不升包），通过 `core/platform/telemetry/` 通道写 `eval_*` 表；若 SAL 认知地图进入规划/召回/反思链路，则实现 `CognitiveModelProvider`，作为 **derived cognitive model** 被官方连续性内核消费，而不是直接成为 canonical state
+- **修 U3 反向依赖**：mem-core 不再 import `@pencil-agent/nano-pencil`，只 import `@pencil-agent/extension-sdk` 的低层协议契约；canonical state 与 merge 规则由 host 的 `core/continuity/` 定义
+
+#### D5.1 面向人 vs 面向技术的双层解释
+
+| 面向人的说法 | 技术层面的定义 |
+|--------------|----------------|
+| 记忆 | `MemoryEngine` + `MemoryStore` + `RecallPolicy` |
+| 灵魂 / 性格 | `SoulEngine` + `SelfModel` + `BehaviorProfile` |
+| 经验沉淀 | `Episode` → `Consolidation` → `LongTermMemory` |
+| 性格变化 | `ReflectionEvent` → `SoulUpdateCandidate` → `MergePolicy` |
+| 认知地图 | `DerivedCognitiveModel` / `CognitiveModelProvider` |
+| 身体器官 | `Provider` / `Store` / `Adapter` |
+| 自我连续性 | `CanonicalAgentState` + `VersionedMergePolicy` + `PromptInjectionPolicy` |
 
 ### D6 UI / 入口形态 → `modes/` + `core/lib/tui/`
 
@@ -423,7 +537,7 @@ nanoPencil/
 | **Q9** D8 平台基础设施 | 🔒 已决议 → `core/platform/` 集中 |
 | **Q10** 顶层结构候选 | 🔒 已决议 → 候选 D（详见 top-level §6.D）|
 | **Q11** cognitive/ 命名 | 🔒 已决议 → 不用 cognitive，mem/soul 直接放 packages |
-| **Q12** 第三方扩展深度 | 🔒 已决议 → 协议化（Q12 = 粒度 3）|
+| **Q12** 第三方扩展深度 | 🔒 已决议 → 协议化（Q12 = 粒度 3；D5 下收窄为 provider/adapter/candidate，不外包连续性内核）|
 | **Q13** Privacy vs telemetry 对齐 | 🟨 待 grilling（独立决策）|
 | **Q14** core/ 杂物间拆开 | 🔒 已决议 → 拆 + 多管一层 |
 
@@ -437,10 +551,11 @@ nanoPencil/
 
 **结论**：**保 package + 真隔离 + 协议化**（原 A 选项升级版）：
 1. `packages/mem-core/` 与 `packages/soul-core/` 保留独立可发布身份
-2. 它们不再 import `@pencil-agent/nano-pencil`，改 import `@pencil-agent/extension-sdk` 的 `MemoryProvider` / `SoulProvider` 协议（修 U3）
-3. 新建 `packages/extension-sdk/` 作为协议契约的稳定家
-4. 在 `extensions/builtin/memory-binding/` / `soul-binding/` 提供桥接扩展（默认实现）
-5. 第三方可实现相同协议替换默认 mem-core（如 Mem0/Zep adapter）
+2. 它们不再 import `@pencil-agent/nano-pencil`，改 import `@pencil-agent/extension-sdk` 的低层协议（修 U3）
+3. 新建 `packages/extension-sdk/` 作为协议契约的稳定家，但协议分层为 `MemoryStore` / `MemoryCandidateProvider` / `SoulFacetProvider` / `CognitiveModelProvider`，不再表达为"整套 MemoryProvider/SoulProvider 可替换"
+4. 新建 `core/continuity/`：官方定义 canonical state、provenance、merge policy、prompt injection policy，保留 PencilAgent 长期自我叙事的解释权
+5. 在 `extensions/builtin/memory-binding/` / `soul-binding/` 提供桥接扩展（默认实现）
+6. 第三方可实现存储介质、召回候选、人格侧面、认知地图等 provider/adapter（如 Mem0/Zep adapter），但不能绕过官方 engine 直接写 canonical memory / soul
 
 **B2 批次影响**：必须先在 B1 引入 `@pencil-agent/extension-sdk` 包，让 mem-core 重定向依赖。
 
@@ -568,7 +683,7 @@ nanoPencil/
 
 | 批次 | Phase 3 决策门控 | 落到目录的具体动作 | 风险 |
 |------|------------------|--------------------|------|
-| **B0** ★ 顶层骨架重组（候选 D）| 🔒 Q10/Q11/Q12/Q14 已决议 | 1. 新建 `packages/extension-sdk/`（含 MemoryProvider/SoulProvider 协议）<br>2. `packages/ai/` `agent-core/` `tui/` → `core/lib/ai/` `agent-core/` `tui/`<br>3. `core/i18n/` `utils/` `telemetry/` `config/` `keybindings.ts` → `core/platform/`<br>4. `core/extensions/` → `core/extensions-host/`<br>5. `extensions/defaults/` → `extensions/builtin/`<br>6. 新建 `extensions/builtin/memory-binding/` `soul-binding/`<br>7. 改 host package.json：真依赖 3 个真包<br>8. 删 `scripts/bundle-deps.js`<br>9. 新建 `scripts/promote-to-package.ts`<br>10. 写 `CODEMOD.md` + 跑 ts-morph codemod | 中-高（路径全变，但纯机械迁移）|
+| **B0** ★ 顶层骨架重组（候选 D）| 🔒 Q10/Q11/Q12/Q14 已决议 | 1. 新建 `packages/extension-sdk/`（含 Agent Profile / Host Adapter / Tool Runtime / MemoryStore / MemoryCandidate / SoulFacet / CognitiveModel provider 协议）<br>2. 新建 `core/continuity/`（canonical state / provenance / merge policy / prompt injection policy）<br>3. 新建 `core/agent-profile/`（profile schema + built-in CLI/browser/remote/editor profile 草案）<br>4. `packages/ai/` `agent-core/` `tui/` → `core/lib/ai/` `agent-core/` `tui/`<br>5. `core/i18n/` `utils/` `telemetry/` `config/` `keybindings.ts` → `core/platform/`<br>6. `core/extensions/` → `core/extensions-host/`<br>7. `extensions/defaults/` → `extensions/builtin/`<br>8. 新建 `extensions/builtin/memory-binding/` `soul-binding/`<br>9. 改 host package.json：真依赖 3 个真包<br>10. 删 `scripts/bundle-deps.js`<br>11. 新建 `scripts/promote-to-package.ts`<br>12. 写 `CODEMOD.md` + 跑 ts-morph codemod | 中-高（路径全变，且 D5 连续性内核与 PARP profile/protocol 是语义新增，不应按纯机械迁移低估）|
 | **B1** 治环 + 守门 | **必须先答 Q5**（contract 文件粒度）+ **Q8** | 1. 新建 `core/_internal.ts` 或 `*-contract.ts` ✦Q5<br>2. 新建 `core/mcp/mcp-types.ts`（F04）<br>3. 新建 `core/soul-options-contract.ts`（F04）<br>4. 新建 `core/lib/ai/event-stream-types.ts`（F04）<br>5. mem-core 切到 `@pencil-agent/extension-sdk`（修 U3）<br>6. 新建 `scripts/verify-quality.ts` + GitHub workflow（F08）—— **必须先答 Q8** | 低 |
 | **B2** god 拆 runtime | 🔒 Q1 已决议 | `core/runtime/` 抽出 7 个子模块；`agent-session.ts` 退化为壳；新建 `core/theme-contract.ts` 解 U2 | 中（外部 API 不变） |
 | **B3** god 拆 UI | 🔒 Q7 已决议 | `modes/_shell/cancellation.ts` 抽出；`modes/interactive/` 新增 `controllers/` 5 个；`state/` 1 个；snapshot tests 覆盖 | 中-高（TUI 行为零回归） |
@@ -579,8 +694,8 @@ nanoPencil/
 ### 7.1 关键观察
 
 1. **B0 是新增的"前提批次"** —— 必须先做完顶层骨架重组，否则下游所有 import 路径都要二次返工
-2. **B0 风险评估**：路径全变但**纯机械迁移**，可用 ts-morph 写 codemod，**< 2 天可完成**
-3. **B0 + B1 必须紧挨着合**：B0 改路径 + B1 引入 extension-sdk 与 mem-core 切换依赖
+2. **B0 风险评估**：路径迁移部分可用 ts-morph codemod 完成；但 `core/continuity/` 是 D5 语义新增，必须补 canonical state / merge policy / prompt injection policy 的最小设计，不能按纯机械迁移低估
+3. **B0 + B1 必须紧挨着合**：B0 改路径 + B1 引入 extension-sdk 与 mem-core 低层协议切换
 4. **grilling 剩余依赖**：B1 还依赖 Q5+Q8；B4 依赖 Q2+Q3；B5 依赖 Q6
 5. **可并行**：B2 与 B3 互不依赖，可由两人并行推进
 

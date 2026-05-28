@@ -142,4 +142,23 @@ describe("transformMessages interrupted tool results", () => {
 		expect((result[2] as ToolResultMessage).toolCallId).toBe(normalizeToolCallId("call_read|opaque/provider/id"));
 		expect((result[2] as ToolResultMessage).isError).toBe(true);
 	});
+
+	it("drops duplicate tool results for an already closed pending tool call", () => {
+		const messages: Message[] = [
+			{ role: "user", content: "read the file", timestamp: 1 },
+			makeToolCallingAssistant("toolUse"),
+			makeToolResult(),
+			{
+				...makeToolResult(),
+				content: [{ type: "text", text: "duplicate output" }],
+				timestamp: 4,
+			},
+			{ role: "user", content: "summarize it", timestamp: 5 },
+		];
+
+		const result = transformMessages(messages, makeAnthropicModel(), normalizeToolCallId);
+
+		expect(result.map((message) => message.role)).toEqual(["user", "assistant", "toolResult", "user"]);
+		expect((result[2] as ToolResultMessage).content).toEqual([{ type: "text", text: "README contents" }]);
+	});
 });

@@ -45,6 +45,15 @@ function createAssistantMessage(text: string): AssistantMessage {
 	};
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	return Promise.race([
+		promise,
+		new Promise<T>((_, reject) => {
+			setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
+		}),
+	]);
+}
+
 describe("stream retry abort handling", () => {
 	it("emits an error event when aborted before provider stream creation", async () => {
 		const providerCalled = vi.fn();
@@ -144,5 +153,111 @@ describe("stream retry abort handling", () => {
 			},
 		});
 		expect(result.content).toEqual([{ type: "text", text: "first result" }]);
+	});
+
+	it("retries provider stream factory errors before forwarding the final result", async () => {
+		let providerCalls = 0;
+		registerApiProvider(
+			{
+				api: "openai-responses",
+				stream() {
+					providerCalls += 1;
+					if (providerCalls === 1) {
+						throw new Error("503 service unavailable");
+					}
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => {
+						stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered") });
+					});
+					return stream;
+				},
+				streamSimple() {
+					providerCalls += 1;
+					if (providerCalls === 1) {
+						throw new Error("503 service unavailable");
+					}
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => {
+						stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered") });
+					});
+					return stream;
+				},
+			},
+			"stream-retry-factory-error-test",
+		);
+
+		const context: Context = {
+			messages: [{ role: "user", content: "hello", timestamp: 1 }],
+		};
+		const stream = streamSimple(createModel(), context, { retry: { baseDelayMs: 1, jitter: false } });
+		const events = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const result = await withTimeout(stream.result(), 100);
+
+		expect(providerCalls).toBe(2);
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			type: "done",
+			reason: "stop",
+			message: {
+				content: [{ type: "text", text: "recovered" }],
+			},
+		});
+		expect(result.content).toEqual([{ type: "text", text: "recovered" }]);
+	});
+
+	it("emits an error event when provider stream factory errors are exhausted", async () => {
+		let providerCalls = 0;
+		registerApiProvider(
+			{
+				api: "openai-responses",
+				stream() {
+					providerCalls += 1;
+					throw new Error("503 service unavailable");
+				},
+				streamSimple() {
+					providerCalls += 1;
+					throw new Error("503 service unavailable");
+				},
+			},
+			"stream-retry-factory-error-exhausted-test",
+		);
+
+		const context: Context = {
+			messages: [{ role: "user", content: "hello", timestamp: 1 }],
+		};
+		const stream = streamSimple(createModel(), context, {
+			retry: { maxRetries: 1, baseDelayMs: 1, jitter: false },
+		});
+		const events = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const result = await withTimeout(stream.result(), 100);
+
+		expect(providerCalls).toBe(2);
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			type: "error",
+			reason: "error",
+			error: {
+				stopReason: "error",
+				errorMessage: "503 service unavailable",
+			},
+		});
+		expect(result.stopReason).toBe("error");
+		expect(result.errorMessage).toBe("503 service unavailable");
 	});
 });

@@ -1,8 +1,8 @@
 /**
- * [WHO]: getEnvApiKey, stream, streamSimple, RetryOptions
+ * [WHO]: getEnvApiKey, stream, streamSimple, complete, completeSimple, RetryOptions
  * [FROM]: Depends on ./api-registry.js
  * [TO]: Consumed by packages/ai/src/index.ts
- * [HERE]: packages/ai/src/stream.ts -
+ * [HERE]: packages/ai/src/stream.ts - provider streaming entrypoint with retry, abort, and factory-error event handling
  */
 
 import "./providers/register-builtins.js";
@@ -132,6 +132,29 @@ function getRetryDelayMs(
 	return calculateDelay(attempt, retryOptions);
 }
 
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	if (typeof error === "string") return error;
+	return JSON.stringify(error) ?? String(error);
+}
+
+function createStreamErrorMessage<TApi extends Api>(
+	model: Pick<Model<TApi>, "api" | "provider" | "id">,
+	error: unknown,
+): AssistantMessage {
+	return {
+		role: "assistant",
+		content: [],
+		api: model.api,
+		provider: model.provider,
+		model: model.id,
+		stopReason: "error",
+		errorMessage: getErrorMessage(error),
+		usage: emptyUsage(),
+		timestamp: Date.now(),
+	};
+}
+
 // =============================================================================
 // Provider Resolution
 // =============================================================================
@@ -238,7 +261,20 @@ function wrapWithRetry<TApi extends Api>(
 				return;
 			}
 
-			const innerStream = createStream();
+			let innerStream: AssistantMessageEventStream;
+			try {
+				innerStream = createStream();
+			} catch (error) {
+				const errorMessage = createStreamErrorMessage(model, error);
+				const delayMs = getRetryDelayMs(errorMessage, attempt, retryOptions);
+				if (delayMs !== undefined) {
+					attempt++;
+					await new Promise((resolve) => setTimeout(resolve, delayMs));
+					continue;
+				}
+				outerStream.push({ type: "error", reason: "error", error: errorMessage });
+				return;
+			}
 
 			// Forward all events from inner to outer, but intercept the final result
 			let lastMessage: AssistantMessage | null = null;

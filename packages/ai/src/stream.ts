@@ -162,6 +162,37 @@ function createMissingStreamResultMessage<TApi extends Api>(
 	return createStreamErrorMessage(model, new Error("Provider stream ended without a final assistant message"));
 }
 
+function createAbortMessage<TApi extends Api>(model: Pick<Model<TApi>, "api" | "provider" | "id">): AssistantMessage {
+	return createStreamErrorMessage(model, new Error("Request was aborted"));
+}
+
+function emitAbortError<TApi extends Api>(
+	stream: AssistantMessageEventStream,
+	model: Pick<Model<TApi>, "api" | "provider" | "id">,
+): void {
+	stream.push({ type: "error", reason: "error", error: createAbortMessage(model) });
+}
+
+function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<"elapsed" | "aborted"> {
+	if (signal?.aborted) return Promise.resolve("aborted");
+	return new Promise((resolve) => {
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+		const cleanup = () => {
+			if (timeout !== undefined) clearTimeout(timeout);
+			signal?.removeEventListener("abort", onAbort);
+		};
+		const onAbort = () => {
+			cleanup();
+			resolve("aborted");
+		};
+		timeout = setTimeout(() => {
+			cleanup();
+			resolve("elapsed");
+		}, delayMs);
+		signal?.addEventListener("abort", onAbort, { once: true });
+	});
+}
+
 // =============================================================================
 // Provider Resolution
 // =============================================================================
@@ -253,18 +284,7 @@ function wrapWithRetry<TApi extends Api>(
 
 		while (attempt <= retryOptions.maxRetries) {
 			if (signal?.aborted) {
-				const errorMessage: AssistantMessage = {
-					role: "assistant",
-					content: [],
-					api: model.api,
-					provider: model.provider,
-					model: model.id,
-					stopReason: "error",
-					errorMessage: "Request was aborted",
-					usage: emptyUsage(),
-					timestamp: Date.now(),
-				};
-				outerStream.push({ type: "error", reason: "error", error: errorMessage });
+				emitAbortError(outerStream, model);
 				return;
 			}
 
@@ -276,7 +296,10 @@ function wrapWithRetry<TApi extends Api>(
 				const delayMs = getRetryDelayMs(errorMessage, attempt, retryOptions);
 				if (delayMs !== undefined) {
 					attempt++;
-					await new Promise((resolve) => setTimeout(resolve, delayMs));
+					if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+						emitAbortError(outerStream, model);
+						return;
+					}
 					continue;
 				}
 				outerStream.push({ type: "error", reason: "error", error: errorMessage });
@@ -298,7 +321,10 @@ function wrapWithRetry<TApi extends Api>(
 					const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
 					if (delayMs !== undefined) {
 						attempt++;
-						await new Promise((resolve) => setTimeout(resolve, delayMs));
+						if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+							emitAbortError(outerStream, model);
+							return;
+						}
 						break; // Break inner loop, retry outer loop
 					}
 
@@ -319,7 +345,10 @@ function wrapWithRetry<TApi extends Api>(
 				const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
 				if (delayMs !== undefined) {
 					attempt++;
-					await new Promise((resolve) => setTimeout(resolve, delayMs));
+					if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+						emitAbortError(outerStream, model);
+						return;
+					}
 					continue;
 				}
 				if (lastMessage.stopReason === "error" || lastMessage.stopReason === "aborted") {

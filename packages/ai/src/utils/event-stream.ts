@@ -2,7 +2,7 @@
  * [WHO]: EventStream, AssistantMessageEventStream, createAssistantMessageEventStream
  * [FROM]: No external dependencies
  * [TO]: Consumed by packages/ai/src/index.ts
- * [HERE]: packages/ai/src/utils/event-stream.ts -
+ * [HERE]: packages/ai/src/utils/event-stream.ts - async event queue with final-result tracking
  */
 
 import type { AssistantMessage, AssistantMessageEvent } from "../types.js";
@@ -12,6 +12,8 @@ export class EventStream<T, R = T> implements AsyncIterable<T> {
 	private queue: T[] = [];
 	private waiting: ((value: IteratorResult<T>) => void)[] = [];
 	private done = false;
+	private finalResult?: R;
+	private hasFinalResult = false;
 	private finalResultPromise: Promise<R>;
 	private resolveFinalResult!: (result: R) => void;
 
@@ -29,7 +31,7 @@ export class EventStream<T, R = T> implements AsyncIterable<T> {
 
 		if (this.isComplete(event)) {
 			this.done = true;
-			this.resolveFinalResult(this.extractResult(event));
+			this.setFinalResult(this.extractResult(event));
 		}
 
 		// Deliver to waiting consumer or queue it
@@ -44,7 +46,7 @@ export class EventStream<T, R = T> implements AsyncIterable<T> {
 	end(result?: R): void {
 		this.done = true;
 		if (result !== undefined) {
-			this.resolveFinalResult(result);
+			this.setFinalResult(result);
 		}
 		// Notify all waiting consumers that we're done
 		while (this.waiting.length > 0) {
@@ -69,6 +71,17 @@ export class EventStream<T, R = T> implements AsyncIterable<T> {
 
 	result(): Promise<R> {
 		return this.finalResultPromise;
+	}
+
+	resultIfResolved(): R | undefined {
+		return this.hasFinalResult ? this.finalResult : undefined;
+	}
+
+	private setFinalResult(result: R): void {
+		if (this.hasFinalResult) return;
+		this.finalResult = result;
+		this.hasFinalResult = true;
+		this.resolveFinalResult(result);
 	}
 }
 

@@ -260,4 +260,116 @@ describe("stream retry abort handling", () => {
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toBe("503 service unavailable");
 	});
+
+	it("retries provider streams that end without a final result", async () => {
+		let providerCalls = 0;
+		registerApiProvider(
+			{
+				api: "openai-responses",
+				stream() {
+					providerCalls += 1;
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => {
+						if (providerCalls === 1) {
+							stream.end();
+						} else {
+							stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered empty") });
+						}
+					});
+					return stream;
+				},
+				streamSimple() {
+					providerCalls += 1;
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => {
+						if (providerCalls === 1) {
+							stream.end();
+						} else {
+							stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered empty") });
+						}
+					});
+					return stream;
+				},
+			},
+			"stream-retry-empty-end-test",
+		);
+
+		const context: Context = {
+			messages: [{ role: "user", content: "hello", timestamp: 1 }],
+		};
+		const stream = streamSimple(createModel(), context, { retry: { baseDelayMs: 1, jitter: false } });
+		const events = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const result = await withTimeout(stream.result(), 100);
+
+		expect(providerCalls).toBe(2);
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			type: "done",
+			reason: "stop",
+			message: {
+				content: [{ type: "text", text: "recovered empty" }],
+			},
+		});
+		expect(result.content).toEqual([{ type: "text", text: "recovered empty" }]);
+	});
+
+	it("emits an error event when provider streams end without a final result after retries", async () => {
+		let providerCalls = 0;
+		registerApiProvider(
+			{
+				api: "openai-responses",
+				stream() {
+					providerCalls += 1;
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => stream.end());
+					return stream;
+				},
+				streamSimple() {
+					providerCalls += 1;
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => stream.end());
+					return stream;
+				},
+			},
+			"stream-retry-empty-end-exhausted-test",
+		);
+
+		const context: Context = {
+			messages: [{ role: "user", content: "hello", timestamp: 1 }],
+		};
+		const stream = streamSimple(createModel(), context, {
+			retry: { maxRetries: 1, baseDelayMs: 1, jitter: false },
+		});
+		const events = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const result = await withTimeout(stream.result(), 100);
+
+		expect(providerCalls).toBe(2);
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			type: "error",
+			reason: "error",
+			error: {
+				stopReason: "error",
+				errorMessage: "Provider stream ended without a final assistant message",
+			},
+		});
+		expect(result.stopReason).toBe("error");
+		expect(result.errorMessage).toBe("Provider stream ended without a final assistant message");
+	});
 });

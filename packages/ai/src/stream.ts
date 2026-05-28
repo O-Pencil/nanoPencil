@@ -67,6 +67,7 @@ const RETRIABLE_ERROR_PATTERNS = [
 	/fetch failed/i,
 	/network/i,
 	/aborted/i,
+	/without a final assistant message/i,
 ];
 
 /**
@@ -153,6 +154,12 @@ function createStreamErrorMessage<TApi extends Api>(
 		usage: emptyUsage(),
 		timestamp: Date.now(),
 	};
+}
+
+function createMissingStreamResultMessage<TApi extends Api>(
+	model: Pick<Model<TApi>, "api" | "provider" | "id">,
+): AssistantMessage {
+	return createStreamErrorMessage(model, new Error("Provider stream ended without a final assistant message"));
 }
 
 // =============================================================================
@@ -308,7 +315,7 @@ function wrapWithRetry<TApi extends Api>(
 			}
 
 			if (!lastMessage) {
-				lastMessage = await innerStream.result();
+				lastMessage = innerStream.resultIfResolved() ?? createMissingStreamResultMessage(model);
 				const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
 				if (delayMs !== undefined) {
 					attempt++;

@@ -28,6 +28,8 @@ audience: pencil maintainer
 > **修订说明（2026-05-28）**：原 §4 目录结构基于"在现有 packages/core/modes/extensions 四分法下做减法"。Phase 2.5 顶层评审揭示 packages/ 是"形式上的多包，实质上的单包"，且 README 三层（Cognitive/Tool/Interface）与代码目录无映射。Phase 3a grilling 选定**候选 D**（详见 top-level-structure-review.md §6.D），§4 据此重写为基于 `core/` + `core/lib/` + `core/platform/` + `packages/` (3 真发布包) 的目标结构。
 >
 > 本文是 Phase 2 与 Phase 3 之间的**综合层**，把 8 个 finding + 顶层评审综合为一份目标架构愿景。**不取代** finding cards（每个 finding 的 deletion test、benefits 仍在原卡中），但提供一个**单一可争论的整体设计**。
+>
+> **文档职责**：本文维护"目标是什么"——目录结构、功能域映射、PARP/continuity 协议边界、迁移批次。`top-level-structure-review.md` 只维护"为什么选择候选 D"；`refactor-plan.md` 只维护"按什么顺序执行"。
 
 ---
 
@@ -716,20 +718,22 @@ nanoPencil/
 
 ---
 
-## 9. 关于本文与 finding cards 的关系
+## 9. 文档职责与后续使用
 
 | 文档 | 角色 |
 |------|------|
+| `top-level-structure-review.md` | **决策依据** —— 为什么选择候选 D，为什么 packages 只保真发布包，为什么需要 PARP / continuity |
+| **`target-architecture.md`（本文）** | **目标架构** —— 目录树、功能域映射、PARP / continuity 协议边界、迁移路径 |
+| `refactor-plan.md` | **执行排序** —— 批次依赖、风险窗口、剩余 grilling 门控 |
 | `findings/F01–F08-*.md` | **微观判断** —— 每个 finding 独立 deletion test、benefits、proposed direction |
-| `refactor-plan.md` | **执行排序** —— 8 个 finding 按 ROI / 依赖排出 6 个批次 |
-| **`target-architecture.md`（本文）** | **整体设计** —— 8 个 finding 综合成"应有的样子"，明确决策点 |
 | `architecture-review-202605271527.html` | **辩论入口** —— Phase 3 grilling 的可视化总览 |
 
-Phase 3 grilling 时建议的次序：
+后续维护规则：
 
-1. **先针对本文 §6 的 9 个决策点逐个回应**（你说倾向；我辩护/修正）
-2. **决策定下后**回到 finding cards 看每个 finding 的细节是否需要调整
-3. **最后**更新 `refactor-plan.md §Phase 3 decisions` 表，签字
+1. 目录结构、协议边界、PARP / continuity 的细节只改本文
+2. 候选 D 的论证、A/B/C 的历史对照只改 `top-level-structure-review.md`
+3. 执行批次、优先级、剩余决策门控只改 `refactor-plan.md`
+4. finding cards 只在具体 finding 的 deletion test 或 proposed direction 需要刷新时更新
 
 ---
 

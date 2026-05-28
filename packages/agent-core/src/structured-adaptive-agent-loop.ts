@@ -196,17 +196,7 @@ async function runStructuredAdaptiveQueryLoop(
 		permissionDenials: [],
 	};
 	if (initialSteeringMessages.type === "aborted") {
-		const finalMessage = createLoopLimitMessage(config, "Request was aborted");
-		finalMessage.stopReason = "aborted";
-		currentContext.messages.push(finalMessage);
-		newMessages.push(finalMessage);
-		stream.push({ type: "message_start", message: { ...finalMessage } });
-		stream.push({ type: "message_end", message: finalMessage });
-		stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
-		state.finalStopReason = "aborted";
-		state.finalErrorMessage = finalMessage.errorMessage;
-		state.finalErrorSubtype = "aborted";
-		finish(stream, newMessages, state);
+		finishStructuredAdaptiveWithAbortedTurn(stream, currentContext, newMessages, state);
 		return;
 	}
 	let firstTurn = true;
@@ -382,17 +372,7 @@ async function runStructuredAdaptiveQueryLoop(
 				);
 				state.stopHookActive = false;
 				if (stopHookResult.type === "aborted") {
-					const finalMessage = createLoopLimitMessage(config, "Request was aborted");
-					finalMessage.stopReason = "aborted";
-					currentContext.messages.push(finalMessage);
-					newMessages.push(finalMessage);
-					stream.push({ type: "message_start", message: { ...finalMessage } });
-					stream.push({ type: "message_end", message: finalMessage });
-					stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
-					state.finalStopReason = "aborted";
-					state.finalErrorMessage = finalMessage.errorMessage;
-					state.finalErrorSubtype = "aborted";
-					finish(stream, newMessages, state);
+					finishStructuredAdaptiveWithAbortedTurn(stream, currentContext, newMessages, state);
 					return;
 				}
 				const resolvedStopHookResult = stopHookResult.value;
@@ -450,17 +430,7 @@ async function runStructuredAdaptiveQueryLoop(
 				signal,
 			);
 			if (followUpMessagesResult.type === "aborted") {
-				const finalMessage = createLoopLimitMessage(config, "Request was aborted");
-				finalMessage.stopReason = "aborted";
-				currentContext.messages.push(finalMessage);
-				newMessages.push(finalMessage);
-				stream.push({ type: "message_start", message: { ...finalMessage } });
-				stream.push({ type: "message_end", message: finalMessage });
-				stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
-				state.finalStopReason = "aborted";
-				state.finalErrorMessage = finalMessage.errorMessage;
-				state.finalErrorSubtype = "aborted";
-				finish(stream, newMessages, state);
+				finishStructuredAdaptiveWithAbortedTurn(stream, currentContext, newMessages, state);
 				return;
 			}
 			const followUpMessages = followUpMessagesResult.value || [];
@@ -746,6 +716,25 @@ function pushAbortedAssistantMessage(
 	stream.push({ type: "message_start", message: { ...finalMessage } });
 	stream.push({ type: "message_end", message: finalMessage });
 	return finalMessage;
+}
+
+function finishStructuredAdaptiveWithAbortedTurn(
+	stream: EventStream<AgentEvent, AgentMessage[]>,
+	context: AgentContext,
+	newMessages: AgentMessage[],
+	state: QueryLoopState,
+): void {
+	const finalMessage = createLoopLimitMessage(state.config, "Request was aborted");
+	finalMessage.stopReason = "aborted";
+	context.messages.push(finalMessage);
+	newMessages.push(finalMessage);
+	stream.push({ type: "message_start", message: { ...finalMessage } });
+	stream.push({ type: "message_end", message: finalMessage });
+	stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
+	state.finalStopReason = "aborted";
+	state.finalErrorMessage = finalMessage.errorMessage;
+	state.finalErrorSubtype = "aborted";
+	finish(stream, newMessages, state);
 }
 
 function createLoopLimitMessage(config: AgentLoopConfig, errorMessage: string): AssistantMessage {

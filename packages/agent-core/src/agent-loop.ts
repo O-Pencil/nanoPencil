@@ -76,6 +76,11 @@ type StandardLoopFinishOptions = {
 	errorSubtype?: string;
 };
 
+type StandardLoopAbortFinishOptions = Omit<
+	StandardLoopFinishOptions,
+	"stopReason" | "errorMessage" | "errorSubtype"
+>;
+
 /**
  * Start an agent loop with a new prompt message.
  * The prompt is added to the context and events are emitted for it.
@@ -257,25 +262,15 @@ async function runLoop(
 		signal,
 	);
 	if (initialSteeringMessages.type === "aborted") {
-		const finalMessage = createLoopLimitMessage(config, "Request was aborted");
-		finalMessage.stopReason = "aborted";
-		currentContext.messages.push(finalMessage);
-		newMessages.push(finalMessage);
-		stream.push({ type: "message_start", message: { ...finalMessage } });
-		stream.push({ type: "message_end", message: finalMessage });
-		stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
-		finishStandardLoop(stream, newMessages, {
+		finishStandardLoopWithAbortedTurn(stream, currentContext, newMessages, {
 			config,
 			turnCount,
 			toolCallCount,
 			startedAt,
 			usage,
 			permissionDenials,
-			stopReason: "aborted",
 			transitions,
 			lastTransition,
-			errorMessage: finalMessage.errorMessage,
-			errorSubtype: "aborted",
 		});
 		return;
 	}
@@ -530,25 +525,15 @@ async function runLoop(
 				);
 				stopHookActive = false;
 				if (stopHookResult.type === "aborted") {
-					const finalMessage = createLoopLimitMessage(config, "Request was aborted");
-					finalMessage.stopReason = "aborted";
-					currentContext.messages.push(finalMessage);
-					newMessages.push(finalMessage);
-					stream.push({ type: "message_start", message: { ...finalMessage } });
-					stream.push({ type: "message_end", message: finalMessage });
-					stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
-					finishStandardLoop(stream, newMessages, {
+					finishStandardLoopWithAbortedTurn(stream, currentContext, newMessages, {
 						config,
 						turnCount,
 						toolCallCount,
 						startedAt,
 						usage,
 						permissionDenials,
-						stopReason: "aborted",
 						transitions,
 						lastTransition,
-						errorMessage: finalMessage.errorMessage,
-						errorSubtype: "aborted",
 					});
 					return;
 				}
@@ -627,25 +612,15 @@ async function runLoop(
 			signal,
 		);
 		if (followUpMessagesResult.type === "aborted") {
-			const finalMessage = createLoopLimitMessage(config, "Request was aborted");
-			finalMessage.stopReason = "aborted";
-			currentContext.messages.push(finalMessage);
-			newMessages.push(finalMessage);
-			stream.push({ type: "message_start", message: { ...finalMessage } });
-			stream.push({ type: "message_end", message: finalMessage });
-			stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
-			finishStandardLoop(stream, newMessages, {
+			finishStandardLoopWithAbortedTurn(stream, currentContext, newMessages, {
 				config,
 				turnCount,
 				toolCallCount,
 				startedAt,
 				usage,
 				permissionDenials,
-				stopReason: "aborted",
 				transitions,
 				lastTransition,
-				errorMessage: finalMessage.errorMessage,
-				errorSubtype: "aborted",
 			});
 			return;
 		}
@@ -857,6 +832,27 @@ function pushAbortedAssistantMessage(
 	stream.push({ type: "message_start", message: { ...finalMessage } });
 	stream.push({ type: "message_end", message: finalMessage });
 	return finalMessage;
+}
+
+function finishStandardLoopWithAbortedTurn(
+	stream: EventStream<AgentEvent, AgentMessage[]>,
+	context: AgentContext,
+	newMessages: AgentMessage[],
+	options: StandardLoopAbortFinishOptions,
+): void {
+	const finalMessage = createLoopLimitMessage(options.config, "Request was aborted");
+	finalMessage.stopReason = "aborted";
+	context.messages.push(finalMessage);
+	newMessages.push(finalMessage);
+	stream.push({ type: "message_start", message: { ...finalMessage } });
+	stream.push({ type: "message_end", message: finalMessage });
+	stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
+	finishStandardLoop(stream, newMessages, {
+		...options,
+		stopReason: "aborted",
+		errorMessage: finalMessage.errorMessage,
+		errorSubtype: "aborted",
+	});
 }
 
 function finishStandardLoop(

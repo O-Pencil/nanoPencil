@@ -701,6 +701,49 @@ describe("agentLoop with AgentMessage", () => {
 		expect(result?.errorSubtype).toBe("aborted");
 	});
 
+	it("should abort standard loop while a custom assistant stream is still being created", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+		const controller = new AbortController();
+		const stream = agentLoop(
+			[createUserMessage("wait")],
+			context,
+			config,
+			controller.signal,
+			() => new Promise<MockAssistantStream>(() => {}),
+		);
+		queueMicrotask(() => controller.abort());
+
+		const events: AgentEvent[] = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+
+		const messages = await withTimeout(stream.result(), 100);
+		const finalAssistant = messages.find(
+			(message): message is AssistantMessage => message.role === "assistant",
+		);
+		expect(finalAssistant?.stopReason).toBe("aborted");
+		expect(finalAssistant?.errorMessage).toBe("Request was aborted");
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("aborted");
+		expect(result?.errorSubtype).toBe("aborted");
+	});
+
 	it("should continue standard loop when a configured output token budget is underused", async () => {
 		const context: AgentContext = {
 			systemPrompt: "",
@@ -3153,6 +3196,49 @@ describe("structuredAdaptiveAgentLoop", () => {
 			config,
 			controller.signal,
 			() => new MockAssistantStream(),
+		);
+		queueMicrotask(() => controller.abort());
+
+		const events: AgentEvent[] = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+
+		const messages = await withTimeout(stream.result(), 100);
+		const finalAssistant = messages.find(
+			(message): message is AssistantMessage => message.role === "assistant",
+		);
+		expect(finalAssistant?.stopReason).toBe("aborted");
+		expect(finalAssistant?.errorMessage).toBe("Request was aborted");
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("aborted");
+		expect(result?.errorSubtype).toBe("aborted");
+	});
+
+	it("should abort structured-adaptive loop while a custom assistant stream is still being created", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+		const controller = new AbortController();
+		const stream = structuredAdaptiveAgentLoop(
+			[createUserMessage("wait")],
+			context,
+			config,
+			controller.signal,
+			() => new Promise<MockAssistantStream>(() => {}),
 		);
 		queueMicrotask(() => controller.abort());
 

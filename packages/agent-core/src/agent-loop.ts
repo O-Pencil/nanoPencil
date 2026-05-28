@@ -49,7 +49,11 @@ import {
 	startToolUseSummary,
 } from "./agent-loop-tool-summaries.js";
 import { buildAgentRunPolicy, resolveAgentRunLoopFramework } from "./agent-run-result.js";
-import { waitForAssistantStreamEvent, type AssistantStreamNext } from "./agent-loop-stream-events.js";
+import {
+	waitForAssistantStream,
+	waitForAssistantStreamEvent,
+	type AssistantStreamNext,
+} from "./agent-loop-stream-events.js";
 
 const DEFAULT_MAX_TURNS_PER_PROMPT = 64;
 const DEFAULT_MAX_TOOL_CALLS_PER_PROMPT = 128;
@@ -631,12 +635,23 @@ async function streamAssistantResponse(
 		maxTokens: maxTokensOverride ?? config.maxTokens,
 	});
 
-	const response = await streamFunction(config.model, llmContext, {
-		...config,
-		maxTokens: maxTokensOverride ?? config.maxTokens,
-		apiKey: resolvedApiKey,
+	const response = await waitForAssistantStream(
+		streamFunction(config.model, llmContext, {
+			...config,
+			maxTokens: maxTokensOverride ?? config.maxTokens,
+			apiKey: resolvedApiKey,
+			signal,
+		}),
 		signal,
-	});
+	);
+	if (response === "aborted") {
+		const finalMessage = createLoopLimitMessage(config, "Request was aborted");
+		finalMessage.stopReason = "aborted";
+		context.messages.push(finalMessage);
+		stream.push({ type: "message_start", message: { ...finalMessage } });
+		stream.push({ type: "message_end", message: finalMessage });
+		return finalMessage;
+	}
 
 	let partialMessage: AssistantMessage | null = null;
 	let addedPartial = false;

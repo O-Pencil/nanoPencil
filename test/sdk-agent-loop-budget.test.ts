@@ -104,6 +104,31 @@ test("createAgentSession accepts output continuation loop policy", async () => {
 	assert.equal(agentWithPrivateOptions.maxOutputTokenRecoveryAttempts, 3);
 });
 
+test("createAgentSession accepts recovery loop policy", async () => {
+	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-recovery-policy-"));
+	const agentCtx = { id: "sdk-recovery-policy-test", path: agentDir };
+
+	const { session } = await createAgentSession({
+		cwd: process.cwd(),
+		agentCtx,
+		agentDir,
+		settingsManager: SettingsManager.inMemory(),
+		model: getModel("openai", "gpt-4o-mini"),
+		enableSoul: false,
+		loopPolicy: {
+			maxModelErrorRecoveryAttempts: 4,
+			maxStopHookContinuations: 2,
+		},
+	});
+
+	const agentWithPrivateOptions = session.agent as unknown as {
+		maxModelErrorRecoveryAttempts?: number;
+		maxStopHookContinuations?: number;
+	};
+	assert.equal(agentWithPrivateOptions.maxModelErrorRecoveryAttempts, 4);
+	assert.equal(agentWithPrivateOptions.maxStopHookContinuations, 2);
+});
+
 test("AgentSession forwards runtime loop policy updates into Agent", async () => {
 	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-loop-policy-"));
 	const agentCtx = { id: "sdk-loop-policy-test", path: agentDir };

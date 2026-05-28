@@ -87,13 +87,15 @@ nanopencil -p --agent-loop weak-model-compatible \
   --output-token-budget 1200 \
   --output-token-budget-threshold 0.75 \
   --output-token-budget-continuations 2 \
+  --max-model-error-recovery-attempts 4 \
+  --max-stop-hook-continuations 2 \
   --print-loop-result \
   --fail-on-agent-error \
   --fail-on-tool-denial \
   "Run bounded checks"
 ```
 
-These flags do not rewrite `models.json` or settings. The output-token budget asks the loop to continue when a final answer is below the target size, which is useful for long reports and migration plans. `--print-loop-result` writes a final `agent_result` JSON line to stderr in text print mode, so stdout can stay reserved for the assistant answer. The `--fail-on-*` flags make CI fail on loop errors or tool permission denials without forcing callers to parse the event stream themselves.
+These flags do not rewrite `models.json` or settings. The output-token budget asks the loop to continue when a final answer is below the target size, which is useful for long reports and migration plans. The recovery flags bound in-loop model-error retries and stop-hook validation continuations. `--print-loop-result` writes a final `agent_result` JSON line to stderr in text print mode, so stdout can stay reserved for the assistant answer. The `--fail-on-*` flags make CI fail on loop errors or tool permission denials without forcing callers to parse the event stream themselves.
 
 For local compatibility, older experimental values `"high-intelligence"`, `"low-intelligence"`, and `"structured-adaptive"` are normalized to the current names when read.
 

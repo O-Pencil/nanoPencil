@@ -86,6 +86,22 @@ test("parse args recognizes output continuation loop controls", () => {
 	assert.deepEqual(args.messages, ["Write the migration plan"]);
 });
 
+test("parse args recognizes model error and stop-hook recovery controls", () => {
+	const args = parseArgs([
+		"--max-model-error-recovery-attempts",
+		"4",
+		"--max-stop-hook-continuations",
+		"2",
+		"Run guarded refactor",
+	]);
+
+	assert.deepEqual(args.loopPolicy, {
+		maxModelErrorRecoveryAttempts: 4,
+		maxStopHookContinuations: 2,
+	});
+	assert.deepEqual(args.messages, ["Run guarded refactor"]);
+});
+
 test("parse args recognizes print failure policies", () => {
 	const args = parseArgs(["--print", "--fail-on-agent-error", "--fail-on-tool-denial", "Run CI checks"]);
 

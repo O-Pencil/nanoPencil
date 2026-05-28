@@ -54,6 +54,8 @@ export interface Args {
 		| "maxToolConcurrency"
 		| "outputTokenBudget"
 		| "maxOutputTokenRecoveryAttempts"
+		| "maxModelErrorRecoveryAttempts"
+		| "maxStopHookContinuations"
 	>;
 	export?: string;
 	noSkills?: boolean;
@@ -238,6 +240,12 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 		} else if (arg === "--max-output-token-recovery-attempts" && i + 1 < args.length) {
 			const value = parseNonNegativeIntegerOption(arg, args[++i]);
 			if (value !== undefined) setLoopPolicyOption(result, "maxOutputTokenRecoveryAttempts", value);
+		} else if (arg === "--max-model-error-recovery-attempts" && i + 1 < args.length) {
+			const value = parseNonNegativeIntegerOption(arg, args[++i]);
+			if (value !== undefined) setLoopPolicyOption(result, "maxModelErrorRecoveryAttempts", value);
+		} else if (arg === "--max-stop-hook-continuations" && i + 1 < args.length) {
+			const value = parseNonNegativeIntegerOption(arg, args[++i]);
+			if (value !== undefined) setLoopPolicyOption(result, "maxStopHookContinuations", value);
 		} else if (arg === "--export" && i + 1 < args.length) {
 			result.export = args[++i];
 		} else if ((arg === "--extension" || arg === "-e") && i + 1 < args.length) {
@@ -344,6 +352,8 @@ ${chalk.bold("Options:")}
   --output-token-budget-threshold <n> Continuation threshold ratio in (0,1], default loop policy
   --output-token-budget-continuations <n> Max output-budget continuations
   --max-output-token-recovery-attempts <n> Max recovery turns after output-token stops
+  --max-model-error-recovery-attempts <n> Max in-loop model error recoveries
+  --max-stop-hook-continuations <n> Max stop-hook validation continuations
   --continue, -c                 Continue previous session
   --resume, -r                   Select a session to resume
   --session <path>               Use specific session file

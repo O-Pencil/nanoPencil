@@ -124,6 +124,8 @@ export interface CreateAgentSessionOptions {
     | "maxToolResultBatchSizeChars"
     | "outputTokenBudget"
     | "maxOutputTokenRecoveryAttempts"
+    | "maxModelErrorRecoveryAttempts"
+    | "maxStopHookContinuations"
   >;
   /** Maximum assistant turns allowed for one prompt. */
   maxTurnsPerPrompt?: number;
@@ -137,6 +139,10 @@ export interface CreateAgentSessionOptions {
   outputTokenBudget?: AgentLoopPolicyOptions["outputTokenBudget"];
   /** Maximum automatic output-token recovery turns per prompt. */
   maxOutputTokenRecoveryAttempts?: number;
+  /** Maximum in-loop model error recoveries per prompt. */
+  maxModelErrorRecoveryAttempts?: number;
+  /** Maximum stop-hook validation/correction continuations per prompt. */
+  maxStopHookContinuations?: number;
   /** Models available for cycling (Ctrl+P in interactive mode) */
   scopedModels?: Array<{ model: Model<any>; thinkingLevel: ThinkingLevel }>;
 
@@ -487,6 +493,9 @@ export async function createAgentSession(
     outputTokenBudget: options.outputTokenBudget ?? options.loopPolicy?.outputTokenBudget,
     maxOutputTokenRecoveryAttempts:
       options.maxOutputTokenRecoveryAttempts ?? options.loopPolicy?.maxOutputTokenRecoveryAttempts,
+    maxModelErrorRecoveryAttempts:
+      options.maxModelErrorRecoveryAttempts ?? options.loopPolicy?.maxModelErrorRecoveryAttempts,
+    maxStopHookContinuations: options.maxStopHookContinuations ?? options.loopPolicy?.maxStopHookContinuations,
     getApiKey: async (provider) => {
       // Use the provider argument from the in-flight request;
       // agent.state.model may already be switched mid-turn.

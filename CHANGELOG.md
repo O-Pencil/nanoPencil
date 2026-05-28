@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.6] - 2026-05-28
+
+### Fixed
+- fix(agent-core): abort pending follow-up checks
+- fix(agent-core): abort pending stop hooks
+- fix(agent-core): abort pending initial steering
+- fix(agent-core): abort pending request preparation
+- fix(agent-core): abort pending stream creation
+- fix(agent-core): reject empty stream completions
+- fix(agent-core): trust final stream events
+- fix(agent-core): recover custom stream failures
+- fix(agent-core): abort hung custom streams
+- fix(ai): retry stream iterator failures
+- fix(ai): abort hung provider streams
+- fix(ai): abort retry backoff promptly
+
+### Changed
+- refactor(agent-core): centralize aborted loop finalization
+
+### Documentation
+- docs(arch-review): align architecture review documents
+
+
 ## [1.14.5] - 2026-05-28
 
 ### Added

@@ -98,7 +98,7 @@ Non-interactive mode for scripting and piping.
 
 **P3 Contract:**
 `print-mode.ts`:
-- [WHO]: Provides PrintModeOptions, formatPrintLoopResult(), runPrintMode()
+- [WHO]: Provides PrintModeOptions, PrintModeResult, formatPrintLoopResult(), runPrintMode()
 - [FROM]: Depends on ai, agent-core, agent-session
 - [TO]: Consumed by main.ts, modes/index.ts, print mode tests
 - [HERE]: modes/print-mode.ts - batch processing mode

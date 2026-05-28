@@ -150,3 +150,78 @@ test("text print mode can emit final agent loop result as stderr JSON", async ()
 		lastTransition: { reason: "tool_result", toolCallCount: 2 },
 	});
 });
+
+test("text print mode emits loop result before returning an error exit code", async () => {
+	const stdout: string[] = [];
+	const stderr: string[] = [];
+	const originalLog = console.log;
+	const originalError = console.error;
+	const originalExit = process.exit;
+	console.log = (...args: unknown[]) => {
+		stdout.push(args.map(String).join(" "));
+	};
+	console.error = (...args: unknown[]) => {
+		stderr.push(args.map(String).join(" "));
+	};
+	process.exit = ((code?: string | number | null | undefined) => {
+		throw new Error(`unexpected process.exit(${code})`);
+	}) as typeof process.exit;
+
+	let result: Awaited<ReturnType<typeof runPrintMode>> | undefined;
+	try {
+		const session = {
+			sessionManager: {
+				getHeader: () => undefined,
+			},
+			state: {
+				lastResult: {
+					stopReason: "error",
+					turnCount: 4,
+					toolCallCount: 6,
+					durationMs: 900,
+					errorMessage: "Stopped after reaching the turn limit.",
+					errorSubtype: "max_turns_reached",
+					lastTransition: { reason: "max_turns_reached", maxTurns: 3, turnCount: 4 },
+				},
+				messages: [
+					{
+						role: "assistant",
+						stopReason: "error",
+						errorMessage: "Stopped after reaching the turn limit.",
+						content: [{ type: "text", text: "partial answer" }],
+					},
+				],
+			},
+			extensionRunner: undefined,
+			agent: {
+				waitForIdle: async () => {},
+			},
+			bindExtensions: async () => {},
+			subscribe: () => () => {},
+			prompt: async () => {},
+		};
+
+		result = await runPrintMode(session as any, {
+			mode: "text",
+			printLoopResult: true,
+		});
+	} finally {
+		console.log = originalLog;
+		console.error = originalError;
+		process.exit = originalExit;
+	}
+
+	assert.equal(result?.exitCode, 1);
+	assert.deepEqual(stdout, []);
+	assert.equal(stderr[0], "Stopped after reaching the turn limit.");
+	assert.deepEqual(JSON.parse(stderr[1]), {
+		type: "agent_result",
+		stopReason: "error",
+		turnCount: 4,
+		toolCallCount: 6,
+		durationMs: 900,
+		errorMessage: "Stopped after reaching the turn limit.",
+		errorSubtype: "max_turns_reached",
+		lastTransition: { reason: "max_turns_reached", maxTurns: 3, turnCount: 4 },
+	});
+});

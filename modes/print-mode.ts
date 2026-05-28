@@ -1,5 +1,5 @@
 /**
- * [WHO]: PrintModeOptions, formatPrintLoopResult(), runPrintMode()
+ * [WHO]: PrintModeOptions, PrintModeResult, formatPrintLoopResult(), runPrintMode()
  * [FROM]: Depends on ai, agent-core, core/runtime/agent-session
  * [TO]: Consumed by modes/index.ts, main.ts, print mode tests
  * [HERE]: modes/print-mode.ts - non-interactive batch processing mode
@@ -24,17 +24,27 @@ export interface PrintModeOptions {
 	printLoopResult?: boolean;
 }
 
+export interface PrintModeResult {
+	exitCode: number;
+}
+
 export function formatPrintLoopResult(result: AgentRunResult | undefined): string | undefined {
 	if (!result) return undefined;
 	return JSON.stringify({ type: "agent_result", ...result });
+}
+
+function emitPrintLoopResult(result: AgentRunResult | undefined): void {
+	const loopResult = formatPrintLoopResult(result);
+	if (loopResult) console.error(loopResult);
 }
 
 /**
  * Run in print (single-shot) mode.
  * Sends prompts to the agent and outputs the result.
  */
-export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<void> {
+export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<PrintModeResult> {
 	const { mode, messages = [], initialMessage, initialImages } = options;
+	let exitCode = 0;
 	if (mode === "json") {
 		const header = session.sessionManager.getHeader();
 		if (header) {
@@ -114,19 +124,21 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 			// Check for error/aborted
 			if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
 				console.error(assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`);
-				process.exit(1);
-			}
-
-			// Output text content
-			for (const content of assistantMsg.content) {
-				if (content.type === "text") {
-					console.log(content.text);
+				if (options.printLoopResult) {
+					emitPrintLoopResult(state.lastResult);
 				}
-			}
+				exitCode = 1;
+			} else {
+				// Output text content
+				for (const content of assistantMsg.content) {
+					if (content.type === "text") {
+						console.log(content.text);
+					}
+				}
 
-			if (options.printLoopResult) {
-				const loopResult = formatPrintLoopResult(state.lastResult);
-				if (loopResult) console.error(loopResult);
+				if (options.printLoopResult) {
+					emitPrintLoopResult(state.lastResult);
+				}
 			}
 		}
 	}
@@ -139,4 +151,6 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 			else resolve();
 		});
 	});
+
+	return { exitCode };
 }

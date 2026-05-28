@@ -1079,7 +1079,7 @@ export async function main(args: string[]) {
 		});
 		await mode.run();
 	} else {
-		await runPrintMode(session, {
+		const printResult = await runPrintMode(session, {
 			mode,
 			messages: parsed.messages,
 			initialMessage,
@@ -1090,6 +1090,6 @@ export async function main(args: string[]) {
 		if (process.stdout.writableLength > 0) {
 			await new Promise<void>((resolve) => process.stdout.once("drain", resolve));
 		}
-		process.exit(0);
+		process.exit(printResult.exitCode);
 	}
 }

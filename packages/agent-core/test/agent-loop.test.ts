@@ -1955,6 +1955,65 @@ describe("agentLoop with AgentMessage", () => {
 		expect(result?.transitions).toEqual([{ reason: "follow_up" }]);
 	});
 
+	it("should abort standard loop while follow-up messages are still loading", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const controller = new AbortController();
+		let followUpCalls = 0;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			getFollowUpMessages: () => {
+				followUpCalls += 1;
+				queueMicrotask(() => controller.abort());
+				return new Promise<AgentMessage[]>(() => {});
+			},
+		};
+
+		let callIndex = 0;
+		const stream = agentLoop([createUserMessage("answer")], context, config, controller.signal, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([{ type: "text", text: "draft" }]),
+				});
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+
+		expect(callIndex).toBe(1);
+		expect(followUpCalls).toBe(1);
+		const finalAssistant = events
+			.filter(
+				(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+					event.type === "message_end" && event.message.role === "assistant",
+			)
+			.at(-1)?.message as AssistantMessage | undefined;
+		expect(finalAssistant?.stopReason).toBe("aborted");
+		expect(finalAssistant?.errorMessage).toBe("Request was aborted");
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("aborted");
+		expect(result?.errorSubtype).toBe("aborted");
+	});
+
 	it("should stop standard loop stop-hook continuations at the configured limit", async () => {
 		const context: AgentContext = {
 			systemPrompt: "",
@@ -4324,6 +4383,65 @@ describe("structuredAdaptiveAgentLoop", () => {
 
 		expect(callIndex).toBe(1);
 		expect(hookCalls).toBe(1);
+		const finalAssistant = events
+			.filter(
+				(event): event is Extract<AgentEvent, { type: "message_end" }> =>
+					event.type === "message_end" && event.message.role === "assistant",
+			)
+			.at(-1)?.message as AssistantMessage | undefined;
+		expect(finalAssistant?.stopReason).toBe("aborted");
+		expect(finalAssistant?.errorMessage).toBe("Request was aborted");
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("aborted");
+		expect(result?.errorSubtype).toBe("aborted");
+	});
+
+	it("should abort structured-adaptive loop while follow-up messages are still loading", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const controller = new AbortController();
+		let followUpCalls = 0;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			getFollowUpMessages: () => {
+				followUpCalls += 1;
+				queueMicrotask(() => controller.abort());
+				return new Promise<AgentMessage[]>(() => {});
+			},
+		};
+
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("answer")], context, config, controller.signal, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([{ type: "text", text: "draft" }]),
+				});
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+
+		expect(callIndex).toBe(1);
+		expect(followUpCalls).toBe(1);
 		const finalAssistant = events
 			.filter(
 				(event): event is Extract<AgentEvent, { type: "message_end" }> =>

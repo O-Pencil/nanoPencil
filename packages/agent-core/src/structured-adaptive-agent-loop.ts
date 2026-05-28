@@ -445,7 +445,25 @@ async function runStructuredAdaptiveQueryLoop(
 				continue;
 			}
 
-			const followUpMessages = (await config.getFollowUpMessages?.()) || [];
+			const followUpMessagesResult = await waitForAbortableOperation(
+				config.getFollowUpMessages ? config.getFollowUpMessages() : [],
+				signal,
+			);
+			if (followUpMessagesResult.type === "aborted") {
+				const finalMessage = createLoopLimitMessage(config, "Request was aborted");
+				finalMessage.stopReason = "aborted";
+				currentContext.messages.push(finalMessage);
+				newMessages.push(finalMessage);
+				stream.push({ type: "message_start", message: { ...finalMessage } });
+				stream.push({ type: "message_end", message: finalMessage });
+				stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
+				state.finalStopReason = "aborted";
+				state.finalErrorMessage = finalMessage.errorMessage;
+				state.finalErrorSubtype = "aborted";
+				finish(stream, newMessages, state);
+				return;
+			}
+			const followUpMessages = followUpMessagesResult.value || [];
 			if (followUpMessages.length === 0) {
 				break;
 			}

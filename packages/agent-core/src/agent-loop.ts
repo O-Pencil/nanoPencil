@@ -622,7 +622,34 @@ async function runLoop(
 		}
 
 		// Agent would stop here. Check for follow-up messages.
-		const followUpMessages = (await config.getFollowUpMessages?.()) || [];
+		const followUpMessagesResult = await waitForAbortableOperation(
+			config.getFollowUpMessages ? config.getFollowUpMessages() : [],
+			signal,
+		);
+		if (followUpMessagesResult.type === "aborted") {
+			const finalMessage = createLoopLimitMessage(config, "Request was aborted");
+			finalMessage.stopReason = "aborted";
+			currentContext.messages.push(finalMessage);
+			newMessages.push(finalMessage);
+			stream.push({ type: "message_start", message: { ...finalMessage } });
+			stream.push({ type: "message_end", message: finalMessage });
+			stream.push({ type: "turn_end", message: finalMessage, toolResults: [] });
+			finishStandardLoop(stream, newMessages, {
+				config,
+				turnCount,
+				toolCallCount,
+				startedAt,
+				usage,
+				permissionDenials,
+				stopReason: "aborted",
+				transitions,
+				lastTransition,
+				errorMessage: finalMessage.errorMessage,
+				errorSubtype: "aborted",
+			});
+			return;
+		}
+		const followUpMessages = followUpMessagesResult.value || [];
 		if (followUpMessages.length > 0) {
 			// Set as pending so inner loop processes them
 			pendingMessages = followUpMessages;

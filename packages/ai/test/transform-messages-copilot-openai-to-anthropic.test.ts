@@ -112,4 +112,40 @@ describe("OpenAI to Anthropic session migration for Copilot Claude", () => {
 
 		expect(toolCall.thoughtSignature).toBeUndefined();
 	});
+
+	it("drops assistant messages made empty by cross-model redacted thinking filtering", () => {
+		const model = makeCopilotClaudeModel();
+		const messages: Message[] = [
+			{ role: "user", content: "continue", timestamp: 1 },
+			{
+				role: "assistant",
+				content: [
+					{
+						type: "thinking",
+						thinking: "[Reasoning redacted]",
+						thinkingSignature: "opaque-redacted-thinking",
+						redacted: true,
+					},
+				],
+				api: "anthropic-messages",
+				provider: "anthropic",
+				model: "claude-opus-4",
+				usage: {
+					input: 0,
+					output: 0,
+					cacheRead: 0,
+					cacheWrite: 0,
+					totalTokens: 0,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				},
+				stopReason: "stop",
+				timestamp: 2,
+			},
+			{ role: "user", content: "next", timestamp: 3 },
+		];
+
+		const result = transformMessages(messages, model, anthropicNormalizeToolCallId);
+
+		expect(result.map((message) => message.role)).toEqual(["user", "user"]);
+	});
 });

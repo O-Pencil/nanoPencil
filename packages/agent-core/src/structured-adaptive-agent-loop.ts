@@ -638,7 +638,9 @@ async function streamAssistantResponse(
 		}
 	}
 
-	const finalMessage = await response.result();
+	const finalMessage =
+		response.resultIfResolved() ??
+		createLoopLimitMessage(config, "Provider stream ended without a final assistant message");
 	if (addedPartial) {
 		context.messages[context.messages.length - 1] = finalMessage;
 	} else {

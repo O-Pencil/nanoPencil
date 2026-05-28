@@ -141,6 +141,26 @@ function createFinalEventWithHangingResultStream(event: AssistantMessageEvent): 
 	} as unknown as MockAssistantStream;
 }
 
+function createEventlessEndWithHangingResultStream(): MockAssistantStream {
+	return {
+		[Symbol.asyncIterator]() {
+			return {
+				next() {
+					return Promise.resolve({ done: true, value: undefined });
+				},
+			};
+		},
+		result() {
+			return new Promise<AssistantMessage>(() => {});
+		},
+		resultIfResolved() {
+			return undefined;
+		},
+		push() {},
+		end() {},
+	} as unknown as MockAssistantStream;
+}
+
 function totalToolResultTextLength(messages: Extract<AgentMessage, { role: "toolResult" }>[]): number {
 	return messages.reduce((total, message) => total + readToolResultText(message).length, 0);
 }
@@ -351,6 +371,43 @@ describe("agentLoop with AgentMessage", () => {
 			event.type === "agent_result",
 		);
 		expect(result?.stopReason).toBe("stop");
+	});
+
+	it("should fail standard loop eventless streams that end without a result", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+		const stream = agentLoop([createUserMessage("hello")], context, config, undefined, () =>
+			createEventlessEndWithHangingResultStream(),
+		);
+
+		const events: AgentEvent[] = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const messages = await withTimeout(stream.result(), 100);
+		const finalAssistant = messages.find(
+			(message): message is AssistantMessage => message.role === "assistant",
+		);
+
+		expect(finalAssistant?.stopReason).toBe("error");
+		expect(finalAssistant?.errorMessage).toBe("Provider stream ended without a final assistant message");
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("error");
+		expect(result?.errorSubtype).toBe("model_error");
 	});
 
 	it("should let a standard loop recovery hook replace context and retry model errors", async () => {
@@ -3388,6 +3445,43 @@ describe("structuredAdaptiveAgentLoop", () => {
 			event.type === "agent_result",
 		);
 		expect(result?.stopReason).toBe("stop");
+	});
+
+	it("should fail structured-adaptive eventless streams that end without a result", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+		};
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("hello")], context, config, undefined, () =>
+			createEventlessEndWithHangingResultStream(),
+		);
+
+		const events: AgentEvent[] = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const messages = await withTimeout(stream.result(), 100);
+		const finalAssistant = messages.find(
+			(message): message is AssistantMessage => message.role === "assistant",
+		);
+
+		expect(finalAssistant?.stopReason).toBe("error");
+		expect(finalAssistant?.errorMessage).toBe("Provider stream ended without a final assistant message");
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("error");
+		expect(result?.errorSubtype).toBe("model_error");
 	});
 
 	it("should classify context overflow errors in structured-adaptive agent_result", async () => {

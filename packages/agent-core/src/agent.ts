@@ -412,6 +412,7 @@ export class Agent {
 
 	clearMessages() {
 		this._state.messages = [];
+		this._state.lastResult = undefined;
 	}
 
 	abort() {

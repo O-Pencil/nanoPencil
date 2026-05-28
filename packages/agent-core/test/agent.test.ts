@@ -486,9 +486,17 @@ describe("Agent", () => {
 		expect(agent.state.messages).toHaveLength(2);
 		expect(agent.state.messages[1]).toBe(newMessage);
 
+		(agent.state as any).lastResult = {
+			stopReason: "stop",
+			turnCount: 1,
+			toolCallCount: 0,
+			durationMs: 1,
+		};
+
 		// Test clearMessages
 		agent.clearMessages();
 		expect(agent.state.messages).toEqual([]);
+		expect(agent.state.lastResult).toBeUndefined();
 	});
 
 	it("should support steering message queue", async () => {
@@ -573,6 +581,9 @@ describe("Agent", () => {
 			if (event.type === "message_end" && event.message.role === "assistant") {
 				events.push("message_end");
 			}
+			if (event.type === "agent_result") {
+				events.push("agent_result");
+			}
 			if (event.type === "agent_end") {
 				events.push("agent_end");
 			}
@@ -580,9 +591,16 @@ describe("Agent", () => {
 
 		await expect(agent.prompt("trigger failure")).resolves.toBeUndefined();
 
-		expect(events).toEqual(["message_start", "message_end", "agent_end"]);
+		expect(events).toEqual(["message_start", "message_end", "agent_result", "agent_end"]);
 		expect(agent.state.messages.at(-1)?.role).toBe("assistant");
 		expect((agent.state.messages.at(-1) as AssistantMessage | undefined)?.errorMessage).toBe("stream setup failed");
+		expect(agent.state.lastResult).toMatchObject({
+			stopReason: "error",
+			turnCount: 0,
+			toolCallCount: 0,
+			errorMessage: "stream setup failed",
+			errorSubtype: "loop_error",
+		});
 	});
 
 	it("should throw when continue() called while streaming", async () => {

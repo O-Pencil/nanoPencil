@@ -301,6 +301,61 @@ test("text print mode joins automatic continuation assistant text", async () => 
 	assert.deepEqual(stdout, ["Part one.", " Part two."]);
 });
 
+test("text print mode does not join user-authored continuation-like prompts", async () => {
+	const stdout: string[] = [];
+	const originalLog = console.log;
+	console.log = (...args: unknown[]) => {
+		stdout.push(args.map(String).join(" "));
+	};
+
+	try {
+		const session = {
+			sessionManager: {
+				getHeader: () => undefined,
+			},
+			state: {
+				lastResult: {
+					stopReason: "stop",
+					turnCount: 1,
+					toolCallCount: 0,
+					durationMs: 100,
+				},
+				messages: [
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text: "Earlier unrelated answer." }],
+					},
+					{
+						role: "user",
+						content: "Continue the previous response from exactly where it stopped. This is automatic output-token recovery attempt 1.",
+					},
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text: "Only this answer." }],
+					},
+				],
+			},
+			extensionRunner: undefined,
+			agent: {
+				waitForIdle: async () => {},
+			},
+			bindExtensions: async () => {},
+			subscribe: () => () => {},
+			prompt: async () => {},
+		};
+
+		await runPrintMode(session as any, {
+			mode: "text",
+		});
+	} finally {
+		console.log = originalLog;
+	}
+
+	assert.deepEqual(stdout, ["Only this answer."]);
+});
+
 test("text print mode can fail on tool denial after emitting answer and loop result", async () => {
 	const stdout: string[] = [];
 	const stderr: string[] = [];

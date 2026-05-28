@@ -59,10 +59,24 @@ function assistantTextBlocks(message: AssistantMessage): string[] {
 		.map((content) => content.text);
 }
 
-export function collectPrintAssistantText(messages: Message[]): string[] {
+function hasAutomaticContinuationTransition(result: AgentRunResult | undefined): boolean {
+	return (
+		result?.transitions?.some(
+			(transition) =>
+				transition.reason === "max_output_tokens_recovery" ||
+				transition.reason === "token_budget_continuation",
+		) ?? false
+	);
+}
+
+export function collectPrintAssistantText(messages: Message[], result?: AgentRunResult): string[] {
 	const lastMessage = messages[messages.length - 1];
 	if (!lastMessage || lastMessage.role !== "assistant") return [];
 	const assistantMessages: AssistantMessage[] = [lastMessage as AssistantMessage];
+
+	if (!hasAutomaticContinuationTransition(result)) {
+		return assistantTextBlocks(lastMessage as AssistantMessage);
+	}
 
 	let index = messages.length - 2;
 	while (index >= 1 && isAutomaticContinuationMessage(messages[index])) {
@@ -183,7 +197,7 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 				exitCode = 1;
 			} else {
 				// Output text content
-				for (const text of collectPrintAssistantText(state.messages as Message[])) {
+				for (const text of collectPrintAssistantText(state.messages as Message[], state.lastResult)) {
 					console.log(text);
 				}
 

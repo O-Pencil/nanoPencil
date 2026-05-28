@@ -566,6 +566,7 @@ async function runLoop(
 		if (followUpMessages.length > 0) {
 			// Set as pending so inner loop processes them
 			pendingMessages = followUpMessages;
+			recordTransition({ reason: "follow_up" });
 			continue;
 		}
 

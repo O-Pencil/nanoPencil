@@ -1333,6 +1333,59 @@ describe("agentLoop with AgentMessage", () => {
 		expect(sawStopHookMessage).toBe(true);
 	});
 
+	it("should record standard loop follow-up message continuations", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [],
+		};
+		let followUpDelivered = false;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			getFollowUpMessages: () => {
+				if (followUpDelivered) return [];
+				followUpDelivered = true;
+				return [createUserMessage("follow up")];
+			},
+		};
+
+		let callIndex = 0;
+		let sawFollowUp = false;
+		const stream = agentLoop([createUserMessage("answer")], context, config, undefined, (_model, ctx) => {
+			if (callIndex === 1) {
+				sawFollowUp = ctx.messages.some(
+					(message) => message.role === "user" && message.content === "follow up",
+				);
+			}
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([
+						{ type: "text", text: callIndex === 0 ? "first answer" : "follow-up answer" },
+					]),
+				});
+				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(callIndex).toBe(2);
+		expect(sawFollowUp).toBe(true);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.lastTransition).toEqual({ reason: "follow_up" });
+		expect(result?.transitions).toEqual([{ reason: "follow_up" }]);
+	});
+
 	it("should stop standard loop stop-hook continuations at the configured limit", async () => {
 		const context: AgentContext = {
 			systemPrompt: "",

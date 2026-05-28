@@ -43,7 +43,11 @@ import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
 import { SessionManager } from "../../core/session/session-manager.js";
 import { randomUUID } from "node:crypto";
 import { Readable, Writable } from "node:stream";
-import { formatLoopPolicySummary } from "../agent-loop-result-format.js";
+import {
+	formatLoopPolicySummary,
+	formatLoopTransitionHistory,
+	formatLoopTransitionSummary,
+} from "../agent-loop-result-format.js";
 import { theme } from "../interactive/theme/theme.js";
 
 type AcpModeId = "ask" | "read-only" | "bypass";
@@ -248,8 +252,11 @@ function formatAcpLoopResultLines(result: AgentRunResult | undefined): string[] 
 	if (policySummary) {
 		lines.push(`Loop policy: ${policySummary}`);
 	}
-	if (result.lastTransition) {
-		lines.push(`Loop transition: ${result.lastTransition.reason}`);
+	const transitionHistory = formatLoopTransitionHistory(result.transitions);
+	if (transitionHistory) {
+		lines.push(`Loop transitions: ${transitionHistory}`);
+	} else if (result.lastTransition) {
+		lines.push(`Loop transition: ${formatLoopTransitionSummary(result.lastTransition)}`);
 	}
 	if (result.permissionDenialCount && result.permissionDenialCount > 0) {
 		lines.push(`Tool denials: ${result.permissionDenialCount}`);

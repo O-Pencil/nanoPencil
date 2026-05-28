@@ -52,6 +52,36 @@ test("agent loop status highlights limits and permission denials", () => {
 	);
 });
 
+test("agent loop status prefers transition history when available", () => {
+	assert.deepEqual(
+		formatAgentLoopStatusLines({
+			stopReason: "stop",
+			turnCount: 3,
+			toolCallCount: 0,
+			durationMs: 1500,
+			transitions: [
+				{ reason: "max_output_tokens_recovery", attempt: 1 },
+				{
+					reason: "token_budget_continuation",
+					continuationCount: 1,
+					outputTokens: 45,
+					targetTokens: 100,
+				},
+			],
+			lastTransition: {
+				reason: "token_budget_continuation",
+				continuationCount: 1,
+				outputTokens: 45,
+				targetTokens: 100,
+			},
+		}),
+		[
+			"Last loop:            stop, 3 turns, 0 tools, 1.5s",
+			"Loop transitions:     max_output_tokens_recovery (attempt 1) -> token_budget_continuation (45/100 output tokens)",
+		],
+	);
+});
+
 test("agent loop status formats framework and policy used by the last run", () => {
 	assert.deepEqual(
 		formatAgentLoopStatusLines({

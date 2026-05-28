@@ -26,9 +26,9 @@ The `modes/` module contains the three distinct execution modes for nanoPencil. 
 - [TO]: Consumed by main.ts
 - [HERE]: modes/index.ts - mode router
 
-`agent-loop-result-format.ts`: Shared agent loop result policy formatter
-- [WHO]: Provides formatLoopPolicySummary()
-- [FROM]: Depends on agent-core AgentRunPolicy
+`agent-loop-result-format.ts`: Shared agent loop result policy and transition formatter
+- [WHO]: Provides formatLoopPolicySummary(), formatLoopTransitionSummary(), formatLoopTransitionHistory()
+- [FROM]: Depends on agent-core AgentRunPolicy and AgentLoopTransition
 - [TO]: Consumed by interactive and ACP status formatters
 - [HERE]: modes/agent-loop-result-format.ts - shared run-result display helpers
 

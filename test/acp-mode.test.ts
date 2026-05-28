@@ -58,6 +58,15 @@ test("acp loop result lines summarize the last agent result", () => {
 			toolCallCount: 7,
 			durationMs: 1200,
 			permissionDenialCount: 1,
+			transitions: [
+				{ reason: "model_error_recovery", subtype: "context_overflow", attempt: 1 },
+				{
+					reason: "tool_call_limit_reached",
+					maxToolCalls: 6,
+					requestedToolCalls: 3,
+					toolCallCount: 5,
+				},
+			],
 			lastTransition: {
 				reason: "tool_call_limit_reached",
 				maxToolCalls: 6,
@@ -69,7 +78,7 @@ test("acp loop result lines summarize the last agent result", () => {
 			"Last loop: toolUse, 4 turns, 7 tools, 1.2s",
 			"Loop framework: weak-model-compatible",
 			"Loop policy: turns=3, tools=8, concurrency=2",
-			"Loop transition: tool_call_limit_reached",
+			"Loop transitions: model_error_recovery (context_overflow, attempt 1) -> tool_call_limit_reached (5/6 used, 3 requested)",
 			"Tool denials: 1",
 		],
 	);

@@ -104,4 +104,42 @@ describe("transformMessages interrupted tool results", () => {
 		expect((result[2] as ToolResultMessage).toolCallId).toBe(normalizeToolCallId("call_read|opaque/provider/id"));
 		expect((result[2] as ToolResultMessage).isError).toBe(true);
 	});
+
+	it("drops tool results that do not match any pending assistant tool call", () => {
+		const messages: Message[] = [
+			{ role: "user", content: "hello", timestamp: 1 },
+			{
+				role: "toolResult",
+				toolCallId: "orphan-call",
+				toolName: "read",
+				content: [{ type: "text", text: "orphan output" }],
+				isError: false,
+				timestamp: 2,
+			},
+			{ role: "user", content: "continue", timestamp: 3 },
+		];
+
+		const result = transformMessages(messages, makeAnthropicModel(), normalizeToolCallId);
+
+		expect(result.map((message) => message.role)).toEqual(["user", "user"]);
+		expect(result.some((message) => message.role === "toolResult")).toBe(false);
+	});
+
+	it("drops unrelated tool results while closing the pending tool call", () => {
+		const messages: Message[] = [
+			{ role: "user", content: "read the file", timestamp: 1 },
+			makeToolCallingAssistant("toolUse"),
+			{
+				...makeToolResult(),
+				toolCallId: "other-call",
+			},
+			{ role: "user", content: "continue", timestamp: 4 },
+		];
+
+		const result = transformMessages(messages, makeAnthropicModel(), normalizeToolCallId);
+
+		expect(result.map((message) => message.role)).toEqual(["user", "assistant", "toolResult", "user"]);
+		expect((result[2] as ToolResultMessage).toolCallId).toBe(normalizeToolCallId("call_read|opaque/provider/id"));
+		expect((result[2] as ToolResultMessage).isError).toBe(true);
+	});
 });

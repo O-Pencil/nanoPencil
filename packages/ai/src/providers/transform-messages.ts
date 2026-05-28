@@ -148,6 +148,9 @@ export function transformMessages<TApi extends Api>(
 				skippedInterruptedToolCallIds.delete(msg.toolCallId);
 				continue;
 			}
+			if (!hasPendingToolCall(pendingToolCalls, msg.toolCallId)) {
+				continue;
+			}
 			existingToolResultIds.add(msg.toolCallId);
 			result.push(msg);
 		} else if (msg.role === "user") {
@@ -168,6 +171,10 @@ export function transformMessages<TApi extends Api>(
 	}
 
 	return result;
+}
+
+function hasPendingToolCall(pendingToolCalls: ToolCall[], toolCallId: string): boolean {
+	return pendingToolCalls.some((tc) => tc.id === toolCallId);
 }
 
 function createMissingToolResults(

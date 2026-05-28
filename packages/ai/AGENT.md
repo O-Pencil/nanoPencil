@@ -20,7 +20,7 @@ providers/openai-completions.ts: OpenAICompletionsOptions, streamOpenAICompletio
 providers/anthropic.ts: AnthropicOptions, streamAnthropic, streamSimpleAnthropic, Anthropic Claude API provider
 providers/openai-codex-responses.ts: streamOpenAICodexResponses, streamSimpleOpenAICodexResponses, OpenAI Codex (ChatGPT OAuth) provider
 providers/google-gemini-cli.ts: GoogleGeminiCliOptions, streamGoogleGeminiCli, streamSimpleGoogleGeminiCli, Google Gemini CLI/Cloud Code Assist
-providers/transform-messages.ts: transformMessages, message normalization for cross-provider compatibility, ID sanitization, interrupted tool-result filtering
+providers/transform-messages.ts: transformMessages, message normalization for cross-provider compatibility, ID sanitization, orphan/interrupted tool-result filtering
 providers/google-vertex.ts: GoogleVertexOptions, streamGoogleVertex, streamSimpleGoogleVertex, Google Vertex AI provider
 providers/google.ts: GoogleOptions, streamGoogle, streamSimpleGoogle, Google Gemini API provider
 providers/google-shared.ts: isThinkingPart, retainThoughtSignature, convertMessages, convertTools, shared Google utilities

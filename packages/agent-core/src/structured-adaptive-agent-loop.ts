@@ -623,7 +623,7 @@ async function streamAssistantResponse(
 				break;
 			case "done":
 			case "error": {
-				const finalMessage = await response.result();
+				const finalMessage = event.type === "done" ? event.message : event.error;
 				if (addedPartial) {
 					context.messages[context.messages.length - 1] = finalMessage;
 				} else {

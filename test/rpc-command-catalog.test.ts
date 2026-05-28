@@ -4,7 +4,7 @@ import type { ExtensionRunner } from "../core/extensions/index.js";
 import type { ResourceLoader } from "../core/config/resource-loader.js";
 import type { PromptTemplate } from "../core/prompt/prompt-templates.js";
 import type { Skill } from "../core/skills.js";
-import { buildRpcSlashCommands } from "../modes/rpc/rpc-mode.js";
+import { buildRpcSessionState, buildRpcSlashCommands } from "../modes/rpc/rpc-mode.js";
 
 const promptTemplates = [
 	{
@@ -77,4 +77,39 @@ test("rpc command catalog shares category and shadow filtering with runtime cata
 			path: "/home/user/.nanopencil/skills/review/SKILL.md",
 		},
 	]);
+});
+
+test("rpc session state exposes last agent loop result", () => {
+	const state = buildRpcSessionState({
+		model: undefined,
+		thinkingLevel: "off",
+		agentLoopFramework: "standard",
+		isStreaming: false,
+		isCompacting: false,
+		steeringMode: "one-at-a-time",
+		followUpMode: "one-at-a-time",
+		sessionFile: "/tmp/session.jsonl",
+		sessionId: "session-1",
+		sessionName: "Loop debugging",
+		autoCompactionEnabled: true,
+		messages: [],
+		pendingMessageCount: 0,
+		state: {
+			lastResult: {
+				stopReason: "toolUse",
+				turnCount: 3,
+				toolCallCount: 4,
+				durationMs: 250,
+				lastTransition: { reason: "tool_result", toolCallCount: 2 },
+			},
+		},
+	});
+
+	assert.deepEqual(state.lastResult, {
+		stopReason: "toolUse",
+		turnCount: 3,
+		toolCallCount: 4,
+		durationMs: 250,
+		lastTransition: { reason: "tool_result", toolCallCount: 2 },
+	});
 });

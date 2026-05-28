@@ -4,7 +4,7 @@
  * [TO]: Consumed by modes/index.ts, modes/rpc/rpc-client.ts, modes/rpc/rpc-mode.ts
  * [HERE]: modes/rpc/rpc-types.ts - RPC protocol type definitions
  */
-import type { AgentLoopFramework, AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
+import type { AgentLoopFramework, AgentMessage, AgentRunResult, ThinkingLevel } from "@pencil-agent/agent-core";
 import type { ImageContent, Model } from "@pencil-agent/ai";
 import type { SessionStats } from "../../core/runtime/agent-session.js";
 import type { BashResult } from "../../core/bash-executor.js";
@@ -107,6 +107,7 @@ export interface RpcSessionState {
 	isCompacting: boolean;
 	steeringMode: "all" | "one-at-a-time";
 	followUpMode: "all" | "one-at-a-time";
+	lastResult?: AgentRunResult;
 	sessionFile?: string;
 	sessionId: string;
 	sessionName?: string;

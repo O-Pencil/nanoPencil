@@ -1,5 +1,5 @@
 /**
- * [WHO]: runRpcMode(), RpcMode class
+ * [WHO]: runRpcMode(), buildRpcSlashCommands(), buildRpcSessionState(), RpcMode class
  * [FROM]: Depends on node:crypto, core/runtime/agent-session, core/extensions
  * [TO]: Consumed by modes/index.ts
  * [HERE]: modes/rpc/rpc-mode.ts - IDE integration via JSON-RPC over stdin/stdout
@@ -34,6 +34,23 @@ export type {
 } from "./rpc-types.js";
 
 type RpcSlashCommandCatalogSession = Pick<AgentSession, "extensionRunner" | "promptTemplates" | "resourceLoader">;
+type RpcStateSession = Pick<
+	AgentSession,
+	| "model"
+	| "thinkingLevel"
+	| "agentLoopFramework"
+	| "isStreaming"
+	| "isCompacting"
+	| "steeringMode"
+	| "followUpMode"
+	| "sessionFile"
+	| "sessionId"
+	| "sessionName"
+	| "autoCompactionEnabled"
+	| "messages"
+	| "pendingMessageCount"
+	| "state"
+>;
 
 function toRpcSlashCommand(command: SlashCommandInfo): RpcSlashCommand {
 	return {
@@ -73,6 +90,25 @@ export function buildRpcSlashCommands(session: RpcSlashCommandCatalogSession): R
 			path: skill.filePath,
 		})),
 	];
+}
+
+export function buildRpcSessionState(session: RpcStateSession): RpcSessionState {
+	return {
+		model: session.model,
+		thinkingLevel: session.thinkingLevel,
+		agentLoopFramework: session.agentLoopFramework,
+		isStreaming: session.isStreaming,
+		isCompacting: session.isCompacting,
+		steeringMode: session.steeringMode,
+		followUpMode: session.followUpMode,
+		lastResult: session.state.lastResult,
+		sessionFile: session.sessionFile,
+		sessionId: session.sessionId,
+		sessionName: session.sessionName,
+		autoCompactionEnabled: session.autoCompactionEnabled,
+		messageCount: session.messages.length,
+		pendingMessageCount: session.pendingMessageCount,
+	};
 }
 
 /**
@@ -416,22 +452,7 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			// =================================================================
 
 			case "get_state": {
-				const state: RpcSessionState = {
-					model: session.model,
-					thinkingLevel: session.thinkingLevel,
-					agentLoopFramework: session.agentLoopFramework,
-					isStreaming: session.isStreaming,
-					isCompacting: session.isCompacting,
-					steeringMode: session.steeringMode,
-					followUpMode: session.followUpMode,
-					sessionFile: session.sessionFile,
-					sessionId: session.sessionId,
-					sessionName: session.sessionName,
-					autoCompactionEnabled: session.autoCompactionEnabled,
-					messageCount: session.messages.length,
-					pendingMessageCount: session.pendingMessageCount,
-				};
-				return success(id, "get_state", state);
+				return success(id, "get_state", buildRpcSessionState(session));
 			}
 
 			// =================================================================

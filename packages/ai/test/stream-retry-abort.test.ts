@@ -54,6 +54,26 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 	]);
 }
 
+function createRejectingStream(error: Error): AssistantMessageEventStream {
+	return {
+		[Symbol.asyncIterator]() {
+			return {
+				next() {
+					return Promise.reject(error);
+				},
+			};
+		},
+		result() {
+			return new Promise<AssistantMessage>(() => {});
+		},
+		resultIfResolved() {
+			return undefined;
+		},
+		push() {},
+		end() {},
+	} as unknown as AssistantMessageEventStream;
+}
+
 describe("stream retry abort handling", () => {
 	it("emits an error event when aborted before provider stream creation", async () => {
 		const providerCalled = vi.fn();
@@ -497,5 +517,63 @@ describe("stream retry abort handling", () => {
 		});
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toBe("Request was aborted");
+	});
+
+	it("retries provider stream iterator errors before forwarding the final result", async () => {
+		let providerCalls = 0;
+		registerApiProvider(
+			{
+				api: "openai-responses",
+				stream() {
+					providerCalls += 1;
+					if (providerCalls === 1) {
+						return createRejectingStream(new Error("503 service unavailable"));
+					}
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => {
+						stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered iterator") });
+					});
+					return stream;
+				},
+				streamSimple() {
+					providerCalls += 1;
+					if (providerCalls === 1) {
+						return createRejectingStream(new Error("503 service unavailable"));
+					}
+					const stream = new AssistantMessageEventStream();
+					queueMicrotask(() => {
+						stream.push({ type: "done", reason: "stop", message: createAssistantMessage("recovered iterator") });
+					});
+					return stream;
+				},
+			},
+			"stream-retry-iterator-error-test",
+		);
+
+		const context: Context = {
+			messages: [{ role: "user", content: "hello", timestamp: 1 }],
+		};
+		const stream = streamSimple(createModel(), context, { retry: { baseDelayMs: 1, jitter: false } });
+		const events = [];
+		await withTimeout(
+			(async () => {
+				for await (const event of stream) {
+					events.push(event);
+				}
+			})(),
+			100,
+		);
+		const result = await withTimeout(stream.result(), 100);
+
+		expect(providerCalls).toBe(2);
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			type: "done",
+			reason: "stop",
+			message: {
+				content: [{ type: "text", text: "recovered iterator" }],
+			},
+		});
+		expect(result.content).toEqual([{ type: "text", text: "recovered iterator" }]);
 	});
 });

@@ -12,6 +12,7 @@ import { getApiProvider } from "./api-registry.js";
 import type {
 	Api,
 	AssistantMessage,
+	AssistantMessageEvent,
 	Context,
 	Model,
 	ProviderStreamOptions,
@@ -338,7 +339,23 @@ function wrapWithRetry<TApi extends Api>(
 			const innerIterator = innerStream[Symbol.asyncIterator]();
 
 			while (true) {
-				const nextEvent = await waitForStreamEvent(innerIterator, signal);
+				let nextEvent: IteratorResult<AssistantMessageEvent> | "aborted";
+				try {
+					nextEvent = await waitForStreamEvent(innerIterator, signal);
+				} catch (error) {
+					lastMessage = createStreamErrorMessage(model, error);
+					const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
+					if (delayMs !== undefined) {
+						attempt++;
+						if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+							emitAbortError(outerStream, model);
+							return;
+						}
+						break;
+					}
+					outerStream.push({ type: "error", reason: "error", error: lastMessage });
+					return;
+				}
 				if (nextEvent === "aborted") {
 					void innerIterator.return?.();
 					emitAbortError(outerStream, model);

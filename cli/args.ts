@@ -52,6 +52,7 @@ export interface Args {
 		| "maxTurnsPerPrompt"
 		| "maxToolCallsPerPrompt"
 		| "maxToolConcurrency"
+		| "maxToolResultBatchSizeChars"
 		| "outputTokenBudget"
 		| "maxOutputTokenRecoveryAttempts"
 		| "maxModelErrorRecoveryAttempts"
@@ -228,6 +229,9 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 		} else if (arg === "--max-tool-concurrency" && i + 1 < args.length) {
 			const value = parsePositiveIntegerOption(arg, args[++i]);
 			if (value !== undefined) setLoopPolicyOption(result, "maxToolConcurrency", value);
+		} else if (arg === "--max-tool-result-batch-size-chars" && i + 1 < args.length) {
+			const value = parsePositiveIntegerOption(arg, args[++i]);
+			if (value !== undefined) setLoopPolicyOption(result, "maxToolResultBatchSizeChars", value);
 		} else if (arg === "--output-token-budget" && i + 1 < args.length) {
 			const value = parsePositiveIntegerOption(arg, args[++i]);
 			if (value !== undefined) outputTokenBudget.targetTokens = value;
@@ -348,6 +352,7 @@ ${chalk.bold("Options:")}
   --max-turns-per-prompt <n>     Stop a prompt after n assistant turns
   --max-tool-calls-per-prompt <n> Stop a prompt after n tool calls
   --max-tool-concurrency <n>     Max concurrent safe tool calls in compatible loop
+  --max-tool-result-batch-size-chars <n> Max aggregate tool result chars per turn
   --output-token-budget <n>      Continue when final output is below n tokens
   --output-token-budget-threshold <n> Continuation threshold ratio in (0,1], default loop policy
   --output-token-budget-continuations <n> Max output-budget continuations

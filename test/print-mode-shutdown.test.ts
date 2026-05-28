@@ -62,6 +62,15 @@ test("parse args recognizes non-persistent agent loop controls", () => {
 	assert.deepEqual(args.messages, ["Run bounded checks"]);
 });
 
+test("parse args recognizes aggregate tool result budget control", () => {
+	const args = parseArgs(["--max-tool-result-batch-size-chars", "64000", "Inspect large logs"]);
+
+	assert.deepEqual(args.loopPolicy, {
+		maxToolResultBatchSizeChars: 64_000,
+	});
+	assert.deepEqual(args.messages, ["Inspect large logs"]);
+});
+
 test("parse args recognizes output continuation loop controls", () => {
 	const args = parseArgs([
 		"--output-token-budget",

@@ -4,7 +4,7 @@
 
 Member List
 agent.ts: Agent class, AgentOptions, AgentLoopPolicyOptions, main agent with message loop, coordinates with agent-loop for execution, stores last run result including transition history, runtime-settable loop policy plumbing
-agent-loop.ts: agentLoop and agentLoopContinue, agent execution loop and state machine, transforms to Message[] at LLM boundary, emits request/result telemetry with transition history, recovers model/output errors, enforces standard tool lifecycle and tool-result budget gates
+agent-loop.ts: agentLoop and agentLoopContinue, agent execution loop and state machine, transforms to Message[] at LLM boundary, emits request/result telemetry with transition history, recovers model/output errors, tombstones recovered error turns, enforces standard tool lifecycle and tool-result budget gates
 agent-loop-continuations.ts: computeRecoveryMaxTokens, createOutputTokenRecoveryMessage, createTokenBudgetContinuation, shared output continuation policy for agent loops
 agent-loop-tool-results.ts: enforceToolResultBatchSize and createInterruptedToolResults, shared aggregate tool-result budget and interrupted tool-call completion policy for agent loops
 agent-loop-tool-summaries.ts: PendingToolUseSummary, flushReadyToolUseSummaries, startToolUseSummary, shared non-blocking tool summary policy for agent loops

@@ -270,6 +270,10 @@ describe("agentLoop with AgentMessage", () => {
 			subtype: "context_overflow",
 			attempt: 1,
 		});
+		const returnedMessages = await stream.result();
+		expect(
+			returnedMessages.some((message) => message.role === "assistant" && message.stopReason === "error"),
+		).toBe(false);
 	});
 
 	it("should recover standard loop once when output stops due to max output tokens", async () => {

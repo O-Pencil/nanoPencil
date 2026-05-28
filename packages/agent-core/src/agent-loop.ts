@@ -3,7 +3,7 @@
  * Transforms to Message[] only at the LLM call boundary.
  */
 /**
- * [WHO]: Provides agentLoop(), agentLoopContinue(), standard loop event emission, continuation recovery, and serial tool execution.
+ * [WHO]: Provides agentLoop(), agentLoopContinue(), standard loop event emission, continuation recovery, recovered-error tombstoning, and serial tool execution.
  * [FROM]: Depends on @pencil-agent/ai streams/messages, ./types contracts, ./errors, and shared loop helpers.
  * [TO]: Consumed by agent.ts and package exports as the default agent execution loop.
  * [HERE]: packages/agent-core/src/agent-loop.ts within agent-core; standard counterpart to structured-adaptive-agent-loop.ts.
@@ -307,6 +307,7 @@ async function runLoop(
 			}
 
 			// Stream assistant response
+			const responseStartMessageCount = newMessages.length;
 			const message = await streamAssistantResponse(
 				currentContext,
 				config,
@@ -349,6 +350,7 @@ async function runLoop(
 					if (recovery.action === "retry") {
 						stream.push({ type: "turn_end", message, toolResults: interruptedToolResults });
 						modelErrorRecoveryCount = attempt;
+						newMessages.splice(responseStartMessageCount);
 						currentContext.messages = recovery.messages;
 						recordTransition(
 							recovery.transition ?? {

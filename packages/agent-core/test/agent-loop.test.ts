@@ -98,6 +98,26 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 	]);
 }
 
+function createRejectingAssistantStream(error: Error): MockAssistantStream {
+	return {
+		[Symbol.asyncIterator]() {
+			return {
+				next() {
+					return Promise.reject(error);
+				},
+			};
+		},
+		result() {
+			return new Promise<AssistantMessage>(() => {});
+		},
+		resultIfResolved() {
+			return undefined;
+		},
+		push() {},
+		end() {},
+	} as unknown as MockAssistantStream;
+}
+
 function totalToolResultTextLength(messages: Extract<AgentMessage, { role: "toolResult" }>[]): number {
 	return messages.reduce((total, message) => total + readToolResultText(message).length, 0);
 }
@@ -344,6 +364,70 @@ describe("agentLoop with AgentMessage", () => {
 		expect(
 			returnedMessages.some((message) => message.role === "assistant" && message.stopReason === "error"),
 		).toBe(false);
+	});
+
+	it("should recover standard loop custom stream iterator errors", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [createUserMessage("old context")],
+			tools: [],
+		};
+		let recoveryCalls = 0;
+		let sawRecoveredContext = false;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			recoverModelError: ({ errorSubtype, attempt }) => {
+				recoveryCalls += 1;
+				expect(errorSubtype).toBe("context_overflow");
+				expect(attempt).toBe(1);
+				return {
+					action: "retry",
+					messages: [createUserMessage("compacted context")],
+					transition: { reason: "model_error_recovery", subtype: errorSubtype, attempt },
+				};
+			},
+		};
+
+		let callIndex = 0;
+		const stream = agentLoop([createUserMessage("too much context")], context, config, undefined, (_model, ctx) => {
+			if (callIndex === 0) {
+				callIndex++;
+				return createRejectingAssistantStream(new Error("maximum context length is 8192 tokens"));
+			}
+			sawRecoveredContext = ctx.messages.some(
+				(message) =>
+					message.role === "user" &&
+					typeof message.content === "string" &&
+					message.content === "compacted context",
+			);
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([{ type: "text", text: "recovered" }]),
+				});
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(recoveryCalls).toBe(1);
+		expect(sawRecoveredContext).toBe(true);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("stop");
+		expect(result?.lastTransition).toEqual({
+			reason: "model_error_recovery",
+			subtype: "context_overflow",
+			attempt: 1,
+		});
 	});
 
 	it("should recover standard loop once when output stops due to max output tokens", async () => {
@@ -3297,6 +3381,70 @@ describe("structuredAdaptiveAgentLoop", () => {
 					});
 				}
 				callIndex++;
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		expect(recoveryCalls).toBe(1);
+		expect(sawRecoveredContext).toBe(true);
+		const result = events.find((event): event is Extract<AgentEvent, { type: "agent_result" }> =>
+			event.type === "agent_result",
+		);
+		expect(result?.stopReason).toBe("stop");
+		expect(result?.lastTransition).toEqual({
+			reason: "model_error_recovery",
+			subtype: "context_overflow",
+			attempt: 1,
+		});
+	});
+
+	it("should recover structured-adaptive custom stream iterator errors", async () => {
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [createUserMessage("old context")],
+			tools: [],
+		};
+		let recoveryCalls = 0;
+		let sawRecoveredContext = false;
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			recoverModelError: ({ errorSubtype, attempt }) => {
+				recoveryCalls += 1;
+				expect(errorSubtype).toBe("context_overflow");
+				expect(attempt).toBe(1);
+				return {
+					action: "retry",
+					messages: [createUserMessage("compacted context")],
+					transition: { reason: "model_error_recovery", subtype: errorSubtype, attempt },
+				};
+			},
+		};
+
+		let callIndex = 0;
+		const stream = structuredAdaptiveAgentLoop([createUserMessage("too much context")], context, config, undefined, (_model, ctx) => {
+			if (callIndex === 0) {
+				callIndex++;
+				return createRejectingAssistantStream(new Error("maximum context length is 8192 tokens"));
+			}
+			sawRecoveredContext = ctx.messages.some(
+				(message) =>
+					message.role === "user" &&
+					typeof message.content === "string" &&
+					message.content === "compacted context",
+			);
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				mockStream.push({
+					type: "done",
+					reason: "stop",
+					message: createAssistantMessage([{ type: "text", text: "recovered" }]),
+				});
 			});
 			return mockStream;
 		});

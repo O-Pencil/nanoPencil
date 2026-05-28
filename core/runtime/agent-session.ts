@@ -1,5 +1,5 @@
 /**
- * [WHO]: AgentSession class, session lifecycle, event emission, in-loop context-overflow recovery adapter
+ * [WHO]: AgentSession class, session lifecycle, event emission, in-loop recovery adapter, pruneRecoverableErrorTail()
  * [FROM]: Depends on agent-core, ai, core/tools/*, core/session/*, core/config/*
  * [TO]: Consumed by core/index.ts, core/runtime/sdk.ts, modes/interactive/interactive-mode.ts, modes/print-mode.ts, modes/rpc/rpc-mode.ts, modes/acp/acp-mode.ts, modes/rpc/rpc-types.ts, modes/rpc/rpc-client.ts, modes/interactive/components/footer.ts, modes/interactive/components/skill-invocation-message.ts
  * [HERE]: Central runtime hub; all modes delegate to this class
@@ -161,6 +161,59 @@ export function parseSkillBlock(text: string): ParsedSkillBlock | null {
     content: match[3],
     userMessage: match[4]?.trim() || undefined,
   };
+}
+
+export function pruneRecoverableErrorTail(
+  messages: AgentMessage[],
+  assistantMessage: AssistantMessage,
+): AgentMessage[] {
+  const interruptedToolCallIds = new Set(
+    assistantMessage.content
+      .filter((part) => part.type === "toolCall")
+      .map((part) => part.id),
+  );
+  let end = messages.length;
+
+  while (
+    end > 0 &&
+    isRecoverableTailToolResult(messages[end - 1], interruptedToolCallIds)
+  ) {
+    end--;
+  }
+
+  if (
+    end > 0 &&
+    isSameRecoverableAssistantMessage(messages[end - 1], assistantMessage)
+  ) {
+    end--;
+  }
+
+  return messages.slice(0, end);
+}
+
+function isRecoverableTailToolResult(
+  message: AgentMessage,
+  interruptedToolCallIds: ReadonlySet<string>,
+): boolean {
+  return (
+    message.role === "toolResult" &&
+    interruptedToolCallIds.has(message.toolCallId)
+  );
+}
+
+function isSameRecoverableAssistantMessage(
+  message: AgentMessage,
+  assistantMessage: AssistantMessage,
+): boolean {
+  return (
+    message.role === "assistant" &&
+    message.stopReason === assistantMessage.stopReason &&
+    message.timestamp === assistantMessage.timestamp &&
+    message.provider === assistantMessage.provider &&
+    message.model === assistantMessage.model &&
+    message.api === assistantMessage.api &&
+    message.errorMessage === assistantMessage.errorMessage
+  );
 }
 
 /** Session-specific events that extend the core AgentEvent */
@@ -2148,9 +2201,10 @@ export class AgentSession {
       const shouldRetry =
         await this._retryCoordinator.handleErrorInLoop(assistantMessage);
       if (!shouldRetry) return { action: "stop" };
-      const messages = this.agent.state.messages;
-      const retryMessages =
-        messages.at(-1)?.role === "assistant" ? messages.slice(0, -1) : messages;
+      const retryMessages = pruneRecoverableErrorTail(
+        this.agent.state.messages,
+        assistantMessage,
+      );
       this.agent.replaceMessages(retryMessages);
       return {
         action: "retry",
@@ -2183,12 +2237,9 @@ export class AgentSession {
     if (errorIsFromBeforeCompaction) return { action: "stop" };
 
     const messages = this.agent.state.messages;
-    if (
-      messages.length > 0 &&
-      messages[messages.length - 1].role === "assistant"
-    ) {
-      this.agent.replaceMessages(messages.slice(0, -1));
-    }
+    this.agent.replaceMessages(
+      pruneRecoverableErrorTail(messages, assistantMessage),
+    );
 
     const recoveredMessages = await this._runAutoCompaction("overflow", true, {
       triggerContinue: false,

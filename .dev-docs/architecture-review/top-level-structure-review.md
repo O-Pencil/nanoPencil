@@ -315,6 +315,10 @@ extensions/
 
 ## 5.5 业界对标（grilling 期间补做）
 
+> Phase 3a 期间分两批做：**5.5.A 项目布局对标**（本节，2026-05-27 完成）+ **5.5.B 协议/runtime 对标**（独立调研落到 `industry-protocol-survey.md`，2026-05-28 完成）。本节只保留项目布局视角；协议层证据见 §5.5.B 链接。
+
+### 5.5.A 项目布局对标
+
 5 个开源 Agent 项目顶层结构对比：
 
 | 项目 | ★ | 语言 | 顶层关键目录 | "核心"目录 | packages/ | SDK 位置 |
@@ -333,6 +337,21 @@ extensions/
 3. **Codex 100+ crate 是 Rust 特例**，npm package 边界成本高，nanoPencil 不应跟随。
 
 **结论**：候选 D 路线（`core/` + 精选 `packages/`）有 Continue.dev 直接背书。
+
+### 5.5.B 协议 / Runtime 对标（PARP 命名争议补做）
+
+grilling 期间 PARP 命名出现"被误解为造轮子"的风险。为避免 maintainer / 外部贡献者把 PARP 当作"又一个 wire protocol"，独立调研落到 [`industry-protocol-survey.md`](./industry-protocol-survey.md)。**核心结论 3 句话**：
+
+1. PARP 五层中 **Host Adapter / Tool Runtime / Host↔Host 三层已有事实标准**：
+   - **ACP**（Agent Client Protocol，Zed/Linux Foundation v1）= Editor Host Adapter 事实标准；nanoPencil 已用 `@agentclientprotocol/sdk@^0.16.1`
+   - **MCP**（Model Context Protocol，Anthropic 2025-11 spec）= Tool Runtime 远程分支事实标准；97M+ monthly SDK downloads
+   - **A2A**（Agent2Agent Protocol，Google→Linux Foundation v1.2）= 未来 PencilAgent ↔ PencilAgent 通信事实标准
+
+2. PARP **Agent Profile 层**有 4 个工业框架可参考（**Microsoft Agent Framework 1.0** 声明式 YAML / OpenAI Agents SDK / Vercel AI SDK 6 / LangGraph）+ 2 篇论文支撑（arXiv 2604.03515 "Inside the Scaffold" 13 agent 源码分类；arXiv 2603.05344 OpenDev terminal coding agent）。
+
+3. PARP **Continuity 层是业界唯一空白**：A2A 明确声明 "agents exchange information without access to memory/state/tools"；MCP/ACP 不管 memory；LangGraph/MS Agent FW 仅有浅层 state——pencil 的 `core/continuity/` 是**真正独立的设计贡献**。
+
+**对 PARP 文档的硬约束**：本节及调研报告 §6 覆盖矩阵生效后，PARP 章节必须明确写 **"PARP is not a new wire protocol; it's a composition contract over MCP + ACP + A2A"**，且 `packages/extension-sdk/host-adapter.ts` / `tool-runtime.ts` 必须 re-export 业界标准类型而非自造。详见 `industry-protocol-survey.md` §7 修订建议表与 `target-architecture.md` §3.5 已落地措辞。
 
 ## 6. 顶层结构调整提案（候选 D 主推 + A/B/C 对照）
 
@@ -497,6 +516,8 @@ grilling 后新增一个独立但与候选 D 集成的解释层：**Pencil Agent
 PARP 的一句话定义：
 
 > nanoPencil 不只是一个 CLI agent，而是一套可宿主、可组合、可扩展的 Agent Runtime Protocol；CLI、Browser、Gateway、Editor 都是这套协议在不同 host adapter、tool runtime、agent profile 下的形态。
+
+> **PARP ≠ 新 wire protocol**：它是一份 **composition contract over MCP（Tool Runtime 远程分支）+ ACP（Editor Host Adapter）+ A2A（Host↔Host）** 加 pencil 自定义的 Continuity 层与 Agent Profile schema。五层 × 业界协议覆盖矩阵、论文与工业框架对位证据详见 [`industry-protocol-survey.md`](./industry-protocol-survey.md) §6（核心矩阵）与 §2–§4（逐层证据）。
 
 PARP 不替代候选 D；候选 D 是目录与发布边界，PARP 是候选 D 之上的产品架构解释：
 

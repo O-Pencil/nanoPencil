@@ -369,6 +369,25 @@ nanoPencil/
 | — | ~~`extensions/builtin/soul-binding/`~~ | 【EVOLUTION-RESERVED】演进 E3，本轮不建 |
 | `scripts/bundle-deps.js` | (删除) | 走 npm 自然解析 |
 
+### 4.2.1 core/ 根散文件 + modes 未列项落点（补 §4 盲区 · 2026-05-29）
+
+> 原 §4 树未给以下文件指定目标家（`execution-plan/migration-classification.md` 的 U 段）。判据：`platform/`=零业务知识原语；归属明确的业务→对应子目录；UI 数据→`modes/`；无所属的业务单文件可留 `core/` 根（与 `slash-commands.ts` 同例）。**均为大阶段一行为等价搬迁（逻辑零改）**。
+
+| 现路径 | 目标 | 类型 | 理由（据 P3 头）|
+|--------|------|------|----------------|
+| `core/exec.ts` | `core/platform/exec/exec.ts` | 搬 | 仅依赖 `child_process` 的命令执行原语，零业务 |
+| `core/bash-executor.ts` | `core/platform/exec/bash-executor.ts` | 搬 | 通用 bash 流式执行原语，与 exec 同域 |
+| `core/timings.ts` | `core/platform/timings.ts` | 搬 | 无依赖的计时插桩原语（≠远程 telemetry，故不进 telemetry/）|
+| `core/defaults.ts` | `core/platform/config/defaults.ts` | 搬 | 9 行默认值常量，归 config |
+| `core/diagnostics.ts` | `core/platform/config/diagnostics.ts` | 搬 | 资源冲突诊断类型，与 resource-loader 同域 |
+| `core/custom-providers.ts` | `core/model/custom-providers.ts` | 搬 | 自定义 provider 注册，model 域业务 |
+| `core/mcp-manager.ts` | `core/mcp/mcp-manager.ts` | 搬 | MCP 生命周期，明确属 mcp 域 |
+| `core/messages.ts` | `core/runtime/messages.ts` | 搬 | AgentMessage 变换/`convertToLlm`，runtime 消息域；⚠️ 跨域被消费，若 P2 测出环则降为 contract |
+| `core/footer-data-provider.ts` | `modes/interactive/footer-data-provider.ts` | 搬 | TUI footer 数据，属 UI，应离开 core/ |
+| `core/skills.ts` | `core/skills.ts` | 原地 | 465 行业务单文件，暂留 core/ 根（同 slash-commands.ts）；是否升 `core/skills/` 留大阶段二评审 |
+| `modes/agent-loop-result-format.ts` | `modes/utils/agent-loop-result-format.ts` | 搬 | 跨 mode 共享的结果展示 helper |
+| `modes/utils/`（clipboard/image-*）| `modes/utils/` | 原地 | 已是合理的 modes 共享工具目录，§4 树补列即可 |
+
 ---
 
 ## 5. 目录的"为什么这样设计"（功能域 × 候选 D 目录映射）

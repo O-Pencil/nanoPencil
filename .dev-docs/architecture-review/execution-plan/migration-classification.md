@@ -72,24 +72,24 @@ scope: 全仓库（D1–D8 全功能域）
 
 ---
 
-## U — §4 未定位（★ 结构缺口，大阶段一前必须补 §4）
+## U — §4 未定位 → ✅ 已落点（见 target-architecture §4.2.1）
 
-§4 端态树**没有给以下 core/ 根散文件指定目标家**。在 top-down 下它们是约束盲区，搬迁前需 maintainer 在 §4 补落点（候选：纯原语→`platform/`，业务→对应业务子目录）：
+10 个 core/ 根散文件 + modes 未列项的落点已据各文件 P3 头**起草进 `../target-architecture.md §4.2.1`**（2026-05-29），全部为大阶段一行为等价搬迁。摘要：
 
-| 文件 | 性质初判 | 候选家 |
-|------|---------|--------|
-| `core/bash-executor.ts` | 工具执行原语 | `core/tools/` 或 `platform/` |
-| `core/exec.ts` | 进程执行原语 | `platform/` |
-| `core/timings.ts` | 计时原语 | `platform/` |
-| `core/messages.ts` | 消息类型 | 待定（contract?）|
-| `core/footer-data-provider.ts` | UI 数据 | `modes/` 或 runtime ui-bridge |
-| `core/defaults.ts` | 默认值 | `platform/config/` |
-| `core/diagnostics.ts` | 诊断 | `platform/telemetry/` 或业务 |
-| `core/custom-providers.ts` | provider 配置 | `core/model/` |
-| `core/mcp-manager.ts` | MCP 业务 | `core/mcp/` |
-| `core/skills.ts` | 技能业务 | 待定业务子目录 |
+| 文件 | 落点 | 类型 |
+|------|------|------|
+| `exec.ts` / `bash-executor.ts` | `core/platform/exec/` | 搬（执行原语）|
+| `timings.ts` | `core/platform/timings.ts` | 搬 |
+| `defaults.ts` / `diagnostics.ts` | `core/platform/config/` | 搬 |
+| `custom-providers.ts` | `core/model/` | 搬（业务）|
+| `mcp-manager.ts` | `core/mcp/` | 搬（业务）|
+| `messages.ts` | `core/runtime/messages.ts` | 搬（⚠️ 若 P2 测出环降为 contract）|
+| `footer-data-provider.ts` | `modes/interactive/` | 搬（UI）|
+| `skills.ts` | `core/skills.ts` | 原地（业务单文件，升目录留大阶段二）|
+| `modes/agent-loop-result-format.ts` | `modes/utils/` | 搬 |
+| `modes/utils/`（clipboard/image-*）| `modes/utils/` | 原地（补列）|
 
-> `modes/` 也有未定位项：`agent-loop-result-format.ts`、`utils/`（§4 modes 树未列）。一并在 P0 补 §4 时处理。
+> **待你审**：上表落点是据 P3 头的初稿；`messages.ts`（跨域消费，可能成 contract）与 `skills.ts`（是否升 `core/skills/`）是两个值得你确认的判断点。审定后此段转 frozen，P0 V0-4 即可闭环。
 
 ---
 

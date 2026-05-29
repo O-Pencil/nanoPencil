@@ -21,43 +21,45 @@ gate: gates.md#门组-a   # 仅前置产出，无独立出口门
 
 ## 任务清单
 
-### 基线
-- [ ] 记录 `main` 上 `llm-wiki/` 基线 commit 指针（写入 Baseline Record）
-- [ ] 记录基线数字：循环依赖数（`madge`，需先装/`npx`）、`tsc --noEmit` 耗时、dist 体积、公共 API 符号表 snapshot
+### 基线（脚本化，去 main 跑，不在本分支阻塞 P1）
+- [x] 基线收集脚本就绪：`scripts/collect-baseline.ts`（5 项数据：commit / 循环依赖数 / `tsc --noEmit` 耗时 / dist 体积 / 公共 API 符号 snapshot）
+- [ ] maintainer 在 `main` 跑一次脚本，把输出 YAML 粘进下方 Baseline Record（`dist_size_mb` 需带 `--build`）
+  - 运行方式见脚本头部注释；不在受限环境跑（性能不足）
 
-### Characterization 脚手架（★ 命门，不能 placeholder）
-- [ ] CLI 关键路径 + 公共 API 符号表导出
-- [ ] **TUI characterization 方案落地**：print-mode 黄金输出对比 / interactive 录放机制（P5 的 V5-1 零回归依赖此，必须先建得起来）
+### Characterization 脚手架（★ 命门）
+- [ ] **TUI = 黄金输出对比**（已定）：print-mode 固定输入 → stdout 黄金文件，前后 diff；交互专属流若黄金盖不住，P5 时再补局部快照
+- [ ] 公共 API 符号 snapshot 由基线脚本产出（`.baseline-out/public-api-symbols.txt`）
 
 ### 结构缺口 + 分类（约束①）
-- [ ] **补 §4**：为 `migration-classification.md` 的 **U（10 个 core/ 根散文件 + modes 未列项）**在 `../target-architecture.md §4` 指定目标家
-- [ ] **核对 R 4 行**处置（已定=整块 blob 挪，落字到分类清单）
-- [ ] 冻结 `migration-classification.md` 的 D / N 清单
+- [x] **补 §4**：U（10 个 core/ 根散文件 + modes 未列项）落点已写入 `../target-architecture.md §4.2.1`
+- [x] **核对 R 4 行 + messages/skills 判断点**：R=整块 blob 挪；`messages.ts` 留 core/ 根作叶子契约；`skills.ts` 升目录推迟大阶段二
+- [ ] 冻结 `migration-classification.md` 的 D / N / U 清单（上述判断点已定，可冻结）
 
 ## 验证门控（DoD）
 
 | # | 检查项 | 通过标准 |
 |---|--------|---------|
-| V0-1 | 基线 commit | `llm-wiki/` 在 main 的 SHA 已记录 |
-| V0-2 | 基线数字 | 循环依赖数 / tsc 耗时 / dist 体积 / 符号表 snapshot 已存档 |
-| V0-3 | TUI 脚手架 | characterization 能跑、**能捕获 TUI 行为**（非 placeholder）|
-| V0-4 | §4 无盲区 | `migration-classification.md` U 行全部在 §4 有落点；D/R/N 冻结 |
+| V0-1 | 基线脚本 | `scripts/collect-baseline.ts` 就绪、文档化要收集的 5 项数据 ✅ |
+| V0-2 | 基线数字 | maintainer 在 main 跑脚本后 Baseline Record 已填（**可与 P1 解耦，sign-off 前补齐即可**）|
+| V0-3 | TUI 脚手架 | print-mode 黄金输出对比可跑、能捕获行为（非 placeholder）|
+| V0-4 | §4 无盲区 | U 行全部在 §4.2.1 有落点；D/R/N 冻结 ✅ |
 
-## Baseline Record（P0 填写）
+## Baseline Record（P0 填写 · 直接粘贴 `scripts/collect-baseline.ts` 输出）
 
 ```yaml
 llm_wiki_baseline_commit: _待填_
 cycle_count_before: _待填_
 tsc_no_emit_ms: _待填_
-dist_size_mb: _待填_
-public_api_symbols_snapshot: _待填_
+dist_size_mb: _待填_              # 需带 --build
+public_api_symbols_count: _待填_
+public_api_symbols_snapshot: _待填_   # .baseline-out/public-api-symbols.txt 存档路径
 recorded_at: _待填_
 recorded_on_branch: main
 ```
 
 ## 提交建议
 
-- `docs(p0): record baseline + fill §4 unplaced files + freeze migration classification`
+- `chore(p0): baseline collection script` ＋ 跑数后 `docs(p0): record main baseline numbers`
 
 ## 决策门控
 

@@ -382,7 +382,7 @@ nanoPencil/
 | `core/diagnostics.ts` | `core/platform/config/diagnostics.ts` | 搬 | 资源冲突诊断类型，与 resource-loader 同域 |
 | `core/custom-providers.ts` | `core/model/custom-providers.ts` | 搬 | 自定义 provider 注册，model 域业务 |
 | `core/mcp-manager.ts` | `core/mcp/mcp-manager.ts` | 搬 | MCP 生命周期，明确属 mcp 域 |
-| `core/messages.ts` | `core/runtime/messages.ts` | 搬 | AgentMessage 变换/`convertToLlm`，runtime 消息域；⚠️ 跨域被消费，若 P2 测出环则降为 contract |
+| `core/messages.ts` | `core/messages.ts` | 原地 | 依赖叶子（只 import ai/agent-core）；被 `session/compaction` + `runtime` **两域**消费 → 放进 runtime 会造 `session→runtime` 环，故留 core/ 根作中立共享契约（同 `soul-options-contract.ts`）；大阶段二可改名 `messages-contract.ts` |
 | `core/footer-data-provider.ts` | `modes/interactive/footer-data-provider.ts` | 搬 | TUI footer 数据，属 UI，应离开 core/ |
 | `core/skills.ts` | `core/skills.ts` | 原地 | 465 行业务单文件，暂留 core/ 根（同 slash-commands.ts）；是否升 `core/skills/` 留大阶段二评审 |
 | `modes/agent-loop-result-format.ts` | `modes/utils/agent-loop-result-format.ts` | 搬 | 跨 mode 共享的结果展示 helper |

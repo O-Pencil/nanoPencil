@@ -83,13 +83,13 @@ scope: 全仓库（D1–D8 全功能域）
 | `defaults.ts` / `diagnostics.ts` | `core/platform/config/` | 搬 |
 | `custom-providers.ts` | `core/model/` | 搬（业务）|
 | `mcp-manager.ts` | `core/mcp/` | 搬（业务）|
-| `messages.ts` | `core/runtime/messages.ts` | 搬（⚠️ 若 P2 测出环降为 contract）|
+| `messages.ts` | `core/messages.ts` | 原地（叶子 contract，搬进 runtime 会造 session→runtime 环）|
 | `footer-data-provider.ts` | `modes/interactive/` | 搬（UI）|
-| `skills.ts` | `core/skills.ts` | 原地（业务单文件，升目录留大阶段二）|
+| `skills.ts` | `core/skills.ts` | 原地（业务单文件；是否升 `core/skills/` 留大阶段二评审）|
 | `modes/agent-loop-result-format.ts` | `modes/utils/` | 搬 |
 | `modes/utils/`（clipboard/image-*）| `modes/utils/` | 原地（补列）|
 
-> **待你审**：上表落点是据 P3 头的初稿；`messages.ts`（跨域消费，可能成 contract）与 `skills.ts`（是否升 `core/skills/`）是两个值得你确认的判断点。审定后此段转 frozen，P0 V0-4 即可闭环。
+> **状态（2026-05-29 · maintainer 已定）**：`messages.ts` 留 core/ 根作叶子契约（避 session→runtime 环）✅；`skills.ts` 升目录推迟大阶段二 ✅。U 段 **frozen**，P0 V0-4 闭环。
 
 ---
 

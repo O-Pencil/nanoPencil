@@ -1,6 +1,6 @@
 /**
  * [WHO]: MCPConfig, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers()
- * [FROM]: Depends on node:fs, node:path, node:os, config, mcp-client
+ * [FROM]: Depends on node:fs, node:path, node:os, config, mcp-types
  * [TO]: Consumed by core/index.ts, core/mcp/mcp-manager.ts, modes/interactive/interactive-mode.ts, extensions/builtin/mcp/index.ts
  * [HERE]: core/mcp/mcp-config.ts - MCP server configuration management
  */
@@ -9,7 +9,7 @@ import { join, resolve } from "path";
 import { homedir } from "os";
 import { getAgentDir } from "../../config.js";
 import { defaultAgentDirContext, type AgentDirContext } from "../agent-dir/agent-dir-context.js";
-import type { MCPServerConfig } from "./mcp-client.js";
+import type { MCPServerConfig } from "./mcp-types.js";
 
 export interface MCPConfig {
   mcpServers: MCPServerConfig[];

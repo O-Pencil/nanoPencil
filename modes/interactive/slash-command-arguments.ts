@@ -8,7 +8,7 @@
 import type { AgentLoopFramework, ThinkingLevel } from "@pencil-agent/agent-core";
 import type { ArgumentCompletionContext, AutocompleteItem } from "@pencil-agent/tui";
 import { AVAILABLE_LOCALES, LOCALE_NAMES, type Locale } from "../../core/platform/i18n/index.js";
-import type { MCPServerConfig } from "../../core/mcp/mcp-client.js";
+import type { MCPServerConfig } from "../../core/mcp/mcp-types.js";
 
 const THINKING_COMPLETIONS: Record<ThinkingLevel, string> = {
 	off: "Skip extra reasoning",

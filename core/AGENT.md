@@ -68,6 +68,8 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `mcp-client.ts`: MCP protocol client implementation, handles JSON-RPC communication
 
+`mcp-types.ts`: Shared MCP contracts for client/config/adapter boundaries
+
 `mcp-config.ts`: MCP server configuration management
 
 `mcp-adapter.ts`: Adapts MCP tools to nanoPencil tool format, - [WHO]: McpToolAdapter
@@ -167,6 +169,8 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 `slash-commands.ts`: Built-in slash command implementations
 
 `package-manager.ts`: Package source installation, update, removal, and resource discovery for npm/git/local packages
+
+`soul-options-contract.ts`: Shared Soul enablement option contract used by runtime SDK and Soul integration without importing runtime implementation
 
 `soul-integration.ts`: Soul manager loading, prompt injection, and session context extraction bridge
 

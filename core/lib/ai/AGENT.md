@@ -32,6 +32,7 @@ utils/validation.ts: validateToolCall, validateToolArguments, tool call validati
 utils/typebox-helpers.ts: StringEnum, TypeBox schema helpers for Google API compatibility
 utils/sanitize-unicode.ts: sanitizeSurrogates, removes unpaired Unicode surrogates for JSON serialization safety
 utils/http-proxy.ts: HTTP proxy setup for fetch-based SDKs in Node.js, Bun has builtin support
+utils/event-stream-types.ts: AsyncEventStream structural contract, keeps provider/core types independent of the event stream implementation
 utils/event-stream.ts: EventStream, AssistantMessageEventStream, generic async iterable event stream with final-result tracking for SSE handling
 utils/overflow.ts: isContextOverflow, getOverflowPatterns, context overflow error detection patterns
 utils/json-parse.ts: parseStreamingJson, streaming JSON parser using partial-json for incomplete responses

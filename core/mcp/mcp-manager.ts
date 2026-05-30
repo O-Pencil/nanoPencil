@@ -4,7 +4,8 @@
  * [TO]: Consumed by core/index.ts, core/runtime/sdk.ts
  * [HERE]: core/mcp/mcp-manager.ts - MCP client lifecycle and tool integration
  */
-import { MCPClient, type MCPServerConfig } from "./mcp-client.js";
+import { MCPClient } from "./mcp-client.js";
+import type { MCPServerConfig } from "./mcp-types.js";
 import { loadMCPTools } from "./mcp-adapter.js";
 import { listEnabledMCPServers } from "./mcp-config.js";
 import type { ToolDefinition } from "../extensions-host/index.js";

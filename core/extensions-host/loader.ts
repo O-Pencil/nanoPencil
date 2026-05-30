@@ -19,9 +19,6 @@ import * as _bundledPiTui from "@pencil-agent/tui";
 // The virtualModules option then makes them available to extensions.
 import * as _bundledTypebox from "@sinclair/typebox";
 import { CONFIG_DIR_NAME, getAgentDir, isBunBinary } from "../../config.js";
-// NOTE: This import works because loader.ts exports are NOT re-exported from index.ts,
-// avoiding a circular dependency. Extensions can import from @pencil-agent/nano-pencil.
-import * as _bundledPiCodingAgent from "../../index.js";
 import { createEventBus, type EventBus } from "../runtime/event-bus.js";
 import type { ExecOptions } from "../platform/exec/exec.js";
 import { execCommand } from "../platform/exec/exec.js";
@@ -37,14 +34,17 @@ import type {
 	ToolDefinition,
 } from "./types.js";
 
-/** Modules available to extensions via virtualModules (for compiled Bun binary) */
-const VIRTUAL_MODULES: Record<string, unknown> = {
-	"@sinclair/typebox": _bundledTypebox,
-	"@pencil-agent/agent-core": _bundledPiAgentCore,
-	"@pencil-agent/tui": _bundledPiTui,
-	"@pencil-agent/ai": _bundledPiAi,
-	"@pencil-agent/nano-pencil": _bundledPiCodingAgent,
-};
+/** Modules available to extensions via virtualModules (for compiled Bun binary). */
+async function getVirtualModules(): Promise<Record<string, unknown>> {
+	return {
+		"@sinclair/typebox": _bundledTypebox,
+		"@pencil-agent/agent-core": _bundledPiAgentCore,
+		"@pencil-agent/tui": _bundledPiTui,
+		"@pencil-agent/ai": _bundledPiAi,
+		// Dynamic to keep the extension loader off the root SDK barrel during normal app startup.
+		"@pencil-agent/nano-pencil": await import("../../index.js"),
+	};
+}
 
 const require = createRequire(import.meta.url);
 
@@ -275,7 +275,7 @@ async function loadExtensionModule(extensionPath: string) {
 		// In Bun binary: use virtualModules for bundled packages (no filesystem resolution)
 		// Also disable tryNative so jiti handles ALL imports (not just the entry point)
 		// In Node.js/dev: use aliases to resolve to node_modules paths
-		...(isBunBinary ? { virtualModules: VIRTUAL_MODULES, tryNative: false } : { alias: getAliases() }),
+		...(isBunBinary ? { virtualModules: await getVirtualModules(), tryNative: false } : { alias: getAliases() }),
 	});
 
 	const module = await jiti.import(extensionPath, { default: true });

@@ -68,6 +68,8 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `mcp-client.ts`: MCP protocol client implementation, handles JSON-RPC communication
 
+`mcp-types.ts`: Shared MCP contracts for client/config/adapter boundaries
+
 `mcp-config.ts`: MCP server configuration management
 
 `mcp-adapter.ts`: Adapts MCP tools to nanoPencil tool format, - [WHO]: McpToolAdapter
@@ -196,6 +198,8 @@ Shared base layer for insforge-backed telemetry sinks. Factored out of SAL's eva
 `export-html/`: HTML export functionality with templates
 
 `package-manager.ts`: Package discovery, resource loading, extension enumeration
+
+`soul-options-contract.ts`: Shared Soul enablement option contract used by runtime SDK and Soul integration without importing runtime implementation
 
 `soul-integration.ts`: Soul AI personality integration bridge
 

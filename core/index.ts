@@ -98,7 +98,7 @@ export type {
   MCPServerConfig,
   MCPTool,
   MCPToolResult,
-} from "./mcp/mcp-client.js";
+} from "./mcp/mcp-types.js";
 export {
   loadMCPConfig,
   saveMCPConfig,

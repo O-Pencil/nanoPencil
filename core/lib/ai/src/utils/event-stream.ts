@@ -1,14 +1,15 @@
 /**
  * [WHO]: EventStream, AssistantMessageEventStream, createAssistantMessageEventStream
- * [FROM]: No external dependencies
+ * [FROM]: Depends on ai message/event types and event-stream-types structural contract
  * [TO]: Consumed by core/lib/ai/src/index.ts
  * [HERE]: core/lib/ai/src/utils/event-stream.ts - async event queue with final-result tracking
  */
 
 import type { AssistantMessage, AssistantMessageEvent } from "../types.js";
+import type { AsyncEventStream } from "./event-stream-types.js";
 
 // Generic event stream class for async iteration
-export class EventStream<T, R = T> implements AsyncIterable<T> {
+export class EventStream<T, R = T> implements AsyncEventStream<T, R> {
 	private queue: T[] = [];
 	private waiting: ((value: IteratorResult<T>) => void)[] = [];
 	private done = false;

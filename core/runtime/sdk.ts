@@ -38,6 +38,7 @@ import {
   toSoulContext,
   createSoulManager,
 } from "../soul-integration.js";
+import type { SoulOptionsContract } from "../soul-options-contract.js";
 // @ts-ignore - soul-core package is bundled at runtime
 import type { SoulManager } from "@pencil-agent/soul-core";
 import {
@@ -96,7 +97,7 @@ export const defaultLogger: SDKLogger = {
   info: (msg, ...args) => console.log(msg, ...args),
 };
 
-export interface CreateAgentSessionOptions {
+export interface CreateAgentSessionOptions extends SoulOptionsContract {
   /** Working directory for project-local discovery. Default: process.cwd() */
   cwd?: string;
   /** Global config directory. Default: ~/.pencils/agents/default */
@@ -152,9 +153,6 @@ export interface CreateAgentSessionOptions {
   customTools?: ToolDefinition[];
   /** Enable MCP (Model Context Protocol) tools. Default: false */
   enableMCP?: boolean;
-  /** Enable Soul (AI personality evolution). Default: true */
-  enableSoul?: boolean;
-
   /** Resource loader. When omitted, DefaultResourceLoader is used. */
   resourceLoader?: ResourceLoader;
 

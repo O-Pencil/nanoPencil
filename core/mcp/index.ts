@@ -5,7 +5,7 @@
  * [HERE]: core/mcp/index.ts - MCP module public API
  */
 export { MCPClient } from "./mcp-client.js";
-export type { MCPServerConfig, MCPTool, MCPToolResult } from "./mcp-client.js";
+export type { MCPServerConfig, MCPTool, MCPToolResult } from "./mcp-types.js";
 
 export {
   createMCPTool,

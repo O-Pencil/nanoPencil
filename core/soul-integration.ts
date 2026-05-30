@@ -1,10 +1,10 @@
 /**
  * [WHO]: isSoulEnabled(), toSoulContext(), createSoulManager()
- * [FROM]: Depends on runtime/sdk, node:path, node:fs, node:url, node:os, node:module
+ * [FROM]: Depends on soul-options-contract, node:path, node:fs, node:url, node:os, node:module
  * [TO]: Consumed by core/runtime/agent-session.ts
  * [HERE]: core/soul-integration.ts - bridges Soul and NanoPencil
  */
-import type { CreateAgentSessionOptions } from "./runtime/sdk.js";
+import type { SoulOptionsContract } from "./soul-options-contract.js";
 import { join, resolve } from "node:path";
 import { getAgentDir } from "../config.js";
 import { defaultAgentDirContext, type AgentDirContext } from "./agent-dir/agent-dir-context.js";
@@ -192,7 +192,7 @@ export function toSoulContext(
 /**
  * Check if Soul should be enabled based on options
  */
-export function isSoulEnabled(options: CreateAgentSessionOptions): boolean {
+export function isSoulEnabled(options: SoulOptionsContract): boolean {
   // Soul is enabled by default in NanoPencil 1.3+
   // Can be disabled with --disable-soul flag
   return options.enableSoul !== false;

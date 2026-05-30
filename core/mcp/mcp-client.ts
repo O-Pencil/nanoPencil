@@ -1,7 +1,7 @@
 /**
- * [WHO]: MCPClient class, MCPServerConfig, MCPTool, MCPToolResult
- * [FROM]: Depends on child_process, node:fs, config, auth-storage, mcp-config
- * [TO]: Consumed by core/mcp/index.ts, core/mcp/mcp-manager.ts, core/mcp/mcp-adapter.ts, core/mcp/mcp-config.ts
+ * [WHO]: MCPClient class
+ * [FROM]: Depends on child_process, node:fs, config, auth-storage, mcp-config, mcp-types
+ * [TO]: Consumed by core/mcp/index.ts, core/mcp/mcp-manager.ts, core/mcp/mcp-adapter.ts
  * [HERE]: core/mcp/mcp-client.ts - MCP client for JSON-RPC over stdio
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
@@ -10,6 +10,7 @@ import { join } from "path";
 import { getAgentDir } from "../../config.js";
 import { AuthStorage } from "../platform/config/auth-storage.js";
 import { getMCPConfigPath } from "./mcp-config.js";
+import type { MCPServerConfig, MCPTool, MCPToolResult } from "./mcp-types.js";
 
 // Log level control: DEBUG shows all MCP messages, RELEASE only shows summary
 // Check if running from installed location (production) vs development
@@ -72,65 +73,6 @@ function logMcpStartupFailure(
   } else {
     console.error(`Failed to start MCP server ${serverId}: ${detail}`);
   }
-}
-
-export interface MCPServerConfig {
-  /** Unique identifier for this server */
-  id: string;
-  /** Display name */
-  name: string;
-  /** Command to start the server (e.g., "npx", "uvx") */
-  command?: string;
-  /** Arguments to pass to the command */
-  args?: string[];
-  /** Streamable HTTP endpoint for remote/local HTTP MCP servers */
-  url?: string;
-  /** Additional headers for HTTP MCP servers */
-  headers?: Record<string, string>;
-  /** Credential provider id stored in auth.json for HTTP MCP servers */
-  authProvider?: string;
-  /** Header name to use when authProvider resolves a token */
-  authHeaderName?: string;
-  /** Header auth scheme. "bearer" prefixes the token, "raw" passes it as-is */
-  authScheme?: "bearer" | "raw";
-  /** Environment variables to pass */
-  env?: Record<string, string>;
-  /** Transport type: "stdio", "sse", or "http" */
-  transport?: "stdio" | "sse" | "http";
-  /** Whether this server is enabled */
-  enabled?: boolean;
-  /** Tool call timeout in milliseconds (default: 20000) */
-  toolTimeout?: number;
-  /** Initialize request timeout in milliseconds (default: 20000) */
-  initTimeout?: number;
-  /** Working directory for the server process */
-  cwd?: string;
-}
-
-export interface MCPTool {
-  /** Tool name (server_id/tool_name format) */
-  name: string;
-  /** Display name */
-  displayName?: string;
-  /** Tool description */
-  description: string;
-  /** JSON Schema for input */
-  inputSchema: Record<string, unknown>;
-  /** Server ID */
-  serverId: string;
-}
-
-export interface MCPToolResult {
-  /** Tool result content */
-  content: Array<{
-    type: "text" | "image" | "resource";
-    text?: string;
-    data?: any;
-  }>;
-  /** Error message if call failed */
-  error?: string;
-  /** Whether result is partial (hasMore=true) */
-  isPartial?: boolean;
 }
 
 interface JsonRpcMessage {

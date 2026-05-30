@@ -1,13 +1,11 @@
 /**
  * [WHO]: ThinkingBudgets, StreamOptions, SimpleStreamOptions, TextContent, ThinkingContent, Model
- * [FROM]: No external dependencies
+ * [FROM]: Depends on utils/event-stream-types for structural stream contracts
  * [TO]: Consumed by core/lib/ai/src/index.ts
  * [HERE]: core/lib/ai/src/types.ts -
  */
 
-import type { AssistantMessageEventStream } from "./utils/event-stream.js";
-
-export type { AssistantMessageEventStream } from "./utils/event-stream.js";
+import type { AsyncEventStream } from "./utils/event-stream-types.js";
 
 export type KnownApi =
 	| "openai-completions"
@@ -139,7 +137,7 @@ export type StreamFunction<TApi extends Api = Api, TOptions extends StreamOption
 	model: Model<TApi>,
 	context: Context,
 	options?: TOptions,
-) => AssistantMessageEventStream;
+) => AssistantMessageEventStreamContract;
 
 export interface TextContent {
 	type: "text";
@@ -245,6 +243,8 @@ export type AssistantMessageEvent =
 	| { type: "toolcall_end"; contentIndex: number; toolCall: ToolCall; partial: AssistantMessage }
 	| { type: "done"; reason: Extract<StopReason, "stop" | "length" | "toolUse">; message: AssistantMessage }
 	| { type: "error"; reason: Extract<StopReason, "aborted" | "error">; error: AssistantMessage };
+
+type AssistantMessageEventStreamContract = AsyncEventStream<AssistantMessageEvent, AssistantMessage>;
 
 /**
  * Compatibility settings for OpenAI-compatible completions APIs.

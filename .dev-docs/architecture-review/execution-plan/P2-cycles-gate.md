@@ -4,7 +4,7 @@
 phase: P2
 macro_stage: B        # 功能级
 batch: B1
-status: pending
+status: implemented_pending_heavy_validation
 risk: low
 depends_on: [门组A]    # 大阶段一收尾后
 blocks: [P3, P4, P5]
@@ -23,10 +23,10 @@ gate: gates.md#门组-b
 
 ## 任务清单
 
-- [ ] **F03** 步骤 1-2：拆 root barrel 循环；`core/_internal.ts` 或 `*-contract.ts`（✦**Q5**）
-- [ ] **F04**：`core/mcp/mcp-types.ts`、`core/soul-options-contract.ts`、`core/lib/ai/event-stream-types.ts`
-- [ ] **F08**：`scripts/verify-quality.ts` + `.github/workflows/quality.yml`（✦**Q8** 例外白名单 deadline）
-- [ ] **R1**：README "no telemetry" → "opt-in" 或 telemetry 默认 opt-in（✦**Q13**）
+- [x] **F03** 步骤 1-2：拆 root barrel 循环；`core/_internal.ts` 或 `*-contract.ts`（✦**Q5**）
+- [x] **F04**：`core/mcp/mcp-types.ts`、`core/soul-options-contract.ts`、`core/lib/ai/event-stream-types.ts`
+- [x] **F08**：`scripts/verify-quality.ts` + `.github/workflows/quality.yml`（✦**Q8** 例外白名单 deadline）
+- [x] **R1**：README "no telemetry" → "opt-in" 或 telemetry 默认 opt-in（✦**Q13**）
 
 ## 验证门控（DoD）
 

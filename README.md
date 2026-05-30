@@ -227,7 +227,7 @@ NanoPencil is built on three pillars:
 
 **Design Principles:**
 - **Terminal First** — No Electron, no browser, pure terminal
-- **Privacy First** — Local storage, no telemetry, your data stays yours
+- **Privacy First** — Local storage by default; opt-in diagnostics/eval telemetry only when explicitly configured
 - **Extensible** — Plugin system for tools, themes, and behaviors
 - **Fast** — Sub-second startup, instant response
 

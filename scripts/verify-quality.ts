@@ -56,6 +56,10 @@ const HOST_REVERSE_DEP_EXCEPTIONS = new Map<string, string>([
     "packages/mem-core/src/extension.ts",
     "S3: mem-core consumes host SessionManager/ExtensionAPI via package name; invert through @pencil-agent/extension-sdk in P3. Remove after P3.",
   ],
+  [
+    "packages/mem-core/test/extension-commands.test.ts",
+    "S3: mem-core integration test creates a host AgentSession; move to host-side extension tests or extension-sdk fixtures in P3. Remove after P3.",
+  ],
 ]);
 
 function toRepoPath(abs: string): string {

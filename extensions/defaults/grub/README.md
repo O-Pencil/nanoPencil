@@ -69,6 +69,17 @@ setting `evidence`.
   `<loop-state>{"status":"continue|complete|blocked", "summary":"...", "nextStep":"..."}</loop-state>`
   block. The extension parses it and dispatches the next iteration or
   stops with a terminal status.
+- **Initializer sanitize-not-fail**: while in the initializer phase, only
+  genuinely unfixable structural problems (feature count out of 15-40,
+  unreplaced placeholder, non-kebab ids, duplicate ids) fail the turn and
+  force a retry. Recoverable hygiene issues are auto-corrected instead of
+  killing the task: a wrong `goal` is restored to the authoritative task goal,
+  pre-marked `passes:true` are reset to `false`, and stray `evidence` is
+  dropped. The sanitized list is written back to disk and becomes the baseline,
+  so the phase always advances once the structure is valid.
+- **Phase-aware failure budget**: the initializer gets a more forgiving budget
+  (default 5) than execution (default 3, via `--max-fail`), because standing up
+  a valid harness is a distinct, retry-friendly activity from execution work.
 - **Mutation guard**: after the initializer creates the first real
   `feature-list.json`, each subsequent turn is diffed against the persisted
   baseline. Rewriting feature ids, descriptions, categories, steps, count, or
@@ -82,8 +93,9 @@ setting `evidence`.
   `state.json` on every transition. On the next session, `session_start`
   calls `discoverActiveTasks()` and adopts the most recent running task
   without auto-dispatching — the user types `/grub resume` to continue.
-- **Safety limits**: 25 iterations and 3 consecutive failures by default;
-  override with `--max-iter` / `--max-fail`.
+- **Safety limits**: 25 iterations and 3 consecutive failures (execution
+  phase) by default; the initializer phase tolerates 5 consecutive failures.
+  Override iterations/execution failures with `--max-iter` / `--max-fail`.
 - **Stale harness cleanup**: on extension load, terminal harnesses older
   than 30 days are pruned from `.grub/`.
 

@@ -94,6 +94,6 @@ main (冻结基线)
 - [x] 【A】[P1](./P1-skeleton-move.md)：目录级骨架实现完成
 - [ ] 【A】门组 A 重型验收补齐（symbols diff / characterization / verify-dip / test / smoke）
 - [ ] ★ maintainer 功能维度评审 → 定稿 [门组 B](./gates.md)
-- [ ] 【B】[P2](./P2-cycles-gate.md) → [P3](./P3-extension-sdk.md)
+- [x] 【B】[P2](./P2-cycles-gate.md) 治环+守门 → [P3](./P3-extension-sdk.md) extension-sdk + S1/S3 + 4-tier loader（2026-05-31 build/verify:quality/test 全绿）
 - [ ] 【B】[P4](./P4-runtime-split.md) / [P5](./P5-ui-split.md) → [P6](./P6-entry-volume.md) → [P7?](./P7-bundle-redesign.md) / [P8?](./P8-sdk-narrow.md)
 - [ ] [sign-off](./sign-off-main.md)

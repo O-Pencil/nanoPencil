@@ -4,7 +4,7 @@
 phase: P3
 macro_stage: B        # 功能级（净新增 N + S3 依赖反转）
 batch: B0b
-status: in_progress
+status: done   # 2026-05-31: build + verify:quality + relocated test all green on maintainer machine
 risk: low-medium
 depends_on: [P2]
 blocks: []
@@ -32,7 +32,11 @@ gate: gates.md#门组-b
 | **P3.2a** SessionManager 实例委托 | `countTouchedSince` 加实例方法 + 纳入 `ReadonlySessionManager`(S3 前置) | host `tsc` 绿 | ✅ |
 | **P3.2b** 生命周期 + **S3** | `lifecycle.ts`(ExtensionAPI/Context/Factory + `SessionManagerContract`)+ `tools.ts` 补 ToolResult/ToolContract;`mem-core` 改依赖 extension-sdk;删 gate 的 extension.ts 例外 | `tsc -b sdk` + host/mem-core `tsc --noEmit` + `verify:quality` 绿 | ✅ |
 | **P3.3** 4-tier loader | `discoverNpmExtensions()` 补 npm 发现层(排除一方包),接为 tier 4 | `tsc` + `verify:quality` 绿(V3-4 行为不变) | ✅ |
-| **P3.4** host 真依赖 | host `dependencies` 加 `@pencil-agent/{extension-sdk@^0.1.0,mem-core@^1.1.0,soul-core@^0.1.0}`(npm 用真实版本,非 `workspace:`)+ extension-sdk 进 `build:deps` | ★ `npm install` 重生成 **package-lock.json**(CI `npm ci` 依赖)+ `npm run build` + 全 mode 冒烟 | 🔄 待 lock |
+| **P3.4** host 真依赖 | host `dependencies` 加 `@pencil-agent/{extension-sdk@^0.1.0,mem-core@^1.1.0,soul-core@^0.1.0}`(npm 用真实版本,非 `workspace:`)+ extension-sdk 进 `build:deps`;package-lock 已同步(`5f2c3c8`) | `npm run build` + `verify:quality` + 搬迁测试 全绿(2026-05-31) | ✅ |
+
+> **附带修复**:`npm run build` 暴露了 P2 治环(F04)的潜在 bug——`core/lib/ai` event-stream 契约返回类型与具体类标注冲突(根 `tsc --noEmit` 走 .d.ts 未重编 ai 源码,故 P2 当时未发现)。已修(`587b3c7`),契约沿 provider→registry→retry 传导、公共返回保持具体类。
+>
+> **门组 B(P3 域)验收**:V3-1 sdk 独立 build ✅ / V3-2 S3 反转(gate 例外清零)✅ / V3-3 S1 形状 ✅ / V3-4 扩展加载行为不变 ✅ / V3-5 测试 ✅。
 
 > **S3 已摸清(P3.2 输入)**:mem-core 对 host 的 value 依赖仅 `SessionManager.countTouchedSince(ctx.cwd, …)` 一处(extension.ts:640)+ `ctx.sessionManager.getSessionFile()`;soul-core 零 host 依赖。故 `SessionManagerContract` 只需覆盖这几个方法。
 

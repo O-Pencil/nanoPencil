@@ -20,7 +20,7 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import * as ts from "typescript";
 
@@ -48,6 +48,7 @@ function cycleCount(): number | string {
       cwd: REPO,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
+      shell: true, // Windows: npx resolves to npx.cmd, which needs a shell
     });
     // madge --circular --json prints an array of cycles (each cycle is an array of files)
     const json = JSON.parse(res.stdout || "[]");
@@ -63,8 +64,26 @@ function tscNoEmitMs(): { ms: number; exitCode: number } {
     cwd: REPO,
     encoding: "utf8",
     stdio: ["ignore", "ignore", "ignore"],
+    shell: true, // Windows: npx resolves to npx.cmd, which needs a shell
   });
   return { ms: Date.now() - start, exitCode: res.status ?? -1 };
+}
+
+/** Recursively sum file sizes (cross-platform; avoids `du`, which is absent on Windows). */
+function dirSizeBytes(dir: string): number {
+  let total = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) total += dirSizeBytes(abs);
+    else if (entry.isFile()) {
+      try {
+        total += statSync(abs).size;
+      } catch {
+        // skip unreadable
+      }
+    }
+  }
+  return total;
 }
 
 function distSizeMb(): number | string {
@@ -72,10 +91,9 @@ function distSizeMb(): number | string {
   const distDir = join(REPO, "dist");
   if (!existsSync(distDir)) return "NO_DIST (run `npm run build` first)";
   try {
-    const bytes = parseInt(sh("du", ["-sb", distDir]).split(/\s+/)[0], 10);
-    return Math.round((bytes / 1024 / 1024) * 100) / 100;
+    return Math.round((dirSizeBytes(distDir) / 1024 / 1024) * 100) / 100;
   } catch {
-    return "DU_FAILED";
+    return "SIZE_FAILED";
   }
 }
 

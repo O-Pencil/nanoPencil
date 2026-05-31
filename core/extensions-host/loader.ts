@@ -2,7 +2,7 @@
  * [WHO]: ExtensionLoader, discoverAndLoadExtensions, loadExtensions, loadExtensionFromFactory
  * [FROM]: Depends on node:fs, node:module, node:os, node:path, @mariozechner/jiti, bundled packages
  * [TO]: Consumed by core/extensions-host/index.ts, core/platform/config/resource-loader.ts
- * [HERE]: core/extensions-host/loader.ts - extension discovery and loading via jiti
+ * [HERE]: core/extensions-host/loader.ts - 4-tier extension discovery (builtin → optional → user-dir → npm) and loading via jiti
  */
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
@@ -492,6 +492,66 @@ function discoverExtensionsInDir(dir: string): string[] {
 }
 
 /**
+ * Tier 4 (npm): discover extensions from installed node_modules packages that opt in by
+ * declaring a `nanopencil.extensions` manifest. First-party `@pencil-agent/*` packages are
+ * EXCLUDED here — they are loaded as built-ins (builtin-extensions.ts) and would otherwise
+ * double-load (their node_modules path differs from the bundled dist path, defeating dedup).
+ *
+ * Opt-in by design: a package is only picked up if its package.json explicitly declares
+ * `nanopencil.extensions` (same trust model as the user-dir tier, which auto-loads too).
+ */
+function discoverNpmExtensions(roots: string[]): string[] {
+	const discovered: string[] = [];
+
+	const scanPackage = (pkgDir: string) => {
+		const packageJsonPath = path.join(pkgDir, "package.json");
+		if (!fs.existsSync(packageJsonPath)) return;
+		const manifest = readPiManifest(packageJsonPath);
+		if (!manifest?.extensions?.length) return;
+		for (const extPath of manifest.extensions) {
+			const resolved = path.resolve(pkgDir, extPath);
+			if (fs.existsSync(resolved)) discovered.push(resolved);
+		}
+	};
+
+	const scanNodeModules = (nodeModulesDir: string) => {
+		if (!fs.existsSync(nodeModulesDir)) return;
+		let entries: fs.Dirent[];
+		try {
+			entries = fs.readdirSync(nodeModulesDir, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const entry of entries) {
+			if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+			if (entry.name === ".bin" || entry.name === ".cache") continue;
+			// First-party packages are loaded as built-ins; skip to avoid double-load.
+			if (entry.name === "@pencil-agent") continue;
+			if (entry.name.startsWith("@")) {
+				// Scoped packages: descend one level.
+				const scopeDir = path.join(nodeModulesDir, entry.name);
+				let scoped: fs.Dirent[];
+				try {
+					scoped = fs.readdirSync(scopeDir, { withFileTypes: true });
+				} catch {
+					continue;
+				}
+				for (const pkg of scoped) {
+					if (pkg.isDirectory() || pkg.isSymbolicLink()) scanPackage(path.join(scopeDir, pkg.name));
+				}
+				continue;
+			}
+			scanPackage(path.join(nodeModulesDir, entry.name));
+		}
+	};
+
+	for (const root of roots) {
+		scanNodeModules(path.join(root, "node_modules"));
+	}
+	return discovered;
+}
+
+/**
  * Discover and load extensions from standard locations.
  */
 export async function discoverAndLoadExtensions(
@@ -538,6 +598,12 @@ export async function discoverAndLoadExtensions(
 
 		addPaths([resolved]);
 	}
+
+	// 4. npm tier: third-party packages installed in node_modules that opt in via a
+	//    `nanopencil.extensions` manifest. Lowest precedence (added last); the `seen`
+	//    dedup keeps any already-listed path from loading twice. First-party
+	//    @pencil-agent/* packages are excluded inside discoverNpmExtensions (built-ins).
+	addPaths(discoverNpmExtensions([cwd, agentDir]));
 
 	return loadExtensions(allPaths, cwd, agentDir, eventBus);
 }

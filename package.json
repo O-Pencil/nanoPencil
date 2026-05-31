@@ -79,7 +79,8 @@
     "core/lib/ai",
     "core/lib/tui",
     "packages/mem-core",
-    "packages/soul-core"
+    "packages/soul-core",
+    "packages/extension-sdk"
   ],
   "engines": {
     "node": ">=20"

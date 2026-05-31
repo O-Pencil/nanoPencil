@@ -4,7 +4,7 @@
 phase: P3
 macro_stage: B        # 功能级（净新增 N + S3 依赖反转）
 batch: B0b
-status: pending
+status: in_progress
 risk: low-medium
 depends_on: [P2]
 blocks: []
@@ -19,7 +19,21 @@ gate: gates.md#门组-b
 
 ## 进入条件
 
-- [ ] [P1 DoD](./P1-skeleton-move.md#验证门控dod) 全过（可与 P2 并行，但均依赖 P1）
+- [x] [P2 DoD](./P2-cycles-gate.md#验证门控dod) 全过（verify-quality + verify-dip 绿；2026-05-30）
+
+## 执行检查点（增量 · 强编译耦合部分需 build loop 逐步验证）
+
+> extension-sdk 的类型抽取与 host 的 1465 行 `types.ts` 深度耦合（`ToolDefinition` 牵连 `TSchema`/`AgentToolResult`/`ExtensionContext`/`Theme`/`Component`）。受限环境无法编译，故拆为可逐步 `tsc`/`vitest` 验证的检查点。
+
+| 检查点 | 内容 | 验证 | 状态 |
+|--------|------|------|------|
+| **P3.0** 地基 | `packages/extension-sdk/` 包骨架(package.json/tsconfig/index)+ 自包含 **S1 词汇**(`tools.ts`: ToolRuntime/ToolPermissions/ToolRuntimeDescriptor)+ host workspaces 注册 | `npm i` + `tsc -b packages/extension-sdk`(V3-1) | ✅ 本次 |
+| **P3.1** 协议抽取 | 把 themes/hooks/commands/permissions 稳定子集从 host `types.ts` 抽进 extension-sdk;host 反向 import 并 re-export(对外 barrel 不变) | host + sdk 同时 `tsc --noEmit` | ⬜ |
+| **P3.2** 生命周期 + **S3** | `lifecycle.ts`: `ExtensionAPI`/`ExtensionContext`/`ExtensionFactory` + **`SessionManagerContract`**(`countTouchedSince`/`getSessionFile` 等 mem-core 实际用到的少数方法);`mem-core` 改依赖 extension-sdk,去掉 host 的 `SessionManager` value import + 测试里的 `createAgentSession` | `tsc` + `vitest`(mem-core);删 `verify-quality.ts` 2 条 HOST_REVERSE_DEP_EXCEPTIONS 后 `verify:quality` 仍绿 | ⬜ |
+| **P3.3** 4-tier loader | `core/extensions-host/loader.ts` 扩展 builtin → optional → user-dir → npm 四层发现 | `vitest` 扩展加载行为不变(V3-4) | ⬜ |
+| **P3.4** host 真依赖 | host `package.json` `dependencies` 加 `@pencil-agent/{extension-sdk,mem-core,soul-core}: workspace:^` | `npm i` 干净 + 全 mode 冒烟 | ⬜ |
+
+> **S3 已摸清(P3.2 输入)**:mem-core 对 host 的 value 依赖仅 `SessionManager.countTouchedSince(ctx.cwd, …)` 一处(extension.ts:640)+ `ctx.sessionManager.getSessionFile()`;soul-core 零 host 依赖。故 `SessionManagerContract` 只需覆盖这几个方法。
 
 ## 任务清单
 

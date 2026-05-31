@@ -14,7 +14,8 @@ import {
 	getPersonaPencilPath,
 	getPersonaSkillsDir,
 } from "../../persona/persona-manager.js";
-import { loadThemeFromPath, type Theme } from "../../../modes/interactive/theme/theme.js";
+import type { Theme } from "../../theme-contract.js";
+import { loadThemeFromPath } from "../../../modes/interactive/theme/theme.js";
 import type { ResourceDiagnostic } from "./diagnostics.js";
 
 export type { ResourceCollision, ResourceDiagnostic } from "./diagnostics.js";

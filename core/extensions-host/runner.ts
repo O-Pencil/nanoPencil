@@ -7,7 +7,8 @@
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ImageContent, Model } from "@pencil-agent/ai";
 import type { KeyId } from "@pencil-agent/tui";
-import { type Theme, theme } from "../../modes/interactive/theme/theme.js";
+import type { Theme } from "../theme-contract.js";
+import { theme } from "../../modes/interactive/theme/theme.js";
 import type { ResourceDiagnostic } from "../platform/config/diagnostics.js";
 import type { KeyAction, KeybindingsConfig } from "../platform/keybindings.js";
 import type { ModelRegistry } from "../model-registry.js";

@@ -38,7 +38,7 @@ import type {
 } from "@pencil-agent/tui";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type { ToolRuntimeDescriptor } from "@pencil-agent/extension-sdk";
-import type { Theme } from "../../modes/interactive/theme/theme.js";
+import type { Theme } from "../theme-contract.js";
 import type { BashResult } from "../platform/exec/bash-executor.js";
 import type { CompactionPreparation, CompactionResult } from "../session/compaction/index.js";
 import type { EventBus } from "../runtime/event-bus.js";

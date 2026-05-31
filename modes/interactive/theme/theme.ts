@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
 import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@pencil-agent/tui";
+import type { ColorMode, Theme as ThemeContract, ThemeBg, ThemeColor } from "../../../core/theme-contract.js";
 import { type Static, Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import chalk from "chalk";
@@ -115,62 +116,9 @@ type ThemeJson = Static<typeof ThemeJsonSchema>;
 
 const validateThemeJson = TypeCompiler.Compile(ThemeJsonSchema);
 
-export type ThemeColor =
-	| "accent"
-	| "border"
-	| "borderAccent"
-	| "borderMuted"
-	| "success"
-	| "error"
-	| "warning"
-	| "muted"
-	| "dim"
-	| "text"
-	| "thinkingText"
-	| "userMessageText"
-	| "customMessageText"
-	| "customMessageLabel"
-	| "toolTitle"
-	| "toolOutput"
-	| "mdHeading"
-	| "mdLink"
-	| "mdLinkUrl"
-	| "mdCode"
-	| "mdCodeBlock"
-	| "mdCodeBlockBorder"
-	| "mdQuote"
-	| "mdQuoteBorder"
-	| "mdHr"
-	| "mdListBullet"
-	| "toolDiffAdded"
-	| "toolDiffRemoved"
-	| "toolDiffContext"
-	| "syntaxComment"
-	| "syntaxKeyword"
-	| "syntaxFunction"
-	| "syntaxVariable"
-	| "syntaxString"
-	| "syntaxNumber"
-	| "syntaxType"
-	| "syntaxOperator"
-	| "syntaxPunctuation"
-	| "thinkingOff"
-	| "thinkingMinimal"
-	| "thinkingLow"
-	| "thinkingMedium"
-	| "thinkingHigh"
-	| "thinkingXhigh"
-	| "bashMode";
-
-export type ThemeBg =
-	| "selectedBg"
-	| "userMessageBg"
-	| "customMessageBg"
-	| "toolPendingBg"
-	| "toolSuccessBg"
-	| "toolErrorBg";
-
-type ColorMode = "truecolor" | "256color";
+// Theme type vocabulary now lives in core/theme-contract.ts (U2 seam); re-exported here for
+// existing modes/extension consumers that import these names from this module.
+export type { ThemeColor, ThemeBg, ColorMode } from "../../../core/theme-contract.js";
 
 // ============================================================================
 // Color Utilities
@@ -353,7 +301,7 @@ function resolveThemeColors<T extends Record<string, ColorValue>>(
 // Theme Class
 // ============================================================================
 
-export class Theme {
+export class Theme implements ThemeContract {
 	readonly name?: string;
 	readonly sourcePath?: string;
 	private fgColors: Map<ThemeColor, string>;

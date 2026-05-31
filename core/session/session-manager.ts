@@ -209,6 +209,7 @@ export type ReadonlySessionManager = Pick<
 	| "getTree"
 	| "getSessionName"
 	| "getAgentCtx"
+	| "countTouchedSince"
 >;
 
 /** Generate a unique short ID (8 hex chars, collision-checked) */
@@ -1449,6 +1450,19 @@ export class SessionManager {
 	 * Designed for gate checks (e.g., auto-dream) where approximate counts are OK.
 	 * @param ctx Optional agent directory context.
 	 */
+	/**
+	 * Instance delegate for the static {@link SessionManager.countTouchedSince}, so extensions can
+	 * count touched sessions via `ctx.sessionManager` without importing the host class (S3 seam).
+	 * Pure forward — identical arguments and behavior.
+	 */
+	countTouchedSince(
+		cwd: string,
+		sinceMs: number,
+		options?: { sessionDir?: string; excludeBasename?: string; concurrency?: number; ctx?: AgentDirContext },
+	): Promise<number> {
+		return SessionManager.countTouchedSince(cwd, sinceMs, options);
+	}
+
 	static async countTouchedSince(
 		cwd: string,
 		sinceMs: number,

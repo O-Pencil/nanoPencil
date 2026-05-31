@@ -37,6 +37,7 @@ import type {
 	TUI,
 } from "@pencil-agent/tui";
 import type { Static, TSchema } from "@sinclair/typebox";
+import type { ToolRuntimeDescriptor } from "@pencil-agent/extension-sdk";
 import type { Theme } from "../../modes/interactive/theme/theme.js";
 import type { BashResult } from "../platform/exec/bash-executor.js";
 import type { CompactionPreparation, CompactionResult } from "../session/compaction/index.js";
@@ -378,7 +379,7 @@ export interface ToolRenderResultOptions {
 /**
  * Tool definition for registerTool().
  */
-export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = unknown> {
+export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = unknown> extends ToolRuntimeDescriptor {
 	/** Tool name (used in LLM tool calls) */
 	name: string;
 	/** Human-readable label for UI */

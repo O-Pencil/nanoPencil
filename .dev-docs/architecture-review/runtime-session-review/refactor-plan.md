@@ -5,7 +5,7 @@ review_id: runtime-session-review
 status: active
 created_at: 2026-06-01
 parent_phase: P4
-total_findings: 6
+total_findings: 7
 ```
 
 ## Priority Order
@@ -18,6 +18,7 @@ total_findings: 6
 | 4 | [AS04](./findings/AS04-compaction-coordinator-placeholder.md) | structural | depth, leverage | medium / medium | none |
 | 5 | [AS05](./findings/AS05-tool-runtime-controller-boundary.md) | load-bearing | seam, leverage | high / medium | AS01 |
 | 6 | [AS06](./findings/AS06-agent-session-public-facade.md) | load-bearing | DIP, leverage | high / low | all slices |
+| 7 | [AS07](./findings/AS07-event-bridge-boundary.md) | load-bearing | DIP, locality | high / medium | AS06 |
 
 ## Ordering Rationale
 
@@ -40,6 +41,7 @@ The context seam comes first because every controller extraction depends on it. 
 | AS04 | selected | P4.x-a/b landed: `CompactionController` owns manual + auto compaction flows, abort slots, and compaction lifecycle capabilities; `AgentSession` keeps loop continuation and facade wiring. Boundary: branch-summary remains with session-tree flow |
 | AS05 | selected | `ToolRuntimeController` owns tool source merge, wrapping, active-name policy, and orchestrator registry updates |
 | AS06 | selected | modes, SDK, sub-agent runtime, and package barrels continue through `AgentSession` / `createAgentSession`; controller collaborators are not exported through public barrels |
+| AS07 | proposed | event bridge may own extension event mapping/fanout only; `AgentSession` must retain public subscribe contract, persistence ordering, retry/compaction ordering, and Soul post-turn recording |
 
 ## Validation Checklist
 

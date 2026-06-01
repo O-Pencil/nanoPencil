@@ -9,6 +9,7 @@ applies_to:
   - core/runtime/*-controller.ts
   - core/runtime/*-runner.ts
   - core/runtime/*-coordinator.ts
+  - core/runtime/*-bridge.ts
 ```
 
 ## Hard Gates
@@ -31,6 +32,7 @@ applies_to:
 | bash execution state | `BashRunner` | `AgentSession` only delegates |
 | tool activation/wrapping/refresh | future `ToolRuntimeController` + `ToolOrchestrator` | no ad hoc tool list assembly in `AgentSession` |
 | compaction state | future real compaction controller/coordinator | no placeholder coordinator claimed as done |
+| event facade and turn lifecycle | `AgentSession`; future event bridge may map/fan out extension events only | no bridge owns persistence/retry/compaction/Soul ordering without a lifecycle finding |
 | session switch/fork/tree flow | future session lifecycle controller, if accepted | model/thinking restore remains model-owned |
 
 ## Review Questions

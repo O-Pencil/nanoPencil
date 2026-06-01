@@ -11,7 +11,7 @@ files_secondary:
   - core/runtime/model-cycle.ts
   - core/runtime/thinking-levels.ts
   - core/model/switcher.ts
-status: open
+status: selected
 ```
 
 ## Problem

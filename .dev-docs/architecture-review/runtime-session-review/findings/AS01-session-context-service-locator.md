@@ -9,7 +9,7 @@ files_primary:
   - core/runtime/model-controller.ts
 files_secondary:
   - core/runtime/agent-session.ts
-status: open
+status: selected
 ```
 
 ## Problem

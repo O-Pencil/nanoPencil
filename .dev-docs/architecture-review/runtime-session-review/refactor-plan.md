@@ -2,7 +2,7 @@
 
 ```yaml
 review_id: runtime-session-review
-status: draft
+status: active
 created_at: 2026-06-01
 parent_phase: P4
 total_findings: 6
@@ -34,8 +34,8 @@ The context seam comes first because every controller extraction depends on it. 
 
 | Finding | Decision | Notes |
 |---------|----------|-------|
-| AS01 | pending | maintainer to approve narrow context target |
-| AS02 | pending | current implementation is close but context still too broad |
+| AS01 | selected | narrow `ModelControllerContext` implemented for current model slice |
+| AS02 | selected | `ModelController` owns model/thinking set, cycle, restore for current slice |
 | AS03 | pending | next candidate after model controller |
 | AS04 | pending | must decide whether to remove placeholders or finish extraction |
 | AS05 | pending | should align with S1 in P4 |

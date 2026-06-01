@@ -2,7 +2,7 @@
  * [WHO]: Provides THINKING_LEVELS, THINKING_LEVELS_WITH_XHIGH, modelSupportsThinking,
  *        modelSupportsXhigh, availableThinkingLevels, clampThinkingLevel, nextThinkingLevel
  * [FROM]: Depends on @pencil-agent/ai (supportsXhigh, Model) and @pencil-agent/agent-core (ThinkingLevel)
- * [TO]: Consumed by core/runtime/agent-session.ts; reusable by any caller that maps a model to
+ * [TO]: Consumed by core/runtime/model-controller.ts and core/runtime/agent-session.ts; reusable by any caller that maps a model to
  *       its thinking-level vocabulary (e.g. rpc/print mode)
  * [HERE]: core/runtime/agent-session.ts split (P4.2) — pure thinking-level logic, no session state
  *

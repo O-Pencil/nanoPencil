@@ -1,8 +1,8 @@
 /**
  * [WHO]: Provides pickThinkingLevelOnModelChange(), nextCyclicIndex() — pure model-cycle decisions
  * [FROM]: Depends on @pencil-agent/ai (Model), @pencil-agent/agent-core (ThinkingLevel)
- * [TO]: Consumed by core/runtime/agent-session.ts model switching/cycling
- * [HERE]: core/runtime/agent-session.ts split (P4.2) — stateless model-cycle logic, no session state
+ * [TO]: Consumed by core/runtime/model-controller.ts model switching/cycling
+ * [HERE]: core/runtime/model-cycle.ts - stateless model-cycle logic, no session state
  *
  * Extracted from AgentSession: the pure decisions in setModel / cycleModel. The side-effecting
  * apply sequence (agent.setModel, persistence, emit) stays in the session.

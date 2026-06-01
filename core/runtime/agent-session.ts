@@ -10,6 +10,7 @@ import type {
   Agent,
   AgentEvent,
   AgentLoopFramework,
+  AgentLoopFrameworkInput,
   AgentLoopPolicyOptions,
   AgentModelErrorRecoveryResult,
   AgentMessage,
@@ -33,19 +34,6 @@ import { getDocsPath } from "../../config.js";
 import type { Theme as ThemeContract } from "../theme-contract.js";
 import { stripFrontmatter } from "../../utils/frontmatter.js";
 
-/**
- * Custom error for model cycling with additional context.
- */
-export class CycleModelError extends Error {
-  constructor(
-    message: string,
-    public readonly provider?: string,
-    public readonly code?: "oauth_expired" | "no_valid_key" | "api_error",
-  ) {
-    super(message);
-    this.name = "CycleModelError";
-  }
-}
 import type { BashResult } from "../platform/exec/bash-executor.js";
 import {
   type CompactionResult,
@@ -59,7 +47,6 @@ import {
 } from "../session/compaction/index.js";
 import { CompactionCoordinator } from "../session/compaction/compaction-coordinator.js";
 import { ToolOrchestrator } from "../tools/orchestrator.js";
-import { ModelSwitcher } from "../model/index.js";
 import { DEFAULT_THINKING_LEVEL } from "../platform/config/defaults.js";
 import { createExtensionTelemetrySink } from "../platform/telemetry/index.js";
 import {
@@ -116,14 +103,8 @@ import { createDefaultRuntimeTools } from "./default-tools.js";
 import { BashRunner } from "./bash-runner.js";
 import { AbortSlot } from "../platform/abort-slot.js";
 import { Listeners } from "../platform/listeners.js";
-import { nextCyclicIndex, pickThinkingLevelOnModelChange } from "./model-cycle.js";
-import {
-  availableThinkingLevels,
-  clampThinkingLevel,
-  modelSupportsThinking,
-  modelSupportsXhigh,
-  nextThinkingLevel,
-} from "./thinking-levels.js";
+import { ModelController, type ModelCycleResult } from "./model-controller.js";
+import { clampThinkingLevel } from "./thinking-levels.js";
 import { bindExtensionCore } from "./extension-core-bindings.js";
 import {
   buildSessionSlashCommands,
@@ -133,12 +114,8 @@ import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } f
 import { createLogger, type AgentLogger } from "../platform/utils/logger.js";
 
 export type { SessionSlashCommandDescriptor } from "./slash-command-catalog.js";
-
-type AgentLoopFrameworkInput =
-  | AgentLoopFramework
-  | "high-intelligence"
-  | "low-intelligence"
-  | "structured-adaptive";
+export { CycleModelError } from "./model-controller.js";
+export type { ModelCycleResult } from "./model-controller.js";
 
 // ============================================================================
 // Skill Block Parsing
@@ -320,14 +297,6 @@ export interface PromptOptions {
   source?: InputSource;
 }
 
-/** Result from cycleModel() */
-export interface ModelCycleResult {
-  model: Model<any>;
-  thinkingLevel: ThinkingLevel;
-  /** Whether cycling through scoped models (--models flag) or all available */
-  isScoped: boolean;
-}
-
 /** Session statistics for /session command */
 export interface SessionStats {
   sessionFile: string | undefined;
@@ -432,10 +401,10 @@ export class AgentSession {
   // Base system prompt (without extension appends) - used to apply fresh appends each turn
   private _baseSystemPrompt = "";
 
-  // Coordinators (P3 - AgentSession responsibility decomposition)
+  // Controllers/coordinators (AgentSession responsibility decomposition)
+  private readonly _modelController: ModelController;
   private _compactionCoordinator?: CompactionCoordinator;
   private _toolOrchestrator?: ToolOrchestrator;
-  private _modelSwitcher?: ModelSwitcher;
 
   constructor(config: AgentSessionConfig) {
     this.agent = config.agent;
@@ -463,6 +432,33 @@ export class AgentSession {
     this._soulManager = config.soulManager;
     this._initialActiveToolNames = config.initialActiveToolNames;
     this._baseToolsOverride = config.baseToolsOverride;
+    this._modelController = new ModelController({
+      getModel: () => this.model,
+      getThinkingLevel: () => this.thinkingLevel,
+      getScopedModels: () => this._scopedModels,
+      setAgentModel: (model) => this.agent.setModel(model),
+      setAgentThinkingLevel: (level) => this.agent.setThinkingLevel(level),
+      setAgentLoopFramework: (framework) => this.agent.setAgentLoopFramework(framework),
+      setLoopPolicy: (options) => this.agent.setLoopPolicy(options),
+      getApiKey: (model) => this._modelRegistry.getApiKey(model),
+      getApiKeyForProvider: (provider) => this._modelRegistry.getApiKeyForProvider(provider),
+      getAvailableModels: () => this._modelRegistry.getAvailableAsync(),
+      getAuthCredential: (provider) => this._modelRegistry.authStorage.get(provider),
+      appendModelChange: (provider, modelId) => this.sessionManager.appendModelChange(provider, modelId),
+      appendThinkingLevelChange: (level) => this.sessionManager.appendThinkingLevelChange(level),
+      setDefaultModelAndProvider: (provider, modelId) =>
+        this.settingsManager.setDefaultModelAndProvider(provider, modelId),
+      setDefaultThinkingLevel: (level) => this.settingsManager.setDefaultThinkingLevel(level),
+      emitModelSelect: async ({ model, previousModel, source }) => {
+        if (!this._extensionRunner) return;
+        await this._extensionRunner.emit({
+          type: "model_select",
+          model,
+          previousModel,
+          source,
+        });
+      },
+    });
     this.agent.setModelErrorRecovery((event) =>
       this._recoverModelErrorInLoop(event),
     );
@@ -506,7 +502,6 @@ export class AgentSession {
    * These coordinators encapsulate specific responsibilities:
    * - CompactionCoordinator: compaction trigger, execution, result handling
    * - ToolOrchestrator: tool registration, lookup, management
-   * - ModelSwitcher: model selection, cycling, fallback
    *
    * Note: Coordinators are initialized with minimal setup.
    * They provide interfaces that can be populated as needed.
@@ -524,16 +519,6 @@ export class AgentSession {
       this._toolOrchestrator.registerTool(name, tool);
     }
 
-    // Initialize ModelSwitcher with scoped models
-    this._modelSwitcher = new ModelSwitcher({
-      scopedModels: this._scopedModels,
-      getApiKey: async (model) => this._modelRegistry.getApiKey(model),
-      getApiKeyForProvider: async (provider) => this._modelRegistry.getApiKeyForProvider(provider),
-      getAvailableModels: () => [], // Will be populated dynamically
-      setModelOnAgent: (model) => this.agent.setModel(model),
-      getCurrentModel: () => this.model,
-    });
-
     // Initialize CompactionCoordinator with basic setup
     this._compactionCoordinator = new CompactionCoordinator({
       getSessionMessages: () => [],
@@ -550,13 +535,6 @@ export class AgentSession {
    */
   get toolOrchestrator(): ToolOrchestrator | undefined {
     return this._toolOrchestrator;
-  }
-
-  /**
-   * Get the ModelSwitcher instance
-   */
-  get modelSwitcher(): ModelSwitcher | undefined {
-    return this._modelSwitcher;
   }
 
   /**
@@ -1618,250 +1596,53 @@ export class AgentSession {
   // Model Management
   // =========================================================================
 
-  private async _emitModelSelect(
-    nextModel: Model<any>,
-    previousModel: Model<any> | undefined,
-    source: "set" | "cycle" | "restore",
-  ): Promise<void> {
-    if (!this._extensionRunner) return;
-    if (modelsAreEqual(previousModel, nextModel)) return;
-    await this._extensionRunner.emit({
-      type: "model_select",
-      model: nextModel,
-      previousModel,
-      source,
-    });
-  }
+  // =========================================================================
+  // Model & Thinking Level Management — delegated to ModelController
+  // =========================================================================
 
-  /**
-   * Apply a model change: persist to session + settings, set the thinking level
-   * (explicit when given, otherwise auto-picked from capabilities), and emit
-   * model_select. Shared by setModel and the cycle paths.
-   */
-  private async _applyModelChange(
-    model: Model<any>,
-    source: "set" | "cycle" | "restore",
-    explicitLevel?: ThinkingLevel,
-  ): Promise<void> {
-    const previousModel = this.model;
-    this.agent.setModel(model);
-    this.sessionManager.appendModelChange(model.provider, model.id);
-    this.settingsManager.setDefaultModelAndProvider(model.provider, model.id);
-    const newLevel = explicitLevel ?? pickThinkingLevelOnModelChange(model, this.thinkingLevel);
-    this.setThinkingLevel(newLevel);
-    await this._emitModelSelect(model, previousModel, source);
-  }
-
-  /**
-   * Set model directly.
-   * Validates API key, saves to session and settings.
-   * @throws Error if no API key available for the model
-   */
+  /** Set model directly. @throws if no API key available. */
   async setModel(model: Model<any>): Promise<void> {
-    const apiKey = await this._modelRegistry.getApiKey(model);
-    if (!apiKey) {
-      throw new Error(`No API key for ${model.provider}/${model.id}`);
-    }
-    await this._applyModelChange(model, "set");
+    await this._modelController.setModel(model);
   }
 
-  /**
-   * Cycle to next/previous model.
-   * Uses scoped models (from --models flag) if available, otherwise all available models.
-   * @param direction - "forward" (default) or "backward"
-   * @returns The new model info, or undefined if only one model available
-   */
-  async cycleModel(
-    direction: "forward" | "backward" = "forward",
-  ): Promise<ModelCycleResult | undefined> {
-    if (this._scopedModels.length > 0) {
-      return this._cycleScopedModel(direction);
-    }
-    return this._cycleAvailableModel(direction);
+  /** Cycle to next/previous model. @returns new model info, or undefined if only one. */
+  async cycleModel(direction: "forward" | "backward" = "forward"): Promise<ModelCycleResult | undefined> {
+    return this._modelController.cycleModel(direction);
   }
 
-  private async _getScopedModelsWithApiKey(): Promise<
-    Array<{ model: Model<any>; thinkingLevel: ThinkingLevel }>
-  > {
-    const apiKeysByProvider = new Map<string, string | undefined>();
-    const result: Array<{ model: Model<any>; thinkingLevel: ThinkingLevel }> =
-      [];
-
-    for (const scoped of this._scopedModels) {
-      const provider = scoped.model.provider;
-      let apiKey: string | undefined;
-      if (apiKeysByProvider.has(provider)) {
-        apiKey = apiKeysByProvider.get(provider);
-      } else {
-        apiKey = await this._modelRegistry.getApiKeyForProvider(provider);
-        apiKeysByProvider.set(provider, apiKey);
-      }
-
-      if (apiKey) {
-        result.push(scoped);
-      }
-    }
-
-    return result;
-  }
-
-  private async _cycleScopedModel(
-    direction: "forward" | "backward",
-  ): Promise<ModelCycleResult | undefined> {
-    const scopedModels = await this._getScopedModelsWithApiKey();
-    if (scopedModels.length <= 1) return undefined;
-
-    const currentModel = this.model;
-    let currentIndex = scopedModels.findIndex((sm) =>
-      modelsAreEqual(sm.model, currentModel),
-    );
-
-    if (currentIndex === -1) currentIndex = 0;
-    const nextIndex = nextCyclicIndex(currentIndex, scopedModels.length, direction);
-    const next = scopedModels[nextIndex];
-
-    await this._applyModelChange(next.model, "cycle", next.thinkingLevel);
-
-    return {
-      model: next.model,
-      thinkingLevel: this.thinkingLevel,
-      isScoped: true,
-    };
-  }
-
-  private async _cycleAvailableModel(
-    direction: "forward" | "backward",
-  ): Promise<ModelCycleResult | undefined> {
-    // Use getAvailableAsync to pre-filter models with invalid OAuth tokens
-    const availableModels = await this._modelRegistry.getAvailableAsync();
-    if (availableModels.length <= 1) return undefined;
-
-    const currentModel = this.model;
-    let currentIndex = availableModels.findIndex((m) =>
-      modelsAreEqual(m, currentModel),
-    );
-
-    if (currentIndex === -1) currentIndex = 0;
-    const len = availableModels.length;
-
-    // Find next model with valid API key, skipping expired OAuth tokens
-    // Start from nextIndex and loop through all models
-    const startIndex = currentIndex;
-    let nextIndex = currentIndex;
-    let attempts = 0;
-    let nextModel: Model<any> | undefined;
-    let apiKey: string | undefined;
-
-    while (attempts < len - 1) {
-      attempts++;
-      nextIndex = nextCyclicIndex(nextIndex, len, direction);
-
-      const candidate = availableModels[nextIndex];
-      if (!candidate) continue;
-
-      // Use async getApiKey to validate OAuth tokens
-      apiKey = await this._modelRegistry.getApiKey(candidate);
-      if (apiKey) {
-        nextModel = candidate;
-        break;
-      }
-      // No valid key - skip this model and continue cycling
-    }
-
-    if (!nextModel || !apiKey) {
-      // No models have valid API keys (all OAuth tokens expired or no keys)
-      const provider = currentModel?.provider;
-      const cred = provider ? this._modelRegistry.authStorage.get(provider) : undefined;
-      if (cred?.type === "oauth") {
-        throw new CycleModelError(
-          `All available models have expired OAuth tokens. Use /login ${provider} to re-authenticate.`,
-          provider,
-          "oauth_expired",
-        );
-      }
-      throw new CycleModelError(
-        `No models with valid API keys available`,
-        provider,
-        "no_valid_key",
-      );
-    }
-
-    await this._applyModelChange(nextModel, "cycle");
-
-    return {
-      model: nextModel,
-      thinkingLevel: this.thinkingLevel,
-      isScoped: false,
-    };
-  }
-
-  // =========================================================================
-  // Thinking Level Management
-  // =========================================================================
-
-  /**
-   * Set thinking level.
-   * Clamps to model capabilities based on available thinking levels.
-   * Saves to session and settings only if the level actually changes.
-   */
+  /** Set thinking level, clamped to model capabilities; persists on change. */
   setThinkingLevel(level: ThinkingLevel): void {
-    const availableLevels = this.getAvailableThinkingLevels();
-    const effectiveLevel = availableLevels.includes(level)
-      ? level
-      : clampThinkingLevel(level, availableLevels);
-
-    // Only persist if actually changing
-    const isChanging = effectiveLevel !== this.agent.state.thinkingLevel;
-
-    this.agent.setThinkingLevel(effectiveLevel);
-
-    if (isChanging) {
-      this.sessionManager.appendThinkingLevelChange(effectiveLevel);
-      this.settingsManager.setDefaultThinkingLevel(effectiveLevel);
-    }
+    this._modelController.setThinkingLevel(level);
   }
 
   /** Set the session-level agent loop framework override. */
   setAgentLoopFramework(framework: AgentLoopFrameworkInput | undefined): void {
-    this.agent.setAgentLoopFramework(framework);
+    this._modelController.setAgentLoopFramework(framework);
   }
 
   /** Update runtime loop policy options for subsequent turns. */
   setLoopPolicy(options: Partial<AgentLoopPolicyOptions>): void {
-    this.agent.setLoopPolicy(options);
+    this._modelController.setLoopPolicy(options);
   }
 
-  /**
-   * Cycle to next thinking level.
-   * @returns New level, or undefined if model doesn't support thinking
-   */
+  /** Cycle to next thinking level. @returns new level, or undefined if unsupported. */
   cycleThinkingLevel(): ThinkingLevel | undefined {
-    const next = nextThinkingLevel(this.thinkingLevel, this.model);
-    if (next === undefined) return undefined;
-    this.setThinkingLevel(next);
-    return next;
+    return this._modelController.cycleThinkingLevel();
   }
 
-  /**
-   * Get available thinking levels for current model.
-   * The provider will clamp to what the specific model supports internally.
-   */
+  /** Thinking levels available for the current model. */
   getAvailableThinkingLevels(): ThinkingLevel[] {
-    return availableThinkingLevels(this.model);
+    return this._modelController.getAvailableThinkingLevels();
   }
 
-  /**
-   * Check if current model supports xhigh thinking level.
-   */
+  /** Whether the current model supports xhigh thinking level. */
   supportsXhighThinking(): boolean {
-    return modelSupportsXhigh(this.model);
+    return this._modelController.supportsXhighThinking();
   }
 
-  /**
-   * Check if current model supports thinking/reasoning.
-   */
+  /** Whether the current model supports thinking/reasoning. */
   supportsThinking(): boolean {
-    return modelSupportsThinking(this.model);
+    return this._modelController.supportsThinking();
   }
 
   // =========================================================================
@@ -2854,7 +2635,6 @@ export class AgentSession {
 
     // Restore model if saved
     if (sessionContext.model) {
-      const previousModel = this.model;
       const availableModels = await this._modelRegistry.getAvailable();
       const match = availableModels.find(
         (m) =>
@@ -2862,8 +2642,7 @@ export class AgentSession {
           m.id === sessionContext.model!.modelId,
       );
       if (match) {
-        this.agent.setModel(match);
-        await this._emitModelSelect(match, previousModel, "restore");
+        await this._modelController.restoreModel(match);
       }
     }
 

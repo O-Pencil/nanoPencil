@@ -40,8 +40,8 @@ This mirrors `../workflow.md`, but with smaller scope and no HTML report require
 
 | Finding | Status | Purpose |
 |---------|--------|---------|
-| [AS01](./findings/AS01-session-context-service-locator.md) | open | Prevent `SessionRuntimeContext` from becoming a new service locator |
-| [AS02](./findings/AS02-model-controller-boundary.md) | open | Make `ModelController` the single model/thinking owner |
+| [AS01](./findings/AS01-session-context-service-locator.md) | selected | Prevent runtime controller context from becoming a new service locator |
+| [AS02](./findings/AS02-model-controller-boundary.md) | selected | Make `ModelController` the single model/thinking owner |
 | [AS03](./findings/AS03-session-switch-state-restore.md) | open | Isolate session switch state restoration |
 | [AS04](./findings/AS04-compaction-coordinator-placeholder.md) | open | Avoid placeholder coordinators that hide no complexity |
 | [AS05](./findings/AS05-tool-runtime-controller-boundary.md) | open | Protect S1: `ToolOrchestrator` as the only tool dispatch point |

@@ -10,6 +10,7 @@ turn-context.ts: Generic per-turn hint bus on globalThis, TURN_CONTEXT_GLOBAL_KE
 pencil-agent.ts: PencilAgent helper class wrapping Agent core
 retry-coordinator.ts: Retry coordination for transient failures
 bash-runner.ts: BashRunner class — bash execution + pending-message queue extracted from AgentSession (P4.1); deps injected as closures (getCwd/getShellCommandPrefix/appendToAgent/appendToSession/isStreaming), no Agent/SessionManager import
+thinking-levels.ts: pure thinking-level logic extracted from AgentSession (P4.2) — THINKING_LEVELS(_WITH_XHIGH), modelSupportsThinking/Xhigh, availableThinkingLevels, clampThinkingLevel, nextThinkingLevel; no session state, reusable by rpc/print
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 

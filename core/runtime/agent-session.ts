@@ -28,7 +28,6 @@ import {
   isContextOverflow,
   modelsAreEqual,
   resetApiProviders,
-  supportsXhigh,
 } from "@pencil-agent/ai";
 import { getDocsPath } from "../../config.js";
 import type { Theme as ThemeContract } from "../theme-contract.js";
@@ -115,6 +114,13 @@ import { buildSystemPrompt } from "../prompt/system-prompt.js";
 import type { BashOperations } from "../tools/bash.js";
 import { createDefaultRuntimeTools } from "./default-tools.js";
 import { BashRunner } from "./bash-runner.js";
+import {
+  availableThinkingLevels,
+  clampThinkingLevel,
+  modelSupportsThinking,
+  modelSupportsXhigh,
+  nextThinkingLevel,
+} from "./thinking-levels.js";
 import { bindExtensionCore } from "./extension-core-bindings.js";
 import {
   buildSessionSlashCommands,
@@ -345,24 +351,6 @@ export type SlashCommandExecutor = (text: string) => Promise<boolean>;
 // ============================================================================
 
 /** Standard thinking levels */
-const THINKING_LEVELS: ThinkingLevel[] = [
-  "off",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-];
-
-/** Thinking levels including xhigh (for supported models) */
-const THINKING_LEVELS_WITH_XHIGH: ThinkingLevel[] = [
-  "off",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-];
-
 // ============================================================================
 // AgentSession Class
 // ============================================================================
@@ -1875,7 +1863,7 @@ export class AgentSession {
     const availableLevels = this.getAvailableThinkingLevels();
     const effectiveLevel = availableLevels.includes(level)
       ? level
-      : this._clampThinkingLevel(level, availableLevels);
+      : clampThinkingLevel(level, availableLevels);
 
     // Only persist if actually changing
     const isChanging = effectiveLevel !== this.agent.state.thinkingLevel;
@@ -1903,15 +1891,10 @@ export class AgentSession {
    * @returns New level, or undefined if model doesn't support thinking
    */
   cycleThinkingLevel(): ThinkingLevel | undefined {
-    if (!this.supportsThinking()) return undefined;
-
-    const levels = this.getAvailableThinkingLevels();
-    const currentIndex = levels.indexOf(this.thinkingLevel);
-    const nextIndex = (currentIndex + 1) % levels.length;
-    const nextLevel = levels[nextIndex];
-
-    this.setThinkingLevel(nextLevel);
-    return nextLevel;
+    const next = nextThinkingLevel(this.thinkingLevel, this.model);
+    if (next === undefined) return undefined;
+    this.setThinkingLevel(next);
+    return next;
   }
 
   /**
@@ -1919,45 +1902,21 @@ export class AgentSession {
    * The provider will clamp to what the specific model supports internally.
    */
   getAvailableThinkingLevels(): ThinkingLevel[] {
-    if (!this.supportsThinking()) return ["off"];
-    return this.supportsXhighThinking()
-      ? THINKING_LEVELS_WITH_XHIGH
-      : THINKING_LEVELS;
+    return availableThinkingLevels(this.model);
   }
 
   /**
    * Check if current model supports xhigh thinking level.
    */
   supportsXhighThinking(): boolean {
-    return this.model ? supportsXhigh(this.model) : false;
+    return modelSupportsXhigh(this.model);
   }
 
   /**
    * Check if current model supports thinking/reasoning.
    */
   supportsThinking(): boolean {
-    return !!this.model?.reasoning;
-  }
-
-  private _clampThinkingLevel(
-    level: ThinkingLevel,
-    availableLevels: ThinkingLevel[],
-  ): ThinkingLevel {
-    const ordered = THINKING_LEVELS_WITH_XHIGH;
-    const available = new Set(availableLevels);
-    const requestedIndex = ordered.indexOf(level);
-    if (requestedIndex === -1) {
-      return availableLevels[0] ?? "off";
-    }
-    for (let i = requestedIndex; i < ordered.length; i++) {
-      const candidate = ordered[i];
-      if (available.has(candidate)) return candidate;
-    }
-    for (let i = requestedIndex - 1; i >= 0; i--) {
-      const candidate = ordered[i];
-      if (available.has(candidate)) return candidate;
-    }
-    return availableLevels[0] ?? "off";
+    return modelSupportsThinking(this.model);
   }
 
   // =========================================================================
@@ -2976,7 +2935,7 @@ export class AgentSession {
       const availableLevels = this.getAvailableThinkingLevels();
       const effectiveLevel = availableLevels.includes(defaultThinkingLevel)
         ? defaultThinkingLevel
-        : this._clampThinkingLevel(defaultThinkingLevel, availableLevels);
+        : clampThinkingLevel(defaultThinkingLevel, availableLevels);
       this.agent.setThinkingLevel(effectiveLevel);
       this.sessionManager.appendThinkingLevelChange(effectiveLevel);
     }

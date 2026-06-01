@@ -20,10 +20,7 @@
       "nanosoul": ["./packages/nanosoul/src"],
       "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
       "@pencil-agent/mem-core": ["./packages/mem-core/src"],
-      "@pencil-agent/soul-core": ["./packages/soul-core/src"],
-      "@pencil-agent/ai": ["./core/lib/ai/src"],
-      "@pencil-agent/agent-core": ["./core/lib/agent-core/src"],
-      "@pencil-agent/tui": ["./core/lib/tui/src"]
+      "@pencil-agent/soul-core": ["./packages/soul-core/src"]
     }
   },
   "include": [

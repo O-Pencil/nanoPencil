@@ -6,6 +6,7 @@ severity: load-bearing
 lenses: [seam, leverage, locality]
 files_primary:
   - core/runtime/agent-session.ts
+  - core/runtime/tool-runtime-controller.ts
   - core/tools/orchestrator.ts
 files_secondary:
   - core/runtime/default-tools.ts
@@ -44,7 +45,7 @@ Create a tool runtime boundary only when it can own:
 
 ## Decision
 
-2026-06-01: first consolidate the live runtime registry into `ToolOrchestrator`. `AgentSession` still assembles extension/MCP/default tool sources for now, but no longer keeps a parallel `_toolRegistry`. A future S1 `ToolRuntimeController` must own source integration, wrapping, active-name policy, and agent tool rebuilds before this card can be considered fully complete.
+2026-06-01: first consolidated the live runtime registry into `ToolOrchestrator`, then introduced `ToolRuntimeController` for source merge, extension wrapping, active-name policy, and registry updates. `AgentSession` still owns extension lifecycle, MCP refresh, prompt application, and final `agent.setTools(...)` facade wiring.
 
 ## Benefits
 

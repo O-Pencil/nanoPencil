@@ -77,8 +77,6 @@ import {
   type TreePreparation,
   type TurnEndEvent,
   type TurnStartEvent,
-  wrapRegisteredTools,
-  wrapToolsWithExtensions,
 } from "../extensions-host/index.js";
 import type { CustomMessage } from "../messages.js";
 import type { ModelRegistry } from "../model-registry.js";
@@ -103,6 +101,7 @@ import { BashRunner } from "./bash-runner.js";
 import { AbortSlot } from "../platform/abort-slot.js";
 import { Listeners } from "../platform/listeners.js";
 import { ModelController, type ModelCycleResult } from "./model-controller.js";
+import { ToolRuntimeController } from "./tool-runtime-controller.js";
 import { bindExtensionCore } from "./extension-core-bindings.js";
 import {
   buildSessionSlashCommands,
@@ -399,6 +398,7 @@ export class AgentSession {
   // Controllers/coordinators (AgentSession responsibility decomposition)
   private readonly _modelController: ModelController;
   private readonly _toolOrchestrator: ToolOrchestrator;
+  private readonly _toolRuntimeController: ToolRuntimeController;
 
   constructor(config: AgentSessionConfig) {
     this.agent = config.agent;
@@ -431,6 +431,9 @@ export class AgentSession {
           ]),
         ),
     });
+    this._toolRuntimeController = new ToolRuntimeController(
+      this._toolOrchestrator,
+    );
     this._cwd = config.cwd;
     this._agentDir = config.agentDir;
     this._modelRegistry = config.modelRegistry;
@@ -2299,81 +2302,18 @@ export class AgentSession {
       );
     }
 
-    const registeredTools =
-      this._extensionRunner?.getAllRegisteredTools() ?? [];
-    const allCustomTools = [
-      ...registeredTools,
-      ...this._customTools.map((def) => ({
-        definition: def,
-        extensionPath: "<sdk>",
-      })),
-    ];
-    const wrappedExtensionTools = this._extensionRunner
-      ? wrapRegisteredTools(allCustomTools, this._extensionRunner)
-      : [];
-
-    const toolRegistry = new Map(this._baseToolRegistry);
-    for (const tool of wrappedExtensionTools as AgentTool[]) {
-      toolRegistry.set(tool.name, tool);
-    }
-
-    const defaultActiveToolNames = this._baseToolsOverride
-      ? Object.keys(this._baseToolsOverride)
-      : ["read", "bash", "edit", "write", "time"];
-    const baseActiveToolNames =
-      options.activeToolNames ?? defaultActiveToolNames;
-    const activeToolNameSet = new Set<string>(baseActiveToolNames);
-    if (options.includeAllExtensionTools) {
-      for (const tool of wrappedExtensionTools as AgentTool[]) {
-        activeToolNameSet.add(tool.name);
-      }
-    }
-
-    const extensionToolNames = new Set(
-      wrappedExtensionTools.map((tool) => tool.name),
+    const toolRuntime = this._toolRuntimeController.build({
+      baseTools: this._baseToolRegistry,
+      baseToolsOverride: this._baseToolsOverride,
+      customTools: this._customTools,
+      activeToolNames: options.activeToolNames,
+      includeAllExtensionTools: options.includeAllExtensionTools,
+      extensionRunner: this._extensionRunner,
+    });
+    this.agent.setTools(toolRuntime.activeTools);
+    this._baseSystemPrompt = this._rebuildSystemPrompt(
+      toolRuntime.systemPromptToolNames,
     );
-    const activeBaseTools = Array.from(activeToolNameSet)
-      .filter(
-        (name) =>
-          this._baseToolRegistry.has(name) && !extensionToolNames.has(name),
-      )
-      .map((name) => this._baseToolRegistry.get(name) as AgentTool);
-    const activeExtensionTools = wrappedExtensionTools.filter((tool) =>
-      activeToolNameSet.has(tool.name),
-    );
-    const activeToolsArray: AgentTool[] = [
-      ...activeBaseTools,
-      ...activeExtensionTools,
-    ];
-
-    if (this._extensionRunner) {
-      const wrappedActiveTools = wrapToolsWithExtensions(
-        activeToolsArray,
-        this._extensionRunner,
-      );
-      this.agent.setTools(wrappedActiveTools as AgentTool[]);
-
-      const wrappedAllTools = wrapToolsWithExtensions(
-        Array.from(toolRegistry.values()),
-        this._extensionRunner,
-      );
-      this._toolOrchestrator.replaceTools(
-        wrappedAllTools,
-        (wrappedActiveTools as AgentTool[]).map((tool) => tool.name),
-      );
-    } else {
-      this.agent.setTools(activeToolsArray);
-      this._toolOrchestrator.replaceTools(
-        toolRegistry.values(),
-        activeToolsArray.map((tool) => tool.name),
-      );
-    }
-    this._toolOrchestrator.setCustomTools(this._customTools);
-
-    const systemPromptToolNames = Array.from(activeToolNameSet).filter((name) =>
-      this._baseToolRegistry.has(name),
-    );
-    this._baseSystemPrompt = this._rebuildSystemPrompt(systemPromptToolNames);
     this.agent.setSystemPrompt(this._baseSystemPrompt);
   }
 

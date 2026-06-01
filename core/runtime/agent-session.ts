@@ -393,15 +393,12 @@ export class AgentSession {
   private _modelRegistry: ModelRegistry;
   private _agentDir: string;
 
-  // Tool registry for extension getTools/setTools
-  private _toolRegistry: Map<string, AgentTool> = new Map();
-
   // Base system prompt (without extension appends) - used to apply fresh appends each turn
   private _baseSystemPrompt = "";
 
   // Controllers/coordinators (AgentSession responsibility decomposition)
   private readonly _modelController: ModelController;
-  private _toolOrchestrator?: ToolOrchestrator;
+  private readonly _toolOrchestrator: ToolOrchestrator;
 
   constructor(config: AgentSessionConfig) {
     this.agent = config.agent;
@@ -422,12 +419,23 @@ export class AgentSession {
     this._mcpToolsFactory = config.mcpToolsFactory;
     this._soulManagerFactory = config.soulManagerFactory;
     this._customTools = [...this._staticCustomTools, ...(config.initialMcpTools ?? [])];
+    this._initialActiveToolNames = config.initialActiveToolNames;
+    this._toolOrchestrator = new ToolOrchestrator({
+      customTools: this._customTools,
+      initialActiveToolNames: this._initialActiveToolNames,
+      getExtensionTools: () =>
+        new Map(
+          (this._extensionRunner?.getAllRegisteredTools() ?? []).map((tool) => [
+            tool.definition.name,
+            tool.definition,
+          ]),
+        ),
+    });
     this._cwd = config.cwd;
     this._agentDir = config.agentDir;
     this._modelRegistry = config.modelRegistry;
     this._extensionRunnerRef = config.extensionRunnerRef;
     this._soulManager = config.soulManager;
-    this._initialActiveToolNames = config.initialActiveToolNames;
     this._baseToolsOverride = config.baseToolsOverride;
     this._modelController = new ModelController({
       getModel: () => this.model,
@@ -484,9 +492,6 @@ export class AgentSession {
     // Initialize retry coordinator (P1 - extracted from AgentSession)
     this._retryCoordinator = new RetryCoordinator(this._createRetryHost());
 
-    // Initialize coordinators (P1 - AgentSession responsibility decomposition)
-    this._initializeCoordinators();
-
     // Initialize structured logger (P2 - observability)
     this._logger = createLogger({
       sessionId: this.sessionManager.getSessionId(),
@@ -495,28 +500,9 @@ export class AgentSession {
   }
 
   /**
-   * Initialize coordinators (P3 - AgentSession responsibility decomposition)
-   * These coordinators encapsulate specific responsibilities:
-   * - ToolOrchestrator: tool registration, lookup, management
-   */
-  private _initializeCoordinators(): void {
-    // Initialize ToolOrchestrator with basic setup
-    this._toolOrchestrator = new ToolOrchestrator({
-      customTools: this._customTools,
-      initialActiveToolNames: this._initialActiveToolNames,
-      getExtensionTools: () => new Map(), // Will be populated when needed
-    });
-
-    // Register base tools to orchestrator
-    for (const [name, tool] of this._baseToolRegistry) {
-      this._toolOrchestrator.registerTool(name, tool);
-    }
-  }
-
-  /**
    * Get the ToolOrchestrator instance
    */
-  get toolOrchestrator(): ToolOrchestrator | undefined {
+  get toolOrchestrator(): ToolOrchestrator {
     return this._toolOrchestrator;
   }
 
@@ -903,11 +889,7 @@ export class AgentSession {
    * Get all configured tools with name, description, and parameter schema.
    */
   getAllTools(): ToolInfo[] {
-    return Array.from(this._toolRegistry.values()).map((t) => ({
-      name: t.name,
-      description: t.description,
-      parameters: t.parameters,
-    }));
+    return this._toolOrchestrator.getAllTools();
   }
 
   /**
@@ -917,15 +899,8 @@ export class AgentSession {
    * Changes take effect on the next agent turn.
    */
   setActiveToolsByName(toolNames: string[]): void {
-    const tools: AgentTool[] = [];
-    const validToolNames: string[] = [];
-    for (const name of toolNames) {
-      const tool = this._toolRegistry.get(name);
-      if (tool) {
-        tools.push(tool);
-        validToolNames.push(name);
-      }
-    }
+    const { tools, validToolNames } =
+      this._toolOrchestrator.setActiveToolsByName(toolNames);
     this.agent.setTools(tools);
 
     // Rebuild base system prompt with new tool set
@@ -2382,13 +2357,18 @@ export class AgentSession {
         Array.from(toolRegistry.values()),
         this._extensionRunner,
       );
-      this._toolRegistry = new Map(
-        wrappedAllTools.map((tool) => [tool.name, tool]),
+      this._toolOrchestrator.replaceTools(
+        wrappedAllTools,
+        (wrappedActiveTools as AgentTool[]).map((tool) => tool.name),
       );
     } else {
       this.agent.setTools(activeToolsArray);
-      this._toolRegistry = toolRegistry;
+      this._toolOrchestrator.replaceTools(
+        toolRegistry.values(),
+        activeToolsArray.map((tool) => tool.name),
+      );
     }
+    this._toolOrchestrator.setCustomTools(this._customTools);
 
     const systemPromptToolNames = Array.from(activeToolNameSet).filter((name) =>
       this._baseToolRegistry.has(name),

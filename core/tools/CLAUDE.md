@@ -6,7 +6,7 @@ Member List
 read.ts: ReadTool, readTool, createReadTool, ReadToolInput, filesystem read boundary with truncation and line range support, consumed by orchestrator
 source.ts: ToolSourceType, ToolSource interface, SourceTool, tool source abstraction (builtin, MCP, extension), key method: load() returns ToolDefinition[]
 find.ts: FindTool, findTool, createFindTool, FindToolInput, file pattern matching via glob, consumed by orchestrator
-orchestrator.ts: ToolInfo interface, ToolOrchestrator class, tool registration/lookup/management, coordinates builtin and extension tools
+orchestrator.ts: ToolInfo interface, ToolOrchestrator class, runtime tool registry, lookup, and active-tool resolution for AgentSession
 path-utils.ts: resolveReadPath(), resolveToCwd(), path manipulation utilities for tools, handles Unicode spaces and macOS NFD normalization
 ls.ts: LsTool, lsTool, createLsTool, LsToolInput, directory listing with metadata, consumed by orchestrator
 grep.ts: GrepTool, grepTool, createGrepTool, GrepToolInput, content search via ripgrep, consumed by orchestrator

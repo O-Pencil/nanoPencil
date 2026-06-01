@@ -11,7 +11,7 @@ files_secondary:
   - core/runtime/default-tools.ts
   - core/mcp/
   - core/extensions-host/
-status: open
+status: selected
 ```
 
 ## Problem
@@ -41,6 +41,10 @@ Create a tool runtime boundary only when it can own:
 - rebuild of agent tool list
 
 `ToolOrchestrator` remains the single dispatch primitive; the controller owns runtime policy around it.
+
+## Decision
+
+2026-06-01: first consolidate the live runtime registry into `ToolOrchestrator`. `AgentSession` still assembles extension/MCP/default tool sources for now, but no longer keeps a parallel `_toolRegistry`. A future S1 `ToolRuntimeController` must own source integration, wrapping, active-name policy, and agent tool rebuilds before this card can be considered fully complete.
 
 ## Benefits
 

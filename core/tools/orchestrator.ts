@@ -2,16 +2,10 @@
  * [WHO]: ToolInfo, ToolOrchestrator class
  * [FROM]: Depends on agent-core, extensions
  * [TO]: Consumed by core/runtime/agent-session.ts
- * [HERE]: core/tools/orchestrator.ts - tool registration, lookup, and management
+ * [HERE]: core/tools/orchestrator.ts - runtime tool registry, lookup, and active-tool resolution
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
-import type { ToolDefinition } from "../extensions-host/index.js";
-
-export interface ToolInfo {
-	name: string;
-	description: string;
-	parameters: unknown;
-}
+import type { ToolDefinition, ToolInfo } from "../extensions-host/index.js";
 
 export interface ToolOrchestratorOptions {
 	/** Initial custom tools from SDK options */
@@ -24,6 +18,7 @@ export interface ToolOrchestratorOptions {
 
 export class ToolOrchestrator {
 	private _toolRegistry: Map<string, AgentTool> = new Map();
+	private _activeToolNames: string[] = [];
 	private _customTools: ToolDefinition[] = [];
 	private _initialActiveToolNames?: string[];
 	private _getExtensionTools: () => Map<string, ToolDefinition>;
@@ -31,6 +26,7 @@ export class ToolOrchestrator {
 	constructor(options: ToolOrchestratorOptions) {
 		this._customTools = options.customTools || [];
 		this._initialActiveToolNames = options.initialActiveToolNames;
+		this._activeToolNames = options.initialActiveToolNames ?? [];
 		this._getExtensionTools = options.getExtensionTools;
 	}
 
@@ -45,7 +41,18 @@ export class ToolOrchestrator {
 	 * Get the names of currently active tools
 	 */
 	getActiveToolNames(): string[] {
-		return Array.from(this._toolRegistry.keys());
+		return [...this._activeToolNames];
+	}
+
+	/**
+	 * Replace the runtime registry after tools are rebuilt.
+	 */
+	replaceTools(tools: Iterable<AgentTool>, activeToolNames?: string[]): void {
+		this._toolRegistry = new Map(Array.from(tools, (tool) => [tool.name, tool]));
+		const nextActiveToolNames = activeToolNames ?? this._activeToolNames;
+		this._activeToolNames = nextActiveToolNames.filter((name) =>
+			this._toolRegistry.has(name),
+		);
 	}
 
 	/**
@@ -87,6 +94,7 @@ export class ToolOrchestrator {
 				validToolNames.push(name);
 			}
 		}
+		this._activeToolNames = validToolNames;
 		return { tools, validToolNames };
 	}
 
@@ -102,6 +110,13 @@ export class ToolOrchestrator {
 	 */
 	getCustomTools(): ToolDefinition[] {
 		return this._customTools;
+	}
+
+	/**
+	 * Replace custom tools after dynamic MCP refresh.
+	 */
+	setCustomTools(customTools: ToolDefinition[]): void {
+		this._customTools = customTools;
 	}
 
 	/**

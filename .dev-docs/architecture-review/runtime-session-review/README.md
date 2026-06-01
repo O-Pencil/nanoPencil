@@ -47,6 +47,7 @@ This mirrors `../workflow.md`, but with smaller scope and no HTML report require
 | [AS05](./findings/AS05-tool-runtime-controller-boundary.md) | selected | Protect S1: `ToolOrchestrator` as the only tool dispatch point |
 | [AS06](./findings/AS06-agent-session-public-facade.md) | selected | Keep `AgentSession` as the stable facade while internals split |
 | [AS07](./findings/AS07-event-bridge-boundary.md) | selected | Keep event bridge narrow and protect turn lifecycle ownership |
+| [AS08](./findings/AS08-session-lifecycle-boundary.md) | proposed | Prevent session lifecycle extraction from becoming a second composition root |
 
 ## Non-Goals
 

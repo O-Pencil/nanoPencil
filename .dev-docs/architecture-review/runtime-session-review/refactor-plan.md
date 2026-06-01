@@ -5,7 +5,7 @@ review_id: runtime-session-review
 status: active
 created_at: 2026-06-01
 parent_phase: P4
-total_findings: 7
+total_findings: 8
 ```
 
 ## Priority Order
@@ -19,6 +19,7 @@ total_findings: 7
 | 5 | [AS05](./findings/AS05-tool-runtime-controller-boundary.md) | load-bearing | seam, leverage | high / medium | AS01 |
 | 6 | [AS06](./findings/AS06-agent-session-public-facade.md) | load-bearing | DIP, leverage | high / low | all slices |
 | 7 | [AS07](./findings/AS07-event-bridge-boundary.md) | load-bearing | DIP, locality | high / medium | AS06 |
+| 8 | [AS08](./findings/AS08-session-lifecycle-boundary.md) | load-bearing | DIP, locality, lifecycle | high / medium | AS06, AS07 |
 
 ## Ordering Rationale
 
@@ -42,6 +43,7 @@ The context seam comes first because every controller extraction depends on it. 
 | AS05 | selected | `ToolRuntimeController` owns tool source merge, wrapping, active-name policy, and orchestrator registry updates |
 | AS06 | selected | modes, SDK, sub-agent runtime, and package barrels continue through `AgentSession` / `createAgentSession`; controller collaborators are not exported through public barrels |
 | AS07 | selected | `ExtensionEventBridge` owns extension event mapping and turn indexing only; `AgentSession` retains public subscribe, persistence ordering, retry/compaction ordering, and Soul post-turn recording |
+| AS08 | proposed | lifecycle extraction should start with `newSession()` / `switchSession()` choreography only; reload, tree navigation, branch summary, MCP/Soul refresh, and tool rebuild policy need separate ownership decisions |
 
 ## Validation Checklist
 

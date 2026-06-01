@@ -27,7 +27,6 @@ import type {
 } from "@pencil-agent/ai";
 import {
   isContextOverflow,
-  modelsAreEqual,
   resetApiProviders,
 } from "@pencil-agent/ai";
 import { getDocsPath } from "../../config.js";

@@ -114,6 +114,7 @@ import { buildSystemPrompt } from "../prompt/system-prompt.js";
 import type { BashOperations } from "../tools/bash.js";
 import { createDefaultRuntimeTools } from "./default-tools.js";
 import { BashRunner } from "./bash-runner.js";
+import { AbortSlot } from "../platform/abort-slot.js";
 import {
   availableThinkingLevels,
   clampThinkingLevel,
@@ -378,14 +379,12 @@ export class AgentSession {
   /** Messages queued to be included with the next user prompt as context ("asides"). */
   private _pendingNextTurnMessages: CustomMessage[] = [];
 
-  // Compaction state
-  private _compactionAbortController: AbortController | undefined = undefined;
-  private _autoCompactionAbortController: AbortController | undefined =
-    undefined;
+  // Compaction state (cancellation via AbortSlot — P4.2 dedup)
+  private readonly _compactionSlot = new AbortSlot();
+  private readonly _autoCompactionSlot = new AbortSlot();
 
   // Branch summarization state
-  private _branchSummaryAbortController: AbortController | undefined =
-    undefined;
+  private readonly _branchSummarySlot = new AbortSlot();
 
   // Retry coordinator (P1 - extracted from AgentSession)
   private _retryCoordinator!: RetryCoordinator;
@@ -990,10 +989,7 @@ export class AgentSession {
 
   /** Whether auto-compaction is currently running */
   get isCompacting(): boolean {
-    return (
-      this._autoCompactionAbortController !== undefined ||
-      this._compactionAbortController !== undefined
-    );
+    return this._autoCompactionSlot.active || this._compactionSlot.active;
   }
 
   /** All messages including custom types like BashExecutionMessage */
@@ -1954,7 +1950,7 @@ export class AgentSession {
     this._logger.info("Manual compaction started", { hasCustomInstructions: !!customInstructions });
     this._disconnectFromAgent();
     await this.abort();
-    this._compactionAbortController = new AbortController();
+    const compactionSignal = this._compactionSlot.begin();
 
     try {
       if (!this.model) {
@@ -1988,7 +1984,7 @@ export class AgentSession {
           preparation,
           branchEntries: pathEntries,
           customInstructions,
-          signal: this._compactionAbortController.signal,
+          signal: compactionSignal,
         })) as SessionBeforeCompactResult | undefined;
 
         if (result?.cancel) {
@@ -2019,7 +2015,7 @@ export class AgentSession {
           this.model,
           apiKey,
           customInstructions,
-          this._compactionAbortController.signal,
+          compactionSignal,
         );
         summary = result.summary;
         firstKeptEntryId = result.firstKeptEntryId;
@@ -2027,7 +2023,7 @@ export class AgentSession {
         details = result.details;
       }
 
-      if (this._compactionAbortController.signal.aborted) {
+      if (compactionSignal.aborted) {
         throw new Error("Compaction cancelled");
       }
 
@@ -2062,7 +2058,7 @@ export class AgentSession {
         details,
       };
     } finally {
-      this._compactionAbortController = undefined;
+      this._compactionSlot.clear();
       this._reconnectToAgent();
     }
   }
@@ -2071,15 +2067,15 @@ export class AgentSession {
    * Cancel in-progress compaction (manual or auto).
    */
   abortCompaction(): void {
-    this._compactionAbortController?.abort();
-    this._autoCompactionAbortController?.abort();
+    this._compactionSlot.abort();
+    this._autoCompactionSlot.abort();
   }
 
   /**
    * Cancel in-progress branch summarization.
    */
   abortBranchSummary(): void {
-    this._branchSummaryAbortController?.abort();
+    this._branchSummarySlot.abort();
   }
 
   /**
@@ -2241,7 +2237,7 @@ export class AgentSession {
     const triggerContinue = options?.triggerContinue ?? true;
 
     this._emit({ type: "auto_compaction_start", reason });
-    this._autoCompactionAbortController = new AbortController();
+    const autoCompactionSignal = this._autoCompactionSlot.begin();
 
     try {
       if (!this.model) {
@@ -2287,7 +2283,7 @@ export class AgentSession {
           preparation,
           branchEntries: pathEntries,
           customInstructions: undefined,
-          signal: this._autoCompactionAbortController.signal,
+          signal: autoCompactionSignal,
         })) as SessionBeforeCompactResult | undefined;
 
         if (extensionResult?.cancel) {
@@ -2324,7 +2320,7 @@ export class AgentSession {
           this.model,
           apiKey,
           undefined,
-          this._autoCompactionAbortController.signal,
+          autoCompactionSignal,
         );
         summary = compactResult.summary;
         firstKeptEntryId = compactResult.firstKeptEntryId;
@@ -2332,7 +2328,7 @@ export class AgentSession {
         details = compactResult.details;
       }
 
-      if (this._autoCompactionAbortController.signal.aborted) {
+      if (autoCompactionSignal.aborted) {
         this._emit({
           type: "auto_compaction_end",
           result: undefined,
@@ -2415,7 +2411,7 @@ export class AgentSession {
       });
       return undefined;
     } finally {
-      this._autoCompactionAbortController = undefined;
+      this._autoCompactionSlot.clear();
     }
   }
 
@@ -3090,7 +3086,7 @@ export class AgentSession {
     };
 
     // Set up abort controller for summarization
-    this._branchSummaryAbortController = new AbortController();
+    const branchSummarySignal = this._branchSummarySlot.begin();
     let extensionSummary: { summary: string; details?: unknown } | undefined;
     let fromExtension = false;
 
@@ -3099,7 +3095,7 @@ export class AgentSession {
       const result = (await this._extensionRunner.emit({
         type: "session_before_tree",
         preparation,
-        signal: this._branchSummaryAbortController.signal,
+        signal: branchSummarySignal,
       })) as SessionBeforeTreeResult | undefined;
 
       if (result?.cancel) {
@@ -3141,12 +3137,12 @@ export class AgentSession {
       const result = await generateBranchSummary(entriesToSummarize, {
         model,
         apiKey,
-        signal: this._branchSummaryAbortController.signal,
+        signal: branchSummarySignal,
         customInstructions,
         replaceInstructions,
         reserveTokens: branchSummarySettings.reserveTokens,
       });
-      this._branchSummaryAbortController = undefined;
+      this._branchSummarySlot.clear();
       if (result.aborted) {
         return { cancelled: true, aborted: true };
       }
@@ -3237,7 +3233,7 @@ export class AgentSession {
 
     // Emit to custom tools
 
-    this._branchSummaryAbortController = undefined;
+    this._branchSummarySlot.clear();
     return { editorText, cancelled: false, summaryEntry };
   }
 

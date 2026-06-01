@@ -1,0 +1,51 @@
+# Runtime Session Refactor Plan
+
+```yaml
+review_id: runtime-session-review
+status: draft
+created_at: 2026-06-01
+parent_phase: P4
+total_findings: 6
+```
+
+## Priority Order
+
+| Rank | Finding | Severity | Lenses | Leverage / Cost | Depends On |
+|------|---------|----------|--------|-----------------|------------|
+| 1 | [AS01](./findings/AS01-session-context-service-locator.md) | load-bearing | seam, locality | high / low-medium | none |
+| 2 | [AS02](./findings/AS02-model-controller-boundary.md) | load-bearing | depth, locality | high / low | AS01 |
+| 3 | [AS03](./findings/AS03-session-switch-state-restore.md) | structural | seam, locality | medium / medium | AS02 |
+| 4 | [AS04](./findings/AS04-compaction-coordinator-placeholder.md) | structural | depth, leverage | medium / medium | none |
+| 5 | [AS05](./findings/AS05-tool-runtime-controller-boundary.md) | load-bearing | seam, leverage | high / medium | AS01 |
+| 6 | [AS06](./findings/AS06-agent-session-public-facade.md) | load-bearing | DIP, leverage | high / low | all slices |
+
+## Ordering Rationale
+
+The context seam comes first because every controller extraction depends on it. Model/thinking is the smallest currently active slice, so it is the right proving ground. Session switch and tool runtime follow because they cross behavior boundaries and need the controller pattern to be settled before extraction.
+
+## Execution Suggestion
+
+1. Close AS01/AS02 together for the current `ModelController` slice.
+2. Record the accepted context shape as the template for later controllers.
+3. Do not claim compaction/tool/session lifecycle as complete until their placeholder wiring is removed or replaced by real behavior.
+4. Keep `AgentSession` as the only public facade throughout P4.
+
+## Phase Decisions
+
+| Finding | Decision | Notes |
+|---------|----------|-------|
+| AS01 | pending | maintainer to approve narrow context target |
+| AS02 | pending | current implementation is close but context still too broad |
+| AS03 | pending | next candidate after model controller |
+| AS04 | pending | must decide whether to remove placeholders or finish extraction |
+| AS05 | pending | should align with S1 in P4 |
+| AS06 | pending | enforced continuously |
+
+## Validation Checklist
+
+- [ ] `npm run verify:quality` passes
+- [ ] Public API symbol diff unchanged or intentional
+- [ ] Runtime P2/P3 docs updated
+- [ ] No runtime collaborator imports `agent-session.ts`
+- [ ] No mode imports a controller directly
+- [ ] Maintainer confirms behavior-critical paths to validate on stronger machine

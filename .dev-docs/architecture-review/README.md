@@ -54,6 +54,7 @@ architecture-review/
 ├── execution-plan.md               → 指向 execution-plan/ 的入口
 ├── refactor-validation.md          重构验收（功能不变，溯源 llm-wiki；重构后填充）
 ├── findings/F01–F08                微观判断
+├── runtime-session-review/         F01 子评审：AgentSession 等核心复杂拆分的专项评审模板
 │
 └── evolution/                      ── 演进组 ──
     ├── PARP.md                      PARP 协议定义（原 target-arch §3.5 迁入）

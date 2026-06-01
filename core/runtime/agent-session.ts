@@ -520,13 +520,6 @@ export class AgentSession {
     });
   }
 
-  /**
-   * Get the ToolOrchestrator instance
-   */
-  get toolOrchestrator(): ToolOrchestrator {
-    return this._toolOrchestrator;
-  }
-
   /** Model registry for API key resolution and model discovery */
   get modelRegistry(): ModelRegistry {
     return this._modelRegistry;

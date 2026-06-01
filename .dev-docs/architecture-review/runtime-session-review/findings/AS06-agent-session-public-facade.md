@@ -13,7 +13,7 @@ files_secondary:
   - modes/rpc/rpc-mode.ts
   - modes/acp/acp-mode.ts
   - modes/print-mode.ts
-status: open
+status: selected
 ```
 
 ## Problem
@@ -40,6 +40,16 @@ Keep `AgentSession` as the public facade:
 - root and core barrels should not expose controllers by default
 
 If an internal type such as `CycleModelError` is already externally used, re-export it from `agent-session.ts` rather than requiring mode callers to import controller internals.
+
+## Decision
+
+2026-06-01: keep `AgentSession` as the public facade. Modes, sub-agent runtime, package barrels, and SDK creation continue to depend on `AgentSession` / `createAgentSession`; `ModelController`, `ToolRuntimeController`, `CompactionController`, and `session-context` remain internal runtime collaborators and are not exported from `index.ts` or `core/index.ts`.
+
+Validation notes:
+
+- No mode imports `model-controller.ts`, `tool-runtime-controller.ts`, `compaction-controller.ts`, or `session-context.ts`.
+- Runtime controllers do not import `agent-session.ts`.
+- The unused `AgentSession.toolOrchestrator` getter was removed so the facade does not leak the internal dispatch primitive.
 
 ## Benefits
 

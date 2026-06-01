@@ -18,6 +18,7 @@ model-controller.ts: ModelController, CycleModelError, ModelCycleResult, owns mo
 compaction-controller.ts: CompactionController — owns manual + auto compaction flows and their abort slots (AS04); reads session via narrow CompactionControllerContext (lifecycle disconnect/reconnect/abort as capabilities); AgentSession remains the facade and loop continuation host
 tool-runtime-controller.ts: ToolRuntimeController, ToolRuntimeBuildOptions, ToolRuntimeBuildResult, owns runtime tool source merge, extension wrapping, active tool resolution, and ToolOrchestrator registry updates
 prompt-assembly.ts: buildRuntimeSystemPrompt(), getActiveBaseToolNames(), owns runtime prompt resource assembly and base-tool filtering; Soul injection state remains in AgentSession
+export-bridge.ts: exportSessionHtml(), getLastAssistantText(), owns HTML export wiring and last assistant text extraction; Theme remains injected through AgentSessionConfig
 thinking-levels.ts: pure thinking-level logic extracted from AgentSession (P4.2) — THINKING_LEVELS(_WITH_XHIGH), modelSupportsThinking/Xhigh, availableThinkingLevels, clampThinkingLevel, nextThinkingLevel; no session state, reusable by rpc/print
 model-cycle.ts: pure model-cycle decisions extracted from AgentSession (P4.2) — pickThinkingLevelOnModelChange, nextCyclicIndex; side effects are owned by model-controller.ts
 

@@ -46,11 +46,6 @@ import { ToolOrchestrator } from "../tools/orchestrator.js";
 import { DEFAULT_THINKING_LEVEL } from "../platform/config/defaults.js";
 import { createExtensionTelemetrySink } from "../platform/telemetry/index.js";
 import {
-  exportSessionToHtml,
-  type ToolHtmlRenderer,
-} from "../export-html/index.js";
-import { createToolHtmlRenderer } from "../export-html/tool-renderer.js";
-import {
   type ContextUsage,
   type ExtensionCommandContextActions,
   type ExtensionErrorListener,
@@ -103,6 +98,7 @@ import {
   buildRuntimeSystemPrompt,
   getActiveBaseToolNames,
 } from "./prompt-assembly.js";
+import { exportSessionHtml, getLastAssistantText } from "./export-bridge.js";
 import { bindExtensionCore } from "./extension-core-bindings.js";
 import {
   buildSessionSlashCommands,
@@ -2720,25 +2716,13 @@ export class AgentSession {
    * @returns Path to exported file
    */
   async exportToHtml(outputPath?: string): Promise<string> {
-    const themeName = this.settingsManager.getTheme();
-
-    // Create tool renderer if we have an extension runner + an injected theme
-    // (for custom tool HTML rendering). Without a theme, export still works but
-    // skips custom-tool rendering — see AgentSessionConfig.theme (U2 seam).
-    let toolRenderer: ToolHtmlRenderer | undefined;
-    if (this._extensionRunner && this._theme) {
-      const exportTheme = this._theme;
-      toolRenderer = createToolHtmlRenderer({
-        getToolDefinition: (name) =>
-          this._extensionRunner!.getToolDefinition(name),
-        theme: exportTheme,
-      });
-    }
-
-    return await exportSessionToHtml(this.sessionManager, this.state, {
+    return await exportSessionHtml({
+      sessionManager: this.sessionManager,
+      state: this.state,
       outputPath,
-      themeName,
-      toolRenderer,
+      themeName: this.settingsManager.getTheme(),
+      extensionRunner: this._extensionRunner,
+      theme: this._theme,
     });
   }
 
@@ -2752,28 +2736,7 @@ export class AgentSession {
    * @returns Text content, or undefined if no assistant message exists
    */
   getLastAssistantText(): string | undefined {
-    const lastAssistant = this.messages
-      .slice()
-      .reverse()
-      .find((m) => {
-        if (m.role !== "assistant") return false;
-        const msg = m as AssistantMessage;
-        // Skip aborted messages with no content
-        if (msg.stopReason === "aborted" && msg.content.length === 0)
-          return false;
-        return true;
-      });
-
-    if (!lastAssistant) return undefined;
-
-    let text = "";
-    for (const content of (lastAssistant as AssistantMessage).content) {
-      if (content.type === "text") {
-        text += content.text;
-      }
-    }
-
-    return text.trim() || undefined;
+    return getLastAssistantText(this.messages);
   }
 
   // =========================================================================

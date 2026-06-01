@@ -160,7 +160,7 @@ nanoPencil/
 │   │   ├── agent-session.ts             ← 3408 → < 500，退化为 Composition Root
 │   │   ├── session-lifecycle.ts         ← 【新】启动/停止/abort 状态机
 │   │   ├── model-cycle.ts               ← 【新】CycleModelError + xhigh 兜底
-│   │   ├── compaction-pipeline.ts       ← 【新】包装 CompactionCoordinator
+│   │   ├── compaction-pipeline.ts       ← 【新】拥有压缩阈值、执行、abort、branch summary 协调
 │   │   ├── tool-dispatch.ts             ← 【新】ToolOrchestrator + bash 直通
 │   │   ├── prompt-assembly.ts           ← 【新】系统 prompt + soul context 注入
 │   │   ├── export-bridge.ts             ← 【新】HTML 导出绑定
@@ -712,4 +712,3 @@ nanoPencil/
 - [ ] Finding cards 据本文修订（U3/U2 等议题刷新到候选 D 措辞）
 - [ ] Phase 3 ADRs（若有驳回）
 - [ ] Phase 3 sign-off
-

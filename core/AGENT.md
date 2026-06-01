@@ -100,8 +100,6 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `branch-summarization.ts`: Branch summary generation for forked sessions
 
-`compaction-coordinator.ts`: Coordinates compaction operations
-
 `utils.ts`: Token estimation and text processing helpers
 
 `index.ts`: Barrel exports for compaction module

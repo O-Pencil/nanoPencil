@@ -37,7 +37,7 @@ The context seam comes first because every controller extraction depends on it. 
 | AS01 | selected | narrow `ModelControllerContext` implemented for current model slice |
 | AS02 | selected | `ModelController` owns model/thinking set, cycle, restore for current slice |
 | AS03 | selected | model/thinking restore is delegated to `ModelController`; switch flow remains lifecycle orchestration |
-| AS04 | pending | must decide whether to remove placeholders or finish extraction |
+| AS04 | selected | removed the shallow `CompactionCoordinator`; real compaction extraction remains a later P4 slice |
 | AS05 | pending | should align with S1 in P4 |
 | AS06 | pending | enforced continuously |
 

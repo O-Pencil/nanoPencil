@@ -6,11 +6,11 @@ severity: structural
 lenses: [depth, leverage]
 files_primary:
   - core/runtime/agent-session.ts
-  - core/session/compaction/compaction-coordinator.ts
+  - core/session/compaction/
 files_secondary:
   - core/runtime/AGENT.md
   - core/runtime/CLAUDE.md
-status: open
+status: selected
 ```
 
 ## Problem
@@ -35,6 +35,10 @@ Either:
 - remove/avoid exposing it until the extraction is ready.
 
 Do not mark P4 compaction as complete while coordinator wiring is placeholder.
+
+## Decision
+
+2026-06-01: remove the shallow `CompactionCoordinator` placeholder. It had no real data ownership, no external consumer, and no independent behavior. A future compaction extraction must introduce a real pipeline/controller only when it owns thresholds, abort state, branch-summary coordination, and extension hook boundaries.
 
 ## Benefits
 

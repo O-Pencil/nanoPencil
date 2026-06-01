@@ -31,7 +31,7 @@ status: open
 | 职责块 | 证据 |
 |--------|------|
 | 模型周期与切换 | `ModelSwitcher`、`CycleModelError`、`modelsAreEqual`、`supportsXhigh`、`resetApiProviders` |
-| 上下文压缩 | `CompactionCoordinator`、`prepareCompaction`、`shouldCompact`、`generateBranchSummary` |
+| 上下文压缩 | `compaction-pipeline`、`prepareCompaction`、`shouldCompact`、`generateBranchSummary` |
 | 工具编排 | `ToolOrchestrator` + 直接处理 `BashExecutionMessage` |
 | Soul / 个性 | `toSoulContext` / `extractSessionContext` |
 | Export HTML | `createToolHtmlRenderer`、`exportSessionToHtml` |
@@ -64,7 +64,7 @@ core/runtime/
 ├── agent-session.ts             ← 仅作 Composition Root + 事件转发，目标 < 500 行
 ├── session-lifecycle.ts         ← session 启动/停止/abort 状态机
 ├── model-cycle.ts               ← CycleModelError + 模型切换 + xhigh 兜底
-├── compaction-pipeline.ts       ← 包装 CompactionCoordinator + prepareCompaction
+├── compaction-pipeline.ts       ← 拥有压缩阈值、执行、abort、branch summary 协调
 ├── tool-dispatch.ts             ← 包装 ToolOrchestrator + bash 直通
 ├── prompt-assembly.ts           ← buildSystemPrompt + soul context 注入
 ├── export-bridge.ts             ← HTML 导出绑定

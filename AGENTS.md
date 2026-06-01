@@ -311,7 +311,6 @@ Extensions can:
 |------|---------|
 | `compaction.ts` | Main compaction logic for context window management |
 | `branch-summarization.ts` | Branch summary generation for forked sessions |
-| `compaction-coordinator.ts` | Coordinates compaction operations |
 | `utils.ts` | Token estimation helpers |
 
 ---

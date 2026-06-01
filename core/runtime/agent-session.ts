@@ -45,7 +45,6 @@ import {
   prepareCompaction,
   shouldCompact,
 } from "../session/compaction/index.js";
-import { CompactionCoordinator } from "../session/compaction/compaction-coordinator.js";
 import { ToolOrchestrator } from "../tools/orchestrator.js";
 import { DEFAULT_THINKING_LEVEL } from "../platform/config/defaults.js";
 import { createExtensionTelemetrySink } from "../platform/telemetry/index.js";
@@ -402,7 +401,6 @@ export class AgentSession {
 
   // Controllers/coordinators (AgentSession responsibility decomposition)
   private readonly _modelController: ModelController;
-  private _compactionCoordinator?: CompactionCoordinator;
   private _toolOrchestrator?: ToolOrchestrator;
 
   constructor(config: AgentSessionConfig) {
@@ -499,11 +497,7 @@ export class AgentSession {
   /**
    * Initialize coordinators (P3 - AgentSession responsibility decomposition)
    * These coordinators encapsulate specific responsibilities:
-   * - CompactionCoordinator: compaction trigger, execution, result handling
    * - ToolOrchestrator: tool registration, lookup, management
-   *
-   * Note: Coordinators are initialized with minimal setup.
-   * They provide interfaces that can be populated as needed.
    */
   private _initializeCoordinators(): void {
     // Initialize ToolOrchestrator with basic setup
@@ -517,16 +511,6 @@ export class AgentSession {
     for (const [name, tool] of this._baseToolRegistry) {
       this._toolOrchestrator.registerTool(name, tool);
     }
-
-    // Initialize CompactionCoordinator with basic setup
-    this._compactionCoordinator = new CompactionCoordinator({
-      getSessionMessages: () => [],
-      compact: () => {}, // Will delegate to actual compact method
-      abortCompaction: () => this.abortCompaction(),
-      isAutoCompactionEnabled: () => this.autoCompactionEnabled,
-      getContextUsage: () => this.getContextUsage(),
-      getContextWindow: () => this.model?.contextWindow ?? 128000,
-    });
   }
 
   /**
@@ -534,13 +518,6 @@ export class AgentSession {
    */
   get toolOrchestrator(): ToolOrchestrator | undefined {
     return this._toolOrchestrator;
-  }
-
-  /**
-   * Get the CompactionCoordinator instance
-   */
-  get compactionCoordinator(): CompactionCoordinator | undefined {
-    return this._compactionCoordinator;
   }
 
   /** Model registry for API key resolution and model discovery */

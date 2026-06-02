@@ -19,7 +19,7 @@ applies_to:
 | UI-G1 No reverse mount import | controllers/state 不得 import `./interactive-mode.ts`（mount 是组合根，单向）| `rg 'from "\.\./interactive-mode\|from "\./interactive-mode' modes/interactive/controllers modes/interactive/state` 必须为空 |
 | UI-G2 No service-locator context | controller context 暴露**命名能力**（闭包），不得整体接收 `InteractiveMode` 或 `AgentSession` | code review |
 | UI-G3 Single owner | 每个 UI 副作用/overlay（attachments、extension widget、model overlay、auth 流…）只有一个 owning controller | finding 卡 + code review |
-| UI-G4 TUI 行为稳定（命门）| `V5-1` interactive-mode 级 characterization **全过**；公共符号表不变 | characterization 回放 + 符号 diff（**前置 UI01 基线存在**）|
+| UI-G4 功能正确（命门，接受重写）| [feature-inventory.md](./feature-inventory.md) **逐条验收通过**；有意符号/行为变更显式声明(GB-2)，**不**要求字节级/符号 diff 为空 | 功能清单逐条确认（UI01；非 characterization）|
 | UI-G5 No fake extraction | 新 controller 必须**持自己那片状态或藏真复杂度**；纯转发占位不算完成 | deletion test |
 | UI-G6 DIP isomorphism | 新 UI 文件有 P3 头，并登记进 `modes/AGENT.md` / `modes/CLAUDE.md`（及 `modes/interactive` 子目录索引）| P2/P3 review |
 | UI-G7 No deepened core leakage | 抽 controller 时，对 core 内部的直接 import 必须**收敛到 AgentSession facade / 窄 context**（UI03），禁止把泄漏的 import 平移进 controller 或新增同类泄漏 | import diff + grep |

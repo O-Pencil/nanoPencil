@@ -64,8 +64,8 @@ gate: gates.md#门组-b
 ### 下一步（开拆前置）
 
 1. ✅ **已建 [`interactive-ui-review/`](../interactive-ui-review/README.md)**（镜像 runtime-session-review）：5 个发现立成卡 [UI01–UI05](../interactive-ui-review/README.md#current-finding-set)，门组 [UI-G1…UI-G7](../interactive-ui-review/gates.md) 定稿，抽取顺序见 [refactor-plan.md](../interactive-ui-review/refactor-plan.md)。
-2. 🚫 **补 TUI characterization**（[UI01](../interactive-ui-review/findings/UI01-tui-characterization-baseline.md) blocker，命门）：在冻结 `main` 上为 interactive 关键流录快照基线（键位/`/command`/overlay），否则 V5-1 无从谈起。**未解除前禁止任何 controller 抽取。**
-3. 评审定稿后再按 controller 分批抽（沿用 P4 capability-context + 逐 tsc + 回放）。
+2. **校全 [feature-inventory.md](../interactive-ui-review/feature-inventory.md)**（[UI01](../interactive-ui-review/findings/UI01-tui-characterization-baseline.md)，命门）：v0 已起草(33 命令+22 键位+overlay+渲染特性)，maintainer 校到 v1。P5 **接受重写** → 验收"功能正确"而非字节级 characterization；安全网 = 清单完整度。
+3. 评审定稿后按 controller 分批抽：一簇一簇定 **纯搬(preserve-check) vs 重写(功能验收)**，逐 tsc + 逐条功能验收。
 
 ## 验证门控（DoD）
 
@@ -73,7 +73,7 @@ gate: gates.md#门组-b
 
 | # | 检查项 | 通过标准 | 门组 B |
 |---|--------|---------|--------|
-| V5-1 | TUI 零回归（硬）| interactive-mode 级 TUI snapshot/characterization **全过** ⚠️ **基线尚不存在（UI-1）→ 开拆前必须先在冻结 main 上录** | GB-2 |
+| V5-1 | 功能正确（硬，接受重写）| [feature-inventory.md](../interactive-ui-review/feature-inventory.md) **逐条验收通过**；**非** characterization（P5 接受重写，见 [UI01](../interactive-ui-review/findings/UI01-tui-characterization-baseline.md)）。有意变更显式声明(GB-2) | GB-2 |
 | V5-2 | 边界守恒（硬）| controllers/state 不反向依赖 mount；UI 不直接碰 runtime 内部（经契约）| **GB-1** |
 | V5-3 | 公共 API | 符号表不变 | GB-2 |
 | V5-4 | 单一职责 | controller 职责单一（行数仅信号）| GB-4 |

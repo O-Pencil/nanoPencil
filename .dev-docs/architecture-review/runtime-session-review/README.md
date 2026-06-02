@@ -91,11 +91,11 @@ This review is the detailed decision surface for [P4 runtime god split](../execu
 | Gate | Statement | Where verified | Result |
 |------|-----------|----------------|--------|
 | RS-4a | Public API unchanged | plain symbol-table diff vs P0 `main` snapshot (wiki-independent) | ✅ zero diff (296==296) |
-| RS-4b | Facade **behavior** unchanged | characterization replay (print-mode golden) | 🚧 suspended — cassette/golden not yet recorded on frozen `main` |
+| RS-4b | Facade **behavior** unchanged | characterization replay (print-mode golden) | ✅ 2/2 green — MiMo golden recorded on frozen `main`, replayed on branch byte-identical |
 | RS-6 | DIP isomorphism (P2 member list + Capability Ownership + P3 headers ↔ code) | `npx tsx scripts/verify-dip.ts` | ✅ 478 P3 + 30 P2 |
 | — | No new import cycles | `scripts/verify-quality.ts` (F08; madge raw count is noise) | ✅ 529 files, zero |
 | — | Compiles + builds | `npx tsc --noEmit` + `npm run build` | ✅ tsc exit 0, build v1.14.6 |
 
-5 of 6 green; only RS-4b (behavior baseline) is outstanding and **blocks P4 `completed`** until cassettes are recorded on `main` (see [P4-signoff-checklist.md §2b](../execution-plan/P4-signoff-checklist.md)). This review supplies the WHY (cards) and WHO-OWNS-WHAT (Capability Ownership table) feeding these gates.
+**All 6 green (2026-06-02).** P4 exit gates fully verified → P4 `completed`. This review supplied the WHY (cards) and WHO-OWNS-WHAT (Capability Ownership table) feeding these gates. **Merge to main still gated** on all phases (P2–P8) + sign-off-main S-1…S-6 + sign-off — P4 alone does not authorize a merge.
 
 > **Not a P4 gate**: `npm run wiki:all` (llm-wiki regeneration) is a **whole-repo merge-to-main step run once after all phases land**, not per-phase — P5–P8 would invalidate it. Per-phase "behavior unchanged" is carried by the plain symbol diff + characterization above. See [refactor-validation.md §5](../refactor-validation.md).

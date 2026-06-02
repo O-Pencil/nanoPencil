@@ -39,7 +39,6 @@ import {
   calculateContextTokens,
   collectEntriesForBranchSummary,
   estimateContextTokens,
-  generateBranchSummary,
   shouldCompact,
 } from "../session/compaction/index.js";
 import { ToolOrchestrator } from "../tools/orchestrator.js";
@@ -55,11 +54,9 @@ import {
   type SessionBeforeCompactResult,
   type SessionBeforeForkResult,
   type SessionBeforeSwitchResult,
-  type SessionBeforeTreeResult,
   type ShutdownHandler,
   type ToolDefinition,
   type ToolInfo,
-  type TreePreparation,
 } from "../extensions-host/index.js";
 import type { CustomMessage } from "../messages.js";
 import type { ModelRegistry } from "../model-registry.js";
@@ -80,10 +77,10 @@ import { toSoulContext, extractSessionContext } from "../soul-integration.js";
 import type { BashOperations } from "../tools/bash.js";
 import { createDefaultRuntimeTools } from "./default-tools.js";
 import { BashRunner } from "./bash-runner.js";
-import { AbortSlot } from "../platform/abort-slot.js";
 import { Listeners } from "../platform/listeners.js";
 import { ModelController, type ModelCycleResult } from "./model-controller.js";
 import { CompactionController } from "./compaction-controller.js";
+import { SessionTreeController } from "./session-tree-controller.js";
 import { ToolRuntimeController } from "./tool-runtime-controller.js";
 import {
   buildRuntimeSystemPrompt,
@@ -336,9 +333,6 @@ export class AgentSession {
   /** Messages queued to be included with the next user prompt as context ("asides"). */
   private _pendingNextTurnMessages: CustomMessage[] = [];
 
-  // Branch summarization state
-  private readonly _branchSummarySlot = new AbortSlot();
-
   // Retry coordinator (P1 - extracted from AgentSession)
   private _retryCoordinator!: RetryCoordinator;
 
@@ -383,6 +377,7 @@ export class AgentSession {
   // Controllers/coordinators (AgentSession responsibility decomposition)
   private readonly _modelController: ModelController;
   private readonly _compactionController: CompactionController;
+  private readonly _sessionTreeController: SessionTreeController;
   private readonly _toolOrchestrator: ToolOrchestrator;
   private readonly _toolRuntimeController: ToolRuntimeController;
 
@@ -478,6 +473,26 @@ export class AgentSession {
       emitAutoCompactionEnd: (payload) => this._emit({ type: "auto_compaction_end", ...payload }),
       getAutoCompactionEnabled: () => this.settingsManager.getCompactionEnabled(),
       setAutoCompactionEnabled: (enabled) => this.settingsManager.setCompactionEnabled(enabled),
+    });
+    this._sessionTreeController = new SessionTreeController({
+      getModel: () => this.model,
+      getApiKey: (model) => this._modelRegistry.getApiKey(model),
+      getExtensionRunner: () => this._extensionRunner,
+      getLeafId: () => this.sessionManager.getLeafId(),
+      getEntry: (entryId) => this.sessionManager.getEntry(entryId),
+      collectBranchSummaryEntries: (oldLeafId, targetId) =>
+        collectEntriesForBranchSummary(this.sessionManager, oldLeafId, targetId),
+      getBranchSummaryReserveTokens: () => this.settingsManager.getBranchSummarySettings().reserveTokens,
+      branchWithSummary: (newLeafId, summaryText, summaryDetails, fromExtension) =>
+        this.sessionManager.branchWithSummary(newLeafId, summaryText, summaryDetails, fromExtension),
+      appendLabelChange: (entryId, label) => this.sessionManager.appendLabelChange(entryId, label),
+      resetLeaf: () => this.sessionManager.resetLeaf(),
+      branch: (newLeafId) => this.sessionManager.branch(newLeafId),
+      rebuildAgentMessages: () => {
+        const sessionContext = this.sessionManager.buildSessionContext();
+        this.agent.replaceMessages(sessionContext.messages);
+      },
+      extractUserMessageText: (content) => this._extractUserMessageText(content),
     });
     this.agent.setModelErrorRecovery((event) =>
       this._recoverModelErrorInLoop(event),
@@ -1559,7 +1574,7 @@ export class AgentSession {
    * Cancel in-progress branch summarization.
    */
   abortBranchSummary(): void {
-    this._branchSummarySlot.abort();
+    this._sessionTreeController.abortBranchSummary();
   }
 
   /**
@@ -2307,193 +2322,7 @@ export class AgentSession {
     aborted?: boolean;
     summaryEntry?: BranchSummaryEntry;
   }> {
-    const oldLeafId = this.sessionManager.getLeafId();
-
-    // No-op if already at target
-    if (targetId === oldLeafId) {
-      return { cancelled: false };
-    }
-
-    // Model required for summarization
-    if (options.summarize && !this.model) {
-      throw new Error("No model available for summarization");
-    }
-
-    const targetEntry = this.sessionManager.getEntry(targetId);
-    if (!targetEntry) {
-      throw new Error(`Entry ${targetId} not found`);
-    }
-
-    // Collect entries to summarize (from old leaf to common ancestor)
-    const { entries: entriesToSummarize, commonAncestorId } =
-      collectEntriesForBranchSummary(this.sessionManager, oldLeafId, targetId);
-
-    // Prepare event data - mutable so extensions can override
-    let customInstructions = options.customInstructions;
-    let replaceInstructions = options.replaceInstructions;
-    let label = options.label;
-
-    const preparation: TreePreparation = {
-      targetId,
-      oldLeafId,
-      commonAncestorId,
-      entriesToSummarize,
-      userWantsSummary: options.summarize ?? false,
-      customInstructions,
-      replaceInstructions,
-      label,
-    };
-
-    // Set up abort controller for summarization
-    const branchSummarySignal = this._branchSummarySlot.begin();
-    let extensionSummary: { summary: string; details?: unknown } | undefined;
-    let fromExtension = false;
-
-    // Emit session_before_tree event
-    if (this._extensionRunner?.hasHandlers("session_before_tree")) {
-      const result = (await this._extensionRunner.emit({
-        type: "session_before_tree",
-        preparation,
-        signal: branchSummarySignal,
-      })) as SessionBeforeTreeResult | undefined;
-
-      if (result?.cancel) {
-        return { cancelled: true };
-      }
-
-      if (result?.summary && options.summarize) {
-        extensionSummary = result.summary;
-        fromExtension = true;
-      }
-
-      // Allow extensions to override instructions and label
-      if (result?.customInstructions !== undefined) {
-        customInstructions = result.customInstructions;
-      }
-      if (result?.replaceInstructions !== undefined) {
-        replaceInstructions = result.replaceInstructions;
-      }
-      if (result?.label !== undefined) {
-        label = result.label;
-      }
-    }
-
-    // Run default summarizer if needed
-    let summaryText: string | undefined;
-    let summaryDetails: unknown;
-    if (
-      options.summarize &&
-      entriesToSummarize.length > 0 &&
-      !extensionSummary
-    ) {
-      const model = this.model!;
-      const apiKey = await this._modelRegistry.getApiKey(model);
-      if (!apiKey) {
-        throw new Error(`No API key for ${model.provider}`);
-      }
-      const branchSummarySettings =
-        this.settingsManager.getBranchSummarySettings();
-      const result = await generateBranchSummary(entriesToSummarize, {
-        model,
-        apiKey,
-        signal: branchSummarySignal,
-        customInstructions,
-        replaceInstructions,
-        reserveTokens: branchSummarySettings.reserveTokens,
-      });
-      this._branchSummarySlot.clear();
-      if (result.aborted) {
-        return { cancelled: true, aborted: true };
-      }
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      summaryText = result.summary;
-      summaryDetails = {
-        readFiles: result.readFiles || [],
-        modifiedFiles: result.modifiedFiles || [],
-      };
-    } else if (extensionSummary) {
-      summaryText = extensionSummary.summary;
-      summaryDetails = extensionSummary.details;
-    }
-
-    // Determine the new leaf position based on target type
-    let newLeafId: string | null;
-    let editorText: string | undefined;
-
-    if (targetEntry.type === "message" && targetEntry.message.role === "user") {
-      // User message: leaf = parent (null if root), text goes to editor
-      newLeafId = targetEntry.parentId;
-      editorText = this._extractUserMessageText(targetEntry.message.content);
-    } else if (targetEntry.type === "custom_message") {
-      // Custom message: leaf = parent (null if root), text goes to editor
-      newLeafId = targetEntry.parentId;
-      editorText =
-        typeof targetEntry.content === "string"
-          ? targetEntry.content
-          : targetEntry.content
-              .filter(
-                (c): c is { type: "text"; text: string } => c.type === "text",
-              )
-              .map((c) => c.text)
-              .join("");
-    } else {
-      // Non-user message: leaf = selected node
-      newLeafId = targetId;
-    }
-
-    // Switch leaf (with or without summary)
-    // Summary is attached at the navigation target position (newLeafId), not the old branch
-    let summaryEntry: BranchSummaryEntry | undefined;
-    if (summaryText) {
-      // Create summary at target position (can be null for root)
-      const summaryId = this.sessionManager.branchWithSummary(
-        newLeafId,
-        summaryText,
-        summaryDetails,
-        fromExtension,
-      );
-      summaryEntry = this.sessionManager.getEntry(
-        summaryId,
-      ) as BranchSummaryEntry;
-
-      // Attach label to the summary entry
-      if (label) {
-        this.sessionManager.appendLabelChange(summaryId, label);
-      }
-    } else if (newLeafId === null) {
-      // No summary, navigating to root - reset leaf
-      this.sessionManager.resetLeaf();
-    } else {
-      // No summary, navigating to non-root
-      this.sessionManager.branch(newLeafId);
-    }
-
-    // Attach label to target entry when not summarizing (no summary entry to label)
-    if (label && !summaryText) {
-      this.sessionManager.appendLabelChange(targetId, label);
-    }
-
-    // Update agent state
-    const sessionContext = this.sessionManager.buildSessionContext();
-    this.agent.replaceMessages(sessionContext.messages);
-
-    // Emit session_tree event
-    if (this._extensionRunner) {
-      await this._extensionRunner.emit({
-        type: "session_tree",
-        newLeafId: this.sessionManager.getLeafId(),
-        oldLeafId,
-        summaryEntry,
-        fromExtension: summaryText ? fromExtension : undefined,
-      });
-    }
-
-    // Emit to custom tools
-
-    this._branchSummarySlot.clear();
-    return { editorText, cancelled: false, summaryEntry };
+    return this._sessionTreeController.navigateTree(targetId, options);
   }
 
   /**

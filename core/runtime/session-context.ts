@@ -89,3 +89,28 @@ export interface CompactionControllerContext {
   getAutoCompactionEnabled(): boolean;
   setAutoCompactionEnabled(enabled: boolean): void;
 }
+
+/**
+ * Narrow capability surface for SessionTreeController (navigateTree + branch summary). Tree
+ * navigation reads/mutates the session tree and may summarize the abandoned branch; those effects
+ * are exposed as capabilities rather than handing over the AgentSession or SessionManager.
+ */
+export interface SessionTreeControllerContext {
+  getModel(): Model<any> | undefined;
+  getApiKey(model: Model<any>): Promise<string | undefined>;
+  getExtensionRunner(): ExtensionRunner | undefined;
+  getLeafId(): string | null;
+  getEntry(entryId: string): SessionEntry | undefined;
+  collectBranchSummaryEntries(
+    oldLeafId: string | null,
+    targetId: string,
+  ): { entries: SessionEntry[]; commonAncestorId: string | null };
+  getBranchSummaryReserveTokens(): number;
+  branchWithSummary(newLeafId: string | null, summaryText: string, summaryDetails: unknown, fromExtension: boolean): string;
+  appendLabelChange(entryId: string, label: string): void;
+  resetLeaf(): void;
+  branch(newLeafId: string): void;
+  /** Rebuild agent messages from the (post-navigation) session context. */
+  rebuildAgentMessages(): void;
+  extractUserMessageText(content: string | Array<{ type: string; text?: string }>): string;
+}

@@ -1,8 +1,8 @@
-# interactive-mode 功能特性清单 v0.5
+# interactive-mode 功能特性清单 v1
 
 ```yaml
 doc: feature-inventory
-version: v0.5  # v0 + 代码扫全(editor 键位/submit 管线/冗余坏味)；剩主观判断项待 maintainer 定 → v1
+version: v1     # 代码扫全 + 5 主观项已定(含扩展验收 = A 契约 + C 内置手测)；UI01 blocker 解除
 parent: ./README.md
 purpose: |
   P5 的验收基准（功能验收，非 characterization）+ 维护者特性目录。
@@ -206,6 +206,6 @@ legend:
 | **B fixture 扩展** | 造一个最小**测试扩展**,注册已知 `/cmd` + widget + prompt,对它验收 | 端到端、隔离、可复现 | 要维护 fixture |
 | **C 内置扩展手测** | 对随包的内置扩展(interview/loop/plan/team/security-audit/soul…)逐个手跑,确认其命令+UI | 验真实扩展 | 不可自动化、依赖人 |
 
-> **我的建议:A + C** —— A 验"分派契约不破"(自动、稳),C 对真实内置扩展手测兜底;B(fixture)等以后要自动化回归再上。你选。
+> **已定:A + C**(2026-06-02)—— A 验"分派契约不破"(自动、稳)+ C 对真实内置扩展(interview/loop/plan/team/security-audit/soul…)手测兜底;B(fixture)等以后要自动化回归再上。
 
 > 校全后此表即 P5 验收门 + 维护者特性目录；每抽一个 controller，回填该 owner 名下功能的 verify 列。

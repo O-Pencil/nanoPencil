@@ -61,13 +61,13 @@ gate: gates.md#门组-b
 | # | 检查项 | 通过标准 | 门组 B | 状态(2026-06-02) |
 |---|--------|---------|--------|-----------------|
 | V4-1 | 边界守恒（硬）| runtime 子模块 import 服从白名单：禁反向依赖组合根 / 禁碰 UI（经 ui-bridge）| **GB-1** | ✅ 已验(RS-1 grep：0 控制器 import agent-session) |
-| V4-2 | 公共 API | 符号表 == P0 snapshot；如有意改须声明 | GB-2 | ⬜ 待 sign-off 机器(符号 diff) |
-| V4-3 | 行为基线 | characterization tests 全过 | GB-2 | ⬜ 待 sign-off 机器(回放) |
+| V4-2 | 公共 API | 符号表 == P0 snapshot；如有意改须声明 | GB-2 | ✅ 已验(2026-06-02 C3 符号 diff 零差异,296==296) |
+| V4-3 | 行为基线 | characterization tests 全过 | GB-2 | 🚧 挂起 — C4 待在冻结 `main` 上 `RECORD=1` 录 cassette/golden 后回放 |
 | V4-4 | S2/S1 形状 | 组合根单 config 装配；ToolOrchestrator 唯一分发点，code review 确认 | GB-6 | ✅ 已验(RS-2：4 窄 context;S1 唯一分发点经 `tool-runtime-controller`) |
 | V4-5 | 单一职责 | 子模块职责单一（行数仅作复审信号，非 pass/fail）| GB-4 | ✅ 已验(RS-3：单 owner;facade 0 abort slot) |
-| V4-6 | 无环 | madge 仍零循环 | GB-5 | ⬜ 待 sign-off 机器(verify-quality) |
+| V4-6 | 无环 | **verify-quality 零环**（唯一判据；F08 剥 type-only 边 + SCC。madge 原始计数含 type-only/跨包噪声 → build:deps 出 dist 后 madge≈22 属噪声，**非判据**）| GB-5 | ✅ 已验(2026-06-02 C5 verify-quality 零环,529 文件) |
 
-> **结构门(V4-1/4/5 ↔ RS-1/2/3)已在分支上以 grep 客观验证**(见 [runtime-session-review §Closeout](../runtime-session-review/README.md#closeout--p4-sign-off-handoff))。**重型门(V4-2/3/6)交 sign-off 机器**,逐条命令见单文件 runbook [P4-signoff-checklist.md](./P4-signoff-checklist.md):tsc/build、**纯文本符号 diff(对 P0 snapshot,不依赖 wiki)**、characterization 回放、verify-quality/verify-dip。
+> **结构门(V4-1/4/5 ↔ RS-1/2/3)** 早以 grep 验证；**重型门 C1–C6** 已在 sign-off 机器跑(2026-06-02,`6a72b43`):C1 tsc / C2 build / C3 符号 diff / C5 verify-quality / C6 verify-dip **全过**,**仅 C4 行为基线挂起**(冻结 `main` 上 cassette 未录)。逐条命令与回填见 [P4-signoff-checklist.md](./P4-signoff-checklist.md)。
 >
 > ⚠️ `wiki:all` **不是 P4 出口门** —— 它是全仓库合 main 的一次性证据(P5–P8 改码即作废),只在所有 phase landed 后跑一次,见 [sign-off-main.md](./sign-off-main.md)。
 

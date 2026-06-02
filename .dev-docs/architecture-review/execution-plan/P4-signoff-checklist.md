@@ -39,16 +39,19 @@ npm install
 npm run build:deps      # 关键：core/lib/{ai,agent-core,tui} 先出 dist，否则 tsc 报 Cannot find module '@pencil-agent/*'
 ```
 
+运行结果（2026-06-02，`6a72b43`，机器 `/Users/lucy.cl/...`）：
+
 | # | 门 | 命令 | 通过标准 | 状态 | 证据 |
 |---|----|------|---------|------|------|
-| C1 | 编译 | `npx tsc --noEmit` | 无输出（exit 0） | ⬜ | |
-| C2 | 构建 | `npm run build` | 成功（含 ai 包自身 tsconfig.build.json）| ⬜ | |
-| C3 | 符号不变（V4-2）| 见下方 **§2** | diff 为空，或仅"已声明的有意变更" | ⬜ | |
-| C4 | 行为基线（V4-3）| `npx vitest run tests/characterization` | 全过（cassette/golden 零回归）| ⬜ | |
-| C5 | 无新环（V4-6）| `npx tsx scripts/verify-quality.ts` | exit 0（或白名单带 deadline）| ⬜ | |
-| C6 | DIP 同构（RS-6）| `npx tsx scripts/verify-dip.ts` | exit 0（含 `core/runtime/CLAUDE.md` Capability Ownership 表与成员表一致）| ⬜ | |
+| C1 | 编译 | `npx tsc --noEmit` | 无输出（exit 0） | ✅ | exit 0，3307ms（collect-baseline 内跑）|
+| C2 | 构建 | `npm run build` | 成功（含 ai 包自身 tsconfig.build.json）| ✅ | `dist/build-meta.json` v1.14.6, 6a72b43 |
+| C3 | 符号不变（V4-2）| 见下方 **§2** | diff 为空，或仅"已声明的有意变更" | ✅ | 零差异（296 == 296）|
+| C4 | 行为基线（V4-3）| `npx vitest run tests/characterization` | 全过（cassette/golden 零回归）| 🚧 挂起 | cassette 未录 → 见 **§2b** |
+| C5 | 无新环（V4-6）| `npx tsx scripts/verify-quality.ts` | exit 0（或白名单带 deadline）| ✅ | passed，529 文件（madge≈22 属噪声，非判据）|
+| C6 | DIP 同构（RS-6）| `npx tsx scripts/verify-dip.ts` | exit 0（含 `core/runtime/CLAUDE.md` Capability Ownership 表与成员表一致）| ✅ | passed，478 P3 + 30 P2 |
 
 > 注：`npm test` 脚本本仓库不存在；characterization 用 `vitest run tests/characterization` 直跑。
+> **C5 判据是 verify-quality（零真实环），不是 madge 原始计数** —— build:deps 出 dist 后 madge≈22 全是 type-only/跨包噪声，verify-quality（F08 剥 type-only + SCC）才是唯一环门。
 
 ---
 
@@ -68,6 +71,27 @@ diff .dev-docs/architecture-review/baseline/public-api-symbols-main.txt \
 - **期望**：无差异（god 拆是内部重构，公共面应不变 → 功能不变硬指标）。
 - 若有差异：必须每一行对应一个**已在 review 卡/Phase 文档声明的有意变更**（GB-2）；否则视为回归，C3 不通过。
 - 这一步**不需要 llm-wiki** —— 是独立纯文本快照，专为 per-phase 出口设计。
+
+---
+
+## 2b. C4 挂起：行为基线待在 `main` 上录制
+
+C4 当前**无法判定**，因为 `tests/characterization/cases/*/cassette.json` 与 `__golden__/` **从未在重构前的 `main` 上录过**（P0 标的"冻结 main cassette/golden"硬前置，受限沙箱当时跑不了）。报错 `missing cassette ...; run RECORD=1 on main first` 即此意 —— 不是回归，是**无基线可比**。
+
+**解除挂起的步骤（需真实 API key + 一次真模型调用，仅在 main 录一次）**：
+
+```bash
+git checkout main          # 冻结基线点（P0 记 0eea985）
+RECORD=1 OPENAI_API_KEY=sk-... npx vitest run --config tests/characterization/vitest.config.ts
+#   ⚠️ 首次录:run-case.ts 顶部有 1 个待确认假设(apiKey env 注入 / createAgentSession 选项名)
+git add tests/characterization/cases/*/cassette.json tests/characterization/__golden__
+git commit -m "test(characterization): record pre-refactor golden baseline on main"
+git checkout refactor/arch-candidate-d
+git checkout main -- tests/characterization/cases tests/characterization/__golden__   # 带回 cassette+golden
+npx vitest run tests/characterization      # 回放:全绿=行为不变(C4 过);红=真回归
+```
+
+只有 2 个 case（hello / read-file），录一次很快。**录制完成前 P4 不能 `completed`** —— 行为不变只证了结构半边（C3 符号），行为半边（C4）仍空。
 
 ---
 

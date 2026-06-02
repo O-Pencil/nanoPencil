@@ -86,15 +86,16 @@ This review is the detailed decision surface for [P4 runtime god split](../execu
 | RS-3 | Single owner; no residual state on facade | `agent-session.ts` holds 0 abort slots; each slot owned by compaction/tree controller |
 | RS-5 | No fake/placeholder extraction | enforced by rejecting AS12 (teardown) + deferring AS09 (reload) — both would own no state |
 
-### Gates that hand off to P4 sign-off (need a capable machine)
+### Gates run at P4 sign-off (capable machine, 2026-06-02 @ `6a72b43`)
 
-| Gate | Statement | Where verified |
-|------|-----------|----------------|
-| RS-4 | Facade behavior stable — public `AgentSession` API + mode callers unchanged | characterization replay + **plain** symbol-table diff vs P0 `main` snapshot (wiki-independent) |
-| RS-6 | DIP isomorphism (P2 member list + Capability Ownership + P3 headers ↔ code) | `npx tsx scripts/verify-dip.ts` |
-| — | No new import cycles from the split | `scripts/verify-quality.ts` (F08) |
-| — | Compiles + builds | `npm run build` (already green at `91ab9de`, re-confirm post-resolution-docs) |
+| Gate | Statement | Where verified | Result |
+|------|-----------|----------------|--------|
+| RS-4a | Public API unchanged | plain symbol-table diff vs P0 `main` snapshot (wiki-independent) | ✅ zero diff (296==296) |
+| RS-4b | Facade **behavior** unchanged | characterization replay (print-mode golden) | 🚧 suspended — cassette/golden not yet recorded on frozen `main` |
+| RS-6 | DIP isomorphism (P2 member list + Capability Ownership + P3 headers ↔ code) | `npx tsx scripts/verify-dip.ts` | ✅ 478 P3 + 30 P2 |
+| — | No new import cycles | `scripts/verify-quality.ts` (F08; madge raw count is noise) | ✅ 529 files, zero |
+| — | Compiles + builds | `npx tsc --noEmit` + `npm run build` | ✅ tsc exit 0, build v1.14.6 |
 
-Run these via the single-file runbook [P4-signoff-checklist.md](../execution-plan/P4-signoff-checklist.md). This review supplies the WHY (cards) and WHO-OWNS-WHAT (Capability Ownership table) feeding them.
+5 of 6 green; only RS-4b (behavior baseline) is outstanding and **blocks P4 `completed`** until cassettes are recorded on `main` (see [P4-signoff-checklist.md §2b](../execution-plan/P4-signoff-checklist.md)). This review supplies the WHY (cards) and WHO-OWNS-WHAT (Capability Ownership table) feeding these gates.
 
 > **Not a P4 gate**: `npm run wiki:all` (llm-wiki regeneration) is a **whole-repo merge-to-main step run once after all phases land**, not per-phase — P5–P8 would invalidate it. Per-phase "behavior unchanged" is carried by the plain symbol diff + characterization above. See [refactor-validation.md §5](../refactor-validation.md).

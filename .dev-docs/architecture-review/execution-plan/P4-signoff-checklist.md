@@ -110,10 +110,15 @@ npx vitest run tests/characterization      # 回放:全绿=行为不变(C4 过);
 
 ## 4. 通过后
 
-- [ ] C1–C6 全绿 → 在 [P4-runtime-split.md](./P4-runtime-split.md) V4 表把 V4-2/3/6 标 ✅
+- [ ] C1–C6 **全绿（含 C4 行为基线）** → 在 [P4-runtime-split.md](./P4-runtime-split.md) V4 表把 V4-2/3/6 标 ✅
 - [ ] 回填本表"证据"列（粘贴关键输出）
 - [ ] P4 status `structure_landed → completed`
 - [ ] 继续 P5（UI 拆，串行于 P4 之后）
+
+> **⛔ 合 main 硬门(重申)**：`refactor/arch-candidate-d` **禁止合入 `main`，直到全部改动确认完毕** ——
+> 不是单个 phase 过门就行，而是 **P2–P8 各域门组 B 全过 + 本表 C1–C6（含 C4）全绿 +
+> [sign-off-main.md](./sign-off-main.md) S-1…S-6 全填 + maintainer 签字**。任一项未确认即不得开 PR 合 main。
+> 当前 P4：C4 行为基线尚挂起 → **即使 P4 其余全绿，也不构成可合 main 的依据**。
 
 ---
 

@@ -130,6 +130,9 @@ legend:
 
 ## D. 流式渲染特性（handleEvent，13 事件，owner: mount/render — UI04 deferred）
 
+> **验收粒度(已定)**：本轮 P5 **不动** handleEvent(UI04 deferred)，故 D 用**粗粒度功能验收**——每事件确认"渲染发生且形态对"(如 message_update 增量刷文本、tool_execution_end 出可展开结果)，**不做逐帧/逐态字节比对**。
+> 逐态精验(工具展开↔折叠、thinking 显隐、loader 帧)**推迟到 UI04 真正重写 render 层时**再做；那时这些事件才是被改对象，才需要细粒度验收。本轮它们是"保持不变"的旁观者，粗验足够。
+
 | 事件 | 预期渲染 | verify |
 |------|---------|--------|
 | agent_start | 起 loading/working 动画 + 计时 | ⬜ |
@@ -161,7 +164,7 @@ legend:
 
 ---
 
-## F. 输入提交管线（owner: mount/input-submit；slash-dispatcher 只处理内置 `/command` dispatch）
+## F. 输入提交管线（owner: `input-submit-controller`（UI06）；slash-dispatcher 只处理内置 `/command` dispatch）
 
 | 特性 | 触发 | 预期 | owner | verify |
 |------|------|------|-------|--------|
@@ -188,12 +191,21 @@ legend:
 - ✅ F 的 submit 管线 = `setupEditorSubmitHandler` 实读(persona 嵌入/bash/compaction queue/steer/附件/回滚)
 - ✅ 冗余坏味(4 条命令双处理)已标
 
-**仍需你主观拍板（→ v1）**：
+**已定（2026-06-02）**：
 
-- [ ] **每条标 hybrid 决策**：纯搬(preserve-check) vs 重写(功能验收) —— 你最清楚哪些想借机改好
-- [ ] **D 渲染特性验收粒度**：是否要"工具输出展开/折叠""thinking 显隐"逐态(影响 UI04 范围)
-- [ ] **input-submit(F) 是否单独立卡**：随 mount 还是抽 `input-submit-controller`(它现 ~246 行且交叉 image/persona/bash/queue)
-- [ ] **扩展动态命令/键位的验收方式**：依赖装了哪些扩展，怎么定可复现的验收
-- [ ] **双击 esc 动作**(`getDoubleEscapeAction`)归 _shell/cancellation 还是配置项,验收口径
+- [x] **per-feature hybrid 决策**：不逐条标，**继承 owner 簇**的决策（见 [refactor-plan §纯搬 vs 重写](./refactor-plan.md)）。
+- [x] **D 渲染验收粒度**：本轮**粗粒度功能验收**；逐态精验推迟到 UI04（见 D 段说明）。
+- [x] **input-submit 单独立卡**：→ [UI06](./findings/UI06-input-submit-pipeline.md)，抽 `input-submit-controller`，controller 集 = 8。
+- [x] **双击 esc / esc 分派归属**：`onEscape` 是单键多目标分派 —— **mount 接线**(判状态后转发)，分支委托 owner(abort→cancellation、空闲双击→tree-overlay、queue 恢复→queue)。见 [gates.md esc 键分派行](./gates.md)。
+
+**仍需你拍板（第 4 点，给你 3 选 1）—— 扩展动态命令/键位/widget 怎么验收**：
+
+| 选项 | 做法 | 优 | 劣 |
+|------|------|----|----|
+| **A 契约验收(推荐)** | 验 `ExtensionUIContext` **契约**:host 能正确路由"任意注册的命令/widget/overlay",测分派机制而非具体扩展 | 与装了啥扩展无关、稳定、可复现 | 不验具体扩展的端到端 |
+| **B fixture 扩展** | 造一个最小**测试扩展**,注册已知 `/cmd` + widget + prompt,对它验收 | 端到端、隔离、可复现 | 要维护 fixture |
+| **C 内置扩展手测** | 对随包的内置扩展(interview/loop/plan/team/security-audit/soul…)逐个手跑,确认其命令+UI | 验真实扩展 | 不可自动化、依赖人 |
+
+> **我的建议:A + C** —— A 验"分派契约不破"(自动、稳),C 对真实内置扩展手测兜底;B(fixture)等以后要自动化回归再上。你选。
 
 > 校全后此表即 P5 验收门 + 维护者特性目录；每抽一个 controller，回填该 owner 名下功能的 verify 列。

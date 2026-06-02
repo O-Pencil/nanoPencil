@@ -35,15 +35,17 @@ UI04 render 层切片（deferred，最后评估）
 | 5 | `slash-dispatcher` | UI02 | skillCommands | 调度表 + handle*Command |
 | 6 | `model-overlay-controller` / `auth-controller` | UI02 | — | provider 配置归 auth/provider-config；model-overlay 只消费 |
 | 7 | `tree-overlay-controller`（UI05 改名）| UI05 | — | 经 facade 调 runtime 导航 |
-| 8 | `_shell/cancellation` | — | sigint/escape/shutdown | 跨 mode |
-| 9 | `interactive-mode.ts` → mount(<500 行) | — | 根容器 | 退壳 |
+| 8 | `_shell/cancellation` | — | sigint/escape/shutdown | 跨 mode；esc 分派接线留 mount，分支委托 owner |
+| 9 | `input-submit-controller` | UI06 | optimistic/bashMode/排队决策 | 委托目标稳定后再抽（slash/image 之后）|
+| 10 | `interactive-mode.ts` → mount(post-UI04 目标 <500 行) | — | 根容器 | 退壳；本轮含 handleEvent，未达 500 |
 | — | `handleEvent` render 层 | UI04 | 流式/工具/loader | **deferred**，最后 |
 
-## 纯搬 vs 重写 决策（初稿 v0，待 maintainer 评审）
+## 纯搬 vs 重写 决策（v1 定稿）
 
 > 原则：**内聚且无明显坏味 → 纯搬**（preserve-check：tsc + 符号 diff + 手测，便宜且强）；
 > **有结构坏味/分支爆炸/重复 → 重写**（feature-acceptance：按 feature-inventory 逐条验收）。
 > hybrid = 逻辑搬、边界/接线重写。
+> **per-feature 不单独标**：feature-inventory 每条的 hybrid 决策 = **继承其 owner 簇**本表的决策（如所有 model-overlay 名下功能继承"hybrid 偏搬"）。
 
 | 簇 | 决策 | 证据 / 理由 | 风险 | 验收方式 |
 |----|------|-----------|------|---------|
@@ -57,9 +59,10 @@ UI04 render 层切片（deferred，最后评估）
 | **tree-overlay**(UI05) | **纯搬 + 改名 + facade 委托** | 选择器 UI 逻辑搬；**改名**消歧(UI05) + 经 facade 调 runtime 导航(不 deep import，UI03) | 低-中 | preserve-check(UI) + 确认 `/tree`/`/fork`/`/resume` 行为 |
 | **_shell/cancellation** | **hybrid(偏搬)** | sigint/escape/双击时序逻辑**保持**(易回归，不动)；**改进是跨 mode 复用**(print/rpc/acp 去重)→ 改写各 mode call site | 中 | preserve-check(逻辑) + 各 mode 取消 smoke |
 | **handleEvent/render**(UI04) | **deferred → 若动则重写** | 流式渲染核心，最敏感；本轮不动 | 高 | (deferred) 动时：D 表逐事件重度验收 |
-| **mount**(interactive-mode.ts) | **纯搬(退壳)** | 其余抽完后剩组合根，<500 行；行为保持 | 低 | preserve-check |
+| **★ input-submit**(UI06) | **重写** | `onSubmit` ~246 行分派,交叉 slash/persona/bash/queue/附件;含死分支(4 命令双处理)。重写为 `input-submit-controller` 总分派,委托各 owner;清死分支。委托目标稳定后(slash/image 之后)再抽 | **中-高** | feature-acceptance：F 表逐条 |
+| **mount**(interactive-mode.ts) | **纯搬(退壳)** | 其余抽完后剩组合根;<500 行为 **post-UI04** 目标(本轮含 handleEvent 未达)；行为保持 | 低 | preserve-check |
 
-**决策摘要**：纯搬 5（state/image/tree/mount + self-update 逻辑）· 重写 2（extension-ui lifecycle / slash-dispatcher dispatch）· hybrid 3（model-overlay/auth-provider-config/cancellation）· deferred 1（render）。
+**决策摘要**：纯搬 5（state/image/tree/mount + self-update 逻辑）· 重写 3（extension-ui lifecycle / slash-dispatcher dispatch / input-submit 分派）· hybrid 3（model-overlay/auth-provider-config/cancellation）· deferred 1（render）。controller 集 = **8**。
 
 > 重写集中在**两处真坏味**：slash 的 188 行 if-else、extension-ui 的重复 prompt lifecycle。extension-ui 只重写生命周期协调，不把 widget/footer/header/status/editor replacement 误并进 overlay stack。其余以搬为主、在 seam(UI03)和边界(UI02)上做最小重写。**先做低风险纯搬热身(image/state)，再啃重写。**
 

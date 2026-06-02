@@ -36,8 +36,10 @@ applies_to:
 | 扩展 prompt/overlay/widget surfaces | `extension-ui-controller`（UI02 新增）| mount 不直接 set/clear extension widget；persistent surfaces 不进 overlay stack |
 | 自更新/版本检查/重装 | `self-update-controller`（UI02 新增）| P5 先 interactive 内拆；非 `core/platform` owner |
 | Ctrl-C/D/Z + shutdown 信号 | `_shell/cancellation`（跨 mode）| mount 只接线 |
+| 输入提交分派（`onSubmit`）| `input-submit-controller`（UI06）| 总分派归此；slash-dispatcher 只执行内置命令，不吞管线 |
 | ~80 响应式状态字段 | `state/interactive-state` | 散落的 `this._` 收敛 |
 | 流式渲染事件路由（`handleEvent`）| 暂留 mount（UI04 deferred）| 不强行抽空壳 |
+| **esc 键分派**（`onEscape`，单键多目标）| **mount 接线**，分支委托各 owner | abort→cancellation；空闲双击→tree-overlay(选择器)；queue 恢复→queue；mount 只判状态转发，不拥有动作 |
 
 ## Review Questions
 

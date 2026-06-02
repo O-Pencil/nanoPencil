@@ -25,13 +25,12 @@ gate: gates.md#门组-b
 
 ## 任务清单
 
-> 经 [interactive-ui-review](../interactive-ui-review/README.md) 摸底，controller 集从 F02 初稿的 5 个修正为 **7 个 + state 容器**（UI02）。
+> 经 [interactive-ui-review](../interactive-ui-review/README.md) 摸底，controller 集从 F02 初稿的 5 个修正为 **8 个 + state 容器**（UI02/UI06）。
 
-- [ ] `modes/_shell/cancellation.ts` 抽出（Q7：只抽 cancellation，跨 mode）
-- [ ] `modes/interactive/controllers/`：**7 个 controller**
-  - slash-dispatcher（限内置 `/command` dispatch）/ model-overlay（只消费 provider 能力）/ auth + provider-config / tree-overlay（UI05 改名）/ image-pipeline / **extension-ui**（UI02 新增）/ **self-update**（UI02 新增，P5 先 interactive 内拆）
+- [ ] `modes/_shell/cancellation.ts` 抽出（Q7：只抽 cancellation，跨 mode；esc 分派接线留 mount）
+- [ ] `modes/interactive/controllers/`：**8 个 controller**
+  - slash-dispatcher（限内置 `/command` dispatch）/ model-overlay（只消费 provider 能力）/ auth + provider-config / tree-overlay（UI05 改名）/ image-pipeline / **extension-ui**（UI02）/ **self-update**（UI02，P5 先 interactive 内拆）/ **input-submit**（UI06，slash/image 之后抽）
 - [ ] `modes/interactive/state/`：UI 状态合一（~80 字段）
-- [ ] **input-submit pipeline**（feature-inventory §F）：决定单独 owner 或随 mount（待 UI01 v1 定）
 - [ ] `interactive-mode.ts` → mount 入口（**< 500 行为 post-UI04 + input-submit 目标**；第一轮 `handleEvent`(336) + submit handler(~246) 仍留 mount，达不到 500）
 - [ ] **F05** 步骤 4-5：扩展类型 UI / commands 部分
 

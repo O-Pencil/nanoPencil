@@ -63,8 +63,8 @@ gate: gates.md#门组-b
 
 ### 下一步（开拆前置）
 
-1. **建 `interactive-ui-review/`**（镜像 runtime-session-review）：把上表簇逐个立卡（UI01… 边界/状态归属/service-locator 风险），定 UI 版门组（沿用 RS-1…RS-6 精神）。
-2. **补 TUI characterization**（UI-1，命门）：在冻结 `main` 上为 interactive 关键流录快照基线（键位/`/command`/overlay），否则 V5-1 无从谈起。
+1. ✅ **已建 [`interactive-ui-review/`](../interactive-ui-review/README.md)**（镜像 runtime-session-review）：5 个发现立成卡 [UI01–UI05](../interactive-ui-review/README.md#current-finding-set)，门组 [UI-G1…UI-G7](../interactive-ui-review/gates.md) 定稿，抽取顺序见 [refactor-plan.md](../interactive-ui-review/refactor-plan.md)。
+2. 🚫 **补 TUI characterization**（[UI01](../interactive-ui-review/findings/UI01-tui-characterization-baseline.md) blocker，命门）：在冻结 `main` 上为 interactive 关键流录快照基线（键位/`/command`/overlay），否则 V5-1 无从谈起。**未解除前禁止任何 controller 抽取。**
 3. 评审定稿后再按 controller 分批抽（沿用 P4 capability-context + 逐 tsc + 回放）。
 
 ## 验证门控（DoD）

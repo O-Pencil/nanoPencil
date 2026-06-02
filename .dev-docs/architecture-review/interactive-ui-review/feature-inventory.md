@@ -1,8 +1,8 @@
-# interactive-mode 功能特性清单 v0
+# interactive-mode 功能特性清单 v0.5
 
 ```yaml
 doc: feature-inventory
-version: v0    # 从摸底 182 方法 + /command + 键位 + handleEvent + overlay 反推，待 maintainer 校全
+version: v0.5  # v0 + 代码扫全(editor 键位/submit 管线/冗余坏味)；剩主观判断项待 maintainer 定 → v1
 parent: ./README.md
 purpose: |
   P5 的验收基准（功能验收，非 characterization）+ 维护者特性目录。
@@ -88,6 +88,24 @@ legend:
 | resume | (无默认) | 恢复会话 | tree-overlay | ⬜ |
 | 附件导航 | 方向键(附件态) | 在附件条上移动/删除 | image-pipeline | ⬜ |
 
+### B-editor. 编辑器层键位（EditorAction，39 个 — 多数属 TUI 库，非 P5 范围）
+
+> `@pencil-agent/tui` 的 `EditorComponent` 自带 39 个 `EditorAction`（光标/删除/选择/翻页/undo/yank…）。
+> **绝大多数是纯文本编辑，owner = tui 库，P5 不动、不验收**。只有下面几个与 interactive-mode 行为交叉，需纳入验收：
+
+| EditorAction | 默认键 | 预期 | owner | verify |
+|------|--------|------|-------|--------|
+| submit | `enter` | 触发输入提交管线（→ F 表）| input-submit | ⬜ |
+| newLine | `shift+enter` | 多行换行(不提交) | tui/editor | ⬜ |
+| expandTools | `ctrl+o` | 展开工具输出（与 AppAction 同名，确认单一路径）| mount(render) | ⬜ |
+| toggleSessionPath | `ctrl+p`(选择器内) | session 选择器:切路径显示 | tree-overlay | ⬜ |
+| toggleSessionSort | `ctrl+s`(选择器内) | session 选择器:切排序 | tree-overlay | ⬜ |
+| renameSession | `ctrl+r`(选择器内) | session 选择器:重命名 | tree-overlay | ⬜ |
+| deleteSession / ...Noninvasive | `ctrl+d`/`ctrl+backspace`(选择器内) | session 选择器:删除 | tree-overlay | ⬜ |
+| selectConfirm / selectCancel | `enter` / `esc`,`ctrl+c` | overlay 确认/取消导航 | 各 overlay controller | ⬜ |
+
+> 其余 30 个(cursor*/delete*/page*/copy/yank/undo/jump*)= 纯编辑器,不列入 P5 验收。
+
 ---
 
 ## C. Overlay / 选择器（owner 见注）
@@ -158,15 +176,24 @@ legend:
 | 外部输入回调 | `onInputCallback` 存在时提交 | 调用 callback，不走 agent prompt | mount/input-submit | ⬜ |
 | 提交失败回滚 | 普通消息 prompt 抛错 | 移除对应 optimistic user message 并显示错误 | input-submit/render | ⬜ |
 
+> **⚠️ 已发现冗余坏味(给 slash 重写的证据)**：`/memory`、`/arminsayshi`、`/resume`、`/quit` 在 `executeBuiltinSlashCommand`(L165-180) **和** submit handler(L2808-2827)**两处都有分支**。submit handler 先调 `executeBuiltinSlashCommand` 并在命中时 return(L2782-2784)，故后者那 4 个分支**大概率是不可达死分支**。**slash 重写(UI02)须消除该重复**，验收时确认这 4 条仍只走一条路径(dispatch 表)、行为不变。
+
 ---
 
-## 待校全清单（v0 → v1，maintainer）
+## 代码已扫全 vs 待 maintainer 主观判断
 
-- [ ] 校对 A 的 33 条是否完整（是否有未走 `executeBuiltinSlashCommand` 的命令）
-- [ ] 补 B 中"双击 esc 动作"、editor 层键位（EditorAction）是否纳入验收
-- [ ] D 的渲染特性是否需要更细的验收标准（如"工具输出展开/折叠"逐态）
-- [ ] 校对 F 的 input-submit pipeline 是否完整，决定是否单独立卡或随 mount 保留
-- [ ] 标注每条的 **hybrid 决策**：纯搬(preserve-check) vs 重写(功能验收)
-- [ ] 扩展注册命令/键位的动态部分如何验收（依赖装了哪些扩展）
+**v0.5 已从代码确定**（无需你逐行翻 7960 行）：
+- ✅ A 的 33 条 = `executeBuiltinSlashCommand` 全分支(标准命令集完整;扩展命令走 `isExtensionCommand`)
+- ✅ B 的 22 个 AppAction + B-editor 的相关 EditorAction(其余 30 个纯编辑器已排除)
+- ✅ F 的 submit 管线 = `setupEditorSubmitHandler` 实读(persona 嵌入/bash/compaction queue/steer/附件/回滚)
+- ✅ 冗余坏味(4 条命令双处理)已标
+
+**仍需你主观拍板（→ v1）**：
+
+- [ ] **每条标 hybrid 决策**：纯搬(preserve-check) vs 重写(功能验收) —— 你最清楚哪些想借机改好
+- [ ] **D 渲染特性验收粒度**：是否要"工具输出展开/折叠""thinking 显隐"逐态(影响 UI04 范围)
+- [ ] **input-submit(F) 是否单独立卡**：随 mount 还是抽 `input-submit-controller`(它现 ~246 行且交叉 image/persona/bash/queue)
+- [ ] **扩展动态命令/键位的验收方式**：依赖装了哪些扩展，怎么定可复现的验收
+- [ ] **双击 esc 动作**(`getDoubleEscapeAction`)归 _shell/cancellation 还是配置项,验收口径
 
 > 校全后此表即 P5 验收门 + 维护者特性目录；每抽一个 controller，回填该 owner 名下功能的 verify 列。

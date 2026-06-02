@@ -3,16 +3,16 @@
 ```yaml
 plan_for: interactive-ui-review
 parent: ./README.md
-status: pre-implementation   # 卡已立，等 UI01 blocker 解除后开拆
+status: pre-implementation   # 卡已立，等 feature-inventory v1 后开拆
 ```
 
 ## 硬序
 
 ```
-UI01 (blocker: 录 TUI 基线)  ──► 必须先解
+UI01 (blocker: feature-inventory v0→v1)  ──► 必须先解
         │
         ▼
-UI05 改名定稿 ──► 各 controller 抽取（每抽一个：逐 tsc + V5-1 回放）
+UI05 改名定稿 ──► 各 controller 抽取（每抽一个：逐 tsc + V5-1 功能验收）
         │
         ▼
 UI02 七 controller + state 合一（沿用 P4 capability-context）
@@ -27,13 +27,13 @@ UI04 render 层切片（deferred，最后评估）
 
 | 序 | 切片 | 卡 | 自带状态 | 备注 |
 |----|------|----|---------|------|
-| 0 | **TUI characterization 基线** | UI01 | — | **blocker，先做** |
+| 0 | **feature-inventory v1** | UI01 | — | **blocker，先做：校全功能清单，而非录 characterization** |
 | 1 | `state/interactive-state` 合一 | UI02 | ~80 字段 | 先立状态容器，后续 controller 经 context 读 |
 | 2 | `image-pipeline-controller` | UI02 | 附件/剪贴板 | 状态最独立，先试水（类比 P4 的 bash-runner）|
-| 3 | `self-update-controller` | UI02 | — | 与渲染解耦，评估移出 interactive |
-| 4 | `extension-ui-controller` | UI02 | 扩展 widget/overlay | 体量大，独立 owner |
+| 3 | `self-update-controller` | UI02 | — | P5 先在 interactive 内部拆；有第二个 mode 消费者再上移 `_shell` |
+| 4 | `extension-ui-controller` | UI02 | 扩展 prompt/overlay/widget surfaces | 体量大，独立 owner；重写生命周期协调层，不把所有 surface 泛化成栈 |
 | 5 | `slash-dispatcher` | UI02 | skillCommands | 调度表 + handle*Command |
-| 6 | `model-overlay-controller` / `auth-controller` | UI02 | — | provider 配置边界（UI02 ⚠️）|
+| 6 | `model-overlay-controller` / `auth-controller` | UI02 | — | provider 配置归 auth/provider-config；model-overlay 只消费 |
 | 7 | `tree-overlay-controller`（UI05 改名）| UI05 | — | 经 facade 调 runtime 导航 |
 | 8 | `_shell/cancellation` | — | sigint/escape/shutdown | 跨 mode |
 | 9 | `interactive-mode.ts` → mount(<500 行) | — | 根容器 | 退壳 |
@@ -49,25 +49,25 @@ UI04 render 层切片（deferred，最后评估）
 |----|------|-----------|------|---------|
 | **state/interactive-state** | **纯搬** | ~80 字段机械合并到容器，不动逻辑；"行为不变"是定义性的 | 低 | preserve-check（符号/编译）|
 | **image-pipeline** | **纯搬** | 内聚、自带状态(attachments/clipboard)、无明显坏味；类比 P4 bash-runner 先试水 | 低 | preserve-check + 手测粘贴/拖入 |
-| **self-update** | **纯搬(逻辑) + 重定位** | 逻辑(performUpdate/compareVersion/restart)保持；**改进点是把它移出 `modes/interactive`**(非 TUI 专属，UI02)→ 落 `_shell`/`core/platform`，UI 仅留"提示"薄壳 | 低-中 | preserve-check(逻辑) + 确认移位后 `/update` 仍工作 |
-| **★ extension-ui** | **重写** | ~32 方法里 **6 套并行 show/hide/dismiss 三连**(selector/input/editor/confirm/notify/custom/error) + ad-hoc `hasActiveExtensionPrompt`/`dismissActiveExtensionPrompt`/`restoreEditorFocusIfPossible` = 分支重复坏味。重写为**统一 overlay 生命周期(栈/注册表)** | **中-高** | feature-acceptance：逐 overlay 类型验收(C 表 + E 表 extension widget)|
-| **★ slash-dispatcher** | **重写** | `executeBuiltinSlashCommand` = **188 行 if-else 链 / 33 个 `if (text===\"/x\")` 分支**(CLAUDE.md「分支爆炸是设计信号」)。重写为 **dispatch 表**，并按 F02 把**内置 + 扩展命令并到同一路径** | **中-高** | feature-acceptance：A 表 33 条命令逐条 |
-| **model-overlay** | **hybrid(偏写)** | 选择器/cycle 逻辑可搬；但 **provider 配置子簇**(ensureProviderConfigured/configureCustomProtocolProvider/refreshCurrentModel/selectConfiguredCustom)与 auth **边界重叠**(UI02)→ 边界重划属重写 | 中 | feature-acceptance：B/C 表 model 相关 + provider 配置 |
-| **auth** | **hybrid(偏搬)** | OAuth/apikey 流程逻辑搬；**解 custom-providers 耦合**(UI03 seam)属重写；与 model-overlay 的 provider 配置边界共定 | 中 | feature-acceptance：A 表 login/logout/apikey + C 表 oauth |
+| **self-update** | **纯搬(逻辑) + interactive 内部拆分** | 逻辑(performUpdate/compareVersion/restart)保持；先拆到 `modes/interactive` 内部 controller，隔离更新流程与渲染。暂**不**落 `core/platform`：self-update 依赖 package update UX、settings、spawn/restart、TUI 提示，不是 platform primitive；仅在 print/rpc/acp 出现第二消费者时再抽 `modes/_shell/update` | 低-中 | preserve-check(逻辑) + 确认 `/update`/`/reinstall` 仍工作 |
+| **★ extension-ui** | **重写生命周期协调层，组件接线以搬为主** | ~32 方法里多套 show/hide/dismiss + ad-hoc active prompt/focus restore 是重复坏味。重写目标不是“所有 overlay 统一成栈”，而是拆成：`PromptHost`(select/input/editor/confirm 单活动 prompt，替换旧 prompt 并恢复焦点)、`CustomOverlayHost`(保留 overlay handle/onHandle/options)、`PersistentSurfaceRegistry`(widget/footer/header/status keyed surface)、`EditorComponentAdapter`(`setEditorComponent` 保持 editor text/callback/shortcut/focus)。generic stack 仅在真实嵌套需求出现后再引入 | **中-高** | feature-acceptance：逐 prompt/overlay/surface 类型验收(C 表 + E 表 extension widget)|
+| **★ slash-dispatcher** | **重写（限内置命令 dispatch）** | `executeBuiltinSlashCommand` = **188 行 if-else 链 / 33 个 `if (text===\"/x\")` 分支**(CLAUDE.md「分支爆炸是设计信号」)。重写为 **dispatch 表**。输入提交管线（嵌入 `/persona`、bash、streaming steer、附件、extension command 立即执行）先独立验收，避免被 slash 重写误吞 | **中-高** | feature-acceptance：A 表 33 条命令 + F 表 input-submit pipeline |
+| **model-overlay** | **hybrid(偏搬)** | 选择器/cycle/model candidates 逻辑可搬；provider 配置不归它。它只在选择模型前调用 `auth/provider-config.ensureProviderConfiguredForSelection(model)`，配置成功后执行 model selection/status 更新 | 中 | feature-acceptance：B/C 表 model 选择与 thinking/provider→model overlay |
+| **auth / provider-config** | **hybrid(偏写)** | OAuth/apikey 流程逻辑搬；provider 配置子簇(`ensureProviderConfigured`/`configureCustomProtocolProvider`/`refreshCurrentModelForProvider`/`resolveProviderId`)归此，解 custom-providers 耦合(UI03 seam)。返回“provider/model 已可用”的结果，不直接拥有模型选择 overlay | 中 | feature-acceptance：A 表 login/logout/apikey + C 表 oauth/provider config |
 | **tree-overlay**(UI05) | **纯搬 + 改名 + facade 委托** | 选择器 UI 逻辑搬；**改名**消歧(UI05) + 经 facade 调 runtime 导航(不 deep import，UI03) | 低-中 | preserve-check(UI) + 确认 `/tree`/`/fork`/`/resume` 行为 |
 | **_shell/cancellation** | **hybrid(偏搬)** | sigint/escape/双击时序逻辑**保持**(易回归，不动)；**改进是跨 mode 复用**(print/rpc/acp 去重)→ 改写各 mode call site | 中 | preserve-check(逻辑) + 各 mode 取消 smoke |
 | **handleEvent/render**(UI04) | **deferred → 若动则重写** | 流式渲染核心，最敏感；本轮不动 | 高 | (deferred) 动时：D 表逐事件重度验收 |
 | **mount**(interactive-mode.ts) | **纯搬(退壳)** | 其余抽完后剩组合根，<500 行；行为保持 | 低 | preserve-check |
 
-**决策摘要**：纯搬 5（state/image/tree/mount + self-update 逻辑）· 重写 2（extension-ui / slash-dispatcher）· hybrid 3（model-overlay/auth/cancellation）· deferred 1（render）。
+**决策摘要**：纯搬 5（state/image/tree/mount + self-update 逻辑）· 重写 2（extension-ui lifecycle / slash-dispatcher dispatch）· hybrid 3（model-overlay/auth-provider-config/cancellation）· deferred 1（render）。
 
-> 重写集中在**两处真坏味**：slash 的 188 行 if-else、extension-ui 的 6 套重复 overlay 三连。其余以搬为主、在 seam(UI03)和边界(UI02)上做最小重写。**先做低风险纯搬热身(image/state)，再啃重写。**
+> 重写集中在**两处真坏味**：slash 的 188 行 if-else、extension-ui 的重复 prompt lifecycle。extension-ui 只重写生命周期协调，不把 widget/footer/header/status/editor replacement 误并进 overlay stack。其余以搬为主、在 seam(UI03)和边界(UI02)上做最小重写。**先做低风险纯搬热身(image/state)，再啃重写。**
 
 ## 验证记录（每切片回填）
 
-| 切片 | 落地 commit | V5-1 回放 | import 收缩(UI-G7) | 状态 |
+| 切片 | 落地 commit | V5-1 功能验收 | import 收缩(UI-G7) | 状态 |
 |------|------------|-----------|-------------------|------|
-| UI01 基线 | _待_ | — | — | ⬜ |
+| UI01 feature-inventory v1 | _待_ | — | — | ⬜ |
 | state 合一 | _待_ | _待_ | _待_ | ⬜ |
 | …（随抽取追加）| | | | |
 

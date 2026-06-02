@@ -43,18 +43,26 @@ core/platform/timings · core/theme-contract
 
 | 类别 | 例 | 处理 |
 |------|----|------|
-| **运行时能力泄漏** | mcp-config、persona-manager、model-resolver、custom-providers、compaction、session-manager、tools-manager | 经 `AgentSession` facade 或 controller 窄 context 暴露能力；UI 不再直接 import |
-| **本应在对应 controller 内** | slash-commands(→slash-dispatcher)、custom-providers(→auth/model-overlay) | 随该 controller 一起，且仍走 facade 而非 deep import |
+| **运行时能力泄漏** | mcp-config、persona-manager、model-resolver、custom-providers、compaction、session-manager、tools-manager | 收敛到**该 controller 自己的窄 context**（context 内部调这些模块函数）；UI 不再直接 import |
+| **本应在对应 controller 内** | slash-commands(→slash-dispatcher)、custom-providers(→auth/provider-config) | 随该 controller 一起，经 context 而非 deep import |
 | **纯 UI 原语，保留** | i18n `t`、keybindings、theme-contract、messages 格式化 | 留在 UI 层 |
 
-**UI-G7 强制**：每抽一个 controller，`interactive-mode.ts` 的 core 内部 import **只减不增**；新 controller 不得新增同类 deep import。
+### ⚠️ 收敛去向优先级（防"耦合搬家"）
+
+收敛**不是**把 18 条一律塞进 `AgentSession` facade —— 那会给 P4 刚瘦下来的 AgentSession（3550→2375）**重新加肥**，把 UI god 的耦合搬成 runtime god 的耦合。优先级：
+
+1. **首选：收敛到该 controller 的窄 context**。`mcp-config`/`persona-manager`/`model-resolver`/`custom-providers` 多是**模块级函数**，让 controller 的 `*ControllerContext` 内部去调它们，UI 与 mount 都不认识这些模块。
+2. **仅当能力本属会话生命周期**（已在 AgentSession 内、UI 只是读）才走 facade。
+3. **判据**：收敛后 `agent-session.ts` 的公共面**不应因 UI 重构而显著变大**；若某条收敛会迫使 AgentSession 新增一批 wrapper，说明它该进 controller context，不是 facade。
+
+**UI-G7 强制**：每抽一个 controller，`interactive-mode.ts` 的 core 内部 import **只减不增**；新 controller 不得新增同类 deep import，且**不得借收敛之名给 AgentSession facade 加肥**（优先 controller 窄 context）。
 
 ## Decision Criteria
 
 - 抽取后 `interactive-mode.ts` import 头逐步收缩；以 import diff 为证。
 - 运行时能力一律经 facade/context，不 deep import core 子模块。
 - controller 不平移泄漏 import（UI-G7）。
-- 收敛不改行为：V5-1 回放绿。
+- 收敛不改行为：V5-1 功能验收通过。
 
 ## References
 

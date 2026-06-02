@@ -103,9 +103,10 @@ legend:
 | 用户消息选择器 | `/fork` | 选分叉点 | tree-overlay | ⬜ |
 | OAuth 选择器 | `/login` `/logout` | 选 provider 登录/登出 | auth | ⬜ |
 | 登录对话框 | login 流 | 输入凭据/OAuth 跳转 | auth | ⬜ |
+| Provider 配置 | 模型选择或 provider 选择触发 | API key/base URL/custom model 配置归 auth/provider-config；model-overlay 只在配置成功后切换模型 | auth/provider-config + model-overlay | ⬜ |
 | 更新选项 | `/update` | 选更新方式 | self-update | ⬜ |
 | 重试选项 | 更新失败 | 重试/放弃 | self-update | ⬜ |
-| 扩展选择器/输入/编辑器/确认/通知/错误 | 扩展 API | 扩展驱动的 UI 表面 | extension-ui | ⬜ |
+| 扩展选择器/输入/编辑器/确认/通知/错误 | 扩展 API | 扩展驱动的 prompt/overlay 表面；select/input/editor 为单活动 prompt，custom overlay 保留 handle 语义，notify 不进入 overlay stack | extension-ui | ⬜ |
 
 ---
 
@@ -142,11 +143,29 @@ legend:
 
 ---
 
+## F. 输入提交管线（owner: mount/input-submit；slash-dispatcher 只处理内置 `/command` dispatch）
+
+| 特性 | 触发 | 预期 | owner | verify |
+|------|------|------|-------|--------|
+| 内置 slash 优先处理 | 输入 `/model` 等内置命令 | 命中内置命令后不继续走普通消息提交 | slash-dispatcher + input-submit | ⬜ |
+| 嵌入式 persona | 输入 `文本 /persona ...` | 执行 persona 切换，并把前置文本继续作为用户消息提交 | input-submit/persona | ⬜ |
+| bash 命令 | 输入 `!cmd` | 执行 bash，不作为普通消息；运行中已有 bash 时保留 editor 文本并提示 | input-submit/bash | ⬜ |
+| bash 排除上下文 | 输入 `!!cmd` | 执行 bash 且标记 excludeFromContext | input-submit/bash | ⬜ |
+| compaction 期间输入 | compaction 运行中输入普通文本 | 普通文本进入 compaction queue；extension command 仍立即执行 | input-submit/queue | ⬜ |
+| streaming steer | agent streaming 时输入文本 | 先乐观渲染用户消息，再以 steer 行为提交 | input-submit/queue | ⬜ |
+| streaming 附件 | streaming 时带附件/图片路径输入 | 处理图片；模型不支持图片时丢弃并提示 | input-submit + image-pipeline | ⬜ |
+| 普通附件提交 | idle 时带附件/图片路径输入 | 图片进入消息内容；提交后清空附件条并清理临时文件 | input-submit + image-pipeline | ⬜ |
+| 外部输入回调 | `onInputCallback` 存在时提交 | 调用 callback，不走 agent prompt | mount/input-submit | ⬜ |
+| 提交失败回滚 | 普通消息 prompt 抛错 | 移除对应 optimistic user message 并显示错误 | input-submit/render | ⬜ |
+
+---
+
 ## 待校全清单（v0 → v1，maintainer）
 
 - [ ] 校对 A 的 33 条是否完整（是否有未走 `executeBuiltinSlashCommand` 的命令）
 - [ ] 补 B 中"双击 esc 动作"、editor 层键位（EditorAction）是否纳入验收
 - [ ] D 的渲染特性是否需要更细的验收标准（如"工具输出展开/折叠"逐态）
+- [ ] 校对 F 的 input-submit pipeline 是否完整，决定是否单独立卡或随 mount 保留
 - [ ] 标注每条的 **hybrid 决策**：纯搬(preserve-check) vs 重写(功能验收)
 - [ ] 扩展注册命令/键位的动态部分如何验收（依赖装了哪些扩展）
 

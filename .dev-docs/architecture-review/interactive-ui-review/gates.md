@@ -22,19 +22,19 @@ applies_to:
 | UI-G4 功能正确（命门，接受重写）| [feature-inventory.md](./feature-inventory.md) **逐条验收通过**；有意符号/行为变更显式声明(GB-2)，**不**要求字节级/符号 diff 为空 | 功能清单逐条确认（UI01；非 characterization）|
 | UI-G5 No fake extraction | 新 controller 必须**持自己那片状态或藏真复杂度**；纯转发占位不算完成 | deletion test |
 | UI-G6 DIP isomorphism | 新 UI 文件有 P3 头，并登记进 `modes/AGENT.md` / `modes/CLAUDE.md`（及 `modes/interactive` 子目录索引）| P2/P3 review |
-| UI-G7 No deepened core leakage | 抽 controller 时，对 core 内部的直接 import 必须**收敛到 AgentSession facade / 窄 context**（UI03），禁止把泄漏的 import 平移进 controller 或新增同类泄漏 | import diff + grep |
+| UI-G7 No deepened core leakage | 抽 controller 时对 core 内部的直接 import 必须**优先收敛到该 controller 的窄 context**（仅会话生命周期能力才走 AgentSession facade，UI03）；禁止平移泄漏 import，且**不得借收敛之名给 AgentSession facade 加肥**（`agent-session.ts` 公共面不应因 UI 重构显著变大）| import diff + grep + AgentSession 公共符号 diff |
 
 ## Single-Owner Table（草案，随卡定稿）
 
 | Concern | Owner | Non-owner rule |
 |---------|-------|----------------|
 | `/command` 路由 + 各 handle*Command | `slash-dispatcher` | mount 只委托 |
-| model/thinking/provider overlay | `model-overlay-controller` | mount 只委托；provider 配置与 auth 边界见 UI02 |
-| API key / OAuth 流 | `auth-controller` | provider 凭据不散落到 model overlay |
+| model/thinking/provider overlay | `model-overlay-controller` | mount 只委托；provider credential/config 不归 model-overlay |
+| API key / OAuth / provider 配置 | `auth-controller` / `provider-config-controller` | provider 凭据、base URL、custom model config 不散落到 model overlay |
 | fork/switch/tree 选择器（UI 侧）| `tree-overlay-controller`（UI05 改名）| 与 P4 runtime `session-tree-controller` 不同层 |
 | 剪贴板/附件/图像管线 | `image-pipeline-controller` | 附件状态归此 |
-| 扩展 widget/overlay 表面 | `extension-ui-controller`（UI02 新增）| mount 不直接 set/clear extension widget |
-| 自更新/版本检查/重装 | `self-update-controller`（UI02 新增）| 与 TUI 渲染解耦 |
+| 扩展 prompt/overlay/widget surfaces | `extension-ui-controller`（UI02 新增）| mount 不直接 set/clear extension widget；persistent surfaces 不进 overlay stack |
+| 自更新/版本检查/重装 | `self-update-controller`（UI02 新增）| P5 先 interactive 内拆；非 `core/platform` owner |
 | Ctrl-C/D/Z + shutdown 信号 | `_shell/cancellation`（跨 mode）| mount 只接线 |
 | ~80 响应式状态字段 | `state/interactive-state` | 散落的 `this._` 收敛 |
 | 流式渲染事件路由（`handleEvent`）| 暂留 mount（UI04 deferred）| 不强行抽空壳 |
@@ -48,7 +48,7 @@ applies_to:
 3. 哪段代码变得可不 boot 整个 7960 行就单测？
 4. `interactive-mode.ts` 少了哪些 import？是否减少了对 core 内部的泄漏（UI-G7）？
 5. 新引入哪些 import，是否服从 GB-1 / UI-G7？
-6. 行为是否仍经同一公共路径 + 同一键序 可达，且 V5-1 回放绿？
+6. 行为是否仍经同一公共路径 + 同一键序 可达，且 V5-1 功能验收通过？
 
 ## Low-Performance Machine Policy
 

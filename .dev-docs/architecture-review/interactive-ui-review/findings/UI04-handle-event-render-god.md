@@ -19,13 +19,13 @@ status: deferred
 
 > 若现在就抽一个 RenderController 出来？
 
-**Result**：它会**带走半个 state/interactive-state**（所有流式/工具/loader 状态）和与 `addMessageToChat`/`renderSessionContext`/`subscribeToAgent` 的紧耦合。在 controller 们（slash/model/auth/…）和 state 容器都还没落地前抽它，**归属面未稳，易抽错**，且它是 V5-1 回放最敏感的部分（流式逐帧）。
+**Result**：它会**带走半个 state/interactive-state**（所有流式/工具/loader 状态）和与 `addMessageToChat`/`renderSessionContext`/`subscribeToAgent` 的紧耦合。在 controller 们（slash/model/auth/…）和 state 容器都还没落地前抽它，**归属面未稳，易抽错**，且它是 V5-1 功能验收最敏感的部分（流式逐帧）。
 
 ## Verdict — DEFERRED（先随 mount 保留，作为后续切片）
 
 **不在第一轮抽取**。理由：
 
-- 它是组合根的渲染心脏，应在 state 容器（`interactive-state`）+ 周边 controller 落地、UI01 基线稳固之后，再作为独立 **render 层**评估。
+- 它是组合根的渲染心脏，应在 state 容器（`interactive-state`）+ 周边 controller 落地、feature-inventory v1 稳固之后，再作为独立 **render 层**评估。
 - 过早抽取会与正在移动的状态归属打架，且最易引入流式回归。
 
 优先级：**低于** UI02 的 7 个 controller 与 state 合一。等其余切片稳定、`handleEvent` 依赖面收敛后再立专卡（render-controller）。

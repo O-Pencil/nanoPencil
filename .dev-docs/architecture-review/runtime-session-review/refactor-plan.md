@@ -5,7 +5,7 @@ review_id: runtime-session-review
 status: active
 created_at: 2026-06-01
 parent_phase: P4
-total_findings: 8
+total_findings: 12
 ```
 
 ## Priority Order
@@ -20,6 +20,10 @@ total_findings: 8
 | 6 | [AS06](./findings/AS06-agent-session-public-facade.md) | load-bearing | DIP, leverage | high / low | all slices |
 | 7 | [AS07](./findings/AS07-event-bridge-boundary.md) | load-bearing | DIP, locality | high / medium | AS06 |
 | 8 | [AS08](./findings/AS08-session-lifecycle-boundary.md) | load-bearing | DIP, locality, lifecycle | high / medium | AS06, AS07 |
+| 9 | [AS10](./findings/AS10-tree-navigation-boundary.md) | load-bearing | depth, locality, leverage | high / medium | AS06 |
+| 10 | [AS11](./findings/AS11-session-fork-boundary.md) | structural | locality, lifecycle | medium / low | AS08, AS10 |
+| 11 | [AS09](./findings/AS09-reload-runtime-boundary.md) | structural | DIP, lifecycle | medium / medium | AS06 |
+| 12 | [AS12](./findings/AS12-teardown-abort-boundary.md) | opinionated | locality | n/a (rejected) | none |
 
 ## Ordering Rationale
 
@@ -44,6 +48,10 @@ The context seam comes first because every controller extraction depends on it. 
 | AS06 | selected | modes, SDK, sub-agent runtime, and package barrels continue through `AgentSession` / `createAgentSession`; controller collaborators are not exported through public barrels |
 | AS07 | selected | `ExtensionEventBridge` owns extension event mapping and turn indexing only; `AgentSession` retains public subscribe, persistence ordering, retry/compaction ordering, and Soul post-turn recording |
 | AS08 | proposed | lifecycle extraction should start with `newSession()` / `switchSession()` choreography only; reload, tree navigation, branch summary, MCP/Soul refresh, and tool rebuild policy need separate ownership decisions |
+| AS10 | selected | `navigateTree()` (~206 lines, largest remaining method) owns real state (`_branchSummarySlot`) + behavior (tree positioning, branch summary, extension override) → extract `SessionTreeController` (incl. `abortBranchSummary` + the last abort slot). Next slice |
+| AS11 | grouped with AS08 | `fork()` is a session-identity change (new file), same shape as new/switch — implement under the lifecycle slice, not the tree controller |
+| AS09 | deferred | `reload()` is a runtime-rebuild + sequencing problem; only extract if paired with `_buildRuntime` as a `RuntimeRebuildController`. Lower priority than AS10 |
+| AS12 | rejected | `abort()`/`dispose()`/mode shutdown are thin sequencers over already-owned collaborators (RetryCoordinator/Agent/ExtensionRunner/Listeners); a teardown controller would own no state → RS-5 placeholder. Keep on `AgentSession` |
 
 ## Validation Checklist
 

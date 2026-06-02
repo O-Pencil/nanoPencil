@@ -1,20 +1,22 @@
 /**
  * [WHO]: Provides runCase() — builds an AgentSession with a cassette-backed model and captures print-mode stdout
- * [FROM]: Depends on core/runtime/sdk (createAgentSession), modes/print-mode (runPrintMode), @pencil-agent/ai (getModel), fetch-cassette, normalize
+ * [FROM]: Depends on core/runtime/sdk (createAgentSession), modes/print-mode (runPrintMode), @pencil-agent/ai (getModel, Model/Api types), fetch-cassette, normalize
  * [TO]: Consumed by tests/characterization/characterization.test.ts
  * [HERE]: tests/characterization/harness/run-case.ts — single-case characterization runner
  *
  * Option names { model, tools, cwd, sessionManager } are confirmed against core/runtime/sdk.ts.
- * ⚠️ ONE ASSUMPTION TO VERIFY on the first `RECORD=1` run (could not run in sandbox — perf):
- *   apiKey presence — createAgentSession resolves the provider key internally; in replay we set a
- *   dummy `<PROVIDER>_API_KEY` so streaming proceeds past the key check (fetch is mocked, so the
- *   value is irrelevant). If your provider reads a different env var, adjust ENV_KEY_BY_PROVIDER.
+ * apiKey resolution (VERIFIED): in record mode the real `<PROVIDER>_API_KEY` env flows via
+ *   auth-storage.getApiKey → getEnvApiKey(provider); in replay we set a dummy key (fetch mocked).
+ *   Provider name must be one getEnvApiKey() maps (e.g. "openai" → OPENAI_API_KEY) — there is no
+ *   generic ${PROVIDER}_API_KEY fallback. For an OpenAI-compatible third-party endpoint, set
+ *   provider:"openai" and put that endpoint's key in OPENAI_API_KEY, plus baseUrl/api in case.json.
  */
 
 import { cpSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getModel } from "@pencil-agent/ai";
+import type { Api, Model } from "@pencil-agent/ai";
 import { createAgentSession, createCodingTools } from "../../../core/runtime/sdk.js";
 import { SessionManager } from "../../../core/session/session-manager.js";
 import { runPrintMode } from "../../../modes/print-mode.js";
@@ -29,6 +31,40 @@ export interface CharacterizationCase {
   input: string;
   /** optional: relative path to a workspace seed dir under the case folder */
   workspace?: string;
+  /**
+   * Optional: OpenAI-compatible third-party endpoint (e.g. a proxy/self-hosted
+   * chat-completions base). When set, the model is synthesized directly instead
+   * of looked up in the static registry, so the harness can record against any
+   * chat-completions-compatible host. The key still resolves via `provider`
+   * (use "openai" → OPENAI_API_KEY).
+   */
+  baseUrl?: string;
+  /** Optional: API dialect for a custom `baseUrl`; defaults to "openai-completions". */
+  api?: string;
+}
+
+/**
+ * Resolve the model for a case. Built-in models come from the static registry
+ * (getModel). When the case supplies a `baseUrl`, synthesize a Model so the
+ * harness works with any OpenAI-compatible endpoint not in the registry.
+ */
+function buildModel(spec: CharacterizationCase): Model<Api> {
+  if (spec.baseUrl) {
+    return {
+      id: spec.model,
+      name: spec.model,
+      api: (spec.api ?? "openai-completions") as Api,
+      provider: spec.provider,
+      baseUrl: spec.baseUrl,
+      // compat omitted on purpose: auto-detected from baseUrl by the provider.
+      reasoning: false,
+      input: ["text"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 204800,
+      maxTokens: 65536,
+    } as Model<Api>;
+  }
+  return getModel(spec.provider, spec.model);
 }
 
 const ENV_KEY_BY_PROVIDER: Record<string, string> = {
@@ -88,7 +124,7 @@ export async function runCase(caseDir: string, spec: CharacterizationCase, recor
     cpSync(join(caseDir, spec.workspace), cwd, { recursive: true });
   }
 
-  const model = getModel(spec.provider, spec.model);
+  const model = buildModel(spec);
   const modelHost = (() => {
     try {
       return model?.baseUrl ? [new URL(model.baseUrl).host] : [];

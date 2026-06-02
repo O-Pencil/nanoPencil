@@ -1,5 +1,7 @@
 {
   "provider": "openai",
-  "model": "gpt-4o-mini",
+  "model": "mimo-v2.5-pro",
+  "baseUrl": "https://token-plan-cn.xiaomimimo.com/v1",
+  "api": "openai-completions",
   "input": "Reply with exactly: hello from characterization"
 }

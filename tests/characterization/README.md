@@ -32,7 +32,7 @@ tests/characterization/
 │   ├── normalize.ts        # diff 前洗掉易变量（时间戳/耗时/绝对路径/ANSI/uuid）
 │   └── run-case.ts         # 构 session(假模型) + runPrintMode + 捕获 stdout
 ├── cases/<name>/
-│   ├── case.json           # { provider, model, input, workspace? }
+│   ├── case.json           # { provider, model, input, workspace?, baseUrl?, api? }
 │   ├── cassette.json       # 录制产物（RECORD 生成）
 │   └── workspace/          # 沙箱种子文件（让 read/edit/bash 输出稳定）
 ├── __golden__/<name>.txt   # 归一化后的黄金 stdout
@@ -51,6 +51,14 @@ git commit -m "test(characterization): record pre-refactor golden baseline"
 # ② 把 harness + golden + cassette 带到重构分支，回放比对（零网络）
 npx vitest run --config tests/characterization/vitest.config.ts
 #   全绿 = 行为不变；红 = 回归（或大阶段二有意变更，--update 黄金 + 留理由）
+```
+
+**OpenAI 兼容第三方端点**（非静态注册表里的模型）：case.json 加 `baseUrl`（+ 可选 `api`，默认 `openai-completions`），`run-case.ts buildModel()` 见到 `baseUrl` 即直接合成 Model。key 仍按 `provider` 解析（无通用 `${PROVIDER}_API_KEY` 兜底），用 `provider:"openai"` → 把该端点 key 放进 `OPENAI_API_KEY`。例：
+
+```json
+{ "provider": "openai", "model": "mimo-v2.5-pro",
+  "baseUrl": "https://token-plan-cn.xiaomimimo.com/v1", "api": "openai-completions",
+  "input": "..." }
 ```
 
 Replay 前置条件：

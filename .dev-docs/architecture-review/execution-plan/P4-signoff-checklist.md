@@ -78,20 +78,58 @@ diff .dev-docs/architecture-review/baseline/public-api-symbols-main.txt \
 
 C4 当前**无法判定**，因为 `tests/characterization/cases/*/cassette.json` 与 `__golden__/` **从未在重构前的 `main` 上录过**（P0 标的"冻结 main cassette/golden"硬前置，受限沙箱当时跑不了）。报错 `missing cassette ...; run RECORD=1 on main first` 即此意 —— 不是回归，是**无基线可比**。
 
-**解除挂起的步骤（需真实 API key + 一次真模型调用，仅在 main 录一次）**：
+### 模型：走小米 MiMo（OpenAI 兼容端点）
+
+case.json 已配为 OpenAI 兼容第三方端点（不依赖静态注册表的 gpt-4o-mini）：
+
+| 字段 | 值 |
+|------|----|
+| provider | `openai`（决定 key 走 `OPENAI_API_KEY` —— 无通用 `${PROVIDER}_API_KEY` 兜底，必须用 getEnvApiKey 认得的名）|
+| api | `openai-completions` |
+| baseUrl | `https://token-plan-cn.xiaomimimo.com/v1` |
+| model | `mimo-v2.5-pro` |
+| key（env，**不入库**）| `OPENAI_API_KEY=tp-…`（小米 token-plan key）|
+
+harness 见到 `baseUrl` 即**直接合成 Model 对象**（`run-case.ts buildModel()`），`getModel()` 查不到 mimo 也没关系。
+
+### 关键：main 上是旧 harness，要叠加分支的 harness 再录
+
+main 的 `tests/characterization/` 还是旧版（无 `buildModel`、case.json 还是 gpt-4o-mini）。录制要的是 **main 的产品代码 + 分支的 harness**（test-only，不改产品行为），所以先把分支的 test 目录覆盖到 main 工作区（**不提交到 main**）：
 
 ```bash
-git checkout main          # 冻结基线点（P0 记 0eea985）
-RECORD=1 OPENAI_API_KEY=sk-... npx vitest run --config tests/characterization/vitest.config.ts
-#   ⚠️ 首次录:run-case.ts 顶部有 1 个待确认假设(apiKey env 注入 / createAgentSession 选项名)
-git add tests/characterization/cases/*/cassette.json tests/characterization/__golden__
-git commit -m "test(characterization): record pre-refactor golden baseline on main"
-git checkout refactor/arch-candidate-d
-git checkout main -- tests/characterization/cases tests/characterization/__golden__   # 带回 cassette+golden
-npx vitest run tests/characterization      # 回放:全绿=行为不变(C4 过);红=真回归
+# ── 1) 切到冻结 main（产品代码），装 main 的内部库 dist ──
+git checkout main
+npm run build:deps
+
+# ── 2) 用分支版 harness+case 覆盖 main 工作区（仅 test 文件，不 commit 到 main）──
+git checkout refactor/arch-candidate-d -- tests/characterization
+
+# ── 3) RECORD：真 key 走小米端点（provider=openai → 读 OPENAI_API_KEY）──
+export OPENAI_API_KEY=tp-你的小米key
+RECORD=1 npx vitest run --config tests/characterization/vitest.config.ts
+#   期望:2 case pass，生成 cases/*/cassette.json + __golden__/*.txt（main 行为快照）
+
+# ── 4) 拷出录制产物（不动 main 的提交）──
+rm -rf /tmp/cb && mkdir -p /tmp/cb
+cp -R tests/characterization/cases       /tmp/cb/cases
+cp -R tests/characterization/__golden__  /tmp/cb/__golden__
+
+# ── 5) 回分支，放回产物，重建分支 dist，回放比对 ──
+git checkout -f refactor/arch-candidate-d      # -f 丢弃 main 工作区里被覆盖的 test 文件
+cp -R /tmp/cb/cases/.       tests/characterization/cases/
+cp -R /tmp/cb/__golden__/.  tests/characterization/__golden__/
+npm run build:deps                              # 恢复分支 dist（被 main 的覆盖过）
+npx vitest run tests/characterization           # 回放:全绿=行为不变(C4 过);红=真回归
+
+# ── 6) C4 绿后，把基线提交到【分支】(绝不 commit 到 main) ──
+git add tests/characterization/cases tests/characterization/__golden__
+git commit -m "test(characterization): add pre-refactor golden baseline (recorded on main via MiMo)"
+git push origin refactor/arch-candidate-d
 ```
 
 只有 2 个 case（hello / read-file），录一次很快。**录制完成前 P4 不能 `completed`** —— 行为不变只证了结构半边（C3 符号），行为半边（C4）仍空。
+
+> ⚠️ key 是机密：只放进 `OPENAI_API_KEY` 环境变量，**绝不写进 case.json 或任何提交**。case.json 只存 provider/model/baseUrl/api。
 
 ---
 

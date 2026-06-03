@@ -427,6 +427,7 @@ export class InteractiveMode {
       requestRender: () => this.ui.requestRender(),
       showStatus: (message) => this.showStatus(message),
       getThemeName: () => this.settingsManager.getTheme(),
+      isEditorEmpty: () => !this.editor.getText().trim(),
       getEditorContainer: () => this.editorContainer,
       getAttachmentsContainer: () => this.attachmentsContainer,
       getEditorBuddyLayout: () => this.editorBuddyLayout,
@@ -3165,6 +3166,10 @@ export class InteractiveMode {
           this.streamingMessage = undefined;
         }
         this.pendingTools.clear();
+        // Clear any leftover attachments when the turn ends so the bar doesn't
+        // accumulate across conversations (sent attachments are already cleared
+        // at submit; this also covers images consumed via on-disk file reads).
+        this.imagePipeline.clearAttachments();
         this.setBuddyPetState("happy", "Done!", {
           resetTo: "idle",
           afterMs: 1800,

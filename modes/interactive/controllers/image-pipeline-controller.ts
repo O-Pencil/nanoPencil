@@ -38,6 +38,8 @@ export interface ImagePipelineContext {
   showStatus(message: string): void;
   /** Active theme name (for the attachments bar). */
   getThemeName(): string | undefined;
+  /** Whether the editor text is empty (so ↑ would browse history, not move the cursor). */
+  isEditorEmpty(): boolean;
   /** The editor shell container that hosts the attachments bar. */
   getEditorContainer(): Container;
   /** The container the attachments bar is mounted into. */
@@ -100,45 +102,63 @@ export class ImagePipelineController {
     this.enqueueClipboardPaste(() => this.loadClipboardImageIntoAttachments());
   }
 
+  /**
+   * Arrow/Delete handling for the attachments bar. The editor offers these keys
+   * here before its own cursor/history handling.
+   *
+   * Model: the bar sits above the editor.
+   * - ↑ from the editor (only when the editor is empty, so ↑ would otherwise browse
+   *   history) ENTERS the bar at the last (most recent) attachment.
+   * - Inside the bar, ↑/↓ move the selection; stepping past the top/bottom leaves
+   *   the bar (returns false so the editor handles the key, e.g. history).
+   * - Delete/Backspace removes the selected attachment.
+   * This works for a single attachment too (the previous code only intercepted when
+   * there were 2+, so one image could never be selected/deleted by keyboard).
+   */
   handleAttachmentKeyNavigation(data: string): boolean {
     if (this.attachments.length === 0) return false;
+    const inBar = this.selectedAttachmentIndex >= 0;
 
-    // Only intercept up/down arrows when multiple attachments need navigation.
-    // With a single attachment, let the editor handle arrows for history browsing.
-    if (this.attachments.length > 1) {
-      if (matchesKey(data, "up")) {
-        if (this.selectedAttachmentIndex < 0) {
-          this.selectedAttachmentIndex = 0;
-        } else if (this.selectedAttachmentIndex > 0) {
-          this.selectedAttachmentIndex--;
-        }
-        this.updateAttachmentsBar();
-        this.ctx.requestRender();
+    if (matchesKey(data, "up")) {
+      if (!inBar) {
+        // Only hijack ↑ from the editor when it's empty (otherwise the editor
+        // needs ↑ for cursor movement / history).
+        if (!this.ctx.isEditorEmpty()) return false;
+        this.setSelectedIndex(this.attachments.length - 1);
         return true;
       }
-
-      if (matchesKey(data, "down")) {
-        if (this.selectedAttachmentIndex < 0) {
-          this.selectedAttachmentIndex = 0;
-        } else if (this.selectedAttachmentIndex < this.attachments.length - 1) {
-          this.selectedAttachmentIndex++;
-        }
-        this.updateAttachmentsBar();
-        this.ctx.requestRender();
+      if (this.selectedAttachmentIndex > 0) {
+        this.setSelectedIndex(this.selectedAttachmentIndex - 1);
         return true;
       }
+      // At the top of the bar — leave it; let the editor handle ↑ (history).
+      this.setSelectedIndex(-1);
+      return false;
     }
 
-    // Delete/backspace only removes attachment when one is explicitly selected
-    if (
-      this.selectedAttachmentIndex >= 0 &&
-      (matchesKey(data, "delete") || matchesKey(data, "backspace"))
-    ) {
+    if (matchesKey(data, "down")) {
+      if (!inBar) return false; // not in the bar — editor handles ↓
+      if (this.selectedAttachmentIndex < this.attachments.length - 1) {
+        this.setSelectedIndex(this.selectedAttachmentIndex + 1);
+        return true;
+      }
+      // At the bottom — leave the bar.
+      this.setSelectedIndex(-1);
+      return false;
+    }
+
+    if (inBar && (matchesKey(data, "delete") || matchesKey(data, "backspace"))) {
       this.deleteAttachment(this.selectedAttachmentIndex);
       return true;
     }
 
     return false;
+  }
+
+  private setSelectedIndex(index: number): void {
+    this.selectedAttachmentIndex = index;
+    this.updateAttachmentsBar();
+    this.ctx.requestRender();
   }
 
   /**

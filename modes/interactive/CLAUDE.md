@@ -5,6 +5,7 @@
 Member List
 interactive-mode.ts: TUI orchestration hub, coordinates AgentSession with terminal UI, handles input/output loop; delegates clipboard/attachment/image work to controllers/image-pipeline-controller (P5 UI02)
 controllers/image-pipeline-controller.ts: ImagePipelineController, ImagePipelineContext, Attachment — clipboard image paste, attachments bar, attachment key navigation, text→image extraction; narrow ImagePipelineContext (getCwd/requestRender/showStatus/getThemeName/editor-shell containers), no InteractiveMode reference; extracted from interactive-mode.ts (P5 first slice, 纯搬)
+controllers/self-update-controller.ts: SelfUpdateController, SelfUpdateContext — npm-based update/reinstall workflow + startup version check (checkForNewVersion/showNewVersionNotification/handleUpdateCommand/handleReinstallCommand/checkAutoUpdateOnStartup + private update/retry/restart/waitForKeyPress); narrow SelfUpdateContext (chat container/render/settings/selector), no InteractiveMode reference; P5 keeps it inside modes/interactive (move to modes/_shell/update only on a 2nd mode consumer), 纯搬
 agent-loop-status.ts: formatAgentLoopStatusLines(), formats last agent loop result telemetry for /status
 footer-data-provider.ts: FooterDataProvider class, supplies model/session/branch footer information for the TUI status bar
 theme/theme.ts: Theme loader and definitions, ThemeJson schema validation, chalk-based color system

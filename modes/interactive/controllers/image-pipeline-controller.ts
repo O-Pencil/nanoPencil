@@ -38,8 +38,12 @@ export interface ImagePipelineContext {
   showStatus(message: string): void;
   /** Active theme name (for the attachments bar). */
   getThemeName(): string | undefined;
-  /** Whether the editor text is empty (so ↑ would browse history, not move the cursor). */
-  isEditorEmpty(): boolean;
+  /**
+   * Whether the editor is on a single line (empty or single-line text), so ↑ has
+   * nowhere to move the cursor up and would otherwise browse history — that's when
+   * ↑ should enter the attachments bar instead. Multi-line text keeps ↑ for the cursor.
+   */
+  isEditorSingleLine(): boolean;
   /** The editor shell container that hosts the attachments bar. */
   getEditorContainer(): Container;
   /** The container the attachments bar is mounted into. */
@@ -86,15 +90,22 @@ export class ImagePipelineController {
   }
 
   /**
-   * Discard all pending (unsent) attachments — used on session new/switch/fork/tree.
-   * Disk files are reclaimed by cleanupClipboardImages() at shutdown (same as sent images).
+   * Discard attachments and their on-disk clipboard files — used on turn end and
+   * session new/switch/fork/tree. Deleting the files (not just the in-memory list)
+   * is what prevents a new paste from reusing a stale path: the sequence restarts
+   * at 1, so without deleting `_np_clipboard_image_1.png` the next paste would
+   * collide with the previous image's filename. Sent images already live in the
+   * model context; the on-disk copies are only scratch.
    */
   clearAttachments(): void {
-    if (this.attachments.length === 0) return;
+    const hadAttachments = this.attachments.length > 0;
     this.attachments = [];
     this.selectedAttachmentIndex = -1;
     this.clipboardImageSeq = 0;
-    this.updateAttachmentsBar();
+    // Delete the saved clipboard image files even when the in-memory list was
+    // already emptied at submit (the files otherwise linger in cwd until shutdown).
+    this.cleanupClipboardImages();
+    if (hadAttachments) this.updateAttachmentsBar();
     this.ctx.requestRender();
   }
 
@@ -121,9 +132,9 @@ export class ImagePipelineController {
 
     if (matchesKey(data, "up")) {
       if (!inBar) {
-        // Only hijack ↑ from the editor when it's empty (otherwise the editor
-        // needs ↑ for cursor movement / history).
-        if (!this.ctx.isEditorEmpty()) return false;
+        // Only hijack ↑ when the editor is on a single line (↑ has nowhere to move
+        // the cursor up). Multi-line text keeps ↑ for cursor movement.
+        if (!this.ctx.isEditorSingleLine()) return false;
         this.setSelectedIndex(this.attachments.length - 1);
         return true;
       }

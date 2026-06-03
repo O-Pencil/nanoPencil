@@ -83,6 +83,19 @@ export class ImagePipelineController {
     return taken;
   }
 
+  /**
+   * Discard all pending (unsent) attachments — used on session new/switch/fork/tree.
+   * Disk files are reclaimed by cleanupClipboardImages() at shutdown (same as sent images).
+   */
+  clearAttachments(): void {
+    if (this.attachments.length === 0) return;
+    this.attachments = [];
+    this.selectedAttachmentIndex = -1;
+    this.clipboardImageSeq = 0;
+    this.updateAttachmentsBar();
+    this.ctx.requestRender();
+  }
+
   handleClipboardImagePaste(): void {
     this.enqueueClipboardPaste(() => this.loadClipboardImageIntoAttachments());
   }

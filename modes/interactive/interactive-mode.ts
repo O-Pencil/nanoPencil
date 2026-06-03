@@ -1399,6 +1399,7 @@ export class InteractiveMode {
           this.streamingComponent = undefined;
           this.streamingMessage = undefined;
           this.pendingTools.clear();
+          this.imagePipeline.clearAttachments();
 
           // Render any messages added via setup, or show empty session
           this.renderInitialMessages();
@@ -1412,6 +1413,7 @@ export class InteractiveMode {
           }
 
           this.chatContainer.clear();
+          this.imagePipeline.clearAttachments();
           this.addSessionNavigationBanner("Forked session");
           this.renderInitialMessages();
           this.editor.setText(result.selectedText);
@@ -1431,6 +1433,7 @@ export class InteractiveMode {
           }
 
           this.chatContainer.clear();
+          this.imagePipeline.clearAttachments();
           this.addSessionNavigationBanner("Navigated session tree");
           this.renderInitialMessages();
           if (result.editorText && !this.editor.getText().trim()) {
@@ -5375,6 +5378,7 @@ export class InteractiveMode {
     this.streamingComponent = undefined;
     this.streamingMessage = undefined;
     this.pendingTools.clear();
+    this.imagePipeline.clearAttachments();
 
     // Switch session via AgentSession (emits extension session events)
     await this.session.switchSession(sessionPath);
@@ -6337,6 +6341,7 @@ export class InteractiveMode {
     this.streamingComponent = undefined;
     this.streamingMessage = undefined;
     this.pendingTools.clear();
+    this.imagePipeline.clearAttachments();
 
     this.chatContainer.addChild(new Spacer(1));
     this.chatContainer.addChild(

@@ -117,19 +117,13 @@ import {
 import { getChangelogPath, parseChangelog } from "../../utils/changelog.js";
 import { copyToClipboard } from "../utils/clipboard.js";
 import {
-  extensionForImageMimeType,
-  readClipboardImage,
-} from "../utils/clipboard-image.js";
-import {
   ensureTool,
   getToolPath,
   prewarmTool,
 } from "../../core/platform/utils/tools-manager.js";
 import { printTimings, time } from "../../core/platform/timings.js";
-import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
-import { formatDimensionNote, resizeImage } from "../utils/image-resize.js";
 import { ArminComponent } from "./components/armin.js";
-import { AttachmentsBarComponent } from "./components/attachments-bar.js";
+import { ImagePipelineController } from "./controllers/image-pipeline-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
@@ -257,10 +251,6 @@ export interface InteractiveModeOptions {
 }
 
 export class InteractiveMode {
-  private static clipboardImageSeq = 0;
-  private clipboardImageFiles: string[] = [];
-  /** Ensures Enter cannot submit before an async clipboard read finishes populating attachments. */
-  private clipboardPastePromise: Promise<void> = Promise.resolve();
   private session: AgentSession;
   private ui: TUI;
   private chatContainer: Container;
@@ -378,11 +368,8 @@ export class InteractiveMode {
     undefined;
 
   // Attachments state (bytes = in-memory clipboard payload for reliable inline images)
-  private attachments: { path: string; mimeType?: string; bytes?: Uint8Array }[] =
-    [];
-  private selectedAttachmentIndex: number = -1;
   private attachmentsContainer: Container | undefined = undefined;
-  private attachmentsBar: AttachmentsBarComponent | undefined = undefined;
+  private imagePipeline!: ImagePipelineController;
 
   // Convenience accessors
   private get agent() {
@@ -435,6 +422,15 @@ export class InteractiveMode {
     );
     this.editorContainer.addChild(this.attachmentsContainer);
     this.editorContainer.addChild(this.editorBuddyLayout);
+    this.imagePipeline = new ImagePipelineController({
+      getCwd: () => this.session.cwd,
+      requestRender: () => this.ui.requestRender(),
+      showStatus: (message) => this.showStatus(message),
+      getThemeName: () => this.settingsManager.getTheme(),
+      getEditorContainer: () => this.editorContainer,
+      getAttachmentsContainer: () => this.attachmentsContainer,
+      getEditorBuddyLayout: () => this.editorBuddyLayout,
+    });
     this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
     this.footer.setAutoCompactEnabled(session.autoCompactionEnabled);
@@ -643,7 +639,7 @@ export class InteractiveMode {
     time("interactive.init.start");
 
     // Clean up stale clipboard image files from previous sessions
-    this.cleanupStaleClipboardFiles();
+    this.imagePipeline.cleanupStaleClipboardFiles();
 
     // Do not show changelog on startup; version check will prompt to update CLI when newer version exists
     this.fdPath = getToolPath("fd") ?? undefined;
@@ -1755,7 +1751,7 @@ export class InteractiveMode {
    */
   private remountEditorShell(): void {
     this.editorContainer.clear();
-    if (this.attachments.length > 0 && this.attachmentsContainer) {
+    if (this.imagePipeline.hasAttachments() && this.attachmentsContainer) {
       this.editorContainer.addChild(this.attachmentsContainer);
     }
     this.editorContainer.addChild(this.editorBuddyLayout);
@@ -2496,280 +2492,13 @@ export class InteractiveMode {
 
     // Handle clipboard image paste (triggered on Ctrl+V)
     this.defaultEditor.onPasteImage = () => {
-      this.handleClipboardImagePaste();
+      this.imagePipeline.handleClipboardImagePaste();
     };
 
     // Handle attachment navigation keys (arrow keys, delete)
     this.defaultEditor.onAttachmentKey = (data: string) => {
-      return this.handleAttachmentKeyNavigation(data);
+      return this.imagePipeline.handleAttachmentKeyNavigation(data);
     };
-  }
-
-  private handleClipboardImagePaste(): void {
-    this.enqueueClipboardPaste(() => this.loadClipboardImageIntoAttachments());
-  }
-
-  /**
-   * Chain clipboard work so rapid Enter after paste still waits for attachment registration.
-   */
-  private enqueueClipboardPaste(task: () => Promise<void>): void {
-    this.clipboardPastePromise = this.clipboardPastePromise
-      .catch(() => undefined)
-      .then(() => task())
-      .catch(() => undefined);
-  }
-
-  private async loadClipboardImageIntoAttachments(): Promise<void> {
-    try {
-      const image = await readClipboardImage();
-      if (!image) {
-        return;
-      }
-
-      // Save to project root for cleanup tracking and optional tool reads.
-      const ext = extensionForImageMimeType(image.mimeType) ?? "png";
-      const seq = ++InteractiveMode.clipboardImageSeq;
-      const fileName = `_np_clipboard_image_${seq}.${ext}`;
-      const filePath = path.join(this.session.cwd, fileName);
-      fs.writeFileSync(filePath, Buffer.from(image.bytes));
-
-      this.clipboardImageFiles.push(filePath);
-      // Keep a copy of bytes so submit uses memory (avoids races with disk/cleanup).
-      this.attachments.push({
-        path: filePath,
-        mimeType: image.mimeType,
-        bytes: Uint8Array.from(image.bytes),
-      });
-      this.updateAttachmentsBar();
-
-      // Show success feedback to user
-      const sizeKB = Math.round(image.bytes.length / 1024);
-      this.showStatus(`Image pasted (${sizeKB} KB). Press Enter to send, ↑↓ Del to manage.`);
-      this.ui.requestRender();
-    } catch (error: unknown) {
-      // Show user feedback for clipboard errors
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      this.showStatus(`Clipboard paste failed: ${errorMessage}`);
-      this.ui.requestRender();
-    }
-  }
-
-  private updateAttachmentsBar(): void {
-    if (!this.attachmentsContainer) return;
-
-    this.attachmentsContainer.clear();
-
-    if (this.attachments.length === 0) {
-      this.attachmentsBar = undefined;
-      this.editorContainer.removeChild(this.attachmentsContainer);
-      return;
-    }
-
-    // Ensure attachmentsContainer is placed before the editor in the layout
-    if (!this.editorContainer.children.includes(this.attachmentsContainer)) {
-      const editorIdx = this.editorContainer.children.indexOf(
-        this.editorBuddyLayout,
-      );
-      if (editorIdx >= 0) {
-        this.editorContainer.children.splice(
-          editorIdx,
-          0,
-          this.attachmentsContainer,
-        );
-      } else {
-        this.editorContainer.addChild(this.attachmentsContainer);
-      }
-    }
-
-    const themeName = this.settingsManager.getTheme();
-    const theme = getThemeByName(themeName || "dark") ?? getThemeByName("dark")!;
-    this.attachmentsBar = new AttachmentsBarComponent(
-      this.attachments,
-      this.selectedAttachmentIndex,
-      theme,
-    );
-    this.attachmentsContainer.addChild(this.attachmentsBar);
-  }
-
-  private deleteAttachment(index: number): void {
-    if (index < 0 || index >= this.attachments.length) return;
-
-    // Remove the attachment file
-    const attachment = this.attachments[index];
-    try {
-      fs.unlinkSync(attachment.path);
-    } catch {
-      // Ignore file deletion errors
-    }
-
-    this.attachments.splice(index, 1);
-    if (this.selectedAttachmentIndex >= this.attachments.length) {
-      this.selectedAttachmentIndex = this.attachments.length - 1;
-    }
-    this.updateAttachmentsBar();
-    this.ui.requestRender();
-  }
-
-  private handleAttachmentKeyNavigation(data: string): boolean {
-    if (this.attachments.length === 0) return false;
-
-    // Only intercept up/down arrows when multiple attachments need navigation.
-    // With a single attachment, let the editor handle arrows for history browsing.
-    if (this.attachments.length > 1) {
-      if (matchesKey(data, "up")) {
-        if (this.selectedAttachmentIndex < 0) {
-          this.selectedAttachmentIndex = 0;
-        } else if (this.selectedAttachmentIndex > 0) {
-          this.selectedAttachmentIndex--;
-        }
-        this.updateAttachmentsBar();
-        this.ui.requestRender();
-        return true;
-      }
-
-      if (matchesKey(data, "down")) {
-        if (this.selectedAttachmentIndex < 0) {
-          this.selectedAttachmentIndex = 0;
-        } else if (this.selectedAttachmentIndex < this.attachments.length - 1) {
-          this.selectedAttachmentIndex++;
-        }
-        this.updateAttachmentsBar();
-        this.ui.requestRender();
-        return true;
-      }
-    }
-
-    // Delete/backspace only removes attachment when one is explicitly selected
-    if (
-      this.selectedAttachmentIndex >= 0 &&
-      (matchesKey(data, "delete") || matchesKey(data, "backspace"))
-    ) {
-      this.deleteAttachment(this.selectedAttachmentIndex);
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Convert attachment files to ImageContent array for sending to the model.
-   * Prefers in-memory bytes (clipboard) then falls back to disk read.
-   */
-  private async processAttachmentFiles(
-    attachments: { path: string; mimeType?: string; bytes?: Uint8Array }[],
-  ): Promise<ImageContent[]> {
-    const supportedMime = new Set([
-      "image/png",
-      "image/jpeg",
-      "image/gif",
-      "image/webp",
-    ]);
-    const normalizedMime = (raw?: string): string | null => {
-      if (!raw) return null;
-      const base = raw.split(";")[0]?.trim().toLowerCase() ?? "";
-      return supportedMime.has(base) ? base : null;
-    };
-
-    const result: ImageContent[] = [];
-    for (const attachment of attachments) {
-      try {
-        let mimeType = normalizedMime(attachment.mimeType);
-        let base64Content: string;
-
-        if (attachment.bytes && attachment.bytes.length > 0) {
-          base64Content = Buffer.from(attachment.bytes).toString("base64");
-          if (!mimeType) {
-            mimeType = fs.existsSync(attachment.path)
-              ? await detectSupportedImageMimeTypeFromFile(attachment.path)
-              : null;
-          }
-        } else {
-          if (!fs.existsSync(attachment.path)) continue;
-          mimeType =
-            mimeType ??
-            (await detectSupportedImageMimeTypeFromFile(attachment.path));
-          if (!mimeType) continue;
-          base64Content = fs.readFileSync(attachment.path).toString("base64");
-        }
-
-        if (!mimeType) continue;
-
-        const resized = await resizeImage({
-          type: "image",
-          data: base64Content,
-          mimeType,
-        });
-        result.push({
-          type: "image",
-          mimeType: resized.mimeType,
-          data: resized.data,
-        });
-      } catch (error: unknown) {
-        // Skip unreadable attachment files but log the error for debugging
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.warn(`[Attachments] Skipped unreadable file ${attachment.path}: ${errorMessage}`);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Extract image file paths from text, read them as base64 ImageContent,
-   * and return the cleaned text with image references plus the image array.
-   */
-  private async extractImagesFromText(
-    text: string,
-  ): Promise<{ text: string; images: ImageContent[] }> {
-    const images: ImageContent[] = [];
-    const tmpDir = os.tmpdir();
-
-    // Match clipboard-pasted image paths (nanopencil-clipboard-UUID.ext)
-    const clipboardImagePattern = new RegExp(
-      `${tmpDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[/\\\\]nanopencil-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)`,
-      "gi",
-    );
-
-    const matches = text.match(clipboardImagePattern);
-    if (!matches) {
-      return { text, images };
-    }
-
-    let cleanedText = text;
-    for (const filePath of matches) {
-      try {
-        if (!fs.existsSync(filePath)) continue;
-
-        const mimeType =
-          await detectSupportedImageMimeTypeFromFile(filePath);
-        if (!mimeType) continue;
-
-        const content = fs.readFileSync(filePath);
-        const base64Content = content.toString("base64");
-
-        const resized = await resizeImage({
-          type: "image",
-          data: base64Content,
-          mimeType,
-        });
-        const dimensionNote = formatDimensionNote(resized);
-
-        images.push({
-          type: "image",
-          mimeType: resized.mimeType,
-          data: resized.data,
-        });
-
-        // Replace file path in text with a reference
-        const ref = dimensionNote
-          ? `[image: ${path.basename(filePath)}] ${dimensionNote}`
-          : `[image: ${path.basename(filePath)}]`;
-        cleanedText = cleanedText.replace(filePath, ref);
-      } catch {
-        // Skip files that can't be read
-      }
-    }
-
-    return { text: cleanedText, images };
   }
 
   private setupEditorSubmitHandler(): void {
@@ -2777,7 +2506,7 @@ export class InteractiveMode {
       text = text.trim();
       if (!text) return;
 
-      await this.clipboardPastePromise;
+      await this.imagePipeline.awaitPendingPaste();
 
       if (await this.executeBuiltinSlashCommand(text)) {
         return;
@@ -2879,17 +2608,12 @@ export class InteractiveMode {
         } as AgentMessage);
         this.ui.requestRender();
 
-        const steerResult = await this.extractImagesFromText(text);
+        const steerResult = await this.imagePipeline.extractImagesFromText(text);
         const steerImages = steerResult.images;
         let steerAttachmentPaths: string[] = [];
-        if (this.attachments.length > 0) {
-          const pendingAttachments = this.attachments.splice(0);
-          this.selectedAttachmentIndex = -1;
-          // Reset the sequence counter when all attachments are sent
-          InteractiveMode.clipboardImageSeq = 0;
-          this.updateAttachmentsBar();
-          this.ui.requestRender();
-          steerAttachmentPaths = pendingAttachments.map((a) => a.path);
+        const steerPendingAttachments = this.imagePipeline.takePendingAttachments();
+        if (steerPendingAttachments.length > 0) {
+          steerAttachmentPaths = steerPendingAttachments.map((a) => a.path);
         }
         // Drop images if model doesn't support them
         const steerModel = this.session.model;
@@ -2942,20 +2666,15 @@ export class InteractiveMode {
 
       // Extract images from clipboard-pasted file paths in the text
       const { text: processedText, images } =
-        await this.extractImagesFromText(text);
+        await this.imagePipeline.extractImagesFromText(text);
 
       // Collect and clear pending attachments upfront (ensures cleanup even on error).
       // Clipboard images are read as inline base64 AND saved to disk. The inline
       // base64 is sent directly in the user message so the model sees the image
       // regardless of whether it uses the `read` tool or not.
-      if (this.attachments.length > 0) {
-        const pendingAttachments = this.attachments.splice(0);
-        this.selectedAttachmentIndex = -1;
-        // Reset the sequence counter when all attachments are sent
-        InteractiveMode.clipboardImageSeq = 0;
-        this.updateAttachmentsBar();
-        this.ui.requestRender();
-        const inlineImages = await this.processAttachmentFiles(pendingAttachments);
+      const pendingAttachments = this.imagePipeline.takePendingAttachments();
+      if (pendingAttachments.length > 0) {
+        const inlineImages = await this.imagePipeline.processAttachmentFiles(pendingAttachments);
         images.push(...inlineImages);
       }
 
@@ -3014,7 +2733,7 @@ export class InteractiveMode {
       this.ui.requestRender();
 
       // Clean up temporary clipboard image files from project root
-      this.cleanupClipboardImages();
+      this.imagePipeline.cleanupClipboardImages();
     };
   }
 
@@ -3204,37 +2923,6 @@ export class InteractiveMode {
     }
 
     return false;
-  }
-
-  private cleanupStaleClipboardFiles(): void {
-    try {
-      const cwd = this.session.cwd;
-
-      // Clean legacy clipboard files from older implementations.
-      for (const entry of fs.readdirSync(cwd)) {
-        if (
-          /^_clipboard_\d+\.\w+$/.test(entry) ||
-          /^_np_clipboard_image_\d+\.\w+$/.test(entry)
-        ) {
-          try { fs.unlinkSync(path.join(cwd, entry)); } catch { /* best-effort */ }
-        }
-      }
-    } catch {
-      // Ignore errors during cleanup
-    }
-  }
-
-  private cleanupClipboardImages(): void {
-    for (const filePath of this.clipboardImageFiles) {
-      try {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch {
-        // Best-effort cleanup
-      }
-    }
-    this.clipboardImageFiles = [];
   }
 
   private subscribeToAgent(): void {
@@ -4060,7 +3748,7 @@ export class InteractiveMode {
     }
 
     // Clean up any clipboard image files before exit
-    this.cleanupClipboardImages();
+    this.imagePipeline.cleanupClipboardImages();
 
     // Wait for any pending renders to complete
     // requestRender() uses process.nextTick(), so we wait one tick

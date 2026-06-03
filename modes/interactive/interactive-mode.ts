@@ -427,7 +427,9 @@ export class InteractiveMode {
       requestRender: () => this.ui.requestRender(),
       showStatus: (message) => this.showStatus(message),
       getThemeName: () => this.settingsManager.getTheme(),
-      isEditorSingleLine: () => !this.editor.getText().includes("\n"),
+      isEditorCursorAtTop: () =>
+        this.editor.isCursorOnFirstVisualLine?.() ??
+        !this.editor.getText().includes("\n"),
       getEditorContainer: () => this.editorContainer,
       getAttachmentsContainer: () => this.attachmentsContainer,
       getEditorBuddyLayout: () => this.editorBuddyLayout,

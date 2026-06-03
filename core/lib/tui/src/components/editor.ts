@@ -284,6 +284,15 @@ export class Editor implements Component, Focusable {
 		return currentVisualLine === 0;
 	}
 
+	/**
+	 * Public: whether the cursor is on the first visual line (accounts for soft
+	 * wrapping). Consumers use this to decide whether ↑ should leave the editor
+	 * (e.g. into an attachments bar above it) rather than move the cursor.
+	 */
+	isCursorOnFirstVisualLine(): boolean {
+		return this.isOnFirstVisualLine();
+	}
+
 	private isOnLastVisualLine(): boolean {
 		const visualLines = this.buildVisualLineMap(this.lastWidth);
 		const currentVisualLine = this.findCurrentVisualLine(visualLines);

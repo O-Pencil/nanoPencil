@@ -46,6 +46,14 @@ export interface EditorComponent extends Component {
 	/** Add text to history for up/down navigation */
 	addToHistory?(text: string): void;
 
+	/**
+	 * Whether the cursor is on the first visual line (accounts for soft wrapping).
+	 * Used to decide whether ↑ should leave the editor (e.g. into an attachments
+	 * bar above it) instead of moving the cursor. Optional: callers fall back to a
+	 * single-line check when an editor implementation does not provide it.
+	 */
+	isCursorOnFirstVisualLine?(): boolean;
+
 	// =========================================================================
 	// Advanced text manipulation (optional)
 	// =========================================================================

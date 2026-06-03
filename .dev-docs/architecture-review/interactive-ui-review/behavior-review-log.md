@@ -27,7 +27,7 @@ why_needed: |
 | B1 | `/new` 后附件栏不清，残留旧图 | `handleClearCommand` 等清了 chat/streaming 却漏了附件 | `clearAttachments()` 接入所有会话切换点 (`2840395`) | ✅ |
 | B2 | 单张图时方向键无响应、无法删除 | 旧逻辑只在 `length>1` 才拦截 ↑↓；`selectedIndex` 卡在 -1 → Del 永不触发 | 重设计 `handleAttachmentKeyNavigation`：↑ 进栏/导航/Del (`4e67d7e`) | ✅ |
 | B3 | 一轮对话结束后附件栏不清，下次粘贴堆积成第二张 | 仅在 submit 清；"agent 读磁盘文件"路径下附件从未被消费 | `agent_end` 也清附件 (`4e67d7e`) | ✅ |
-| B4 | 有文本输入时无法用方向键选附件 | 进栏判据用 `isEditorEmpty`，有文本即拒 | 改判据为 `isEditorSingleLine`（单行即可进栏，多行保留光标）(`52c982f`) | ✅ |
+| B4 | 有文本输入时无法用方向键选附件（含多行） | 进栏判据先用 `isEditorEmpty` 再用 `isEditorSingleLine`，都拒多行 | 终版：`isEditorCursorAtTop`（光标在首视觉行即进栏）；为此给 tui `Editor` 加公共 `isCursorOnFirstVisualLine()`（`Editor.state` 为 private）(`52c982f` → tui 改动) | ✅ |
 | B5 | 对话结束栏清空但磁盘路径还在；新粘贴复用旧图文件名 | `clearAttachments`/`takePendingAttachments` 重置 seq→0 但不删盘文件 → 新粘贴复用 `_np_clipboard_image_1.png` | `clearAttachments` 同时删盘文件 (`52c982f`) | ✅ |
 
 > 非代码 bug（记录以备追溯）：图片"未送达模型" → 实为自定义端点/模型不支持视觉；nanoPencil 发送链正确（paste→attachment→userContent→provider image_url）。换支持视觉的端点后正常。
@@ -36,10 +36,10 @@ why_needed: |
 
 附件栏在编辑器**上方**。
 - **粘贴** → 图入栏（暂存，不阻塞输入）。可继续打字；**发送时随消息带走并清栈**。
-- **进栏选择**：编辑器单行时（空 或 单行文本）按 **↑** 进栏，选中最近一张；栏内 ↑/↓ 移动，**越界退栏**（键交还编辑器/历史）。多行文本时 ↑/↓ 归光标。
+- **进栏选择**：**光标在首视觉行**时按 **↑** 进栏，选中最近一张；栏内 ↑/↓ 移动，**越界退栏**（键交还编辑器/历史）。多行文本时 ↑ 先把光标移到首行，再按 ↑ 进栏 —— 不破坏多行编辑。
 - **删除**：栏内按 Del/Backspace 删选中。
 - **清空**：发送时清 + **一轮对话结束(agent_end)清** + 会话切换清；清栈**同时删盘文件**（避免文件名复用）。
-- 已知取舍：**多行文本时无法用 ↑ 进栏**（↑ 要给光标）；需先回到单行。`Editor.state` 为 private，"光标在顶行才进栏"的完整版需给 tui 加 `isCursorAtTop()`，按需再做。
+- 实现：经 tui `Editor.isCursorOnFirstVisualLine()`（新增公共方法，考虑软折行）+ context `isEditorCursorAtTop`（带单行回退）。多行已支持，无遗留取舍。
 
 ---
 

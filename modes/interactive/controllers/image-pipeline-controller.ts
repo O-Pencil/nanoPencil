@@ -39,11 +39,11 @@ export interface ImagePipelineContext {
   /** Active theme name (for the attachments bar). */
   getThemeName(): string | undefined;
   /**
-   * Whether the editor is on a single line (empty or single-line text), so ↑ has
-   * nowhere to move the cursor up and would otherwise browse history — that's when
-   * ↑ should enter the attachments bar instead. Multi-line text keeps ↑ for the cursor.
+   * Whether the editor cursor is on the first (visual) line, so ↑ has nowhere to
+   * move the cursor up — that's when ↑ should enter the attachments bar instead.
+   * With multi-line text below the first line, ↑ keeps moving the cursor.
    */
-  isEditorSingleLine(): boolean;
+  isEditorCursorAtTop(): boolean;
   /** The editor shell container that hosts the attachments bar. */
   getEditorContainer(): Container;
   /** The container the attachments bar is mounted into. */
@@ -132,9 +132,10 @@ export class ImagePipelineController {
 
     if (matchesKey(data, "up")) {
       if (!inBar) {
-        // Only hijack ↑ when the editor is on a single line (↑ has nowhere to move
-        // the cursor up). Multi-line text keeps ↑ for cursor movement.
-        if (!this.ctx.isEditorSingleLine()) return false;
+        // Only hijack ↑ when the cursor is on the first line (↑ has nowhere to move
+        // the cursor up). With multi-line text below, ↑ keeps moving the cursor and
+        // only enters the bar once the cursor reaches the top line.
+        if (!this.ctx.isEditorCursorAtTop()) return false;
         this.setSelectedIndex(this.attachments.length - 1);
         return true;
       }

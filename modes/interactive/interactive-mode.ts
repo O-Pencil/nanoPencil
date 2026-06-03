@@ -74,12 +74,8 @@ import type {
   ExtensionRunner,
   ExtensionUIContext,
   ExtensionUIDialogOptions,
-  ExtensionWidgetOptions,
 } from "../../core/extensions-host/index.js";
-import {
-  FooterDataProvider,
-  type ReadonlyFooterDataProvider,
-} from "./footer-data-provider.js";
+import { FooterDataProvider } from "./footer-data-provider.js";
 import { type AppAction, KeybindingsManager } from "../../core/platform/keybindings.js";
 import { createCompactionSummaryMessage } from "../../core/messages.js";
 import { listMCPServers, setMCPServerEnabled } from "../../core/mcp/mcp-config.js";
@@ -125,6 +121,7 @@ import { ArminComponent } from "./components/armin.js";
 import { ImagePipelineController } from "./controllers/image-pipeline-controller.js";
 import { SelfUpdateController } from "./controllers/self-update-controller.js";
 import { InteractiveState } from "./state/interactive-state.js";
+import { PersistentSurfaceRegistry } from "./controllers/extension-ui/persistent-surface-registry.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
@@ -279,24 +276,11 @@ export class InteractiveMode {
   private extensionEditor: ExtensionEditorComponent | undefined = undefined;
   private extensionTerminalInputUnsubscribers = new Set<() => void>();
 
-  // Extension widgets (components rendered above/below the editor)
-  private extensionWidgetsAbove = new Map<
-    string,
-    Component & { dispose?(): void }
-  >();
-  private extensionWidgetsBelow = new Map<
-    string,
-    Component & { dispose?(): void }
-  >();
   private widgetContainerAbove!: Container;
   private widgetContainerBelow!: Container;
   /** Pet column next to the input (right side, compact coding-agent style). */
   private buddySlot!: Container;
   private editorBuddyLayout!: EditorBuddyLayout;
-
-  // Custom footer from extension (undefined = use built-in footer)
-  private customFooter: (Component & { dispose?(): void }) | undefined =
-    undefined;
 
   // Header container that holds the built-in or custom header
   private headerContainer: Container;
@@ -304,14 +288,11 @@ export class InteractiveMode {
   // Built-in header (logo + keybinding hints + changelog)
   private builtInHeader: Component | undefined = undefined;
 
-  // Custom header from extension (undefined = use built-in header)
-  private customHeader: (Component & { dispose?(): void }) | undefined =
-    undefined;
-
   // Attachments state (bytes = in-memory clipboard payload for reliable inline images)
   private attachmentsContainer: Container | undefined = undefined;
   private imagePipeline!: ImagePipelineController;
   private selfUpdate!: SelfUpdateController;
+  private surfaces!: PersistentSurfaceRegistry;
 
   // Convenience accessors
   private get agent() {
@@ -384,6 +365,16 @@ export class InteractiveMode {
       setSkippedVersion: (version) => this.settingsManager.setSkippedVersion(version),
       setAutoUpdate: (mode) => this.settingsManager.setAutoUpdate(mode),
       showSelector: (title, options) => this.showExtensionSelector(title, options),
+    });
+    this.surfaces = new PersistentSurfaceRegistry({
+      requestRender: () => this.ui.requestRender(),
+      getUi: () => this.ui,
+      getWidgetContainerAbove: () => this.widgetContainerAbove,
+      getWidgetContainerBelow: () => this.widgetContainerBelow,
+      getHeaderContainer: () => this.headerContainer,
+      getBuiltInHeader: () => this.builtInHeader,
+      getFooter: () => this.footer,
+      getFooterDataProvider: () => this.footerDataProvider,
     });
     this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
@@ -660,7 +651,7 @@ export class InteractiveMode {
     this.ui.addChild(this.chatContainer);
     this.ui.addChild(this.pendingMessagesContainer);
     this.ui.addChild(this.statusContainer);
-    this.renderWidgets(); // Initialize with default spacer
+    this.surfaces.renderWidgets(); // Initialize with default spacer
     this.ui.addChild(this.widgetContainerAbove);
     this.ui.addChild(this.editorContainer);
     this.ui.addChild(this.widgetContainerBelow);
@@ -1440,81 +1431,6 @@ export class InteractiveMode {
     };
   }
 
-  /**
-   * Set extension status text in the footer.
-   */
-  private setExtensionStatus(key: string, text: string | undefined): void {
-    this.footerDataProvider.setExtensionStatus(key, text);
-    this.ui.requestRender();
-  }
-
-  /**
-   * Set an extension widget (string array or custom component).
-   */
-  private setExtensionWidget(
-    key: string,
-    content:
-      | string[]
-      | ((tui: TUI, thm: Theme) => Component & { dispose?(): void })
-      | undefined,
-    options?: ExtensionWidgetOptions,
-  ): void {
-    const placement = options?.placement ?? "aboveEditor";
-    const removeExisting = (
-      map: Map<string, Component & { dispose?(): void }>,
-    ) => {
-      const existing = map.get(key);
-      if (existing?.dispose) existing.dispose();
-      map.delete(key);
-    };
-
-    removeExisting(this.extensionWidgetsAbove);
-    removeExisting(this.extensionWidgetsBelow);
-
-    if (content === undefined) {
-      this.renderWidgets();
-      return;
-    }
-
-    let component: Component & { dispose?(): void };
-
-    if (Array.isArray(content)) {
-      // Wrap string array in a Container with Text components
-      const container = new Container();
-      for (const line of content.slice(0, InteractiveMode.MAX_WIDGET_LINES)) {
-        container.addChild(new Text(line, 1, 0));
-      }
-      if (content.length > InteractiveMode.MAX_WIDGET_LINES) {
-        container.addChild(
-          new Text(theme.fg("muted", "... (widget truncated)"), 1, 0),
-        );
-      }
-      component = container;
-    } else {
-      // Factory function - create component
-      component = content(this.ui, theme);
-    }
-
-    const targetMap =
-      placement === "belowEditor"
-        ? this.extensionWidgetsBelow
-        : this.extensionWidgetsAbove;
-    targetMap.set(key, component);
-    this.renderWidgets();
-  }
-
-  private clearExtensionWidgets(): void {
-    for (const widget of this.extensionWidgetsAbove.values()) {
-      widget.dispose?.();
-    }
-    for (const widget of this.extensionWidgetsBelow.values()) {
-      widget.dispose?.();
-    }
-    this.extensionWidgetsAbove.clear();
-    this.extensionWidgetsBelow.clear();
-    this.renderWidgets();
-  }
-
   private formatElapsedSeconds(ms: number): string {
     return `${(Math.max(0, ms) / 1000).toFixed(1)}s`;
   }
@@ -1578,9 +1494,9 @@ export class InteractiveMode {
     }
     this.ui.hideOverlay();
     this.clearExtensionTerminalInputListeners();
-    this.setExtensionFooter(undefined);
-    this.setExtensionHeader(undefined);
-    this.clearExtensionWidgets();
+    this.surfaces.setFooter(undefined);
+    this.surfaces.setHeader(undefined);
+    this.surfaces.clearWidgets();
     this.footerDataProvider.clearExtensionStatuses();
     this.footer.invalidate();
     this.setCustomEditorComponent(undefined);
@@ -1589,52 +1505,6 @@ export class InteractiveMode {
     if (this.state.loadingAnimation) {
       this.state.workingMessageOverride = undefined;
       this.updateWorkingMessage();
-    }
-  }
-
-  // Maximum total widget lines to prevent viewport overflow
-  private static readonly MAX_WIDGET_LINES = 10;
-
-  /**
-   * Render all extension widgets to the widget container.
-   */
-  private renderWidgets(): void {
-    if (!this.widgetContainerAbove || !this.widgetContainerBelow) return;
-    this.renderWidgetContainer(
-      this.widgetContainerAbove,
-      this.extensionWidgetsAbove,
-      true,
-      true,
-    );
-    this.renderWidgetContainer(
-      this.widgetContainerBelow,
-      this.extensionWidgetsBelow,
-      false,
-      false,
-    );
-    this.ui.requestRender();
-  }
-
-  private renderWidgetContainer(
-    container: Container,
-    widgets: Map<string, Component & { dispose?(): void }>,
-    spacerWhenEmpty: boolean,
-    leadingSpacer: boolean,
-  ): void {
-    container.clear();
-
-    if (widgets.size === 0) {
-      if (spacerWhenEmpty) {
-        container.addChild(new Spacer(1));
-      }
-      return;
-    }
-
-    if (leadingSpacer) {
-      container.addChild(new Spacer(1));
-    }
-    for (const component of widgets.values()) {
-      container.addChild(component);
     }
   }
 
@@ -1655,7 +1525,7 @@ export class InteractiveMode {
       this.buddyPet = null;
       this.buddyPetSpecies = null;
       this.buddySlot.clear();
-      this.renderWidgets();
+      this.surfaces.renderWidgets();
       return;
     }
 
@@ -1670,7 +1540,7 @@ export class InteractiveMode {
 
     this.buddySlot.clear();
     this.buddySlot.addChild(this.buddyPet);
-    this.renderWidgets();
+    this.surfaces.renderWidgets();
   }
 
   /**
@@ -1708,85 +1578,6 @@ export class InteractiveMode {
     this.ui.requestRender();
   }
 
-  /**
-   * Set a custom footer component, or restore the built-in footer.
-   */
-  private setExtensionFooter(
-    factory:
-      | ((
-          tui: TUI,
-          thm: Theme,
-          footerData: ReadonlyFooterDataProvider,
-        ) => Component & { dispose?(): void })
-      | undefined,
-  ): void {
-    // Dispose existing custom footer
-    if (this.customFooter?.dispose) {
-      this.customFooter.dispose();
-    }
-
-    // Remove current footer from UI
-    if (this.customFooter) {
-      this.ui.removeChild(this.customFooter);
-    } else {
-      this.ui.removeChild(this.footer);
-    }
-
-    if (factory) {
-      // Create and add custom footer, passing the data provider
-      this.customFooter = factory(this.ui, theme, this.footerDataProvider);
-      this.ui.addChild(this.customFooter);
-    } else {
-      // Restore built-in footer
-      this.customFooter = undefined;
-      this.ui.addChild(this.footer);
-    }
-
-    this.ui.requestRender();
-  }
-
-  /**
-   * Set a custom header component, or restore the built-in header.
-   */
-  private setExtensionHeader(
-    factory:
-      | ((tui: TUI, thm: Theme) => Component & { dispose?(): void })
-      | undefined,
-  ): void {
-    // Header may not be initialized yet if called during early initialization
-    if (!this.builtInHeader) {
-      return;
-    }
-
-    // Dispose existing custom header
-    if (this.customHeader?.dispose) {
-      this.customHeader.dispose();
-    }
-
-    // Find the index of the current header in the header container
-    const currentHeader = this.customHeader || this.builtInHeader;
-    const index = this.headerContainer.children.indexOf(currentHeader);
-
-    if (factory) {
-      // Create and add custom header
-      this.customHeader = factory(this.ui, theme);
-      if (index !== -1) {
-        this.headerContainer.children[index] = this.customHeader;
-      } else {
-        // If not found (e.g. builtInHeader was never added), add at the top
-        this.headerContainer.children.unshift(this.customHeader);
-      }
-    } else {
-      // Restore built-in header
-      this.customHeader = undefined;
-      if (index !== -1) {
-        this.headerContainer.children[index] = this.builtInHeader;
-      }
-    }
-
-    this.ui.requestRender();
-  }
-
   private addExtensionTerminalInputListener(
     handler: (data: string) => { consume?: boolean; data?: string } | undefined,
   ): () => void {
@@ -1819,7 +1610,7 @@ export class InteractiveMode {
       notify: (message, type) => this.showExtensionNotify(message, type),
       onTerminalInput: (handler) =>
         this.addExtensionTerminalInputListener(handler),
-      setStatus: (key, text) => this.setExtensionStatus(key, text),
+      setStatus: (key, text) => this.surfaces.setStatus(key, text),
       setWorkingMessage: (message) => {
         this.state.workingMessageOverride = message || undefined;
         if (this.state.loadingAnimation) {
@@ -1830,9 +1621,9 @@ export class InteractiveMode {
         }
       },
       setWidget: (key, content, options) =>
-        this.setExtensionWidget(key, content, options),
-      setFooter: (factory) => this.setExtensionFooter(factory),
-      setHeader: (factory) => this.setExtensionHeader(factory),
+        this.surfaces.setWidget(key, content, options),
+      setFooter: (factory) => this.surfaces.setFooter(factory),
+      setHeader: (factory) => this.surfaces.setHeader(factory),
       setTitle: (title) => this.ui.terminal.setTitle(title),
       custom: (factory, options) => this.showExtensionCustom(factory, options),
       pasteToEditor: (text) =>

@@ -67,7 +67,7 @@ main (冻结基线)
 | **P3** 扩展能力 | [P3-extension-sdk.md](./P3-extension-sdk.md) | B0b→B2 | extension-sdk(N) + 4-tier loader + S3 依赖反转 | P2 |
 | **P4** runtime 拆 | [P4-runtime-split.md](./P4-runtime-split.md) | B2 | agent-session 拆 7 子模块 + S2 + theme-contract | P2 |
 | **P5** UI 拆 | [P5-ui-split.md](./P5-ui-split.md) | B3 | interactive-mode 拆 controllers/state/mount | P2；建议串 P4 后 |
-| **P6** 入口体积 | [P6-entry-volume.md](./P6-entry-volume.md) | B4 | lazy 入口、browser→optional、ai lazy provider | P5 |
+| **P6** 入口体积 | [P6-entry-volume.md](./P6-entry-volume.md) + [entry-volume-review](../entry-volume-review/README.md) | B4 | lazy 入口、browser→optional、ai lazy provider | P5；评审可并行，代码等 P5 |
 | **P7** 体积重设计（可选）| [P7-bundle-redesign.md](./P7-bundle-redesign.md) | B5 | esbuild、models.generated 拆分 | P6 |
 | **P8** SDK 收窄（可选）| [P8-sdk-narrow.md](./P8-sdk-narrow.md) | B6 | index.ts 收窄、root barrel R 拆完 | P6 |
 | **签字合 main** | [sign-off-main.md](./sign-off-main.md) | — | 两阶段对比 + 签字 | 全部 |

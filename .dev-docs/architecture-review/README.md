@@ -55,6 +55,8 @@ architecture-review/
 ├── refactor-validation.md          重构验收（功能不变，溯源 llm-wiki；重构后填充）
 ├── findings/F01–F08                微观判断
 ├── runtime-session-review/         F01 子评审：AgentSession 等核心复杂拆分的专项评审模板
+├── interactive-ui-review/          F02/P5 子评审：InteractiveMode UI 拆分边界、验收与执行顺序
+├── entry-volume-review/            F06/F07/P6 子评审：入口形态、可选能力、provider lazy、包表面
 │
 └── evolution/                      ── 演进组 ──
     ├── PARP.md                      PARP 协议定义（原 target-arch §3.5 迁入）

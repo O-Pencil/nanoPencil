@@ -4,7 +4,7 @@
 phase: P6
 macro_stage: B        # 功能级
 batch: B4
-status: pending
+status: review-only-while-p5-active
 risk: medium
 depends_on: [P5]
 blocks: [P7, P8]
@@ -17,12 +17,15 @@ gate: gates.md#门组-b
 
 lazy 入口分派、browser opt-in、ai lazy provider；改善冷启动与安装体积，**不劣化功能**。
 
+> **专项评审**：P6 代码依赖 P5，但评审可并行推进。先按 [entry-volume-review/](../entry-volume-review/README.md) 从顶层 entry shape / optional capability / provider loading / package surface 重审；代码落地等 P5 entry 稳定。
+
 ## 进入条件
 
 - [ ] [P5 DoD](./P5-ui-split.md#验证门控dod) 全过
 
 ## 任务清单
 
+- [x] 建立 [entry-volume-review/](../entry-volume-review/README.md) 专项评审（EV01–EV05）
 - [ ] **F06**：`modes/index.ts` → facade（< 50 行）；`main.ts` → dynamic dispatch
 - [ ] **F07 短期**：browser `extensions/builtin/` → `extensions/optional/`（✦**Q2** opt-in 形态）
 - [ ] **F07 短期**：ai provider lazy import（按 `models.json` 配置）
@@ -38,6 +41,7 @@ lazy 入口分派、browser opt-in、ai lazy provider；改善冷启动与安装
 | V6-2 | 体积 | dist 体积 ≤ P0 基线 | GB-2 |
 | V6-3 | 功能 | 全 mode smoke（interactive/print/rpc/acp）通过 | GB-2 |
 | V6-4 | browser | 按 Q2 决议验证 opt-in 路径可用（注：builtin→optional 改变自动加载，属有意行为变更，按 GB-2 声明）| GB-2 |
+| V6-5 | P5 boundary | P6 code does not touch P5-active interactive files before P5 entry stability is confirmed | GB-1 |
 
 ## 提交建议
 

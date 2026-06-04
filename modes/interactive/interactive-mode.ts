@@ -102,6 +102,7 @@ import { TreeOverlayController } from "./controllers/tree-overlay-controller.js"
 import { SettingsOverlayController } from "./controllers/settings-overlay-controller.js";
 import { SlashDispatcherController } from "./controllers/slash-dispatcher-controller.js";
 import { InputSubmitController } from "./controllers/input-submit-controller.js";
+import { InterruptController } from "./controllers/interrupt-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -211,8 +212,6 @@ export class InteractiveMode {
   /** Consolidated render/turn UI state (streaming, tools, loaders, run timers, status, queues). */
   private readonly state = new InteractiveState();
 
-  private lastSigintTime = 0;
-  private lastEscapeTime = 0;
 
   // Skill commands: command name -> skill file path
   private skillCommands = new Map<string, string>();
@@ -257,6 +256,7 @@ export class InteractiveMode {
   private settingsOverlay!: SettingsOverlayController;
   private slashDispatcher!: SlashDispatcherController;
   private inputSubmit!: InputSubmitController;
+  private interrupt!: InterruptController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
   private customOverlay!: CustomOverlayHost;
@@ -680,6 +680,40 @@ export class InteractiveMode {
             this.state.optimisticUserMessages.shift();
           }
         },
+      },
+    });
+    this.interrupt = new InterruptController({
+      queue: {
+        isLoadingAnimationActive: () => !!this.state.loadingAnimation,
+        restoreQueuedMessagesWithAbort: () =>
+          void this.restoreQueuedMessagesToEditor({ abort: true }),
+      },
+      runtime: {
+        isStreaming: () => this.session.isStreaming,
+        isBashRunning: () => this.session.isBashRunning,
+        abortAgent: () => this.agent.abort(),
+        abortBash: () => this.session.abortBash(),
+      },
+      bash: {
+        isBashMode: () => this.isBashMode,
+        exitBashMode: () => {
+          this.editor.setText("");
+          this.isBashMode = false;
+          this.updateEditorBorderColor();
+        },
+      },
+      editor: {
+        getText: () => this.editor.getText(),
+        clearEditor: () => this.clearEditor(),
+      },
+      tree: {
+        getDoubleEscapeAction: () => this.settingsManager.getDoubleEscapeAction(),
+        showTreeSelector: () => this.treeOverlay.showTreeSelector(),
+        showForkSelector: () => this.treeOverlay.showForkSelector(),
+      },
+      lifecycle: {
+        requestShutdown: () => void this.shutdown(),
+        suspend: () => this.suspend(),
       },
     });
     this.syncBuddyPet();
@@ -2014,43 +2048,15 @@ export class InteractiveMode {
   private setupKeyHandlers(): void {
     // Set up handlers on defaultEditor - they use this.editor for text access
     // so they work correctly regardless of which editor is active
-    this.defaultEditor.onEscape = () => {
-      if (this.state.loadingAnimation) {
-        this.restoreQueuedMessagesToEditor({ abort: true });
-      } else if (this.session.isStreaming) {
-        this.agent.abort();
-      } else if (this.session.isBashRunning) {
-        this.session.abortBash();
-      } else if (this.isBashMode) {
-        this.editor.setText("");
-        this.isBashMode = false;
-        this.updateEditorBorderColor();
-      } else if (!this.editor.getText().trim()) {
-        // Double-escape with empty editor triggers /tree, /fork, or nothing based on setting
-        const action = this.settingsManager.getDoubleEscapeAction();
-        if (action !== "none") {
-          const now = Date.now();
-          if (now - this.lastEscapeTime < 500) {
-            if (action === "tree") {
-              this.treeOverlay.showTreeSelector();
-            } else {
-              this.treeOverlay.showForkSelector();
-            }
-            this.lastEscapeTime = 0;
-          } else {
-            this.lastEscapeTime = now;
-          }
-        }
-      }
-    };
+    this.defaultEditor.onEscape = () => this.interrupt.dispatchEscape();
 
     // Register app action handlers
-    this.defaultEditor.onAction("clear", () => this.handleCtrlC());
+    this.defaultEditor.onAction("clear", () => this.interrupt.handleCtrlC());
     this.defaultEditor.onAction("showResources", () =>
       this.handleShowResourcesCommand(),
     );
-    this.defaultEditor.onCtrlD = () => this.handleCtrlD();
-    this.defaultEditor.onAction("suspend", () => this.handleCtrlZ());
+    this.defaultEditor.onCtrlD = () => this.interrupt.handleCtrlD();
+    this.defaultEditor.onAction("suspend", () => this.interrupt.handleCtrlZ());
     this.defaultEditor.onAction("cycleThinkingLevel", () =>
       this.modelOverlay.cycleThinkingLevel(),
     );
@@ -2899,21 +2905,6 @@ export class InteractiveMode {
   // Key handlers
   // =========================================================================
 
-  private handleCtrlC(): void {
-    const now = Date.now();
-    if (now - this.lastSigintTime < 500) {
-      void this.shutdown();
-    } else {
-      this.clearEditor();
-      this.lastSigintTime = now;
-    }
-  }
-
-  private handleCtrlD(): void {
-    // Only called when editor is empty (enforced by CustomEditor)
-    void this.shutdown();
-  }
-
   /**
    * Gracefully shutdown the agent.
    * Emits shutdown event to extensions (with timeout guard), then exits.
@@ -2965,7 +2956,8 @@ export class InteractiveMode {
     await this.shutdown();
   }
 
-  private handleCtrlZ(): void {
+  /** TUI suspend mechanic (Ctrl-Z): stop the TUI, SIGTSTP the group, restore on SIGCONT. */
+  private suspend(): void {
     // Set up handler to restore TUI when resumed
     process.once("SIGCONT", () => {
       this.ui.start();

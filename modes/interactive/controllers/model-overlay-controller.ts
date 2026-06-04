@@ -1,8 +1,9 @@
 /**
  * [WHO]: Provides ModelOverlayController + ModelOverlayContext (ModelSessionPort/ModelCatalogPort/
  *        ModelSettingsPort/ProviderConfigPort/ModelOverlaySurface/ModelOverlayFooter) — interactive model selection
- * [FROM]: Depends on @pencil-agent/ai (Model/CycleModelError), agent-core (ThinkingLevel), @pencil-agent/tui (Component/TUI),
- *         core/model-resolver (resolveModelScope), components (Model/Provider/ScopedModels selectors)
+ * [FROM]: Depends on @pencil-agent/ai (Model), agent-core (ThinkingLevel), core/runtime/agent-session
+ *         (CycleModelError), @pencil-agent/tui (Component/TUI), core/model-resolver (resolveModelScope),
+ *         components (Model/Provider/ScopedModels selectors)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.modelOverlay`; /model, cycle keybindings,
  *       /scoped-models delegate here)
  * [HERE]: modes/interactive/controllers/model-overlay-controller.ts — P5 model-overlay slice (UI08, hybrid)
@@ -16,8 +17,8 @@
  */
 
 import type { Model } from "@pencil-agent/ai";
-import { CycleModelError } from "@pencil-agent/ai";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import { CycleModelError } from "../../../core/runtime/agent-session.js";
 import type { Component, TUI } from "@pencil-agent/tui";
 import type { ModelRegistry } from "../../../core/model-registry.js";
 import { resolveModelScope } from "../../../core/model-resolver.js";
@@ -39,7 +40,7 @@ export interface ModelSessionPort {
   setThinkingLevel(level: ThinkingLevel): void;
   cycleThinkingLevel(): string | undefined;
   getAvailableThinkingLevels(): string[];
-  getScopedModels(): ScopedModel[];
+  getScopedModels(): ReadonlyArray<ScopedModel>;
   setScopedModels(models: ScopedModel[]): void;
 }
 

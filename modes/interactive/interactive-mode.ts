@@ -22,11 +22,8 @@ import type {
   AutocompleteItem,
   EditorAction,
   EditorComponent,
-  EditorTheme,
   KeyId,
   MarkdownTheme,
-  OverlayHandle,
-  OverlayOptions,
   SlashCommand,
 } from "@pencil-agent/tui";
 import {
@@ -122,6 +119,8 @@ import { SelfUpdateController } from "./controllers/self-update-controller.js";
 import { InteractiveState } from "./state/interactive-state.js";
 import { PersistentSurfaceRegistry } from "./controllers/extension-ui/persistent-surface-registry.js";
 import { PromptHost } from "./controllers/extension-ui/prompt-host.js";
+import { CustomOverlayHost } from "./controllers/extension-ui/custom-overlay-host.js";
+import { EditorComponentAdapter } from "./controllers/extension-ui/editor-component-adapter.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
@@ -175,7 +174,6 @@ import {
   type ThemeColor,
   theme,
 } from "./theme/theme.js";
-import type { Theme } from "../../core/theme-contract.js";
 import {
   getAgentLoopArgumentCompletions,
   getLanguageArgumentCompletions,
@@ -288,6 +286,8 @@ export class InteractiveMode {
   private selfUpdate!: SelfUpdateController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
+  private customOverlay!: CustomOverlayHost;
+  private editorAdapter!: EditorComponentAdapter;
 
   // Convenience accessors
   private get agent() {
@@ -377,6 +377,25 @@ export class InteractiveMode {
       getEditor: () => this.editor as Component,
       getEditorBuddyLayout: () => this.editorBuddyLayout,
       getKeybindings: () => this.keybindings,
+      remountEditorShell: () => this.remountEditorShell(),
+    });
+    this.customOverlay = new CustomOverlayHost({
+      getEditor: () => this.editor,
+      getUi: () => this.ui,
+      getEditorContainer: () => this.editorContainer,
+      getKeybindings: () => this.keybindings,
+      remountEditorShell: () => this.remountEditorShell(),
+    });
+    this.editorAdapter = new EditorComponentAdapter({
+      getEditor: () => this.editor,
+      setEditor: (editor) => {
+        this.editor = editor;
+      },
+      getDefaultEditor: () => this.defaultEditor,
+      getEditorContainer: () => this.editorContainer,
+      getUi: () => this.ui,
+      getKeybindings: () => this.keybindings,
+      getAutocompleteProvider: () => this.autocompleteProvider,
       remountEditorShell: () => this.remountEditorShell(),
     });
     this.footerDataProvider = new FooterDataProvider(session.cwd);
@@ -1494,7 +1513,7 @@ export class InteractiveMode {
     this.surfaces.clearWidgets();
     this.footerDataProvider.clearExtensionStatuses();
     this.footer.invalidate();
-    this.setCustomEditorComponent(undefined);
+    this.editorAdapter.setComponent(undefined);
     this.defaultEditor.onExtensionShortcut = undefined;
     this.updateTerminalTitle();
     if (this.state.loadingAnimation) {
@@ -1620,14 +1639,14 @@ export class InteractiveMode {
       setFooter: (factory) => this.surfaces.setFooter(factory),
       setHeader: (factory) => this.surfaces.setHeader(factory),
       setTitle: (title) => this.ui.terminal.setTitle(title),
-      custom: (factory, options) => this.showExtensionCustom(factory, options),
+      custom: (factory, options) => this.customOverlay.show(factory, options),
       pasteToEditor: (text) =>
         this.editor.handleInput(`\x1b[200~${text}\x1b[201~`),
       setEditorText: (text) => this.editor.setText(text),
       getEditorText: () => this.editor.getText(),
       editor: (title, prefill) => this.promptHost.editor(title, prefill),
       openExternalEditor: (filePath) => this.openExistingFileInExternalEditor(filePath),
-      setEditorComponent: (factory) => this.setCustomEditorComponent(factory),
+      setEditorComponent: (factory) => this.editorAdapter.setComponent(factory),
       get theme() {
         return theme;
       },
@@ -1656,81 +1675,6 @@ export class InteractiveMode {
   }
 
   /**
-   * Set a custom editor component from an extension.
-   * Pass undefined to restore the default editor.
-   */
-  private setCustomEditorComponent(
-    factory:
-      | ((
-          tui: TUI,
-          theme: EditorTheme,
-          keybindings: KeybindingsManager,
-        ) => EditorComponent)
-      | undefined,
-  ): void {
-    // Save text from current editor before switching
-    const currentText = this.editor.getText();
-
-    this.editorContainer.clear();
-
-    if (factory) {
-      // Create the custom editor with tui, theme, and keybindings
-      const newEditor = factory(this.ui, getEditorTheme(), this.keybindings);
-
-      // Wire up callbacks from the default editor
-      newEditor.onSubmit = this.defaultEditor.onSubmit;
-      newEditor.onChange = this.defaultEditor.onChange;
-
-      // Copy text from previous editor
-      newEditor.setText(currentText);
-
-      // Copy appearance settings if supported
-      if (newEditor.borderColor !== undefined) {
-        newEditor.borderColor = this.defaultEditor.borderColor;
-      }
-      if (newEditor.setPaddingX !== undefined) {
-        newEditor.setPaddingX(this.defaultEditor.getPaddingX());
-      }
-
-      // Set autocomplete if supported
-      if (newEditor.setAutocompleteProvider && this.autocompleteProvider) {
-        newEditor.setAutocompleteProvider(this.autocompleteProvider);
-      }
-
-      // If extending CustomEditor, copy app-level handlers
-      // Use duck typing since instanceof fails across jiti module boundaries
-      const customEditor = newEditor as unknown as Record<string, unknown>;
-      if (
-        "actionHandlers" in customEditor &&
-        customEditor.actionHandlers instanceof Map
-      ) {
-        customEditor.onEscape = () => this.defaultEditor.onEscape?.();
-        customEditor.onCtrlD = () => this.defaultEditor.onCtrlD?.();
-        customEditor.onPasteImage = () => this.defaultEditor.onPasteImage?.();
-        customEditor.onExtensionShortcut = (data: string) =>
-          this.defaultEditor.onExtensionShortcut?.(data);
-        // Copy action handlers (clear, suspend, model switching, etc.)
-        for (const [action, handler] of this.defaultEditor.actionHandlers) {
-          (customEditor.actionHandlers as Map<string, () => void>).set(
-            action,
-            handler,
-          );
-        }
-      }
-
-      this.editor = newEditor;
-    } else {
-      // Restore default editor with text from custom editor
-      this.defaultEditor.setText(currentText);
-      this.editor = this.defaultEditor;
-    }
-
-    this.remountEditorShell();
-    this.ui.setFocus(this.editor as Component);
-    this.ui.requestRender();
-  }
-
-  /**
    * Show a notification for extensions.
    */
   private showExtensionNotify(
@@ -1751,86 +1695,6 @@ export class InteractiveMode {
       return this.settingsManager.getShowMemoryTrace();
     }
     return this.settingsManager.getShowWorkingTrace();
-  }
-
-  /** Show a custom component with keyboard focus. Overlay mode renders on top of existing content. */
-  private async showExtensionCustom<T>(
-    factory: (
-      tui: TUI,
-      theme: Theme,
-      keybindings: KeybindingsManager,
-      done: (result: T) => void,
-    ) =>
-      | (Component & { dispose?(): void })
-      | Promise<Component & { dispose?(): void }>,
-    options?: {
-      overlay?: boolean;
-      overlayOptions?: OverlayOptions | (() => OverlayOptions);
-      onHandle?: (handle: OverlayHandle) => void;
-    },
-  ): Promise<T> {
-    const savedText = this.editor.getText();
-    const isOverlay = options?.overlay ?? false;
-
-    const restoreEditor = () => {
-      this.remountEditorShell();
-      this.editor.setText(savedText);
-      this.ui.setFocus(this.editor);
-      this.ui.requestRender();
-    };
-
-    return new Promise((resolve, reject) => {
-      let component: Component & { dispose?(): void };
-      let closed = false;
-
-      const close = (result: T) => {
-        if (closed) return;
-        closed = true;
-        if (isOverlay) this.ui.hideOverlay();
-        else restoreEditor();
-        // Note: both branches above already call requestRender
-        resolve(result);
-        try {
-          component?.dispose?.();
-        } catch {
-          /* ignore dispose errors */
-        }
-      };
-
-      Promise.resolve(factory(this.ui, theme, this.keybindings, close))
-        .then((c) => {
-          if (closed) return;
-          component = c;
-          if (isOverlay) {
-            // Resolve overlay options - can be static or dynamic function
-            const resolveOptions = (): OverlayOptions | undefined => {
-              if (options?.overlayOptions) {
-                const opts =
-                  typeof options.overlayOptions === "function"
-                    ? options.overlayOptions()
-                    : options.overlayOptions;
-                return opts;
-              }
-              // Fallback: use component's width property if available
-              const w = (component as { width?: number }).width;
-              return w ? { width: w } : undefined;
-            };
-            const handle = this.ui.showOverlay(component, resolveOptions());
-            // Expose handle to caller for visibility control
-            options?.onHandle?.(handle);
-          } else {
-            this.editorContainer.clear();
-            this.editorContainer.addChild(component);
-            this.ui.setFocus(component);
-            this.ui.requestRender();
-          }
-        })
-        .catch((err) => {
-          if (closed) return;
-          if (!isOverlay) restoreEditor();
-          reject(err);
-        });
-    });
   }
 
   /**

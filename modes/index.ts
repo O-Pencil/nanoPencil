@@ -1,8 +1,10 @@
 /**
- * [WHO]: Barrel exports for all run modes
+ * [WHO]: Barrel exports for all run modes (InteractiveMode, runPrintMode, RpcClient, runRpcMode, runAcpMode + types)
  * [FROM]: Depends on interactive/, print/, rpc/, acp/ modes
- * [TO]: Consumed by main.ts
- * [HERE]: Mode selection entry point; consumed by main.ts
+ * [TO]: Consumed by root index.ts for programmatic SDK usage. NOT on the CLI dispatch path: as of P6/EV02,
+ *       main.ts dynamically imports each selected mode runner directly so startup only pays for the chosen
+ *       mode. This barrel remains the public SDK surface (do not narrow without Q3/P8).
+ * [HERE]: modes/index.ts — public SDK mode surface; the CLI bypasses it via dynamic import (P6/EV02)
  */
 
 export { InteractiveMode, type InteractiveModeOptions } from "./interactive/interactive-mode.js";

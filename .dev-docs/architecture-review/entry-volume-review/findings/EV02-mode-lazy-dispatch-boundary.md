@@ -46,3 +46,28 @@ main.ts parses args/config
 - interactive/print/rpc/acp CLI paths remain reachable.
 - Public imports remain compatible unless Q3 explicitly changes them.
 - Cold-start measurement is captured on a capable machine after implementation.
+
+## Resolution（landed 2026-06-04）
+
+Narrow entry-dispatch slice, **main.ts only** (EV-G9 reversibility — its own commit):
+
+- Removed the eager `import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js"`. That
+  single static import forced every CLI path (incl. `--print`/`--rpc`) to load the interactive TUI + all
+  P5 controllers + tui at startup.
+- The three dispatch branches now mirror the pre-existing ACP pattern:
+  - `rpc` → `const { runRpcMode } = await import("./modes/rpc/rpc-mode.js")`
+  - interactive → `const { InteractiveMode } = await import("./modes/interactive/interactive-mode.js")`
+  - print → `const { runPrintMode } = await import("./modes/print-mode.js")`
+- `modes/index.ts` **kept unchanged as the public SDK surface** — root `index.ts` re-exports it, so
+  narrowing it would break EV-G4 (Q3/P8 owns SDK narrowing). Only its P3 `[TO]` header was corrected
+  (now "consumed by root index.ts, not the CLI dispatch path").
+- `main.ts` still eagerly imports `modes/interactive/theme/theme.js` (a leaf needed for early theme init);
+  that does not pull `interactive-mode.ts`.
+
+Boundary rules honoured: no mode behavior / option-object change; no P5 controller code touched; ACP
+equivalent; root exports not narrowed.
+
+**Gate**: EV-G2 ✅ (static graph no longer eager-loads unselected modes) · EV-G3 (dispatch semantics
+identical; mode smoke pending capable machine) · EV-G4 ✅ (surface unchanged) · EV-G7 N/A · EV-G9 ✅
+(isolated commit) · EV-G10 ✅ (P3 corrected) · verify-quality green. EV-G8 cold-start/dist-size measurement
+deferred to maintainer machine (low-perf policy).

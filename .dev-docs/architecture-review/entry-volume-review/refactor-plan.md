@@ -3,12 +3,12 @@
 ```yaml
 plan_for: entry-volume-review
 parent: ./README.md
-status: review-only-while-p5-active
+status: active   # P5 structurally complete (2026-06-04); P6 code unblocked. EV02 landed.
 ```
 
 ## Execution Rule
 
-P6 code is blocked by P5. While P5 is active, only do review, conflict mapping, and decision prep.
+~~P6 code is blocked by P5.~~ **P5 结构完成（2026-06-04）** → P6 代码解锁。EV02（mode lazy dispatch）已落地；EV03 仍待 Q2；EV04 待 provider-matrix 议定。
 
 ```text
 P5 interactive entry stable
@@ -23,7 +23,7 @@ P5 interactive entry stable
 | Order | Slice | Finding | Code allowed now? | Notes |
 |-------|-------|---------|-------------------|-------|
 | 0 | P6 review scaffolding | EV01-EV05 | docs only | Safe parallel work while another Agent changes P5 |
-| 1 | mode lazy dispatch | EV02 / F06 | no, wait P5 | Touches `main.ts` + `modes/index.ts`; should be first code slice after P5 because it gives P6 leverage without package reshaping |
+| 1 ✅ done | mode lazy dispatch | EV02 / F06 | **landed 2026-06-04** | main.ts only: dropped the eager `modes/index.ts` barrel import; rpc/interactive/print dispatch branches now `await import(...)` the selected runner (ACP already did). modes/index.ts barrel kept as public SDK surface (root index.ts re-exports it; EV-G4 — not narrowed). Cold-start measurement pending capable machine. See EV02 §Resolution |
 | 2 | browser opt-in decision | EV03 / F07 / Q2 | docs only | Decide independent package vs lazy-extract vs status quo before moving files |
 | 3 | browser optional implementation | EV03 | no, after Q2 | Moving builtin→optional is intentional behavior change; needs fallback UX and docs |
 | 4 | ai provider lazy design | EV04 / F07 / Q6 | docs only | Split metadata/runtime concerns before touching `@pencil-agent/ai` |

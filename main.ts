@@ -34,7 +34,10 @@ import { AgentDirContext, defaultAgentDirContext, loadAgentDirContext } from "./
 import { time } from "./core/platform/timings.js";
 import { allTools } from "./core/tools/index.js";
 import { runMigrations, showDeprecationWarnings } from "./migrations.js";
-import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
+// Mode runners (interactive/print/rpc) are dynamically imported at dispatch time (P6/EV02)
+// so the CLI only pays for the selected mode — eager-importing the modes barrel here would
+// load the interactive TUI (+ all controllers) even for --print/--rpc. ACP already did this.
+// The barrel still exists for SDK consumers via root index.ts (public surface unchanged).
 import { initTheme, stopThemeWatcher, theme } from "./modes/interactive/theme/theme.js";
 import { exportFromFile } from "./core/export-html/index.js";
 import { profileCheckpoint } from "./utils/startup-profiler.js";
@@ -1060,6 +1063,7 @@ export async function main(args: string[]) {
 
 		await runAcpMode(session, { createSessionForCwd: createAcpSessionForCwd });
 	} else if (mode === "rpc") {
+		const { runRpcMode } = await import("./modes/rpc/rpc-mode.js");
 		await runRpcMode(session);
 	} else if (isInteractive) {
 		if (scopedModels.length > 0 && (parsed.verbose || !settingsManager.getQuietStartup())) {
@@ -1072,6 +1076,9 @@ export async function main(args: string[]) {
 			console.log(chalk.dim(`Model scope: ${modelList} ${chalk.gray("(Ctrl+P to cycle)")}`));
 		}
 
+		const { InteractiveMode } = await import(
+			"./modes/interactive/interactive-mode.js"
+		);
 		const mode = new InteractiveMode(session, {
 			migratedProviders,
 			modelFallbackMessage,
@@ -1082,6 +1089,7 @@ export async function main(args: string[]) {
 		});
 		await mode.run();
 	} else {
+		const { runPrintMode } = await import("./modes/print-mode.js");
 		const printResult = await runPrintMode(session, {
 			mode,
 			messages: parsed.messages,

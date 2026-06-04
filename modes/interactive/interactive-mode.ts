@@ -8,7 +8,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
+import type { AgentMessage } from "@pencil-agent/agent-core";
 import {
   type AssistantMessage,
   getOAuthProviders,
@@ -62,7 +62,6 @@ import {
 import {
   type AgentSession,
   type AgentSessionEvent,
-  CycleModelError,
   parseSkillBlock,
   type PromptOptions,
 } from "../../core/runtime/agent-session.js";
@@ -75,7 +74,6 @@ import { FooterDataProvider } from "./footer-data-provider.js";
 import { type AppAction, KeybindingsManager } from "../../core/platform/keybindings.js";
 import { createCompactionSummaryMessage } from "../../core/messages.js";
 import { listMCPServers, setMCPServerEnabled } from "../../core/mcp/mcp-config.js";
-import { resolveModelScope } from "../../core/model-resolver.js";
 import type { ResourceDiagnostic } from "../../core/platform/config/resource-loader.js";
 import {
   type SessionContext,
@@ -121,6 +119,7 @@ import { PersistentSurfaceRegistry } from "./controllers/extension-ui/persistent
 import { PromptHost } from "./controllers/extension-ui/prompt-host.js";
 import { CustomOverlayHost } from "./controllers/extension-ui/custom-overlay-host.js";
 import { EditorComponentAdapter } from "./controllers/extension-ui/editor-component-adapter.js";
+import { ModelOverlayController } from "./controllers/model-overlay-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -142,7 +141,6 @@ import {
   rawKeyHint,
 } from "./components/keybinding-hints.js";
 import { LoginDialogComponent } from "./components/login-dialog.js";
-import { ModelSelectorComponent } from "./components/model-selector.js";
 import {
   OAuthSelectorComponent,
   type ProviderSelectorItem,
@@ -150,7 +148,6 @@ import {
 import { formatSoulStats } from "./components/soul-stats.js";
 import { formatMemoryStats } from "./components/memory-stats.js";
 import { ProviderSelectorComponent } from "./components/provider-selector.js";
-import { ScopedModelsSelectorComponent } from "./components/scoped-models-selector.js";
 import { SessionSelectorComponent } from "./components/session-selector.js";
 import { SettingsSelectorComponent } from "./components/settings-selector.js";
 import { SkillInvocationMessageComponent } from "./components/skill-invocation-message.js";
@@ -289,6 +286,7 @@ export class InteractiveMode {
   private attachmentsContainer: Container | undefined = undefined;
   private imagePipeline!: ImagePipelineController;
   private selfUpdate!: SelfUpdateController;
+  private modelOverlay!: ModelOverlayController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
   private customOverlay!: CustomOverlayHost;
@@ -406,6 +404,57 @@ export class InteractiveMode {
     this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
     this.footer.setAutoCompactEnabled(session.autoCompactionEnabled);
+    this.modelOverlay = new ModelOverlayController({
+      modelSession: {
+        getModel: () => this.session.model,
+        setModel: (model) => this.session.setModel(model),
+        cycleModel: (direction) => this.session.cycleModel(direction),
+        getThinkingLevel: () => this.session.thinkingLevel,
+        setThinkingLevel: (level) => this.session.setThinkingLevel(level),
+        cycleThinkingLevel: () => this.session.cycleThinkingLevel(),
+        getAvailableThinkingLevels: () => this.session.getAvailableThinkingLevels(),
+        getScopedModels: () => this.session.scopedModels,
+        setScopedModels: (models) => this.session.setScopedModels(models),
+      },
+      modelCatalog: {
+        refresh: () => this.session.modelRegistry.refresh(),
+        getAvailable: () => this.session.modelRegistry.getAvailable(),
+        getAll: () => this.session.modelRegistry.getAll(),
+        find: (provider, id) => this.session.modelRegistry.find(provider, id),
+        appendOpenRouterModel: (id, opts) =>
+          this.session.modelRegistry.appendOpenRouterModel(id, opts),
+        getCredentialType: (provider) =>
+          this.session.modelRegistry.authStorage.get(provider)?.type,
+        getRegistry: () => this.session.modelRegistry,
+      },
+      modelSettings: {
+        getEnabledModels: () => this.settingsManager.getEnabledModels(),
+        setEnabledModels: (patterns) => this.settingsManager.setEnabledModels(patterns),
+        setDefaultModelAndProvider: (provider, id) =>
+          this.settingsManager.setDefaultModelAndProvider(provider, id),
+      },
+      providerConfig: {
+        ensureProviderConfiguredForSelection: (model) =>
+          this.ensureProviderConfiguredForSelection(model),
+        handleProviderSelectionFromSelector: (provider, done) =>
+          this.handleProviderSelectionFromSelector(provider, done),
+      },
+      surface: {
+        showSelector: (create) => this.showSelector(create),
+        showStatus: (message) => this.showStatus(message),
+        showError: (message) => this.showError(message),
+        promptInput: (title, placeholder, opts) =>
+          this.promptHost.input(title, placeholder, opts),
+        getUi: () => this.ui,
+      },
+      footer: {
+        invalidate: () => this.footer.invalidate(),
+        setAvailableProviderCount: (count) =>
+          this.footerDataProvider.setAvailableProviderCount(count),
+        updateEditorBorderColor: () => this.updateEditorBorderColor(),
+      },
+      playDaxnuts: () => this.handleDaxnuts(),
+    });
     this.syncBuddyPet();
 
     // Load hide thinking block setting
@@ -725,7 +774,7 @@ export class InteractiveMode {
     });
 
     // Initialize available provider count for footer display
-    await this.updateAvailableProviderCount();
+    await this.modelOverlay.updateAvailableProviderCount();
     time("interactive.firstInput.ready");
     printTimings();
   }
@@ -1772,22 +1821,22 @@ export class InteractiveMode {
     this.defaultEditor.onCtrlD = () => this.handleCtrlD();
     this.defaultEditor.onAction("suspend", () => this.handleCtrlZ());
     this.defaultEditor.onAction("cycleThinkingLevel", () =>
-      this.cycleThinkingLevel(),
+      this.modelOverlay.cycleThinkingLevel(),
     );
     this.defaultEditor.onAction("cycleModelForward", () =>
-      this.cycleModel("forward"),
+      this.modelOverlay.cycleModel("forward"),
     );
     this.defaultEditor.onAction("cycleModelBackward", () =>
-      this.cycleModel("backward"),
+      this.modelOverlay.cycleModel("backward"),
     );
 
     // Global debug handler on TUI (works regardless of focus)
     this.ui.onDebug = () => this.handleRenderDebugCommand();
     this.defaultEditor.onAction("selectModel", () =>
-      this.showProviderThenModelSelector(),
+      this.modelOverlay.showProviderThenModelSelector(),
     );
     this.defaultEditor.onAction("selectProviderThenModel", () =>
-      this.showProviderThenModelSelector(),
+      this.modelOverlay.showProviderThenModelSelector(),
     );
     this.defaultEditor.onAction("expandTools", () =>
       this.toggleToolOutputExpansion(),
@@ -2071,15 +2120,15 @@ export class InteractiveMode {
     },
     "/scoped-models": async (_t, clear) => {
       clear();
-      await this.showModelsSelector();
+      await this.modelOverlay.showModelsSelector();
     },
     "/model": async (t, clear) => {
       const searchTerm = t.startsWith("/model ") ? t.slice(7).trim() : undefined;
       clear();
-      await this.handleModelCommand(searchTerm);
+      await this.modelOverlay.handleModelCommand(searchTerm);
     },
     "/thinking": (t, clear) => {
-      this.handleThinkingCommand(t);
+      this.modelOverlay.handleThinkingCommand(t);
       clear();
     },
     "/agent-loop": (t, clear) => {
@@ -3159,39 +3208,6 @@ export class InteractiveMode {
     this.ui.requestRender();
   }
 
-  private cycleThinkingLevel(): void {
-    const newLevel = this.session.cycleThinkingLevel();
-    if (newLevel === undefined) {
-      this.showStatus("Current model does not support thinking");
-    } else {
-      this.footer.invalidate();
-      this.updateEditorBorderColor();
-      this.showStatus(`Thinking level: ${newLevel}`);
-    }
-  }
-
-  private handleThinkingCommand(text: string): void {
-    const arg = text.slice("/thinking".length).trim().toLowerCase();
-    const levels = this.session.getAvailableThinkingLevels();
-
-    if (!arg) {
-      this.showStatus(
-        `Thinking level: ${this.session.thinkingLevel} (available: ${levels.join(", ")})`,
-      );
-      return;
-    }
-
-    if (!levels.includes(arg as ThinkingLevel)) {
-      this.showStatus(`Unknown thinking level: ${arg} (available: ${levels.join(", ")})`);
-      return;
-    }
-
-    this.session.setThinkingLevel(arg as ThinkingLevel);
-    this.footer.invalidate();
-    this.updateEditorBorderColor();
-    this.showStatus(`Thinking level: ${this.session.thinkingLevel}`);
-  }
-
   private handleAgentLoopCommand(text: string): void {
     const arg = text.slice("/agent-loop".length).trim().toLowerCase();
     const choices = ["standard", "weak-model-compatible"] as const;
@@ -3217,44 +3233,6 @@ export class InteractiveMode {
     this.session.setAgentLoopFramework(normalized as any);
     this.footer.invalidate();
     this.showStatus(`Agent loop framework: ${this.session.agentLoopFramework}`);
-  }
-
-  private async cycleModel(direction: "forward" | "backward"): Promise<void> {
-    try {
-      const result = await this.session.cycleModel(direction);
-      if (result === undefined) {
-        const msg =
-          this.session.scopedModels.length > 0
-            ? "Only one model in scope"
-            : "Only one model available";
-        this.showStatus(msg);
-      } else {
-        this.footer.invalidate();
-        this.updateEditorBorderColor();
-        const thinkingStr =
-          result.model.reasoning && result.thinkingLevel !== "off"
-            ? ` (thinking: ${result.thinkingLevel})`
-            : "";
-        this.showStatus(
-          `Switched to ${result.model.name || result.model.id}${thinkingStr}`,
-        );
-      }
-    } catch (error) {
-      // Check if this is an OAuth provider that needs re-login
-      const errorMsg = error instanceof Error ? error.message : String(error);
-
-      // Check for CycleModelError with provider info
-      if (error instanceof CycleModelError && error.provider) {
-        const cred = this.session.modelRegistry.authStorage.get(error.provider);
-        if (cred?.type === "oauth" || error.code === "oauth_expired") {
-          this.showError(`${errorMsg}\nUse /login ${error.provider} to re-authenticate.`);
-        } else {
-          this.showError(errorMsg);
-        }
-      } else {
-        this.showError(errorMsg);
-      }
-    }
   }
 
   private toggleToolOutputExpansion(): void {
@@ -3798,21 +3776,6 @@ export class InteractiveMode {
     });
   }
 
-  private async handleModelCommand(searchTerm?: string): Promise<void> {
-    if (!searchTerm) {
-      this.showProviderThenModelSelector();
-      return;
-    }
-
-    const model = await this.findExactModelMatch(searchTerm);
-    if (model) {
-      await this.selectModelWithProviderEnsure(model);
-      return;
-    }
-
-    this.showModelSelector(searchTerm);
-  }
-
   /**
    * Handle /apikey command - allow user to update API key for current provider
    */
@@ -3933,7 +3896,7 @@ export class InteractiveMode {
                 title: `Set API key for ${provider}`,
               });
               this.session.modelRegistry.refresh();
-              this.showModelSelector(undefined, provider);
+              this.modelOverlay.showModelSelector(undefined, provider);
             })();
           },
           () => {
@@ -4108,7 +4071,7 @@ export class InteractiveMode {
       return;
     }
 
-    await this.applySelectedModel(model);
+    await this.modelOverlay.applySelectedModel(model);
   }
 
   private async handleProviderSelectionFromSelector(
@@ -4119,7 +4082,7 @@ export class InteractiveMode {
     this.ui.requestRender();
 
     if (!isCustomProtocolProvider(provider)) {
-      this.showModelSelector(undefined, provider);
+      this.modelOverlay.showModelSelector(undefined, provider);
       return;
     }
 
@@ -4139,302 +4102,7 @@ export class InteractiveMode {
   }
 
 
-  private async applySelectedModel(model: Model<any>): Promise<void> {
-    await this.session.setModel(model);
-    this.settingsManager.setDefaultModelAndProvider(model.provider, model.id);
-    this.footer.invalidate();
-    this.updateEditorBorderColor();
-    this.showStatus(`Model: ${model.id}`);
-    this.checkDaxnutsEasterEgg(model);
-  }
-
-  private async selectModelWithProviderEnsure(model: Model<any>): Promise<void> {
-    try {
-      const configured = await this.ensureProviderConfiguredForSelection(model);
-      if (!configured) {
-        this.showStatus("Configuration cancelled");
-        return;
-      }
-
-      this.session.modelRegistry.refresh();
-      const refreshedModel =
-        this.session.modelRegistry.find(model.provider, model.id) ?? model;
-      await this.applySelectedModel(refreshedModel);
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      if (error instanceof CycleModelError && error.provider) {
-        this.showError(`${errorMsg}\nUse /login ${error.provider} to re-authenticate.`);
-      } else {
-        this.showError(errorMsg);
-      }
-    }
-  }
-
-  private async findExactModelMatch(
-    searchTerm: string,
-  ): Promise<Model<any> | undefined> {
-    const term = searchTerm.trim();
-    if (!term) return undefined;
-
-    let targetProvider: string | undefined;
-    let targetModelId = "";
-
-    if (term.includes("/")) {
-      const parts = term.split("/", 2);
-      targetProvider = parts[0]?.trim().toLowerCase();
-      targetModelId = parts[1]?.trim().toLowerCase() ?? "";
-    } else {
-      targetModelId = term.toLowerCase();
-    }
-
-    if (!targetModelId) return undefined;
-
-    const models = await this.getModelCandidates();
-    const exactMatches = models.filter((item) => {
-      const idMatch = item.id.toLowerCase() === targetModelId;
-      const providerMatch =
-        !targetProvider || item.provider.toLowerCase() === targetProvider;
-      return idMatch && providerMatch;
-    });
-
-    return exactMatches.length === 1 ? exactMatches[0] : undefined;
-  }
-
-  private async getModelCandidates(): Promise<Model<any>[]> {
-    if (this.session.scopedModels.length > 0) {
-      return this.session.scopedModels.map((scoped) => scoped.model);
-    }
-
-    this.session.modelRegistry.refresh();
-    try {
-      // Use getAll() so all providers (including Qianfan, Fangzhou) appear in /model selector;
-      // user can configure key when selecting a model without auth
-      return this.session.modelRegistry.getAll();
-    } catch {
-      return [];
-    }
-  }
-
   /** Update the footer's available provider count from current model candidates */
-  private async updateAvailableProviderCount(): Promise<void> {
-    const models = await this.getModelCandidates();
-    const uniqueProviders = new Set(models.map((m) => m.provider));
-    this.footerDataProvider.setAvailableProviderCount(uniqueProviders.size);
-  }
-
-  private showModelSelector(
-    initialSearchInput?: string,
-    filterByProvider?: string,
-  ): void {
-    this.showSelector((done) => {
-      const selector = new ModelSelectorComponent(
-        this.ui,
-        this.session.model,
-        this.session.modelRegistry,
-        this.session.scopedModels,
-        async (model) => {
-          done();
-          await this.selectModelWithProviderEnsure(model);
-        },
-        () => {
-          done();
-          this.ui.requestRender();
-        },
-        initialSearchInput,
-        filterByProvider,
-        () => {
-          void (async () => {
-            done();
-            const modelId = await this.promptHost.input(
-              "Add OpenRouter model",
-              "Model id (e.g. x-ai/grok-4.20)",
-            );
-            if (!modelId?.trim()) {
-              this.showModelSelector(initialSearchInput, filterByProvider);
-              return;
-            }
-            const nameInput = await this.promptHost.input(
-              "Display name (optional)",
-              "Leave empty to use model id",
-              { initialValue: modelId.trim() },
-            );
-            if (nameInput === undefined) {
-              this.showModelSelector(initialSearchInput, filterByProvider);
-              return;
-            }
-            try {
-              this.session.modelRegistry.appendOpenRouterModel(modelId.trim(), {
-                name: nameInput.trim() || undefined,
-              });
-              this.showStatus(`Added OpenRouter model ${modelId.trim()}`);
-            } catch (error) {
-              this.showError(
-                error instanceof Error ? error.message : String(error),
-              );
-            }
-            this.showModelSelector(initialSearchInput, filterByProvider);
-          })();
-        },
-      );
-      return { component: selector, focus: selector };
-    });
-  }
-
-  private async showProviderThenModelSelector(): Promise<void> {
-    // Use getAll() so all providers (Qianfan, Fangzhou, etc.) appear; user can configure key when selecting
-    this.session.modelRegistry.refresh();
-    const allModels = this.session.modelRegistry.getAll();
-    const providers = [...new Set(allModels.map((m) => m.provider))].sort();
-    if (providers.length === 0) {
-      this.showStatus("No providers available");
-      return;
-    }
-    if (providers.length === 1) {
-      this.showModelSelector(undefined, providers[0]);
-      return;
-    }
-    this.showSelector((done) => {
-      const selector = new ProviderSelectorComponent(
-        providers,
-        this.session.model?.provider,
-        (provider) => {
-          void this.handleProviderSelectionFromSelector(provider, done);
-        },
-        () => {
-          done();
-          this.ui.requestRender();
-        },
-      );
-      return { component: selector, focus: selector };
-    });
-  }
-
-  private async showModelsSelector(): Promise<void> {
-    // Get all available models
-    this.session.modelRegistry.refresh();
-    const allModels = this.session.modelRegistry.getAvailable();
-
-    if (allModels.length === 0) {
-      this.showStatus("No models available");
-      return;
-    }
-
-    // Check if session has scoped models (from previous session-only changes or CLI --models)
-    const sessionScopedModels = this.session.scopedModels;
-    const hasSessionScope = sessionScopedModels.length > 0;
-
-    // Build enabled model IDs from session state or settings
-    const enabledModelIds = new Set<string>();
-    let hasFilter = false;
-
-    if (hasSessionScope) {
-      // Use current session's scoped models
-      for (const sm of sessionScopedModels) {
-        enabledModelIds.add(`${sm.model.provider}/${sm.model.id}`);
-      }
-      hasFilter = true;
-    } else {
-      // Fall back to settings
-      const patterns = this.settingsManager.getEnabledModels();
-      if (patterns !== undefined && patterns.length > 0) {
-        hasFilter = true;
-        const scopedModels = await resolveModelScope(
-          patterns,
-          this.session.modelRegistry,
-        );
-        for (const sm of scopedModels) {
-          enabledModelIds.add(`${sm.model.provider}/${sm.model.id}`);
-        }
-      }
-    }
-
-    // Track current enabled state (session-only until persisted)
-    const currentEnabledIds = new Set(enabledModelIds);
-    let currentHasFilter = hasFilter;
-
-    // Helper to update session's scoped models (session-only, no persist)
-    const updateSessionModels = async (enabledIds: Set<string>) => {
-      if (enabledIds.size > 0 && enabledIds.size < allModels.length) {
-        // Use current session thinking level, not settings default
-        const currentThinkingLevel = this.session.thinkingLevel;
-        const newScopedModels = await resolveModelScope(
-          Array.from(enabledIds),
-          this.session.modelRegistry,
-        );
-        this.session.setScopedModels(
-          newScopedModels.map((sm) => ({
-            model: sm.model,
-            thinkingLevel: sm.thinkingLevel ?? currentThinkingLevel,
-          })),
-        );
-      } else {
-        // All enabled or none enabled = no filter
-        this.session.setScopedModels([]);
-      }
-      await this.updateAvailableProviderCount();
-      this.ui.requestRender();
-    };
-
-    this.showSelector((done) => {
-      const selector = new ScopedModelsSelectorComponent(
-        {
-          allModels,
-          enabledModelIds: currentEnabledIds,
-          hasEnabledModelsFilter: currentHasFilter,
-        },
-        {
-          onModelToggle: async (modelId, enabled) => {
-            if (enabled) {
-              currentEnabledIds.add(modelId);
-            } else {
-              currentEnabledIds.delete(modelId);
-            }
-            currentHasFilter = true;
-            await updateSessionModels(currentEnabledIds);
-          },
-          onEnableAll: async (allModelIds) => {
-            currentEnabledIds.clear();
-            for (const id of allModelIds) {
-              currentEnabledIds.add(id);
-            }
-            currentHasFilter = false;
-            await updateSessionModels(currentEnabledIds);
-          },
-          onClearAll: async () => {
-            currentEnabledIds.clear();
-            currentHasFilter = true;
-            await updateSessionModels(currentEnabledIds);
-          },
-          onToggleProvider: async (_provider, modelIds, enabled) => {
-            for (const id of modelIds) {
-              if (enabled) {
-                currentEnabledIds.add(id);
-              } else {
-                currentEnabledIds.delete(id);
-              }
-            }
-            currentHasFilter = true;
-            await updateSessionModels(currentEnabledIds);
-          },
-          onPersist: (enabledIds) => {
-            // Persist to settings
-            const newPatterns =
-              enabledIds.length === allModels.length
-                ? undefined // All enabled = clear filter
-                : enabledIds;
-            this.settingsManager.setEnabledModels(newPatterns);
-            this.showStatus("Model selection saved to settings");
-          },
-          onCancel: () => {
-            done();
-            this.ui.requestRender();
-          },
-        },
-      );
-      return { component: selector, focus: selector };
-    });
-  }
-
   private showUserMessageSelector(): void {
     const userMessages = this.session.getUserMessagesForForking();
 
@@ -4704,7 +4372,7 @@ export class InteractiveMode {
             try {
               this.session.modelRegistry.authStorage.logout(providerId);
               this.session.modelRegistry.refresh();
-              await this.updateAvailableProviderCount();
+              await this.modelOverlay.updateAvailableProviderCount();
               this.showStatus(`Logged out of ${providerName}`);
             } catch (error: unknown) {
               this.showError(
@@ -4854,7 +4522,7 @@ export class InteractiveMode {
       // Success
       restoreEditor();
       this.session.modelRegistry.refresh();
-      await this.updateAvailableProviderCount();
+      await this.modelOverlay.updateAvailableProviderCount();
       this.showStatus(
         `Logged in to ${providerName}. Credentials saved to ${getAuthPath()}`,
       );
@@ -5682,15 +5350,6 @@ export class InteractiveMode {
     this.chatContainer.addChild(new Spacer(1));
     this.chatContainer.addChild(new DaxnutsComponent(this.ui));
     this.ui.requestRender();
-  }
-
-  private checkDaxnutsEasterEgg(model: { provider: string; id: string }): void {
-    if (
-      model.provider === "opencode" &&
-      model.id.toLowerCase().includes("kimi-k2.5")
-    ) {
-      this.handleDaxnuts();
-    }
   }
 
   private async handleBashCommand(

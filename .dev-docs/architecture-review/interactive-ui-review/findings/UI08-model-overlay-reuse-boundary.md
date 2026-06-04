@@ -92,3 +92,43 @@ Examples:
 - `/settings`, agent-loop, tree/session navigation, extension UI, and render-event ownership do not enter the controller.
 - Repointing provider configuration from mount to `auth/provider-config-controller` later only changes the `providerConfig` port implementation, not the model-overlay workflow.
 - Token neutrality, compatibility, data fallback, and performance neutrality gates still pass.
+
+## Resolution
+
+`modes/interactive/controllers/model-overlay-controller.ts` created (2026-06-04). 13 methods faithfully
+moved (纯搬, not 重写) — bodies unchanged except `this.<member>` → `this.ctx.<port>.<cap>`:
+
+| Method | Visibility | Trigger |
+|--------|-----------|---------|
+| `cycleThinkingLevel` | public | `cycleThinkingLevel` keybinding |
+| `handleThinkingCommand` | public | `/thinking` |
+| `cycleModel` | public | `cycleModelForward/Backward` keybindings |
+| `handleModelCommand` | public | `/model <term>` |
+| `showModelSelector` | public | `/model` no-match + provider-config path (mount) |
+| `showProviderThenModelSelector` | public | `/model` (no arg) + `selectModel` keybindings |
+| `showModelsSelector` | public | `/scoped-models` |
+| `updateAvailableProviderCount` | public | startup + auth flows (mount) |
+| `applySelectedModel` | public | selector onSelect + provider-config path (mount) |
+| `findExactModelMatch` / `getModelCandidates` / `selectModelWithProviderEnsure` / `checkDaxnutsEasterEgg` | private | internal to the above |
+
+Acceptance checks honoured:
+
+- **Port shape** = the required 7 groups: `modelSession` / `modelCatalog` / `modelSettings` /
+  `providerConfig` / `surface` / `footer` / `playDaxnuts` (the `onModelApplied` hook).
+- **Deletion test passes**: model/thinking/scoped mutation delegates to `AgentSession` via `modelSession`;
+  deleting the controller does not delete model switching, thinking clamp/persist, API-key validation,
+  default-model persistence, or model-select events.
+- **No reverse import** (UI-G1): controller does not import `interactive-mode.ts` / receive `InteractiveMode`.
+- **No service-locator** (UI-G2): named capability closures only. `ModelRegistry` is passed via
+  `modelCatalog.getRegistry()` because `ModelSelectorComponent` and `resolveModelScope` consume the
+  registry object directly — it is the catalog domain object, not the composition root, so allowed.
+- **provider-config stays outside**: `ensureProviderConfiguredForSelection` /
+  `handleProviderSelectionFromSelector` consumed through `providerConfig` port (currently mount impls);
+  repointing to `auth/provider-config-controller` later changes only that port impl.
+- **Import leakage reduced** (UI-G7): mount dropped `ModelSelectorComponent`,
+  `ScopedModelsSelectorComponent`, `resolveModelScope`, `CycleModelError`, `ThinkingLevel` imports;
+  `AgentSession` public surface unchanged (no facade fattening).
+- `interactive-mode.ts` 6231 → 5888 lines (−343 net; 390 method lines removed, 47 wiring added).
+- `npx tsx scripts/verify-quality.ts` PASS (no new cycles). tsc deferred to maintainer machine (low-perf policy).
+
+Status: implemented — pending maintainer tsc + feature-inventory verification.

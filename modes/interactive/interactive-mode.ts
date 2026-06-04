@@ -102,6 +102,7 @@ import { EditorComponentAdapter } from "./controllers/extension-ui/editor-compon
 import { ModelOverlayController } from "./controllers/model-overlay-controller.js";
 import { AuthProviderConfigController } from "./controllers/auth-provider-config-controller.js";
 import { TreeOverlayController } from "./controllers/tree-overlay-controller.js";
+import { SettingsOverlayController } from "./controllers/settings-overlay-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -124,13 +125,11 @@ import {
 } from "./components/keybinding-hints.js";
 import { formatSoulStats } from "./components/soul-stats.js";
 import { formatMemoryStats } from "./components/memory-stats.js";
-import { SettingsSelectorComponent } from "./components/settings-selector.js";
 import { SkillInvocationMessageComponent } from "./components/skill-invocation-message.js";
 import { ToolExecutionComponent } from "./components/tool-execution.js";
 import { UserMessageComponent } from "./components/user-message.js";
 import { RawText } from "./components/raw-text.js";
 import {
-  getAvailableThemes,
   getAvailableThemesWithPaths,
   getEditorTheme,
   getMarkdownTheme,
@@ -262,6 +261,7 @@ export class InteractiveMode {
   private authProviderConfig!: AuthProviderConfigController;
   private modelOverlay!: ModelOverlayController;
   private treeOverlay!: TreeOverlayController;
+  private settingsOverlay!: SettingsOverlayController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
   private customOverlay!: CustomOverlayHost;
@@ -499,6 +499,71 @@ export class InteractiveMode {
       },
       keybindings: this.keybindings,
       shutdown: () => this.shutdown(),
+    });
+    this.settingsOverlay = new SettingsOverlayController({
+      session: this.session,
+      settingsManager: this.settingsManager,
+      surface: {
+        showSelector: (create) => this.showSelector(create),
+        showStatus: (message) => this.showStatus(message),
+        showError: (message) => this.showError(message),
+        invalidateUi: () => this.ui.invalidate(),
+        requestRender: () => this.ui.requestRender(),
+        setShowHardwareCursor: (enabled) =>
+          this.ui.setShowHardwareCursor(enabled),
+        setClearOnShrink: (enabled) => this.ui.setClearOnShrink(enabled),
+      },
+      footer: {
+        setAutoCompactEnabled: (enabled) =>
+          this.footer.setAutoCompactEnabled(enabled),
+        setShowTokenStats: (enabled) => this.footer.setShowTokenStats(enabled),
+        invalidate: () => this.footer.invalidate(),
+      },
+      editor: {
+        setPaddingX: (padding) => {
+          this.defaultEditor.setPaddingX(padding);
+          if (
+            this.editor !== this.defaultEditor &&
+            this.editor.setPaddingX !== undefined
+          ) {
+            this.editor.setPaddingX(padding);
+          }
+        },
+        setAutocompleteMaxVisible: (maxVisible) => {
+          this.defaultEditor.setAutocompleteMaxVisible(maxVisible);
+          if (
+            this.editor !== this.defaultEditor &&
+            this.editor.setAutocompleteMaxVisible !== undefined
+          ) {
+            this.editor.setAutocompleteMaxVisible(maxVisible);
+          }
+        },
+        updateBorderColor: () => this.updateEditorBorderColor(),
+      },
+      render: {
+        setToolImagesEnabled: (enabled) => {
+          for (const child of this.chatContainer.children) {
+            if (child instanceof ToolExecutionComponent) {
+              child.setShowImages(enabled);
+            }
+          }
+        },
+        setAssistantThinkingHidden: (hidden) => {
+          for (const child of this.chatContainer.children) {
+            if (child instanceof AssistantMessageComponent) {
+              child.setHideThinkingBlock(hidden);
+            }
+          }
+          this.chatContainer.clear();
+        },
+        rebuildChatFromMessages: () => this.rebuildChatFromMessages(),
+      },
+      getHideThinkingBlock: () => this.state.hideThinkingBlock,
+      setHideThinkingBlock: (hidden) => {
+        this.state.hideThinkingBlock = hidden;
+      },
+      rebuildAutocomplete: () => this.setupAutocomplete(this.fdPath),
+      syncBuddyPet: () => this.syncBuddyPet(),
     });
     this.syncBuddyPet();
 
@@ -2160,7 +2225,7 @@ export class InteractiveMode {
 
   private readonly builtinSlashCommands: Record<string, SlashCommandHandler> = {
     "/settings": (_t, clear) => {
-      this.showSettingsSelector();
+      this.settingsOverlay.showSettingsSelector();
       clear();
     },
     "/apikey": async (_t, clear) => {
@@ -3649,181 +3714,6 @@ export class InteractiveMode {
     this.ui.requestRender();
   }
 
-  private showSettingsSelector(): void {
-    this.showSelector((done) => {
-      const selector = new SettingsSelectorComponent(
-        {
-          autoCompact: this.session.autoCompactionEnabled,
-          showImages: this.settingsManager.getShowImages(),
-          autoResizeImages: this.settingsManager.getImageAutoResize(),
-          blockImages: this.settingsManager.getBlockImages(),
-          enableSkillCommands: this.settingsManager.getEnableSkillCommands(),
-          steeringMode: this.session.steeringMode,
-          followUpMode: this.session.followUpMode,
-          transport: this.settingsManager.getTransport(),
-          agentLoopFramework:
-            this.settingsManager.getAgentLoopFramework() ?? "model-default",
-          thinkingLevel: this.session.thinkingLevel,
-          availableThinkingLevels: this.session.getAvailableThinkingLevels(),
-          currentTheme: this.settingsManager.getTheme() || "dark",
-          availableThemes: getAvailableThemes(),
-          hideThinkingBlock: this.state.hideThinkingBlock,
-          collapseChangelog: this.settingsManager.getCollapseChangelog(),
-          doubleEscapeAction: this.settingsManager.getDoubleEscapeAction(),
-          showHardwareCursor: this.settingsManager.getShowHardwareCursor(),
-          editorPaddingX: this.settingsManager.getEditorPaddingX(),
-          autocompleteMaxVisible:
-            this.settingsManager.getAutocompleteMaxVisible(),
-          quietStartup: this.settingsManager.getQuietStartup(),
-          clearOnShrink: this.settingsManager.getClearOnShrink(),
-          showTokenStats: this.settingsManager.getShowTokenStats(),
-          buddyEnabled: this.settingsManager.getBuddyEnabled(),
-          buddySpecies: this.settingsManager.getBuddySpecies(),
-          showWorkingTrace: this.settingsManager.getShowWorkingTrace(),
-          showMemoryTrace: this.settingsManager.getShowMemoryTrace(),
-          presenceEnabled: this.settingsManager.getPresenceEnabled(),
-        },
-        {
-          onAutoCompactChange: (enabled) => {
-            this.session.setAutoCompactionEnabled(enabled);
-            this.footer.setAutoCompactEnabled(enabled);
-          },
-          onShowImagesChange: (enabled) => {
-            this.settingsManager.setShowImages(enabled);
-            for (const child of this.chatContainer.children) {
-              if (child instanceof ToolExecutionComponent) {
-                child.setShowImages(enabled);
-              }
-            }
-          },
-          onAutoResizeImagesChange: (enabled) => {
-            this.settingsManager.setImageAutoResize(enabled);
-          },
-          onBlockImagesChange: (blocked) => {
-            this.settingsManager.setBlockImages(blocked);
-          },
-          onEnableSkillCommandsChange: (enabled) => {
-            this.settingsManager.setEnableSkillCommands(enabled);
-            this.setupAutocomplete(this.fdPath);
-          },
-          onSteeringModeChange: (mode) => {
-            this.session.setSteeringMode(mode);
-          },
-          onFollowUpModeChange: (mode) => {
-            this.session.setFollowUpMode(mode);
-          },
-          onTransportChange: (transport) => {
-            this.settingsManager.setTransport(transport);
-            this.session.agent.setTransport(transport);
-          },
-          onAgentLoopFrameworkChange: (framework) => {
-            const value = framework === "model-default" ? undefined : framework;
-            this.settingsManager.setAgentLoopFramework(value);
-            this.session.setAgentLoopFramework(value as any);
-            this.footer.invalidate();
-            this.showStatus(`Agent loop: ${this.session.agentLoopFramework}`);
-          },
-          onThinkingLevelChange: (level) => {
-            this.session.setThinkingLevel(level);
-            this.footer.invalidate();
-            this.updateEditorBorderColor();
-          },
-          onThemeChange: (themeName) => {
-            const result = setTheme(themeName, true);
-            this.settingsManager.setTheme(themeName);
-            this.ui.invalidate();
-            if (!result.success) {
-              this.showError(
-                `Failed to load theme "${themeName}": ${result.error}\nFell back to dark theme.`,
-              );
-            }
-          },
-          onThemePreview: (themeName) => {
-            const result = setTheme(themeName, true);
-            if (result.success) {
-              this.ui.invalidate();
-              this.ui.requestRender();
-            }
-          },
-          onHideThinkingBlockChange: (hidden) => {
-            this.state.hideThinkingBlock = hidden;
-            this.settingsManager.setHideThinkingBlock(hidden);
-            for (const child of this.chatContainer.children) {
-              if (child instanceof AssistantMessageComponent) {
-                child.setHideThinkingBlock(hidden);
-              }
-            }
-            this.chatContainer.clear();
-            this.rebuildChatFromMessages();
-          },
-          onCollapseChangelogChange: (collapsed) => {
-            this.settingsManager.setCollapseChangelog(collapsed);
-          },
-          onQuietStartupChange: (enabled) => {
-            this.settingsManager.setQuietStartup(enabled);
-          },
-          onShowWorkingTraceChange: (enabled) => {
-            this.settingsManager.setShowWorkingTrace(enabled);
-          },
-          onShowMemoryTraceChange: (enabled) => {
-            this.settingsManager.setShowMemoryTrace(enabled);
-          },
-          onDoubleEscapeActionChange: (action) => {
-            this.settingsManager.setDoubleEscapeAction(action);
-          },
-          onShowHardwareCursorChange: (enabled) => {
-            this.settingsManager.setShowHardwareCursor(enabled);
-            this.ui.setShowHardwareCursor(enabled);
-          },
-          onEditorPaddingXChange: (padding) => {
-            this.settingsManager.setEditorPaddingX(padding);
-            this.defaultEditor.setPaddingX(padding);
-            if (
-              this.editor !== this.defaultEditor &&
-              this.editor.setPaddingX !== undefined
-            ) {
-              this.editor.setPaddingX(padding);
-            }
-          },
-          onAutocompleteMaxVisibleChange: (maxVisible) => {
-            this.settingsManager.setAutocompleteMaxVisible(maxVisible);
-            this.defaultEditor.setAutocompleteMaxVisible(maxVisible);
-            if (
-              this.editor !== this.defaultEditor &&
-              this.editor.setAutocompleteMaxVisible !== undefined
-            ) {
-              this.editor.setAutocompleteMaxVisible(maxVisible);
-            }
-          },
-          onClearOnShrinkChange: (enabled) => {
-            this.settingsManager.setClearOnShrink(enabled);
-            this.ui.setClearOnShrink(enabled);
-          },
-          onShowTokenStatsChange: (enabled) => {
-            this.settingsManager.setShowTokenStats(enabled);
-            this.footer.setShowTokenStats(enabled);
-            this.ui.requestRender();
-          },
-          onBuddyEnabledChange: (enabled) => {
-            this.settingsManager.setBuddyEnabled(enabled);
-            this.syncBuddyPet();
-          },
-          onBuddySpeciesChange: (species) => {
-            this.settingsManager.setBuddySpecies(species);
-            this.syncBuddyPet();
-          },
-          onPresenceEnabledChange: (enabled) => {
-            this.settingsManager.setPresenceEnabled(enabled);
-          },
-          onCancel: () => {
-            done();
-            this.ui.requestRender();
-          },
-        },
-      );
-      return { component: selector, focus: selector.getSettingsList() };
-    });
-  }
   // =========================================================================
   // Command handlers
   // =========================================================================

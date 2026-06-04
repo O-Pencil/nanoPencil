@@ -87,7 +87,7 @@ dispatcher 要分发到 **33 个 handler**（散在未来的 model-overlay / aut
 
 ## 6. 边界（别吞 input-submit，UI06）
 
-`executeBuiltinSlashCommand` 由 submit handler（`setupEditorSubmitHandler`）调用。本刀**只改 dispatch 机制**，**不碰 submit 管线**（persona 嵌入 / bash / steer / 附件 / 死分支）。input-submit 是独立刀（UI06）。slash 重写不得越界。
+`SlashDispatcherController.execute()` 由 submit handler（`setupEditorSubmitHandler`）调用。slash 刀**只改 dispatch 机制**，**不碰 submit 管线**（persona 嵌入 / bash / steer / 附件 / 死分支）。input-submit 是独立刀（UI06），实施前专项评审见 [input-submit-analysis.md](./input-submit-analysis.md)。slash 重写不得越界。
 
 ---
 
@@ -109,7 +109,7 @@ dispatcher 要分发到 **33 个 handler**（散在未来的 model-overlay / aut
 
 **判决**：瞄准的**分支爆炸**消除（33→0，O(n)→O(1)），命令体逐条保留,唯一行为变更（/export 归一化）已 GB-2 声明,未引 service-locator/新坏味 → **重写成立**。
 
-> 边界守恒：submit handler（`setupEditorSubmitHandler`）里的 5 个 `if (text === "/…")`（persona 嵌入 + /memory,/arminsayshi,/resume,/quit 死分支）**未触碰** —— 属 input-submit（UI06），本刀不越界。死分支由 UI06 清。
+> 边界守恒：submit handler（`setupEditorSubmitHandler`）里的重复 standalone slash 分支（`/persona`、`/memory`、`/arminsayshi`、`/resume`、`/quit`）属 input-submit（UI06），slash 刀不越界。死分支由 UI06 清。
 
 ---
 

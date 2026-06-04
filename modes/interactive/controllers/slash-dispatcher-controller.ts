@@ -37,7 +37,6 @@ export interface SlashDispatcherSelfUpdatePort {
 }
 
 export interface SlashDispatcherCommandHandlers {
-  showSettingsSelector(): void;
   handleAgentLoopCommand(text: string): void | Promise<void>;
   handleMcpCommand(text: string): Promise<void>;
   handleExportCommand(text: string): Promise<void>;

@@ -19,6 +19,63 @@ legend:
 
 ---
 
+## P5 验收优先级（operator checklist）
+
+> **执行顺序**：每个较大切片后先跑 P0 必测主路径；再按该切片 owner 跑重点验收；最后回填下方 A-F 表的相关行。P5 接受重写，所以验收目标是"功能正确 + 边界更清楚"，不是逐字节/逐符号一致。
+
+### P0 必测主路径（每个较大切片后都测）
+
+| 路径 | 验收标准 | verify |
+|------|----------|--------|
+| TUI 启动 | interactive mode 可进入，首屏状态/footer/editor 正常渲染 | ⬜ |
+| 普通 prompt | 输入普通文本后能提交、收到 assistant 响应、消息入会话 | ⬜ |
+| 流式稳定 | streaming 期间文本增量显示；结束后 editor focus 恢复且可继续输入 | ⬜ |
+| 中断/取消 | `esc` / `ctrl+c` 在运行中能中断或进入既有取消路径；TUI 不挂死 | ⬜ |
+| 输入路由 | 普通文本、slash、bash 前缀、附件输入不会互相误路由 | ⬜ |
+| 错误可恢复 | 错误显示到 UI；下一条输入仍可继续 | ⬜ |
+| 会话持久化 | 当前会话可保存；重进或 resume 后能看到历史 | ⬜ |
+
+### P0 非功能约束（每刀 review 必查）
+
+| 约束 | 验收标准 | verify |
+|------|----------|--------|
+| Token neutrality | UI 拆分不得新增默认 prompt/context/system message/tool result 内容；不得改变发送给模型的 user message、attachments、follow-up、compaction 指令语义；用户实际 token 消耗不因拆分增加 | ⬜ |
+| Compatibility preservation | TUI 入口、slash/keybinding、extension UI API、public exports、配置文件格式保持兼容；有意破坏必须按 GB-2 记录并经接受 | ⬜ |
+| Data fallback preservation | settings/auth/provider/session/extension surface 的缺省值、缺失文件、读取失败、取消路径、半写入兜底不弱化 | ⬜ |
+| Performance neutrality | P5 不做性能优化，但也不得明显劣化冷启动、首屏、overlay 打开、输入提交、streaming render；controller 构造不引入 eager heavy work | ⬜ |
+| Responsibility-only change | 当前阶段目标是职责切分和后续编码约束；除已声明 GB-2 外，不借重构改变产品语义 | ⬜ |
+
+### Owner 重点验收
+
+| Owner | 必测重点 |
+|-------|----------|
+| model-overlay | `/model` overlay；`/model provider/model-id` 精确选择；选模型前必须 ensure provider 配置成功；配置取消不得切换或写默认模型；provider→model flow；`/scoped-models`；cycle model；cycle thinking；footer/border/status 更新 |
+| auth/provider-config | `/apikey`；`/login`；`/logout`；custom provider 的 base URL / API key / model name 配置；取消不产生半写入；配置后 registry 可刷新并被 model-overlay 使用 |
+| settings-overlay | `/settings`；theme preview/apply；image 相关开关；thinking block hide/show 后 rebuild；editor padding/autocomplete；token stats/buddy/presence/quiet startup 等设置能保存 |
+| tree-overlay | `/resume`；`/tree`；`/fork`；`/new`；选择器导航、过滤、排序、重命名/删除与 banner 状态 |
+| slash-dispatcher | 内置 slash 命令路由到对应 owner；未知命令行为不变；扩展命令不被吞；`/compact`、`/mcp`、`/resources`、`/status`、`/usage` 保持可达；保留既有彩蛋 |
+| input-submit | 普通 prompt；slash 不作为 prompt 发送；扩展 slash command；`!`/`!!` bash；附件提交；streaming steer/follow-up/queue；compaction queue；optimistic rollback |
+| extension-ui | select/input/editor/confirm；单活动 prompt；focus/text restore；custom overlay handle/onHandle；inline custom restore；widget/footer/header/status set/clear；`setEditorComponent` callbacks/keybindings；reset 清理所有 extension surfaces |
+| render layer | `agent_start`/`message_update`/tool events/end；工具展开/折叠；thinking show/hide；image tool result；error/abort/retry/compaction 顺序；chat rebuild |
+
+### 验收记录模板
+
+```text
+Slice:
+Build:
+Feature inventory rows:
+- ...
+Non-functional checks:
+- Token neutrality:
+- Compatibility:
+- Data fallback:
+- Performance:
+Intentional changes:
+Issues:
+```
+
+---
+
 ## A. Slash 命令（33 条，owner: slash-dispatcher 除非另注）
 
 | 命令 | 触发 | 预期行为(验收标准) | owner | verify |

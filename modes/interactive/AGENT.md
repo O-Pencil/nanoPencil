@@ -4,6 +4,12 @@
 
 Member List
 interactive-mode.ts: TUI orchestration hub, coordinates AgentSession with terminal UI, handles input/output loop
+controllers/image-pipeline-controller.ts: ImagePipelineController, ImagePipelineContext, Attachment — clipboard image paste, attachments bar, attachment key navigation, text→image extraction; narrow ImagePipelineContext, no InteractiveMode reference; extracted from interactive-mode.ts (P5 UI02, 纯搬)
+controllers/self-update-controller.ts: SelfUpdateController, SelfUpdateContext — npm-based update/reinstall workflow + startup version check; narrow SelfUpdateContext, no InteractiveMode reference; P5 keeps it inside modes/interactive until a second mode consumer appears (纯搬)
+state/interactive-state.ts: InteractiveState, CompactionQueuedMessage — consolidated render/turn UI state; held by InteractiveMode as `this.state`, accessed via `this.state.*` (P5 state 合一, UI02)
+controllers/extension-ui/persistent-surface-registry.ts: PersistentSurfaceRegistry, PersistentSurfaceContext — extension keyed persistent surfaces (above/below widgets, custom footer, custom header, footer status); held as `this.surfaces`, wired into ExtensionUIContext setWidget/setFooter/setHeader/setStatus; P5 extension-ui host 1/4 (UI02, 纯搬)
+controllers/extension-ui/prompt-host.ts: PromptHost, PromptHostContext — single-active-prompt slot for extension selector/confirm/input/editor dialogs; held as `this.promptHost`, wired into ExtensionUIContext select/confirm/input/editor + focus restore; P5 extension-ui host 2/4 (UI02, 重写)
+controllers/extension-ui/custom-overlay-host.ts: CustomOverlayHost, CustomOverlayContext — extension custom overlay/inline component host; pure move of `showExtensionCustom`, preserving saved text restore, overlay handle/onHandle, dynamic overlayOptions, inline focus, and disposal semantics; held as `this.customOverlay`, wired into ExtensionUIContext custom; P5 extension-ui host 3/4 (UI02, 纯搬)
 agent-loop-status.ts: formatAgentLoopStatusLines(), formats last agent loop result telemetry for /status
 slash-command-arguments.ts: Built-in TUI slash command argument completion helpers for model, agent-loop, thinking, MCP, language, persona, and login commands
 footer-data-provider.ts: FooterDataProvider class, supplies model/session/branch footer information for the TUI status bar
@@ -43,7 +49,7 @@ components/compaction-summary-message.ts: Compaction message display, context wi
 components/branch-summary-message.ts: Branch summary display, git branch visualization
 components/extension-input.ts: Extension input component, timeout countdown support
 components/custom-editor.ts: Custom editor with app keybindings, actionHandlers map
-components/model-selector.ts: Model picker UI, fuzzy filter with Ctrl+N append
+components/model-selector.ts: Model picker UI, fuzzy filter with Ctrl+N append; emits selected model only, provider configuration and default-model persistence stay with caller
 components/session-selector.ts: Session picker UI, external editor for descriptions
 components/scoped-models-selector.ts: Scoped models selector, project-specific model config
 components/apikey-input.ts: API key input dialog, readline-based prompt

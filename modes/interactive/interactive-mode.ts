@@ -122,7 +122,6 @@ import { PromptHost } from "./controllers/extension-ui/prompt-host.js";
 import { CustomOverlayHost } from "./controllers/extension-ui/custom-overlay-host.js";
 import { EditorComponentAdapter } from "./controllers/extension-ui/editor-component-adapter.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
-import { promptForApiKey } from "./components/apikey-input.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
 import { BuddyPetComponent, type BuddyState } from "./components/buddy/pet-sprites.js";
@@ -3807,15 +3806,7 @@ export class InteractiveMode {
 
     const model = await this.findExactModelMatch(searchTerm);
     if (model) {
-      try {
-        await this.session.setModel(model);
-        this.footer.invalidate();
-        this.updateEditorBorderColor();
-        this.showStatus(`Model: ${model.id}`);
-        this.checkDaxnutsEasterEgg(model);
-      } catch (error) {
-        this.showError(error instanceof Error ? error.message : String(error));
-      }
+      await this.selectModelWithProviderEnsure(model);
       return;
     }
 
@@ -4117,11 +4108,7 @@ export class InteractiveMode {
       return;
     }
 
-    await this.session.setModel(model);
-    this.footer.invalidate();
-    this.updateEditorBorderColor();
-    this.showStatus(`Model: ${model.id}`);
-    this.checkDaxnutsEasterEgg(model);
+    await this.applySelectedModel(model);
   }
 
   private async handleProviderSelectionFromSelector(
@@ -4151,6 +4138,37 @@ export class InteractiveMode {
     }
   }
 
+
+  private async applySelectedModel(model: Model<any>): Promise<void> {
+    await this.session.setModel(model);
+    this.settingsManager.setDefaultModelAndProvider(model.provider, model.id);
+    this.footer.invalidate();
+    this.updateEditorBorderColor();
+    this.showStatus(`Model: ${model.id}`);
+    this.checkDaxnutsEasterEgg(model);
+  }
+
+  private async selectModelWithProviderEnsure(model: Model<any>): Promise<void> {
+    try {
+      const configured = await this.ensureProviderConfiguredForSelection(model);
+      if (!configured) {
+        this.showStatus("Configuration cancelled");
+        return;
+      }
+
+      this.session.modelRegistry.refresh();
+      const refreshedModel =
+        this.session.modelRegistry.find(model.provider, model.id) ?? model;
+      await this.applySelectedModel(refreshedModel);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (error instanceof CycleModelError && error.provider) {
+        this.showError(`${errorMsg}\nUse /login ${error.provider} to re-authenticate.`);
+      } else {
+        this.showError(errorMsg);
+      }
+    }
+  }
 
   private async findExactModelMatch(
     searchTerm: string,
@@ -4212,30 +4230,11 @@ export class InteractiveMode {
       const selector = new ModelSelectorComponent(
         this.ui,
         this.session.model,
-        this.settingsManager,
         this.session.modelRegistry,
         this.session.scopedModels,
-        (model) => this.ensureProviderConfiguredForSelection(model),
         async (model) => {
-          try {
-            await this.session.setModel(model);
-            this.footer.invalidate();
-            this.updateEditorBorderColor();
-            done();
-            this.showStatus(`Model: ${model.id}`);
-            this.checkDaxnutsEasterEgg(model);
-          } catch (error) {
-            done();
-            // Check if this is an OAuth provider that needs re-login
-            const errorMsg = error instanceof Error ? error.message : String(error);
-
-            // Check for CycleModelError with provider info
-            if (error instanceof CycleModelError && error.provider) {
-              this.showError(`${errorMsg}\nUse /login ${error.provider} to re-authenticate.`);
-            } else {
-              this.showError(errorMsg);
-            }
-          }
+          done();
+          await this.selectModelWithProviderEnsure(model);
         },
         () => {
           done();

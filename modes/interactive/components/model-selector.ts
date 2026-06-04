@@ -1,8 +1,10 @@
 /**
- * [WHO]: ModelSelectorComponent
- * [FROM]: Depends on @pencil-agent/ai, ../theme/theme.js, ./apikey-input.js, ./dynamic-border.js, ./keybinding-hints.js
- * [TO]: Consumed by modes/interactive/components/index.ts
- * [HERE]: modes/interactive/components/model-selector.ts -
+ * [WHO]: Provides ModelSelectorComponent — model picker UI with scope/filter/add-OpenRouter affordances
+ * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, model-registry types, theme,
+ *         DynamicBorder, keybinding hints
+ * [TO]: Consumed by modes/interactive/interactive-mode.ts and components/index.ts; emits selected
+ *       models only, while provider configuration is owned by the caller
+ * [HERE]: modes/interactive/components/model-selector.ts — presentation component for model selection
  */
 
 import { type Model, modelsAreEqual } from "@pencil-agent/ai";
@@ -17,10 +19,8 @@ import {
 	Text,
 	type TUI,
 } from "@pencil-agent/tui";
-import type { SettingsManager } from "../../../core/platform/config/settings-manager.js";
 import type { ModelRegistry } from "../../../core/model-registry.js";
 import { theme } from "../theme/theme.js";
-import { promptForApiKey } from "./apikey-input.js";
 import { DynamicBorder } from "./dynamic-border.js";
 import { keyHint } from "./keybinding-hints.js";
 
@@ -36,7 +36,6 @@ interface ScopedModelItem {
 }
 
 type ModelScope = "all" | "scoped";
-type EnsureProviderConfigured = (model: Model<any>) => Promise<boolean>;
 
 export class ModelSelectorComponent extends Container implements Focusable {
 	private searchInput: Input;
@@ -48,9 +47,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	private filteredModels: ModelItem[] = [];
 	private selectedIndex = 0;
 	private currentModel?: Model<any>;
-	private settingsManager: SettingsManager;
 	private modelRegistry: ModelRegistry;
-	private ensureProviderConfigured?: EnsureProviderConfigured;
 	private onSelectCallback: (model: Model<any>) => void;
 	private onCancelCallback: () => void;
 	private errorMessage?: string;
@@ -75,10 +72,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	constructor(
 		tui: TUI,
 		currentModel: Model<any> | undefined,
-		settingsManager: SettingsManager,
 		modelRegistry: ModelRegistry,
 		scopedModels: ReadonlyArray<ScopedModelItem>,
-		ensureProviderConfigured: EnsureProviderConfigured | undefined,
 		onSelect: (model: Model<any>) => void,
 		onCancel: () => void,
 		initialSearchInput?: string,
@@ -89,10 +84,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 
 		this.tui = tui;
 		this.currentModel = currentModel;
-		this.settingsManager = settingsManager;
 		this.modelRegistry = modelRegistry;
 		this.scopedModels = scopedModels;
-		this.ensureProviderConfigured = ensureProviderConfigured;
 		this.filterByProvider = filterByProvider;
 		this.onAddOpenRouterModel = onAddOpenRouterModel;
 		this.scope = scopedModels.length > 0 && !filterByProvider ? "scoped" : "all";
@@ -375,53 +368,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 
 	private async handleSelect(model: Model<any>): Promise<void> {
 		try {
-			if (this.ensureProviderConfigured) {
-				const ready = await this.ensureProviderConfigured(model);
-				if (!ready) {
-					this.onCancelCallback();
-					return;
-				}
-				this.modelRegistry.refresh();
-			}
-
-			// Use async getApiKey to validate OAuth tokens (hasAuth is sync and doesn't refresh)
-			const apiKey = await this.modelRegistry.authStorage.getApiKey(model.provider);
-			if (!apiKey) {
-				// Check if this is an OAuth provider with expired/invalid token
-				const cred = this.modelRegistry.authStorage.get(model.provider);
-				if (cred?.type === "oauth") {
-					// OAuth token expired or refresh failed - prompt user to re-login
-					// Note: onSelectCallback will handle showing error and suggesting /login
-					this.onSelectCallback(model);
-					return;
-				}
-
-				// Non-OAuth provider without key - prompt for API key input
-				const providerHints: Record<string, string> = {
-					"dashscope-coding": "DashScope API key (sk-sp-...)",
-					"qianfan-coding": "Qianfan API key",
-					"ark-coding": "Ark API key",
-					openrouter: "OpenRouter API key",
-				};
-				const prompt = providerHints[model.provider] ?? `${model.provider} API key`;
-				const key = await promptForApiKey({ prompt: `Enter ${prompt}` });
-				if (!key) {
-					this.onCancelCallback();
-					return;
-				}
-				this.modelRegistry.authStorage.set(model.provider, {
-					type: "api_key",
-					key,
-				});
-				this.modelRegistry.refresh();
-			}
-
 			const refreshedModel =
 				this.modelRegistry.find(model.provider, model.id) ?? model;
-			this.settingsManager.setDefaultModelAndProvider(
-				refreshedModel.provider,
-				refreshedModel.id,
-			);
 			this.onSelectCallback(refreshedModel);
 		} catch (error) {
 			// Ensure selector is closed on any error

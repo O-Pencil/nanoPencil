@@ -27,7 +27,7 @@ legend:
 | `/scoped-models` | 输入 | 打开 scoped-models 选择器 | model-overlay | ⬜ |
 | `/thinking [lvl]` | 输入 | 切换/设置 thinking level | model-overlay | ⬜ |
 | `/agent-loop` | 输入 | 切换 agent loop framework | slash-dispatcher | ⬜ |
-| `/settings` | 输入 | 打开设置选择器 | model-overlay | ⬜ |
+| `/settings` | 输入 | 打开设置选择器 | settings-overlay/mount | ⬜ |
 | `/apikey` | 输入 | 进入 API key 录入流 | auth | ⬜ |
 | `/login [provider]` | 输入 | OAuth 登录（带 provider 直登，否则选择器）| auth | ⬜ |
 | `/logout` | 输入 | OAuth 登出选择器 | auth | ⬜ |
@@ -115,13 +115,13 @@ legend:
 | 模型选择器 | `/model` `ctrl+l` | 列模型、选中切换 | model-overlay | ⬜ |
 | provider→模型 | `ctrl+shift+l` | 先选 provider 再选模型 | model-overlay | ⬜ |
 | scoped-models | `/scoped-models` | 多模型作用域配置 | model-overlay | ⬜ |
-| 设置选择器 | `/settings` | 设置项浏览/修改 | model-overlay | ⬜ |
+| 设置选择器 | `/settings` | 设置项浏览/修改 | settings-overlay/mount | ⬜ |
 | 会话恢复选择器 | `/resume` | 列历史会话、恢复 | tree-overlay | ⬜ |
 | 分支树选择器 | `/tree` | 树导航、选叶子 | tree-overlay | ⬜ |
 | 用户消息选择器 | `/fork` | 选分叉点 | tree-overlay | ⬜ |
 | OAuth 选择器 | `/login` `/logout` | 选 provider 登录/登出 | auth | ⬜ |
 | 登录对话框 | login 流 | 输入凭据/OAuth 跳转 | auth | ⬜ |
-| Provider 配置 | 模型选择或 provider 选择触发 | API key/base URL/custom model 配置归 auth/provider-config；model-overlay 只在配置成功后切换模型 | auth/provider-config + model-overlay | ⬜ |
+| Provider 配置 | 模型选择或 provider 选择触发 | API key/base URL/custom model 配置归 auth/provider-config；model-overlay 只在配置成功后切换模型并写默认模型，取消配置不得切换或持久化默认模型 | auth/provider-config + model-overlay | ⬜ |
 | 更新选项 | `/update` | 选更新方式 | self-update | ⬜ |
 | 重试选项 | 更新失败 | 重试/放弃 | self-update | ⬜ |
 | 扩展选择器/输入/编辑器/确认/通知/错误 | 扩展 API | 扩展驱动的 prompt/overlay 表面；select/input/editor 为单活动 prompt，custom overlay 保留 handle 语义，notify 不进入 overlay stack | extension-ui | ⬜ |

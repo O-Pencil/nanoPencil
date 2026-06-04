@@ -49,7 +49,7 @@ components/compaction-summary-message.ts: Compaction message display, context wi
 components/branch-summary-message.ts: Branch summary display, git branch visualization
 components/extension-input.ts: Extension input component, timeout countdown support
 components/custom-editor.ts: Custom editor with app keybindings, actionHandlers map
-components/model-selector.ts: Model picker UI, fuzzy filter with Ctrl+N append
+components/model-selector.ts: Model picker UI, fuzzy filter with Ctrl+N append; emits selected model only, provider configuration and default-model persistence stay with caller
 components/session-selector.ts: Session picker UI, external editor for descriptions
 components/scoped-models-selector.ts: Scoped models selector, project-specific model config
 components/apikey-input.ts: API key input dialog, readline-based prompt

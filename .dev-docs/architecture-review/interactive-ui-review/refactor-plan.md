@@ -45,7 +45,7 @@ UI04 render 层切片（deferred，最后评估）
 > 原则：**内聚且无明显坏味 → 纯搬**（preserve-check：tsc + 符号 diff + 手测，便宜且强）；
 > **有结构坏味/分支爆炸/重复 → 重写**（feature-acceptance：按 feature-inventory 逐条验收）。
 > hybrid = 逻辑搬、边界/接线重写。
-> **per-feature 不单独标**：feature-inventory 每条的 hybrid 决策 = **继承其 owner 簇**本表的决策（如所有 model-overlay 名下功能继承"hybrid 偏搬"）。
+> **per-feature 不单独标**：feature-inventory 每条的 hybrid 决策 = **继承其 owner 簇**本表的决策（如所有 model-overlay 名下功能继承"hybrid：纯搬 selector/cycle + 选模路径归一化"）。
 
 | 簇 | 决策 | 证据 / 理由 | 风险 | 验收方式 |
 |----|------|-----------|------|---------|
@@ -54,7 +54,7 @@ UI04 render 层切片（deferred，最后评估）
 | **self-update** | **纯搬(逻辑) + interactive 内部拆分** | 逻辑(performUpdate/compareVersion/restart)保持；先拆到 `modes/interactive` 内部 controller，隔离更新流程与渲染。暂**不**落 `core/platform`：self-update 依赖 package update UX、settings、spawn/restart、TUI 提示，不是 platform primitive；仅在 print/rpc/acp 出现第二消费者时再抽 `modes/_shell/update` | 低-中 | preserve-check(逻辑) + 确认 `/update`/`/reinstall` 仍工作 |
 | **★ extension-ui** | **重写生命周期协调层，组件接线以搬为主** | ~32 方法里多套 show/hide/dismiss + ad-hoc active prompt/focus restore 是重复坏味。重写目标不是“所有 overlay 统一成栈”，而是拆成：`PromptHost`(select/input/editor/confirm 单活动 prompt，替换旧 prompt 并恢复焦点)、`CustomOverlayHost`(保留 overlay handle/onHandle/options)、`PersistentSurfaceRegistry`(widget/footer/header/status keyed surface)、`EditorComponentAdapter`(`setEditorComponent` 保持 editor text/callback/shortcut/focus)。generic stack 仅在真实嵌套需求出现后再引入 | **中-高** | feature-acceptance：逐 prompt/overlay/surface 类型验收(C 表 + E 表 extension widget)|
 | **★ slash-dispatcher** | **重写（限内置命令 dispatch）** | `executeBuiltinSlashCommand` = **188 行 if-else 链 / 33 个 `if (text===\"/x\")` 分支**(CLAUDE.md「分支爆炸是设计信号」)。重写为 **dispatch 表**。输入提交管线（嵌入 `/persona`、bash、streaming steer、附件、extension command 立即执行）先独立验收，避免被 slash 重写误吞 | **中-高** | feature-acceptance：A 表 33 条命令 + F 表 input-submit pipeline |
-| **model-overlay** | **hybrid(偏搬)** | 选择器/cycle/model candidates 逻辑可搬；provider 配置不归它。它只在选择模型前调用 `auth/provider-config.ensureProviderConfiguredForSelection(model)`，配置成功后执行 model selection/status 更新 | 中 | feature-acceptance：B/C 表 model 选择与 thinking/provider→model overlay |
+| **model-overlay** | **hybrid(偏搬 + 选模路径归一化)** | 选择器/cycle/model candidates 逻辑可搬；provider 配置不归它。所有主动选模型入口收口到 `ensureProviderConfiguredForSelection(model)` → `setModel` → footer/border/status/default-model 更新；配置取消不得切换模型或写默认模型。`showSettingsSelector` 不属于本簇 | 中 | feature-acceptance：B/C 表 model 选择与 thinking/provider→model overlay；覆盖 exact `/model provider/id` 与 overlay 选择 |
 | **auth / provider-config** | **hybrid(偏写)** | OAuth/apikey 流程逻辑搬；provider 配置子簇(`ensureProviderConfigured`/`configureCustomProtocolProvider`/`refreshCurrentModelForProvider`/`resolveProviderId`)归此，解 custom-providers 耦合(UI03 seam)。返回“provider/model 已可用”的结果，不直接拥有模型选择 overlay | 中 | feature-acceptance：A 表 login/logout/apikey + C 表 oauth/provider config |
 | **tree-overlay**(UI05) | **纯搬 + 改名 + facade 委托** | 选择器 UI 逻辑搬；**改名**消歧(UI05) + 经 facade 调 runtime 导航(不 deep import，UI03) | 低-中 | preserve-check(UI) + 确认 `/tree`/`/fork`/`/resume` 行为 |
 | **_shell/cancellation** | **hybrid(偏搬)** | sigint/escape/双击时序逻辑**保持**(易回归，不动)；**改进是跨 mode 复用**(print/rpc/acp 去重)→ 改写各 mode call site | 中 | preserve-check(逻辑) + 各 mode 取消 smoke |
@@ -72,6 +72,8 @@ UI04 render 层切片（deferred，最后评估）
 |------|------------|-----------|-------------------|------|
 | UI01 feature-inventory v1 | _待_ | — | — | ⬜ |
 | state 合一 | _待_ | _待_ | _待_ | ⬜ |
+| extension-ui host 3/4: CustomOverlayHost | _待提交_ | preserve-check：`showExtensionCustom` 单方法纯搬；ExtensionUIContext.custom 仍同一路径可达；未跑 build/test（低性能机器策略） | `interactive-mode.ts` 删除 custom 方法与 Overlay 类型/Theme import，新增窄 context host | ✅ |
+| model-overlay selection guard | _待提交_ | 行为收紧：`/model provider/id` exact 与 overlay select 均先 ensure provider；配置取消不切换、不写默认模型；未跑 build/test（低性能机器策略） | `ModelSelectorComponent` 移除 provider/default-model side effect，caller 统一 apply selected model | ✅ |
 | …（随抽取追加）| | | | |
 
 ## 与 P5 runbook 的关系

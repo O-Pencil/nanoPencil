@@ -51,13 +51,9 @@ export class InteractiveState {
   // Thinking block visibility state
   hideThinkingBlock = false;
 
-  // Auto-compaction state
-  autoCompactionLoader: Component | undefined = undefined;
-  autoCompactionEscapeHandler?: () => void;
-
-  // Auto-retry state
-  retryLoader: Component | undefined = undefined;
-  retryEscapeHandler?: () => void;
+  // Auto-compaction / auto-retry overlay state (loaders + escape handlers) is owned by
+  // StreamRenderController (modes/interactive/controllers/stream-render-controller.ts) — it has zero
+  // readers outside the render layer, so it lives there rather than in this shared holder (UI04).
 
   // Messages queued while compaction is running
   compactionQueuedMessages: CompactionQueuedMessage[] = [];

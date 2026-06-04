@@ -103,6 +103,7 @@ import { SettingsOverlayController } from "./controllers/settings-overlay-contro
 import { SlashDispatcherController } from "./controllers/slash-dispatcher-controller.js";
 import { InputSubmitController } from "./controllers/input-submit-controller.js";
 import { InterruptController } from "./controllers/interrupt-controller.js";
+import { StreamRenderController } from "./controllers/stream-render-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -257,6 +258,7 @@ export class InteractiveMode {
   private slashDispatcher!: SlashDispatcherController;
   private inputSubmit!: InputSubmitController;
   private interrupt!: InterruptController;
+  private streamRender!: StreamRenderController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
   private customOverlay!: CustomOverlayHost;
@@ -714,6 +716,64 @@ export class InteractiveMode {
       lifecycle: {
         requestShutdown: () => void this.shutdown(),
         suspend: () => this.suspend(),
+      },
+    });
+    this.streamRender = new StreamRenderController({
+      state: { get: () => this.state },
+      layout: {
+        getUi: () => this.ui,
+        getChatContainer: () => this.chatContainer,
+        getStatusContainer: () => this.statusContainer,
+        addMessageToChat: (message) => this.addMessageToChat(message),
+        updatePendingMessagesDisplay: () => this.updatePendingMessagesDisplay(),
+        rebuildChatFromMessages: () => this.rebuildChatFromMessages(),
+        requestRender: () => this.ui.requestRender(),
+        invalidateFooter: () => this.footer.invalidate(),
+      },
+      loaders: {
+        getSessionId: () => this.sessionManager.getSessionId(),
+        getDefaultWorkingMessage: () => this.defaultWorkingMessage,
+        getInterruptKeyHint: () => appKey(this.keybindings, "interrupt"),
+        setBuddyPetState: (state, speech, options) =>
+          this.setBuddyPetState(state, speech, options),
+        startAgentRunTimer: () => this.startAgentRunTimer(),
+        stopAgentRunTimer: () => this.stopAgentRunTimer(),
+        updateWorkingMessage: (options) => this.updateWorkingMessage(options),
+        formatElapsedSeconds: (ms) => this.formatElapsedSeconds(ms),
+      },
+      toolTrace: {
+        shouldRenderToolTrace: (toolName) => this.shouldRenderToolTrace(toolName),
+        getRegisteredToolDefinition: (toolName) =>
+          this.getRegisteredToolDefinition(toolName),
+        getShowImages: () => this.settingsManager.getShowImages(),
+      },
+      runtime: {
+        getRetryAttempt: () => this.session.retryAttempt,
+        abortCompaction: () => this.session.abortCompaction(),
+        abortRetry: () => this.session.abortRetry(),
+        flushCompactionQueue: (options) =>
+          void this.flushCompactionQueue(options),
+        checkShutdownRequested: () => this.checkShutdownRequested(),
+        clearAttachments: () => this.imagePipeline.clearAttachments(),
+      },
+      escape: {
+        getHandler: () => this.defaultEditor.onEscape,
+        setHandler: (handler) => {
+          this.defaultEditor.onEscape = handler;
+        },
+      },
+      surface: {
+        ensureInitialized: async () => {
+          if (!this.isInitialized) {
+            await this.init();
+          }
+        },
+        restoreEditorFocusIfPossible: () =>
+          this.promptHost.restoreEditorFocusIfPossible(),
+        getUserMessageText: (message) => this.getUserMessageText(message),
+        getMarkdownThemeWithSettings: () => this.getMarkdownThemeWithSettings(),
+        showStatus: (message) => this.showStatus(message),
+        showError: (message) => this.showError(message),
       },
     });
     this.syncBuddyPet();
@@ -2136,342 +2196,7 @@ export class InteractiveMode {
   }
 
   private async handleEvent(event: AgentSessionEvent): Promise<void> {
-    if (!this.isInitialized) {
-      await this.init();
-    }
-
-    this.footer.invalidate();
-
-    switch (event.type) {
-      case "agent_start":
-        // Restore main escape handler if retry handler is still active
-        // (retry success event fires later, but we need main handler now)
-        if (this.state.retryEscapeHandler) {
-          this.defaultEditor.onEscape = this.state.retryEscapeHandler;
-          this.state.retryEscapeHandler = undefined;
-        }
-        if (this.state.retryLoader) {
-          (this.state.retryLoader as PencilLoader).stop();
-          this.state.retryLoader = undefined;
-        }
-        if (this.state.loadingAnimation) {
-          (this.state.loadingAnimation as PencilLoader).stop();
-        }
-        this.statusContainer.clear();
-        this.state.loadingAnimation = new PencilLoader(
-          this.ui,
-          theme,
-          this.defaultWorkingMessage,
-          this.sessionManager.getSessionId(),
-        );
-        this.statusContainer.addChild(this.state.loadingAnimation);
-        this.setBuddyPetState("working", "Working...");
-        // Apply any pending working message queued before loader existed
-        if (this.state.pendingWorkingMessage !== undefined) {
-          this.state.workingMessageOverride = this.state.pendingWorkingMessage || undefined;
-          this.state.pendingWorkingMessage = undefined;
-        }
-        this.startAgentRunTimer();
-        this.updateWorkingMessage({ resetStallTimer: false });
-        this.promptHost.restoreEditorFocusIfPossible();
-        this.ui.requestRender();
-        break;
-
-      case "message_start":
-        if (event.message.role === "custom") {
-          this.addMessageToChat(event.message);
-          this.ui.requestRender();
-        } else if (event.message.role === "user") {
-          const textContent = this.getUserMessageText(event.message);
-          if (
-            this.state.optimisticUserMessages.length > 0 &&
-            this.state.optimisticUserMessages[0]?.text === textContent
-          ) {
-            this.state.optimisticUserMessages.shift();
-            this.updatePendingMessagesDisplay();
-            this.ui.requestRender();
-            break;
-          }
-          this.addMessageToChat(event.message);
-          this.updatePendingMessagesDisplay();
-          this.ui.requestRender();
-        } else if (event.message.role === "assistant") {
-          this.state.streamingComponent = new AssistantMessageComponent(
-            undefined,
-            this.state.hideThinkingBlock,
-            this.getMarkdownThemeWithSettings(),
-          );
-          this.state.streamingMessage = event.message;
-          this.chatContainer.addChild(this.state.streamingComponent);
-          this.state.streamingComponent.updateContent(this.state.streamingMessage);
-          this.ui.requestRender();
-        }
-        break;
-
-      case "message_update":
-        if (this.state.streamingComponent && event.message.role === "assistant") {
-          // Reset stall timer on new output - spinner should not show as stuck
-          if (this.state.loadingAnimation) {
-            (this.state.loadingAnimation as PencilLoader).resetStallTimer();
-          }
-          this.state.streamingMessage = event.message;
-          this.state.streamingComponent.updateContent(this.state.streamingMessage);
-
-          for (const content of this.state.streamingMessage.content) {
-            if (content.type === "toolCall") {
-              if (!this.shouldRenderToolTrace(content.name)) {
-                continue;
-              }
-              if (!this.state.pendingTools.has(content.id)) {
-                this.chatContainer.addChild(new Text("", 0, 0));
-                const component = new ToolExecutionComponent(
-                  content.name,
-                  content.arguments,
-                  {
-                    showImages: this.settingsManager.getShowImages(),
-                  },
-                  this.getRegisteredToolDefinition(content.name),
-                  this.ui,
-                );
-                component.setExpanded(this.state.toolOutputExpanded);
-                this.chatContainer.addChild(component);
-                this.state.pendingTools.set(content.id, component);
-              } else {
-                const component = this.state.pendingTools.get(content.id);
-                if (component) {
-                  component.updateArgs(content.arguments);
-                }
-              }
-            }
-          }
-          this.ui.requestRender();
-        }
-        break;
-
-      case "message_end":
-        if (event.message.role === "user") break;
-        if (this.state.streamingComponent && event.message.role === "assistant") {
-          this.state.streamingMessage = event.message;
-          let errorMessage: string | undefined;
-          if (this.state.streamingMessage.stopReason === "aborted") {
-            const retryAttempt = this.session.retryAttempt;
-            errorMessage =
-              retryAttempt > 0
-                ? `Aborted after ${retryAttempt} retry attempt${retryAttempt > 1 ? "s" : ""}`
-                : "Operation aborted";
-            this.state.streamingMessage.errorMessage = errorMessage;
-          }
-          this.state.streamingComponent.updateContent(this.state.streamingMessage);
-
-          if (
-            this.state.streamingMessage.stopReason === "aborted" ||
-            this.state.streamingMessage.stopReason === "error"
-          ) {
-            if (!errorMessage) {
-              errorMessage = this.state.streamingMessage.errorMessage || "Error";
-            }
-            for (const [, component] of this.state.pendingTools.entries()) {
-              component.updateResult({
-                content: [{ type: "text", text: errorMessage }],
-                isError: true,
-              });
-            }
-            this.state.pendingTools.clear();
-          } else {
-            // Args are now complete - trigger diff computation for edit tools
-            for (const [, component] of this.state.pendingTools.entries()) {
-              component.setArgsComplete();
-            }
-          }
-          this.state.streamingComponent = undefined;
-          this.state.streamingMessage = undefined;
-          this.footer.invalidate();
-        }
-        this.ui.requestRender();
-        break;
-
-      case "tool_execution_start": {
-        if (!this.shouldRenderToolTrace(event.toolName)) {
-          break;
-        }
-        if (!this.state.pendingTools.has(event.toolCallId)) {
-          const component = new ToolExecutionComponent(
-            event.toolName,
-            event.args,
-            {
-              showImages: this.settingsManager.getShowImages(),
-            },
-            this.getRegisteredToolDefinition(event.toolName),
-            this.ui,
-          );
-          component.setExpanded(this.state.toolOutputExpanded);
-          this.chatContainer.addChild(component);
-          this.state.pendingTools.set(event.toolCallId, component);
-          this.ui.requestRender();
-        }
-        break;
-      }
-
-      case "tool_execution_update": {
-        const component = this.state.pendingTools.get(event.toolCallId);
-        if (component) {
-          component.updateResult(
-            { ...event.partialResult, isError: false },
-            true,
-          );
-          this.ui.requestRender();
-        }
-        break;
-      }
-
-      case "tool_execution_end": {
-        const component = this.state.pendingTools.get(event.toolCallId);
-        if (component) {
-          component.updateResult({ ...event.result, isError: event.isError });
-          this.state.pendingTools.delete(event.toolCallId);
-          this.ui.requestRender();
-        }
-        break;
-      }
-
-      case "agent_end":
-        const finalElapsed =
-          this.state.agentRunStartMs !== undefined
-            ? this.formatElapsedSeconds(Date.now() - this.state.agentRunStartMs)
-            : undefined;
-        this.stopAgentRunTimer();
-        this.state.agentRunStartMs = undefined;
-        this.state.workingMessageOverride = undefined;
-        if (this.state.loadingAnimation) {
-          (this.state.loadingAnimation as PencilLoader).stop();
-          this.state.loadingAnimation = undefined;
-          this.statusContainer.clear();
-        }
-        if (this.state.streamingComponent) {
-          this.chatContainer.removeChild(this.state.streamingComponent);
-          this.state.streamingComponent = undefined;
-          this.state.streamingMessage = undefined;
-        }
-        this.state.pendingTools.clear();
-        // Clear any leftover attachments when the turn ends so the bar doesn't
-        // accumulate across conversations (sent attachments are already cleared
-        // at submit; this also covers images consumed via on-disk file reads).
-        this.imagePipeline.clearAttachments();
-        this.setBuddyPetState("happy", "Done!", {
-          resetTo: "idle",
-          afterMs: 1800,
-        });
-        if (finalElapsed) {
-          this.showStatus(`Completed in ${finalElapsed}`);
-        }
-
-        await this.checkShutdownRequested();
-
-        this.promptHost.restoreEditorFocusIfPossible();
-        this.ui.requestRender();
-        break;
-
-      case "auto_compaction_start": {
-        // Keep editor active; submissions are queued during compaction.
-        // Set up escape to abort auto-compaction
-        this.state.autoCompactionEscapeHandler = this.defaultEditor.onEscape;
-        this.defaultEditor.onEscape = () => {
-          this.session.abortCompaction();
-        };
-        // Show compacting indicator with reason
-        this.statusContainer.clear();
-        const reasonText =
-          event.reason === "overflow" ? "Context overflow detected, " : "";
-        this.state.autoCompactionLoader = new PencilLoader(
-          this.ui,
-          theme,
-          `${reasonText}Auto-compacting... (${appKey(this.keybindings, "interrupt")} to cancel)`,
-        );
-        this.statusContainer.addChild(this.state.autoCompactionLoader);
-        this.ui.requestRender();
-        break;
-      }
-
-      case "auto_compaction_end": {
-        // Restore escape handler
-        if (this.state.autoCompactionEscapeHandler) {
-          this.defaultEditor.onEscape = this.state.autoCompactionEscapeHandler;
-          this.state.autoCompactionEscapeHandler = undefined;
-        }
-        // Stop loader
-        if (this.state.autoCompactionLoader) {
-          (this.state.autoCompactionLoader as PencilLoader).stop();
-          this.state.autoCompactionLoader = undefined;
-          this.statusContainer.clear();
-        }
-        // Handle result
-        if (event.aborted) {
-          this.showStatus("Auto-compaction cancelled");
-        } else if (event.result) {
-          // Rebuild chat to show compacted state
-          this.chatContainer.clear();
-          this.rebuildChatFromMessages();
-          // Add compaction component at bottom so user sees it without scrolling
-          this.addMessageToChat({
-            role: "compactionSummary",
-            tokensBefore: event.result.tokensBefore,
-            summary: event.result.summary,
-            timestamp: Date.now(),
-          });
-          this.footer.invalidate();
-        } else if (event.errorMessage) {
-          // Compaction failed (e.g., quota exceeded, API error)
-          this.chatContainer.addChild(new Spacer(1));
-          this.chatContainer.addChild(
-            new Text(theme.fg("error", event.errorMessage), 1, 0),
-          );
-        }
-        void this.flushCompactionQueue({ willRetry: event.willRetry });
-        this.ui.requestRender();
-        break;
-      }
-
-      case "auto_retry_start": {
-        // Set up escape to abort retry
-        this.state.retryEscapeHandler = this.defaultEditor.onEscape;
-        this.defaultEditor.onEscape = () => {
-          this.session.abortRetry();
-        };
-        // Show retry indicator
-        this.statusContainer.clear();
-        const delaySeconds = Math.round(event.delayMs / 1000);
-        this.state.retryLoader = new PencilLoader(
-          this.ui,
-          theme,
-          `Retrying (${event.attempt}/${event.maxAttempts}) in ${delaySeconds}s... (${appKey(this.keybindings, "interrupt")} to cancel)`,
-        );
-        this.statusContainer.addChild(this.state.retryLoader);
-        this.ui.requestRender();
-        break;
-      }
-
-      case "auto_retry_end": {
-        // Restore escape handler
-        if (this.state.retryEscapeHandler) {
-          this.defaultEditor.onEscape = this.state.retryEscapeHandler;
-          this.state.retryEscapeHandler = undefined;
-        }
-        // Stop loader
-        if (this.state.retryLoader) {
-          (this.state.retryLoader as PencilLoader).stop();
-          this.state.retryLoader = undefined;
-          this.statusContainer.clear();
-        }
-        // Show error only on final failure (success shows normal response)
-        if (!event.success) {
-          this.showError(
-            `Retry failed after ${event.attempt} attempts: ${event.finalError || "Unknown error"}`,
-          );
-        }
-        this.ui.requestRender();
-        break;
-      }
-    }
+    await this.streamRender.handle(event);
   }
 
   /** Extract text content from a user message */

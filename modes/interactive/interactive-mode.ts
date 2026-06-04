@@ -11,11 +11,9 @@ import * as path from "node:path";
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import {
   type AssistantMessage,
-  getOAuthProviders,
   type ImageContent,
   type Message,
   type Model,
-  type OAuthProvider,
   type TextContent,
 } from "@pencil-agent/ai";
 import type {
@@ -43,22 +41,11 @@ import {
 import { spawn, spawnSync } from "child_process";
 import {
   APP_NAME,
-  getAuthPath,
   getDebugLogPath,
-  getModelsPath,
   getShareViewerUrl,
   PACKAGE_NAME,
   VERSION,
 } from "../../config.js";
-import {
-  type CustomProtocolProviderId,
-  getCustomProtocolProviderBaseUrl,
-  getCustomProtocolProviderDefinition,
-  getCustomProtocolProviderModelName,
-  isCustomProtocolProvider,
-  saveCustomProtocolProviderApiKey,
-  saveCustomProtocolProviderConfig,
-} from "../../core/model/custom-providers.js";
 import {
   type AgentSession,
   type AgentSessionEvent,
@@ -98,11 +85,7 @@ import {
   toAbsolutePath,
 } from "../../core/persona/persona-manager.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
-import {
-  NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
-  NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
-  NANOPENCIL_WHATS_NEW,
-} from "../../nanopencil-defaults.js";
+import { NANOPENCIL_WHATS_NEW } from "../../nanopencil-defaults.js";
 import { getChangelogPath, parseChangelog } from "../../utils/changelog.js";
 import { copyToClipboard } from "../utils/clipboard.js";
 import {
@@ -120,6 +103,7 @@ import { PromptHost } from "./controllers/extension-ui/prompt-host.js";
 import { CustomOverlayHost } from "./controllers/extension-ui/custom-overlay-host.js";
 import { EditorComponentAdapter } from "./controllers/extension-ui/editor-component-adapter.js";
 import { ModelOverlayController } from "./controllers/model-overlay-controller.js";
+import { AuthProviderConfigController } from "./controllers/auth-provider-config-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -140,14 +124,8 @@ import {
   keyHint,
   rawKeyHint,
 } from "./components/keybinding-hints.js";
-import { LoginDialogComponent } from "./components/login-dialog.js";
-import {
-  OAuthSelectorComponent,
-  type ProviderSelectorItem,
-} from "./components/oauth-selector.js";
 import { formatSoulStats } from "./components/soul-stats.js";
 import { formatMemoryStats } from "./components/memory-stats.js";
-import { ProviderSelectorComponent } from "./components/provider-selector.js";
 import { SessionSelectorComponent } from "./components/session-selector.js";
 import { SettingsSelectorComponent } from "./components/settings-selector.js";
 import { SkillInvocationMessageComponent } from "./components/skill-invocation-message.js";
@@ -286,6 +264,7 @@ export class InteractiveMode {
   private attachmentsContainer: Container | undefined = undefined;
   private imagePipeline!: ImagePipelineController;
   private selfUpdate!: SelfUpdateController;
+  private authProviderConfig!: AuthProviderConfigController;
   private modelOverlay!: ModelOverlayController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
@@ -404,6 +383,34 @@ export class InteractiveMode {
     this.footerDataProvider = new FooterDataProvider(session.cwd);
     this.footer = new FooterComponent(session, this.footerDataProvider, this.settingsManager.getShowTokenStats());
     this.footer.setAutoCompactEnabled(session.autoCompactionEnabled);
+    this.authProviderConfig = new AuthProviderConfigController({
+      modelRegistry: this.session.modelRegistry,
+      surface: {
+        showSelector: (create) => this.showSelector(create),
+        showStatus: (message) => this.showStatus(message),
+        showError: (message) => this.showError(message),
+        promptInput: (title, placeholder, opts) =>
+          this.promptHost.input(title, placeholder, opts),
+        requestRender: () => this.ui.requestRender(),
+        getUi: () => this.ui,
+        getEditorContainer: () => this.editorContainer,
+        getEditor: () => this.editor as Component,
+        remountEditorShell: () => this.remountEditorShell(),
+      },
+      modelBridge: {
+        getCurrentModel: () => this.session.model,
+        setCurrentModel: async (model) => {
+          await this.session.setModel(model);
+          this.footer.invalidate();
+          this.updateEditorBorderColor();
+        },
+        showModelSelector: (initialSearchInput, filterByProvider) =>
+          this.modelOverlay.showModelSelector(initialSearchInput, filterByProvider),
+        applySelectedModel: (model) => this.modelOverlay.applySelectedModel(model),
+        updateAvailableProviderCount: () =>
+          this.modelOverlay.updateAvailableProviderCount(),
+      },
+    });
     this.modelOverlay = new ModelOverlayController({
       modelSession: {
         getModel: () => this.session.model,
@@ -435,9 +442,9 @@ export class InteractiveMode {
       },
       providerConfig: {
         ensureProviderConfiguredForSelection: (model) =>
-          this.ensureProviderConfiguredForSelection(model),
+          this.authProviderConfig.ensureProviderConfiguredForSelection(model),
         handleProviderSelectionFromSelector: (provider, done) =>
-          this.handleProviderSelectionFromSelector(provider, done),
+          this.authProviderConfig.handleProviderSelectionFromSelector(provider, done),
       },
       surface: {
         showSelector: (create) => this.showSelector(create),
@@ -548,7 +555,11 @@ export class InteractiveMode {
     const loginCommand = slashCommands.find((command) => command.name === "login");
     if (loginCommand) {
       loginCommand.getArgumentCompletions = (prefix, context) =>
-        getLoginArgumentCompletions(prefix, context, this.getLoginSelectorProviders("login"));
+        getLoginArgumentCompletions(
+          prefix,
+          context,
+          this.authProviderConfig.getLoginSelectorProviders("login"),
+        );
     }
 
     // Convert prompt templates to SlashCommand format for autocomplete
@@ -2115,7 +2126,7 @@ export class InteractiveMode {
       clear();
     },
     "/apikey": async (_t, clear) => {
-      await this.handleApiKeyCommand();
+      await this.authProviderConfig.handleApiKeyCommand();
       clear();
     },
     "/scoped-models": async (_t, clear) => {
@@ -2188,11 +2199,11 @@ export class InteractiveMode {
       clear();
     },
     "/login": async (t, clear) => {
-      await this.handleLoginCommand(t);
+      await this.authProviderConfig.handleLoginCommand(t);
       clear();
     },
     "/logout": (_t, clear) => {
-      this.showOAuthSelector("logout");
+      this.authProviderConfig.showOAuthSelector("logout");
       clear();
     },
     "/new": async (_t, clear) => {
@@ -3775,334 +3786,10 @@ export class InteractiveMode {
       return { component: selector, focus: selector.getSettingsList() };
     });
   }
+  // =========================================================================
+  // Session and message selectors
+  // =========================================================================
 
-  /**
-   * Handle /apikey command - allow user to update API key for current provider
-   */
-  private async handleApiKeyCommand(): Promise<void> {
-    await this.handleProviderCredentialsCommand();
-  }
-
-  private getStoredApiKey(provider: string): string | undefined {
-    const credential = this.session.modelRegistry.authStorage.get(provider);
-    return credential?.type === "api_key" ? credential.key : undefined;
-  }
-
-  private resolveProviderId(input: string): string | undefined {
-    const normalized = input.trim().toLowerCase();
-    if (!normalized) return undefined;
-
-    const providerMap = new Map<string, string>();
-    for (const model of this.session.modelRegistry.getAll()) {
-      providerMap.set(model.provider.toLowerCase(), model.provider);
-    }
-    for (const provider of getOAuthProviders()) {
-      providerMap.set(provider.id.toLowerCase(), provider.id);
-    }
-
-    return providerMap.get(normalized);
-  }
-
-  private async promptForProviderApiKey(
-    provider: string,
-    options: { title?: string } = {},
-  ): Promise<boolean> {
-    const currentApiKey = this.getStoredApiKey(provider);
-    const title = options.title ?? `Update API key for ${provider}`;
-    const apiKey = await this.promptHost.input(title, "API key", {
-      initialValue: currentApiKey,
-    });
-    if (apiKey === undefined) {
-      this.showStatus("Configuration cancelled");
-      return false;
-    }
-
-    const trimmedApiKey = apiKey.trim();
-    if (!trimmedApiKey) {
-      this.showStatus("Configuration cancelled");
-      return false;
-    }
-
-    this.session.modelRegistry.authStorage.set(provider, {
-      type: "api_key",
-      key: trimmedApiKey,
-    });
-    if (provider === NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER) {
-      this.session.modelRegistry.authStorage.set(
-        NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
-        {
-          type: "api_key",
-          key: trimmedApiKey,
-        },
-      );
-    } else if (provider === NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER) {
-      this.session.modelRegistry.authStorage.set(
-        NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
-        {
-          type: "api_key",
-          key: trimmedApiKey,
-        },
-      );
-    }
-    this.session.modelRegistry.refresh();
-    this.showStatus(`Updated API key for ${provider}`);
-    return true;
-  }
-
-  private async handleLoginCommand(text: string): Promise<void> {
-    const rawProvider = text.startsWith("/login ") ? text.slice(7).trim() : "";
-    if (!rawProvider) {
-      this.showOAuthSelector("login");
-      return;
-    }
-
-    const providerId = this.resolveProviderId(rawProvider);
-    if (!providerId) {
-      this.showError(`Unknown provider: ${rawProvider}`);
-      return;
-    }
-
-    const oauthProvider = getOAuthProviders().find((provider) => provider.id === providerId);
-    if (oauthProvider) {
-      await this.showLoginDialog(oauthProvider.id);
-      return;
-    }
-
-    await this.promptForProviderApiKey(providerId, {
-      title: `Set API key for ${providerId}`,
-    });
-  }
-
-  private async handleProviderCredentialsCommand(): Promise<void> {
-    const currentModel = this.session.model;
-
-    // No model selected — let user pick a provider first
-    if (!currentModel) {
-      this.session.modelRegistry.refresh();
-      const allModels = this.session.modelRegistry.getAll();
-      const providers = [...new Set(allModels.map((m) => m.provider))].sort();
-      if (providers.length === 0) {
-        this.showStatus("No providers available");
-        return;
-      }
-      this.showSelector((done) => {
-        const selector = new ProviderSelectorComponent(
-          providers,
-          undefined,
-          (provider) => {
-            done();
-            void (async () => {
-              await this.promptForProviderApiKey(provider, {
-                title: `Set API key for ${provider}`,
-              });
-              this.session.modelRegistry.refresh();
-              this.modelOverlay.showModelSelector(undefined, provider);
-            })();
-          },
-          () => {
-            done();
-            this.ui.requestRender();
-          },
-        );
-        return { component: selector, focus: selector };
-      });
-      return;
-    }
-
-    const provider = currentModel.provider;
-
-    try {
-      if (isCustomProtocolProvider(provider)) {
-        const updated = await this.configureCustomProtocolProvider(provider, {
-          force: true,
-        });
-        if (!updated) {
-          this.showStatus("Configuration cancelled");
-        }
-        return;
-      }
-
-      await this.promptForProviderApiKey(provider);
-    } catch (error) {
-      this.showError(error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  private async ensureProviderConfiguredForSelection(
-    model: Model<any>,
-  ): Promise<boolean> {
-    if (isCustomProtocolProvider(model.provider)) {
-      return this.configureCustomProtocolProvider(model.provider);
-    }
-
-    // For standard providers: prompt for API key if none is stored and provider doesn't use OAuth
-    const hasKey = await this.session.modelRegistry.getApiKey(model);
-    if (!hasKey && !this.session.modelRegistry.isUsingOAuth(model)) {
-      return this.promptForProviderApiKey(model.provider, {
-        title: `API key for ${model.provider}`,
-      });
-    }
-
-    return true;
-  }
-
-  private async configureCustomProtocolProvider(
-    provider: CustomProtocolProviderId,
-    options: { force?: boolean } = {},
-  ): Promise<boolean> {
-    const definition = getCustomProtocolProviderDefinition(provider);
-    const modelsPath = getModelsPath();
-    const authStorage = this.session.modelRegistry.authStorage;
-    const currentBaseUrl =
-      getCustomProtocolProviderBaseUrl(modelsPath, provider) ??
-      definition.defaultBaseUrl;
-    const currentModelName =
-      getCustomProtocolProviderModelName(modelsPath, provider) ??
-      "custom-model";
-    const currentApiKey = this.getStoredApiKey(provider) ?? "";
-    const hasExistingApiKey = authStorage.has(provider);
-
-    if (
-      !options.force &&
-      hasExistingApiKey &&
-      currentBaseUrl.trim() &&
-      currentModelName.trim()
-    ) {
-      return true;
-    }
-
-    const baseUrl = await this.promptHost.input(
-      `${definition.label} base URL`,
-      definition.defaultBaseUrl,
-      { initialValue: currentBaseUrl },
-    );
-    if (baseUrl === undefined) {
-      return false;
-    }
-
-    const trimmedBaseUrl = baseUrl.trim();
-    if (!trimmedBaseUrl) {
-      this.showError("Base URL cannot be empty.");
-      return false;
-    }
-
-    const apiKeyInput = await this.promptHost.input(
-      `${definition.label} API key`,
-      hasExistingApiKey && options.force
-        ? "Leave empty to keep the current API key"
-        : "API key",
-      { initialValue: currentApiKey },
-    );
-    if (apiKeyInput === undefined) {
-      return false;
-    }
-
-    const trimmedApiKey = apiKeyInput.trim();
-    if (!trimmedApiKey && !hasExistingApiKey) {
-      this.showError("API key cannot be empty.");
-      return false;
-    }
-
-    const modelNameInput = await this.promptHost.input(
-      `${definition.label} model name`,
-      "Model name",
-      { initialValue: currentModelName },
-    );
-    if (modelNameInput === undefined) {
-      return false;
-    }
-
-    const trimmedModelName = modelNameInput.trim();
-    if (!trimmedModelName) {
-      this.showError("Model name cannot be empty.");
-      return false;
-    }
-
-    saveCustomProtocolProviderConfig(modelsPath, provider, {
-      baseUrl: trimmedBaseUrl,
-      modelName: trimmedModelName,
-    });
-    if (trimmedApiKey) {
-      saveCustomProtocolProviderApiKey(authStorage, provider, trimmedApiKey);
-    }
-
-    this.session.modelRegistry.refresh();
-    await this.refreshCurrentModelForProvider(provider, trimmedModelName);
-    this.showStatus(`Saved ${definition.label} configuration`);
-    return true;
-  }
-
-  private async refreshCurrentModelForProvider(
-    provider: string,
-    preferredModelId?: string,
-  ): Promise<void> {
-    const currentModel = this.session.model;
-    if (!currentModel || currentModel.provider !== provider) {
-      return;
-    }
-
-    const updatedModel =
-      (preferredModelId
-        ? this.session.modelRegistry.find(currentModel.provider, preferredModelId)
-        : undefined) ??
-      this.session.modelRegistry.find(currentModel.provider, currentModel.id);
-    if (!updatedModel) {
-      return;
-    }
-
-    await this.session.setModel(updatedModel);
-    this.footer.invalidate();
-    this.updateEditorBorderColor();
-  }
-
-  private async selectConfiguredCustomProvider(
-    provider: CustomProtocolProviderId,
-  ): Promise<void> {
-    this.session.modelRegistry.refresh();
-    const modelName = getCustomProtocolProviderModelName(getModelsPath(), provider);
-    if (!modelName) {
-      this.showError(`No model configured for ${provider}`);
-      return;
-    }
-
-    const model = this.session.modelRegistry.find(provider, modelName);
-    if (!model) {
-      this.showError(`Configured model not found for ${provider}`);
-      return;
-    }
-
-    await this.modelOverlay.applySelectedModel(model);
-  }
-
-  private async handleProviderSelectionFromSelector(
-    provider: string,
-    done: () => void,
-  ): Promise<void> {
-    done();
-    this.ui.requestRender();
-
-    if (!isCustomProtocolProvider(provider)) {
-      this.modelOverlay.showModelSelector(undefined, provider);
-      return;
-    }
-
-    try {
-      const configured = await this.configureCustomProtocolProvider(provider, {
-        force: true,
-      });
-      if (!configured) {
-        this.showStatus("Configuration cancelled");
-        return;
-      }
-
-      await this.selectConfiguredCustomProvider(provider);
-    } catch (error) {
-      this.showError(error instanceof Error ? error.message : String(error));
-    }
-  }
-
-
-  /** Update the footer's available provider count from current model candidates */
   private showUserMessageSelector(): void {
     const userMessages = this.session.getUserMessagesForForking();
 
@@ -4331,208 +4018,6 @@ export class InteractiveMode {
     this.addSessionNavigationBanner("Resumed session");
     this.renderInitialMessages();
     this.showStatus("Resumed session");
-  }
-
-  private async showOAuthSelector(mode: "login" | "logout"): Promise<void> {
-    const providers = this.getLoginSelectorProviders(mode);
-    if (providers.length === 0) {
-      this.showStatus(
-        mode === "login"
-          ? "No providers available."
-          : "No providers logged in. Use /login first.",
-      );
-      return;
-    }
-
-    this.showSelector((done) => {
-      const selector = new OAuthSelectorComponent(
-        mode,
-        providers,
-        async (providerId: string) => {
-          done();
-
-          if (mode === "login") {
-            const oauthProvider = getOAuthProviders().find(
-              (p) => p.id === providerId,
-            );
-            if (oauthProvider) {
-              await this.showLoginDialog(providerId);
-            } else {
-              await this.promptForProviderApiKey(providerId, {
-                title: `Set API key for ${providerId}`,
-              });
-            }
-          } else {
-            // Logout flow
-            const providerInfo = getOAuthProviders().find(
-              (p) => p.id === providerId,
-            );
-            const providerName = providerInfo?.name || providerId;
-
-            try {
-              this.session.modelRegistry.authStorage.logout(providerId);
-              this.session.modelRegistry.refresh();
-              await this.modelOverlay.updateAvailableProviderCount();
-              this.showStatus(`Logged out of ${providerName}`);
-            } catch (error: unknown) {
-              this.showError(
-                `Logout failed: ${error instanceof Error ? error.message : String(error)}`,
-              );
-            }
-          }
-        },
-        () => {
-          done();
-          this.ui.requestRender();
-        },
-        {
-          title:
-            mode === "login"
-              ? "Select provider to login or configure:"
-              : "Select provider to logout:",
-        },
-      );
-      return { component: selector, focus: selector };
-    });
-  }
-
-  private getLoginSelectorProviders(
-    mode: "login" | "logout",
-  ): ProviderSelectorItem[] {
-    const oauthProviders: ProviderSelectorItem[] = getOAuthProviders().map(
-      (provider) => ({
-        id: provider.id,
-        name: provider.name,
-        authType: "oauth",
-        loggedIn:
-          this.session.modelRegistry.authStorage.get(provider.id)?.type ===
-          "oauth",
-      }),
-    );
-
-    if (mode === "logout") {
-      return oauthProviders.filter((provider) => provider.loggedIn);
-    }
-
-    const items = [...oauthProviders];
-    const providerIds = new Set(items.map((provider) => provider.id));
-    const apiKeyProviders = [
-      { id: "openrouter", name: "OpenRouter" },
-    ];
-
-    for (const provider of apiKeyProviders) {
-      if (providerIds.has(provider.id)) continue;
-      items.push({
-        id: provider.id,
-        name: provider.name,
-        authType: "api_key",
-        loggedIn: !!this.getStoredApiKey(provider.id),
-      });
-    }
-
-    return items;
-  }
-
-  private async showLoginDialog(providerId: string): Promise<void> {
-    const providerInfo = getOAuthProviders().find((p) => p.id === providerId);
-    const providerName = providerInfo?.name || providerId;
-
-    // Providers that use callback servers (can paste redirect URL)
-    const usesCallbackServer = providerInfo?.usesCallbackServer ?? false;
-
-    // Create login dialog component
-    const dialog = new LoginDialogComponent(
-      this.ui,
-      providerId,
-      (_success, _message) => {
-        // Completion handled below
-      },
-    );
-
-    // Show dialog in editor container
-    this.editorContainer.clear();
-    this.editorContainer.addChild(dialog);
-    this.ui.setFocus(dialog);
-    this.ui.requestRender();
-
-    // Promise for manual code input (racing with callback server)
-    let manualCodeResolve: ((code: string) => void) | undefined;
-    let manualCodeReject: ((err: Error) => void) | undefined;
-    const manualCodePromise = new Promise<string>((resolve, reject) => {
-      manualCodeResolve = resolve;
-      manualCodeReject = reject;
-    });
-
-    // Restore editor helper
-    const restoreEditor = () => {
-      this.remountEditorShell();
-      this.ui.setFocus(this.editor);
-      this.ui.requestRender();
-    };
-
-    try {
-      await this.session.modelRegistry.authStorage.login(
-        providerId as OAuthProvider,
-        {
-          onAuth: (info: { url: string; instructions?: string }) => {
-            dialog.showAuth(info.url, info.instructions);
-
-            if (usesCallbackServer) {
-              // Show input for manual paste, racing with callback
-              dialog
-                .showManualInput(
-                  "Paste redirect URL below, or complete login in browser:",
-                )
-                .then((value) => {
-                  if (value && manualCodeResolve) {
-                    manualCodeResolve(value);
-                    manualCodeResolve = undefined;
-                  }
-                })
-                .catch(() => {
-                  if (manualCodeReject) {
-                    manualCodeReject(new Error("Login cancelled"));
-                    manualCodeReject = undefined;
-                  }
-                });
-            } else if (providerId === "github-copilot") {
-              // GitHub Copilot polls after onAuth
-              dialog.showWaiting("Waiting for browser authentication...");
-            }
-            // For Anthropic: onPrompt is called immediately after
-          },
-
-          onPrompt: async (prompt: {
-            message: string;
-            placeholder?: string;
-          }) => {
-            return dialog.showPrompt(prompt.message, prompt.placeholder);
-          },
-
-          onProgress: (message: string) => {
-            dialog.showProgress(message);
-          },
-
-          onManualCodeInput: () => manualCodePromise,
-
-          signal: dialog.signal,
-        },
-      );
-
-      // Success
-      restoreEditor();
-      this.session.modelRegistry.refresh();
-      await this.modelOverlay.updateAvailableProviderCount();
-      this.showStatus(
-        `Logged in to ${providerName}. Credentials saved to ${getAuthPath()}`,
-      );
-    } catch (error: unknown) {
-      restoreEditor();
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      if (errorMsg !== "Login cancelled") {
-        this.showError(`Failed to login to ${providerName}: ${errorMsg}`);
-      }
-    }
   }
 
   // =========================================================================

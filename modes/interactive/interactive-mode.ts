@@ -62,10 +62,7 @@ import { type AppAction, KeybindingsManager } from "../../core/platform/keybindi
 import { createCompactionSummaryMessage } from "../../core/messages.js";
 import { listMCPServers, setMCPServerEnabled } from "../../core/mcp/mcp-config.js";
 import type { ResourceDiagnostic } from "../../core/platform/config/resource-loader.js";
-import {
-  type SessionContext,
-  SessionManager,
-} from "../../core/session/session-manager.js";
+import type { SessionContext } from "../../core/session/session-manager.js";
 import {
   BUILTIN_SLASH_COMMANDS,
   getExtensionBackedBuiltinCommandNames,
@@ -104,6 +101,7 @@ import { CustomOverlayHost } from "./controllers/extension-ui/custom-overlay-hos
 import { EditorComponentAdapter } from "./controllers/extension-ui/editor-component-adapter.js";
 import { ModelOverlayController } from "./controllers/model-overlay-controller.js";
 import { AuthProviderConfigController } from "./controllers/auth-provider-config-controller.js";
+import { TreeOverlayController } from "./controllers/tree-overlay-controller.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -126,13 +124,10 @@ import {
 } from "./components/keybinding-hints.js";
 import { formatSoulStats } from "./components/soul-stats.js";
 import { formatMemoryStats } from "./components/memory-stats.js";
-import { SessionSelectorComponent } from "./components/session-selector.js";
 import { SettingsSelectorComponent } from "./components/settings-selector.js";
 import { SkillInvocationMessageComponent } from "./components/skill-invocation-message.js";
 import { ToolExecutionComponent } from "./components/tool-execution.js";
-import { TreeSelectorComponent } from "./components/tree-selector.js";
 import { UserMessageComponent } from "./components/user-message.js";
-import { UserMessageSelectorComponent } from "./components/user-message-selector.js";
 import { RawText } from "./components/raw-text.js";
 import {
   getAvailableThemes,
@@ -266,6 +261,7 @@ export class InteractiveMode {
   private selfUpdate!: SelfUpdateController;
   private authProviderConfig!: AuthProviderConfigController;
   private modelOverlay!: ModelOverlayController;
+  private treeOverlay!: TreeOverlayController;
   private surfaces!: PersistentSurfaceRegistry;
   private promptHost!: PromptHost;
   private customOverlay!: CustomOverlayHost;
@@ -461,6 +457,48 @@ export class InteractiveMode {
         updateEditorBorderColor: () => this.updateEditorBorderColor(),
       },
       playDaxnuts: () => this.handleDaxnuts(),
+    });
+    this.treeOverlay = new TreeOverlayController({
+      session: this.session,
+      getSessionManager: () => this.sessionManager,
+      surface: {
+        showSelector: (create) => this.showSelector(create),
+        showStatus: (message) => this.showStatus(message),
+        showError: (message) => this.showError(message),
+        requestRender: () => this.ui.requestRender(),
+        getUi: () => this.ui,
+        getChatContainer: () => this.chatContainer,
+        getStatusContainer: () => this.statusContainer,
+        clearChat: () => this.chatContainer.clear(),
+        clearTransientSessionUi: () => {
+          if (this.state.loadingAnimation) {
+            (this.state.loadingAnimation as PencilLoader).stop();
+            this.state.loadingAnimation = undefined;
+          }
+          this.statusContainer.clear();
+          this.pendingMessagesContainer.clear();
+          this.state.compactionQueuedMessages = [];
+          this.state.streamingComponent = undefined;
+          this.state.streamingMessage = undefined;
+          this.state.pendingTools.clear();
+          this.imagePipeline.clearAttachments();
+        },
+        addSessionNavigationBanner: (message) =>
+          this.addSessionNavigationBanner(message),
+        renderInitialMessages: () => this.renderInitialMessages(),
+        getEditorText: () => this.editor.getText(),
+        setEditorText: (text) => this.editor.setText(text),
+        getEscapeHandler: () => this.defaultEditor.onEscape,
+        setEscapeHandler: (handler) => {
+          this.defaultEditor.onEscape = handler;
+        },
+      },
+      promptHost: {
+        selector: (title, options) => this.promptHost.selector(title, options),
+        editor: (title, prefill) => this.promptHost.editor(title, prefill),
+      },
+      keybindings: this.keybindings,
+      shutdown: () => this.shutdown(),
     });
     this.syncBuddyPet();
 
@@ -1446,7 +1484,7 @@ export class InteractiveMode {
           return { cancelled: false };
         },
         switchSession: async (sessionPath) => {
-          await this.handleResumeSession(sessionPath);
+          await this.treeOverlay.resumeSession(sessionPath);
           return { cancelled: false };
         },
         reload: async () => {
@@ -1812,9 +1850,9 @@ export class InteractiveMode {
           const now = Date.now();
           if (now - this.lastEscapeTime < 500) {
             if (action === "tree") {
-              this.showTreeSelector();
+              this.treeOverlay.showTreeSelector();
             } else {
-              this.showUserMessageSelector();
+              this.treeOverlay.showForkSelector();
             }
             this.lastEscapeTime = 0;
           } else {
@@ -1861,9 +1899,9 @@ export class InteractiveMode {
     this.defaultEditor.onAction("followUp", () => this.handleFollowUp());
     this.defaultEditor.onAction("dequeue", () => this.handleDequeue());
     this.defaultEditor.onAction("newSession", () => this.handleClearCommand());
-    this.defaultEditor.onAction("tree", () => this.showTreeSelector());
-    this.defaultEditor.onAction("fork", () => this.showUserMessageSelector());
-    this.defaultEditor.onAction("resume", () => this.showSessionSelector());
+    this.defaultEditor.onAction("tree", () => this.treeOverlay.showTreeSelector());
+    this.defaultEditor.onAction("fork", () => this.treeOverlay.showForkSelector());
+    this.defaultEditor.onAction("resume", () => this.treeOverlay.showSessionSelector());
 
     this.defaultEditor.onChange = (text: string) => {
       const wasBashMode = this.isBashMode;
@@ -1928,7 +1966,7 @@ export class InteractiveMode {
         return;
       }
       if (text === "/resume") {
-        this.showSessionSelector();
+        this.treeOverlay.showSessionSelector();
         this.editor.setText("");
         return;
       }
@@ -2191,11 +2229,11 @@ export class InteractiveMode {
       clear();
     },
     "/fork": (_t, clear) => {
-      this.showUserMessageSelector();
+      this.treeOverlay.showForkSelector();
       clear();
     },
     "/tree": (_t, clear) => {
-      this.showTreeSelector();
+      this.treeOverlay.showTreeSelector();
       clear();
     },
     "/login": async (t, clear) => {
@@ -2248,7 +2286,7 @@ export class InteractiveMode {
       clear();
     },
     "/resume": (_t, clear) => {
-      this.showSessionSelector();
+      this.treeOverlay.showSessionSelector();
       clear();
     },
     "/quit": async (_t, clear) => {
@@ -3786,240 +3824,6 @@ export class InteractiveMode {
       return { component: selector, focus: selector.getSettingsList() };
     });
   }
-  // =========================================================================
-  // Session and message selectors
-  // =========================================================================
-
-  private showUserMessageSelector(): void {
-    const userMessages = this.session.getUserMessagesForForking();
-
-    if (userMessages.length === 0) {
-      this.showStatus("No messages to fork from");
-      return;
-    }
-
-    this.showSelector((done) => {
-      const selector = new UserMessageSelectorComponent(
-        userMessages.map((m) => ({ id: m.entryId, text: m.text })),
-        async (entryId) => {
-          const result = await this.session.fork(entryId);
-          if (result.cancelled) {
-            // Extension cancelled the fork
-            done();
-            this.ui.requestRender();
-            return;
-          }
-
-          this.chatContainer.clear();
-          this.addSessionNavigationBanner("Branched session");
-          this.renderInitialMessages();
-          this.editor.setText(result.selectedText);
-          done();
-          this.showStatus("Branched to new session");
-        },
-        () => {
-          done();
-          this.ui.requestRender();
-        },
-      );
-      return { component: selector, focus: selector.getMessageList() };
-    });
-  }
-
-  private showTreeSelector(initialSelectedId?: string): void {
-    const tree = this.sessionManager.getTree();
-    const realLeafId = this.sessionManager.getLeafId();
-
-    if (tree.length === 0) {
-      this.showStatus("No entries in session");
-      return;
-    }
-
-    this.showSelector((done) => {
-      const selector = new TreeSelectorComponent(
-        tree,
-        realLeafId,
-        this.ui.terminal.rows,
-        async (entryId) => {
-          // Selecting the current leaf is a no-op (already there)
-          if (entryId === realLeafId) {
-            done();
-            this.showStatus("Already at this point");
-            return;
-          }
-
-          // Ask about summarization
-          done(); // Close selector first
-
-          // Loop until user makes a complete choice or cancels to tree
-          let wantsSummary = false;
-          let customInstructions: string | undefined;
-
-          while (true) {
-            const summaryChoice = await this.promptHost.selector(
-              "Summarize branch?",
-              ["No summary", "Summarize", "Summarize with custom prompt"],
-            );
-
-            if (summaryChoice === undefined) {
-              // User pressed escape - re-show tree selector with same selection
-              this.showTreeSelector(entryId);
-              return;
-            }
-
-            wantsSummary = summaryChoice !== "No summary";
-
-            if (summaryChoice === "Summarize with custom prompt") {
-              customInstructions = await this.promptHost.editor(
-                "Custom summarization instructions",
-              );
-              if (customInstructions === undefined) {
-                // User cancelled - loop back to summary selector
-                continue;
-              }
-            }
-
-            // User made a complete choice
-            break;
-          }
-
-          // Set up escape handler and loader if summarizing
-          let summaryLoader: Component | undefined;
-          const originalOnEscape = this.defaultEditor.onEscape;
-
-          if (wantsSummary) {
-            this.defaultEditor.onEscape = () => {
-              this.session.abortBranchSummary();
-            };
-            this.chatContainer.addChild(new Spacer(1));
-            summaryLoader = new PencilLoader(
-              this.ui,
-              theme,
-              `Summarizing branch... (${appKey(this.keybindings, "interrupt")} to cancel)`,
-            );
-            this.statusContainer.addChild(summaryLoader);
-            this.ui.requestRender();
-          }
-
-          try {
-            const result = await this.session.navigateTree(entryId, {
-              summarize: wantsSummary,
-              customInstructions,
-            });
-
-            if (result.aborted) {
-              // Summarization aborted - re-show tree selector with same selection
-              this.showStatus("Branch summarization cancelled");
-              this.showTreeSelector(entryId);
-              return;
-            }
-            if (result.cancelled) {
-              this.showStatus("Navigation cancelled");
-              return;
-            }
-
-            // Update UI
-            this.chatContainer.clear();
-            this.addSessionNavigationBanner("Navigated session tree");
-            this.renderInitialMessages();
-            if (result.editorText && !this.editor.getText().trim()) {
-              this.editor.setText(result.editorText);
-            }
-            this.showStatus("Navigated to selected point");
-          } catch (error) {
-            this.showError(
-              error instanceof Error ? error.message : String(error),
-            );
-          } finally {
-            if (summaryLoader) {
-              (summaryLoader as PencilLoader).stop();
-              this.statusContainer.clear();
-            }
-            this.defaultEditor.onEscape = originalOnEscape;
-          }
-        },
-        () => {
-          done();
-          this.ui.requestRender();
-        },
-        (entryId, label) => {
-          this.sessionManager.appendLabelChange(entryId, label);
-          this.ui.requestRender();
-        },
-        initialSelectedId,
-      );
-      return { component: selector, focus: selector };
-    });
-  }
-
-  private showSessionSelector(): void {
-    this.showSelector((done) => {
-      const selector = new SessionSelectorComponent(
-        (onProgress) =>
-          SessionManager.list(
-            this.sessionManager.getCwd(),
-            this.sessionManager.getSessionDir(),
-            onProgress,
-          ),
-        SessionManager.listAll,
-        async (sessionPath) => {
-          done();
-          await this.handleResumeSession(sessionPath);
-        },
-        () => {
-          done();
-          this.ui.requestRender();
-        },
-        () => {
-          void this.shutdown();
-        },
-        () => this.ui.requestRender(),
-        {
-          renameSession: async (
-            sessionFilePath: string,
-            nextName: string | undefined,
-          ) => {
-            const next = (nextName ?? "").trim();
-            if (!next) return;
-            const mgr = SessionManager.open(sessionFilePath);
-            mgr.appendSessionInfo(next);
-          },
-          showRenameHint: true,
-          keybindings: this.keybindings,
-        },
-
-        this.sessionManager.getSessionFile(),
-      );
-      return { component: selector, focus: selector };
-    });
-  }
-
-  private async handleResumeSession(sessionPath: string): Promise<void> {
-    // Stop loading animation
-    if (this.state.loadingAnimation) {
-      (this.state.loadingAnimation as PencilLoader).stop();
-      this.state.loadingAnimation = undefined;
-    }
-    this.statusContainer.clear();
-
-    // Clear UI state
-    this.pendingMessagesContainer.clear();
-    this.state.compactionQueuedMessages = [];
-    this.state.streamingComponent = undefined;
-    this.state.streamingMessage = undefined;
-    this.state.pendingTools.clear();
-    this.imagePipeline.clearAttachments();
-
-    // Switch session via AgentSession (emits extension session events)
-    await this.session.switchSession(sessionPath);
-
-    // Clear and re-render the chat
-    this.chatContainer.clear();
-    this.addSessionNavigationBanner("Resumed session");
-    this.renderInitialMessages();
-    this.showStatus("Resumed session");
-  }
-
   // =========================================================================
   // Command handlers
   // =========================================================================

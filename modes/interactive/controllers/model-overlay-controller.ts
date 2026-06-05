@@ -16,7 +16,7 @@
  * grouped by capability and serving one workflow; it must not keep growing. No InteractiveMode reference.
  */
 
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import { CycleModelError } from "../../../core/runtime/agent-session.js";
 import type { Component, TUI } from "@pencil-agent/tui";

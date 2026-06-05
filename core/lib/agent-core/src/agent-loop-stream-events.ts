@@ -5,7 +5,8 @@
  * [HERE]: core/lib/agent-core/src/agent-loop-stream-events.ts within agent-core; shared abortable operation and assistant-stream iterator utilities.
  */
 
-import type { AssistantMessageEvent, AssistantMessageEventStream } from "@pencil-agent/ai";
+import type { AssistantMessageEvent } from "@pencil-agent/ai/types";
+import type { AssistantMessageEventStream } from "@pencil-agent/ai/events";
 
 export type AssistantStreamNext = IteratorResult<AssistantMessageEvent> | "aborted";
 export type AssistantStreamStart = AssistantMessageEventStream | "aborted";

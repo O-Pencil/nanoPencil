@@ -8,7 +8,7 @@
  * apply sequence (agent.setModel, persistence, emit) stays in the session.
  */
 
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 
 /**

@@ -5,7 +5,7 @@
  * [HERE]: core/session/compaction/compaction.ts - context window management via summarization
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { AssistantMessage, Model, Usage } from "@pencil-agent/ai";
+import type { AssistantMessage, Model, Usage } from "@pencil-agent/ai/types";
 import { completeSimple } from "@pencil-agent/ai";
 import {
 	convertToLlm,

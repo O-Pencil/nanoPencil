@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/runtime/sdk.ts
  * [HERE]: core/mcp/figma-auth.ts - Figma OAuth integration for MCP servers
  */
-import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@pencil-agent/ai";
+import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@pencil-agent/ai/oauth";
 import { registerOAuthProvider } from "@pencil-agent/ai";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";

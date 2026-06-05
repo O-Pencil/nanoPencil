@@ -6,7 +6,7 @@
  */
 
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
-import type { Transport } from "@pencil-agent/ai";
+import type { Transport } from "@pencil-agent/ai/types";
 import {
 	Container,
 	getCapabilities,

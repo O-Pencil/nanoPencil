@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/oauth-selector.ts - OAuth provider selector
  */
 
-import type { OAuthProviderInterface } from "@pencil-agent/ai";
+import type { OAuthProviderInterface } from "@pencil-agent/ai/oauth";
 import { Container, getEditorKeybindings, Spacer, TruncatedText } from "@pencil-agent/tui";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";

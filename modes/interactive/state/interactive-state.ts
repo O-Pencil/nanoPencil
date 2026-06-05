@@ -13,7 +13,7 @@
  * own owner and is not consolidated here.
  */
 
-import type { AssistantMessage } from "@pencil-agent/ai";
+import type { AssistantMessage } from "@pencil-agent/ai/types";
 import type { Component, Spacer, Text } from "@pencil-agent/tui";
 import type { AssistantMessageComponent } from "../components/assistant-message.js";
 import type { CustomMessageComponent } from "../components/custom-message.js";

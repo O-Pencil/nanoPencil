@@ -9,7 +9,7 @@
  */
 
 import * as path from "node:path";
-import type { ImageContent, Model, TextContent } from "@pencil-agent/ai";
+import type { ImageContent, Model, TextContent } from "@pencil-agent/ai/types";
 import type { PromptOptions } from "../../../core/runtime/agent-session.js";
 import type { Attachment } from "./image-pipeline-controller.js";
 

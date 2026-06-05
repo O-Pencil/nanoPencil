@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/model/index.ts
  * [HERE]: core/model/switcher.ts - model selection and cycling logic
  */
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import { modelsAreEqual } from "@pencil-agent/ai";
 

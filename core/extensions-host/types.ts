@@ -15,17 +15,16 @@ import type {
 import type {
 	Api,
 	AssistantMessageEvent,
-	AssistantMessageEventStream,
 	Context,
 	ImageContent,
 	Model,
-	OAuthCredentials,
-	OAuthLoginCallbacks,
 	SimpleStreamOptions,
 	TextContent,
 	ToolResultMessage,
 	Usage,
-} from "@pencil-agent/ai";
+} from "@pencil-agent/ai/types";
+import type { AssistantMessageEventStream } from "@pencil-agent/ai/events";
+import type { OAuthCredentials, OAuthLoginCallbacks } from "@pencil-agent/ai/oauth";
 import type {
 	AutocompleteItem,
 	Component,

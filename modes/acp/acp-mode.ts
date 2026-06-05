@@ -6,7 +6,7 @@
  */
 import * as acp from "@agentclientprotocol/sdk";
 import type { AgentMessage, AgentRunResult, AgentTool } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import type {
 	AuthenticateRequest,
 	AuthenticateResponse,

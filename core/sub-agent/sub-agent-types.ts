@@ -7,7 +7,7 @@
  */
 
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { ImageContent, Model } from "@pencil-agent/ai";
+import type { ImageContent, Model } from "@pencil-agent/ai/types";
 import type { Tool } from "../tools/index.js";
 
 /** Realtime lifecycle event emitted by a running SubAgent. */

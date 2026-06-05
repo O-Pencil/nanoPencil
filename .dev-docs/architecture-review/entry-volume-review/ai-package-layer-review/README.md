@@ -4,7 +4,7 @@
 review_id: ai-package-layer-review
 parent: ../README.md
 phase: P6
-status: subpaths-implemented-validation-pending
+status: subpaths-validated-internal-migration-started
 created_at: 2026-06-04
 scope:
   - core/lib/ai
@@ -233,4 +233,4 @@ Root `@pencil-agent/ai` remains legacy-compatible.
 
 ## Next Step
 
-Validate build output on a capable machine, then start internal import migration by capability group. The first migration slice should be type-only imports.
+Continue internal import migration by capability group. The first slice migrates pure type-only imports; mixed value/type imports remain on the root barrel until the relevant value subpaths are migrated.

@@ -7,7 +7,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import { SubAgentRuntime } from "../../../core/sub-agent/index.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
 import { WorktreeManager } from "../../../core/workspace/index.js";

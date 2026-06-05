@@ -5,7 +5,7 @@
  * [HERE]: core/session/compaction/branch-summarization.ts - branch summarization
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import { completeSimple } from "@pencil-agent/ai";
 import {
 	convertToLlm,

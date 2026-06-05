@@ -21,7 +21,7 @@
  * 5. **Invalid Signature Format**: Model validates signature format (Anthropic newer models).
  */
 
-import type { AssistantMessage } from "@pencil-agent/ai";
+import type { AssistantMessage } from "@pencil-agent/ai/types";
 import { getModels } from "@pencil-agent/ai";
 import { describe, expect, it } from "vitest";
 import { Agent } from "../src/index.js";

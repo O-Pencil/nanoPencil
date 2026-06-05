@@ -4,7 +4,7 @@
  * [TO]: Consumed by index.ts, main.ts, core/runtime/sdk.ts, cli/config-selector.ts, extensions/builtin/team/index.ts, modes/interactive/components/model-selector.ts, modes/interactive/components/config-selector.ts, and test files
  * [HERE]: core/platform/config/settings-manager.ts - user preferences aggregation
  */
-import type { Transport } from "@pencil-agent/ai";
+import type { Transport } from "@pencil-agent/ai/types";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";

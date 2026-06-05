@@ -5,7 +5,7 @@
  * [HERE]: core/session/session-manager.ts - session state persistence to JSONL
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { ImageContent, Message, TextContent } from "@pencil-agent/ai";
+import type { ImageContent, Message, TextContent } from "@pencil-agent/ai/types";
 import { randomUUID } from "crypto";
 import {
 	appendFileSync,

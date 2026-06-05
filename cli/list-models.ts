@@ -4,7 +4,7 @@
  * [TO]: Consumed by main.ts
  * [HERE]: cli/list-models.ts - list available models with fuzzy search
  */
-import type { Api, Model } from "@pencil-agent/ai";
+import type { Api, Model } from "@pencil-agent/ai/types";
 import { fuzzyFilter } from "@pencil-agent/tui";
 import type { ModelRegistry } from "../core/model-registry.js";
 

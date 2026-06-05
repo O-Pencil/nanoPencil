@@ -5,7 +5,7 @@
  * [HERE]: core/session/compaction/utils.ts - shared compaction utilities
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { Message } from "@pencil-agent/ai";
+import type { Message } from "@pencil-agent/ai/types";
 
 // ============================================================================
 // File Operation Tracking

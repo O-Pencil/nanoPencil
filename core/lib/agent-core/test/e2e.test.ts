@@ -1,4 +1,4 @@
-import type { AssistantMessage, Model, ToolResultMessage, UserMessage } from "@pencil-agent/ai";
+import type { AssistantMessage, Model, ToolResultMessage, UserMessage } from "@pencil-agent/ai/types";
 import { getModel } from "@pencil-agent/ai";
 import { describe, expect, it } from "vitest";
 import { Agent } from "../src/index.js";

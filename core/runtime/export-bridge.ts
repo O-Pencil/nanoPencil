@@ -9,7 +9,7 @@
  */
 
 import type { AgentMessage, AgentState } from "@pencil-agent/agent-core";
-import type { AssistantMessage } from "@pencil-agent/ai";
+import type { AssistantMessage } from "@pencil-agent/ai/types";
 import { exportSessionToHtml } from "../export-html/index.js";
 import { createToolHtmlRenderer } from "../export-html/tool-renderer.js";
 import type { ExtensionRunner } from "../extensions-host/index.js";

@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/custom-message.ts -
  */
 
-import type { TextContent } from "@pencil-agent/ai";
+import type { TextContent } from "@pencil-agent/ai/types";
 import type { Component } from "@pencil-agent/tui";
 import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
 import type { MessageRenderer } from "../../../core/extensions-host/types.js";

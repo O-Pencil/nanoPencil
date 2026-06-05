@@ -5,7 +5,7 @@
  * [HERE]: core/tools/read.ts - filesystem read boundary; consumed by orchestrator
  */
 import type { AgentTool } from "@pencil-agent/agent-core";
-import type { ImageContent, TextContent } from "@pencil-agent/ai";
+import type { ImageContent, TextContent } from "@pencil-agent/ai/types";
 import { type Static, Type } from "@sinclair/typebox";
 import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile } from "fs/promises";

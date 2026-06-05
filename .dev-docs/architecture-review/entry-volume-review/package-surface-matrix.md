@@ -4,7 +4,7 @@
 review_id: entry-volume-review
 finding: EV05
 classification: package surface
-status: subpaths-implemented-validation-pending
+status: subpaths-validated-internal-migration-started
 created_at: 2026-06-04
 decision: Q3
 ```
@@ -135,4 +135,4 @@ After code:
 
 ## Implementation Result
 
-Additive `@pencil-agent/ai/*` subpaths have been added while preserving the root entry. Validation is pending a capable-machine build and quality check.
+Additive `@pencil-agent/ai/*` subpaths have been added while preserving the root entry. Maintainer confirmed build/quality validation passed. Internal import migration has started with type-only imports.

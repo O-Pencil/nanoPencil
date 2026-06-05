@@ -25,7 +25,7 @@ import {
 import { AuthStorage } from "../platform/config/auth-storage.js";
 import { SessionManager } from "../session/session-manager.js";
 import { ModelRegistry } from "../model-registry.js";
-import type { Api, Model } from "@pencil-agent/ai";
+import type { Api, Model } from "@pencil-agent/ai/types";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 
 // ============================================================================

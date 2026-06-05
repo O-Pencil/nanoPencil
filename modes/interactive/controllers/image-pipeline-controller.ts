@@ -11,7 +11,7 @@
  * identical to the former InteractiveMode methods.
  */
 
-import type { ImageContent } from "@pencil-agent/ai";
+import type { ImageContent } from "@pencil-agent/ai/types";
 import { type Component, Container, matchesKey } from "@pencil-agent/tui";
 import { detectSupportedImageMimeTypeFromFile } from "../../../utils/mime.js";
 import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipboard-image.js";

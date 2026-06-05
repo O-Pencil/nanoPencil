@@ -16,7 +16,7 @@ import type {
 	Tool,
 	ToolResultMessage,
 	Usage,
-} from "@pencil-agent/ai";
+} from "@pencil-agent/ai/types";
 import type { Static, TSchema } from "@sinclair/typebox";
 
 /** Stream function - can return sync or Promise for async config lookup */

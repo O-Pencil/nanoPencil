@@ -12,7 +12,7 @@ import type {
 	ToolCall,
 	TSchema,
 	Usage,
-} from "@pencil-agent/ai";
+} from "@pencil-agent/ai/types";
 import { completeSimple } from "@pencil-agent/ai";
 import type { ThinkingLevel } from "@pencil-agent/agent-core";
 import type { SettingsManager } from "../platform/config/settings-manager.js";

@@ -5,7 +5,7 @@
  * [HERE]: modes/print-mode.ts - non-interactive batch processing mode
  */
 import type { AgentRunResult } from "@pencil-agent/agent-core";
-import type { AssistantMessage, ImageContent, Message, UserMessage } from "@pencil-agent/ai";
+import type { AssistantMessage, ImageContent, Message, UserMessage } from "@pencil-agent/ai/types";
 import type { AgentSession } from "../core/runtime/agent-session.js";
 
 /**

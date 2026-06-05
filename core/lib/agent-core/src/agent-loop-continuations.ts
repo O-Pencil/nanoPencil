@@ -5,7 +5,7 @@
  * [HERE]: core/lib/agent-core/src/agent-loop-continuations.ts within agent-core; shared loop continuation policy.
  */
 
-import type { AssistantMessage, UserMessage } from "@pencil-agent/ai";
+import type { AssistantMessage, UserMessage } from "@pencil-agent/ai/types";
 import type { AgentLoopConfig } from "./types.js";
 
 export const DEFAULT_OUTPUT_TOKEN_BUDGET_THRESHOLD_PCT = 0.9;

@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/scoped-models-selector.ts -
  */
 
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import {
 	Container,
 	type Focusable,

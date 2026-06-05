@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/assistant-message.ts - assistant message display
  */
 
-import type { AssistantMessage } from "@pencil-agent/ai";
+import type { AssistantMessage } from "@pencil-agent/ai/types";
 import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 

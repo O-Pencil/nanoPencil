@@ -5,7 +5,7 @@
  * [HERE]: core/messages.ts - custom message types and LLM transformers
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { ImageContent, Message, TextContent } from "@pencil-agent/ai";
+import type { ImageContent, Message, TextContent } from "@pencil-agent/ai/types";
 
 export const COMPACTION_SUMMARY_PREFIX = `The conversation history before this point was compacted into the following summary:
 

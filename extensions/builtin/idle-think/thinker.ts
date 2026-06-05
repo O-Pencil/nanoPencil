@@ -13,7 +13,7 @@ import {
 	createSandboxHook,
 	type Tool,
 } from "../../../core/tools/index.js";
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import { execFile, execSync } from "node:child_process";
 import { promisify } from "node:util";
 import { existsSync } from "node:fs";

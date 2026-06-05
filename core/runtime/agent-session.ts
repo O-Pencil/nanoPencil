@@ -24,7 +24,7 @@ import type {
   Message,
   Model,
   TextContent,
-} from "@pencil-agent/ai";
+} from "@pencil-agent/ai/types";
 import {
   isContextOverflow,
   resetApiProviders,

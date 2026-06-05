@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/runtime/agent-session.ts
  * [HERE]: core/export-html/tool-renderer.ts - renders tools to HTML
  */
-import type { ImageContent, TextContent } from "@pencil-agent/ai";
+import type { ImageContent, TextContent } from "@pencil-agent/ai/types";
 import type { Theme } from "../theme-contract.js";
 import type { ToolDefinition } from "../extensions-host/types.js";
 import { ansiLinesToHtml } from "./ansi-to-html.js";

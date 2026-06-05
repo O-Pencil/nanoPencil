@@ -11,7 +11,7 @@ import { WorktreeManager } from "../../../core/workspace/index.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
 import { isAbsolute, join, resolve } from "node:path";
 import type { Tool } from "../../../core/tools/index.js";
-import type { Model } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
 import { TeamStateStore } from "./team-state-store.js";
 import { PermissionStore } from "./team-permissions.js";
 import { TeamMailbox } from "./team-mailbox.js";

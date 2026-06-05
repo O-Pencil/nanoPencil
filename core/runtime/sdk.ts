@@ -12,7 +12,7 @@ import {
   type AgentMessage,
   type ThinkingLevel,
 } from "@pencil-agent/agent-core";
-import type { Message, Model } from "@pencil-agent/ai";
+import type { Message, Model } from "@pencil-agent/ai/types";
 import { getAgentDir, getDocsPath } from "../../config.js";
 import { AgentSession } from "./agent-session.js";
 import type { Theme as ThemeContract } from "../theme-contract.js";

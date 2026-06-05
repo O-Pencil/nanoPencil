@@ -5,7 +5,7 @@
  * [HERE]: core/lib/agent-core/src/agent-loop-tool-results.ts within agent-core; shared tool-result budget policy.
  */
 
-import type { AssistantMessage, TextContent, ToolResultMessage } from "@pencil-agent/ai";
+import type { AssistantMessage, TextContent, ToolResultMessage } from "@pencil-agent/ai/types";
 
 export function enforceToolResultBatchSize(
 	toolResults: ToolResultMessage[],

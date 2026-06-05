@@ -5,7 +5,7 @@
  * [HERE]: core/extensions-host/runner.ts - extension execution and lifecycle management; owns the single try/catch around command.handler so telemetry can wrap every invocation regardless of caller mode
  */
 import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { ImageContent, Model } from "@pencil-agent/ai";
+import type { ImageContent, Model } from "@pencil-agent/ai/types";
 import type { KeyId } from "@pencil-agent/tui";
 import type { Theme } from "../theme-contract.js";
 import { theme } from "../../modes/interactive/theme/theme.js";

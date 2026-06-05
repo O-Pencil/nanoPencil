@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0-beta.3] - 2026-06-05
+
+### Fixed
+- fix(packaging): beta.2 installed but failed at runtime because compiled host files still import
+  private internal libraries by package name (`@pencil-agent/ai`, `@pencil-agent/agent-core`,
+  `@pencil-agent/tui`). These are not public runtime dependencies in candidate D; they are now copied
+  into `dist/node_modules/@pencil-agent/*` during the host build so Node can resolve them from the
+  published tarball. Public first-party packages (`extension-sdk`, `mem-core`, `soul-core`) continue
+  to resolve from npm.
+
 ## [2.0.0-beta.2] - 2026-06-05
 
 ### Fixed

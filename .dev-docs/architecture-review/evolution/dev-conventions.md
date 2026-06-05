@@ -26,7 +26,7 @@ audience: pencil maintainer · 未来贡献者 · arch agent
 | `packages/<pkg>/` | **独立可发布身份**（有外部消费者 或 maintainer 明确战略发布）| 0 消费者的内部库（→ core/lib）|
 | `extensions/{builtin,optional}/` | 第一方/可选能力实现 | 稳定第三方 SDK 类型（→ extension-sdk）|
 
-> **packages/ 入场券**（grilling 决议）：独立可发布身份是唯一入场券。例外：maintainer 明确战略保留发布意图（如 soul-core 当前未发但战略保留）——此例外须在 `target-architecture.md` 显式记名，不得隐式违反。
+> **packages/ 入场券**（grilling 决议）：独立可发布身份是唯一入场券。进入 `packages/` 的第一方包必须按真实 npm 包维护；若尚未发布，先发布该包，再让 host 依赖公网版本。发布期禁止用脚本临时剥离或改写依赖来掩盖未发布状态。
 
 ## 2. 依赖方向（单向，CI 守门）
 
@@ -46,8 +46,8 @@ extensions/ ──► packages/extension-sdk      （扩展只依赖稳定协议
 ## 4. 新增可发布包流程（promote）
 
 - 默认放 `core/lib/`；出现真实外部消费者后再 promote。
-- 用 `scripts/promote-to-package.ts <name>`：mv 目录 + 生成 package.json/tsconfig.build.json + host 改 `workspace:^` 依赖 + 改 import。
-- 发布顺序：`extension-sdk` → `mem-core`/`soul-core` → `nano-pencil`。
+- 用 `scripts/promote-to-package.ts <name>`：mv 目录 + 生成 package.json/tsconfig.build.json + 改 import；本地开发可走 workspace 解析，但 host 发布依赖必须是 npm 可解析的 semver。
+- 发布顺序：`extension-sdk` → `mem-core`/`soul-core` → `nano-pencil`。其中任何未在 npm 上可解析的 first-party 包，都必须先独立发布，不能通过 host 发布脚本绕过。
 
 ## 5. quality rule（与 F08 联动，CI 可执行）
 

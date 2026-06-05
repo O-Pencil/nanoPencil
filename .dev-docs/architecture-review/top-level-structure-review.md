@@ -41,6 +41,8 @@ new_review_targets:
 | `@pencil-agent/mem-core` | ✅ 1.1.0 | 1.1.0 | **0 外部** · 但版本号在迭代，意图明显 |
 | `@pencil-agent/soul-core` | ❌ **404 Not Found** | 0.1.0 | **0 外部** · README 第二大卖点，根本没上 npm |
 
+> 状态更新（2026-06-05 · beta.2）：上表记录的是顶层评审发生时的基线问题。beta.2 已按候选 D 的发布原则补齐 `@pencil-agent/soul-core@0.1.0` 与 `@pencil-agent/extension-sdk@0.1.0` 的公网发布，host 现在通过 npm semver 依赖这些 first-party 包，不再通过发布脚本剥离/改写依赖。
+
 ### 1.2 两个决定性反差证据
 
 **证据 A — `nanoPencil/package.json:87-119` 的 `dependencies` 没有任何 `@pencil-agent/*`**：
@@ -121,7 +123,7 @@ Pencil-Agent-Gateway          Pencil-extension/native-host
 | # | 承诺 | 当前代码实现 | 对齐度 |
 |---|------|-------------|--------|
 | P1 | **Memory** — "Remembers your projects" | `packages/mem-core` + `extensions/defaults/sal` | ✅ 实现到位 |
-| P2 | **Personality** — "Evolves a unique personality" | `packages/soul-core` + `core/soul-integration.ts` + `extensions/defaults/soul` | ⚠️ soul-core 未发 npm 但实际工作 |
+| P2 | **Personality** — "Evolves a unique personality" | `packages/soul-core` + `core/soul-integration.ts` + `extensions/defaults/soul` | ✅ beta.2 已补齐公网包发布；实现实际工作 |
 | P3 | **Terminal Native** — "Pure TUI" | `modes/interactive/` + `packages/tui` | ✅ |
 | P4 | **Model Freedom** — "10+ providers" | `packages/ai/src/providers/` 11 个 | ✅ |
 | P5 | **Offline Ready** — "Local models via Ollama" | `packages/ai/src/providers/ollama` | ✅ |
@@ -181,7 +183,7 @@ Pencil-Agent-Gateway          Pencil-extension/native-host
 | `agent-core` | 同上，被 vendored；`@pencil-agent/agent-core` 名字暗示"通用 agent 抽象"但只有 nano-pencil 用 | ❌ |
 | `tui` | 同上，被 vendored；可独立的 TUI 库，但没人单独用 | ❌ |
 | `mem-core` | 真在迭代版本号（1.1.0），有 `extension.ts` 入口；README 力推 | ⚠️ 想独立但反向 import host |
-| `soul-core` | README 力推但**npm 404 未发布**；通过 bundle 进 host | ❌ 言行不一 |
+| `soul-core` | README 力推；评审时 npm 404，beta.2 已补齐公网发布 | ✅ 真发布身份成立 |
 
 **packages/ 当前的真实功能**：
 
@@ -302,7 +304,7 @@ extensions/
 | Extensible — Plugin system for tools/themes/behaviors | 只 first-party + MCP；缺第三方注册 | 🟥 **承诺超出现实**（产品定位风险） |
 | Fast — Sub-second startup | 当前恒付全 mode/provider/扩展 | 🟧 已知短板，F06/F07 在治 |
 | NanoMem 持久记忆 | `packages/mem-core@1.1.0` 已 npm 发布且工作 | ✅ |
-| NanoSoul 性格演化 | `packages/soul-core@0.1.0` **npm 404**；实际通过 bundle 工作 | 🟨 名实不副但功能在 |
+| NanoSoul 性格演化 | `packages/soul-core@0.1.0` 已补齐公网发布；实际通过 host 集成工作 | ✅ |
 | 10+ providers | 11 个 provider 在 `packages/ai/src/providers/` | ✅ |
 | MCP Protocol Support | `core/mcp/` 工作 | ✅ |
 | Terminal Native | `modes/interactive/` + `packages/tui` | ✅ |
@@ -516,7 +518,7 @@ Pencil/                                  ← ecosystem 顶层
 | `agent-core` | 0 外部消费者 + 0.0.1 不动 | **退到 `core/lib/agent-core/`** | 同上 |
 | `tui` | 0 外部消费者 + 0.0.1 不动 | **退到 `core/lib/tui/`** | 同上 |
 | `mem-core` | README 力推 + maintainer 明确想保 + 已发 1.1.0 + 未来可接外部 store/provider | **保 `packages/mem-core/`** | 真发布的官方基础记忆实现 |
-| `soul-core` | README 力推 + maintainer 明确想保 | **保 `packages/soul-core/`** | 真发布的官方基础灵魂实现（需补发 npm） |
+| `soul-core` | README 力推 + maintainer 明确想保 + 已发 0.1.0 | **保 `packages/soul-core/`** | 真发布的官方基础灵魂实现 |
 | `extension-sdk`（**新增**）| 第三方扩展协议 + Memory/Soul 低层 provider/adapter 协议 | **新建 `packages/extension-sdk/`** | 等同 Continue.dev 的 continue-sdk，但不外包连续性内核 |
 
 ### 6.D.3 目标骨架摘要（权威目录树见 target-architecture）
@@ -555,7 +557,7 @@ nanoPencil/
 | Memory/Soul 可插拔 | **连续性内核官方定义；provider/adapter/candidate 可插拔** | 不把 PencilAgent 长期自我叙事外包给插件 |
 | 扩展运行时位置 | `core/extensions-host/` | Continue 类似 |
 | 第一方扩展位置 | `extensions/builtin/` + `optional/` 顶层 | OpenClaw + Continue 都顶层 |
-| host dependencies | 真依赖 3 个真包（`workspace:^`）| 标准 npm workspaces 玩法 |
+| host dependencies | 真依赖 3 个真包（npm semver；本地由 workspace/link 参与开发解析）| 发布产物可被 registry 直接安装 |
 | bundle-deps.js | **删除** | 走 npm 自然解析 |
 
 ### 6.D.5 发布依赖原则
@@ -563,8 +565,10 @@ nanoPencil/
 候选 D 的发布原则是：**host 不再把 workspace 包倒灌进 dist，而是通过 npm workspace / package dependency 表达真实依赖**。
 
 - `@pencil-agent/nano-pencil` 依赖 3 个真发布包：`extension-sdk`、`mem-core`、`soul-core`
-- `core/lib/*` 只作为内部 workspace/private package 提供开发期路径解析，不作为外部承诺
+- `core/lib/*` 只作为内部 workspace/private package 提供开发期路径解析，不作为外部承诺；发布时内嵌到 host `dist/node_modules/@pencil-agent/*`
 - 发布顺序是 `extension-sdk` → `mem-core` / `soul-core` → `nano-pencil`
+- 若某个 first-party 包尚未在 npm 上可解析，正确动作是先发布该包并 bump host 依赖；不再保留“发布前剥离/改写依赖”的脚本路径
+- 若安装后的 host runtime 报缺 `@pencil-agent/ai` / `agent-core` / `tui`，正确动作是修 host 内部库打包，而不是依赖公网旧版本
 - 具体 `package.json` 形态与迁移动作由 `target-architecture.md §4.1` 和 `§7` 维护
 
 ### 6.D.6 Memory/Soul 边界原则
@@ -596,7 +600,7 @@ node scripts/promote-to-package.ts ai
 # 自动完成：
 #  1. mv core/lib/ai/ packages/ai/
 #  2. 生成 packages/ai/package.json + tsconfig.build.json
-#  3. host package.json 加入 "@pencil-agent/ai": "workspace:^"
+#  3. 先发布 @pencil-agent/ai，再让 host package.json 加入 npm semver 依赖
 #  4. 仓库内 import 改 "../core/lib/ai" → "@pencil-agent/ai"
 ```
 
@@ -606,10 +610,10 @@ node scripts/promote-to-package.ts ai
 
 | maintainer 诉求 | 候选 D 满足？ | 实现机制 |
 |---------------|------------|---------|
-| mem/soul 在 src 直接引用 | ✅ | workspace:^ + tsc 开发期吃源码 |
+| mem/soul 在 src 直接引用 | ✅ | host 依赖 npm semver；本地 workspace/install 解析到源码包，发布后 registry 解析到公网包 |
 | mem/soul 同时发包 | ✅ | packages/ 真包 + 真依赖 + 真 publish |
 | 删 bundle-deps.js | ✅ | 走 npm 自然解析 |
-| ai/agent-core/tui 不假装独立 | ✅ | 退 `core/lib/`，不发包 |
+| ai/agent-core/tui 不假装独立 | ✅ | 退 `core/lib/`，随 host 内嵌发布，不发公网依赖 |
 | 未来想发 ai-core 不挪来挪去 | ⚠️ 接受 30 分钟成本 + 可选 promote 脚本 | 6.D.7 |
 | nanomem 可插拔 | ✅ | MemoryStore / MemoryCandidate provider；官方 MemoryEngine + ContinuityKernel 保留合并权 |
 | 配置出不同 PencilAgent | ✅ | PARP + `core/agent-profile/`：CLI / Browser / Remote / Editor profile |
@@ -709,4 +713,3 @@ Q8   → quality rule 守门白名单 deadline（B1 启动门控）
 Q5   → contract 粒度（B1 启动门控）
 其余 Q2/Q3/Q6  → 战术级，可在批次内决策
 ```
-

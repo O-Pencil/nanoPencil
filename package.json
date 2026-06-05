@@ -1,6 +1,6 @@
 {
   "name": "@pencil-agent/nano-pencil",
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0-beta.3",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Supports DashScope and Ali Token Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
@@ -26,12 +26,13 @@
   ],
   "scripts": {
     "dev": "tsx cli.ts",
-    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:theme:json && npm run copy:assets && npm run build:meta",
+    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:internal-libs && npm run copy:theme:json && npm run copy:assets && npm run build:meta",
     "build:meta": "node scripts/generate-build-meta.js",
     "build:release": "npm run generate-models --prefix core/lib/ai && npm run build",
     "build:deps": "npm run build --prefix packages/extension-sdk && npm run build --prefix core/lib/ai && npm run build --prefix core/lib/agent-core && npm run build --prefix core/lib/tui",
     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "copy:theme:json": "node -e \"const fs=require('fs');const p=require('path');const d='dist/modes/interactive/theme';if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});fs.readdirSync('modes/interactive/theme').forEach(f=>{if(f.endsWith('.json'))fs.copyFileSync(p.join('modes/interactive/theme',f),p.join(d,f))})\"",
+    "copy:internal-libs": "node scripts/copy-internal-libs.js",
     "copy:assets": "node scripts/copy-assets.js",
     "update-models": "npm run generate-models --prefix core/lib/ai",
     "benchmark": "node scripts/startup-benchmark.cjs",

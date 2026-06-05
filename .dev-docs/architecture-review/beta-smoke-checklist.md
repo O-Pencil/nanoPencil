@@ -94,10 +94,13 @@ rpc/acp 是服务模式，真正消费者是 IDE/编辑器；冒烟只需"启动
 ## 5. 发布步骤（maintainer 手动）
 
 ```bash
+npm view @pencil-agent/extension-sdk@0.1.0 version
+npm view @pencil-agent/mem-core@1.1.0 version
+npm view @pencil-agent/soul-core@0.1.0 version
 npm run build                          # 必须：dist 反映新版本号
 npm publish --tag beta --dry-run       # 看 files/version/tag
 npm publish --tag beta                 # scoped 包已存在，不需 --access
-npm view @pencil-agent/nano-pencil dist-tags   # 确认 latest 不变、beta=2.0.0-beta.0
+npm view @pencil-agent/nano-pencil dist-tags   # 确认 latest 不变、beta 指向本轮 beta 版本
 ```
 
 不违反"签字前不合 main"：publish 是发 tarball，与 git merge 无关。

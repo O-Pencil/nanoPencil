@@ -92,7 +92,7 @@ Phase 3 grilling 启动条件：**Q5（contract 文件粒度）+ Q8（quality ru
 
 关键新发现：
 
-- **packages/ 是"形式上的多包，实质上的单包"** —— 5 个包发布到 npm（其中 soul-core 404 未发布），但 **0 个外部消费者直接 import**；host `dependencies` 也不含 `@pencil-agent/*`；packages 全部通过 `bundle-deps.js` "倒灌" 进 host dist。`workspaces` 字段实质只承担内部代码组织。
+- **packages/ 是"形式上的多包，实质上的单包"**（评审时基线）—— 5 个包发布到 npm（当时 soul-core 404 未发布），但 **0 个外部消费者直接 import**；host `dependencies` 也不含 `@pencil-agent/*`；packages 全部通过 `bundle-deps.js` "倒灌" 进 host dist。beta.2 后已修正为候选 D 发布原则：保留的 first-party packages 必须先上公网，host 再依赖 semver 版本。
 - **3 处真背离 README 初衷**：
   1. README "Privacy First — no telemetry" vs 1.14.3 实际加入远程 telemetry
   2. README "Extensible — Plugin system" vs 现实只有 first-party + MCP（无 user-dir loader / 无第三方 theme / 无 extension-sdk 稳定包）

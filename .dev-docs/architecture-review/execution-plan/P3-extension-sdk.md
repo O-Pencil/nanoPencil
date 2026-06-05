@@ -48,7 +48,7 @@ gate: gates.md#门组-b
 - [ ] `core/extensions-host/`：4-tier loader（builtin → optional → user-dir → npm）
 - [ ] **S3**：`mem-core` / `soul-core` 仅依赖 `@pencil-agent/extension-sdk`，去除 `@pencil-agent/nano-pencil`
   - ⚠️ 不止换 import：`mem-core/src/extension.ts:13` 是 **value import** `SessionManager`（运行时依赖，非纯 type）。须先在 extension-sdk 暴露其能力抽象（或经 `ExtensionContext` 注入），否则依赖反转无法落地
-- [ ] host `package.json` 真依赖三包（`workspace:^`）
+- [x] host `package.json` 真依赖三包（npm semver；beta.2 已按公网包发布路径落地）
 
 ## 验证门控（DoD）
 

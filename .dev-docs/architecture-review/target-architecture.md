@@ -306,7 +306,7 @@ nanoPencil/
 │   │   ├── package.json                 ← peerDependencies: @pencil-agent/extension-sdk
 │   │   └── tsconfig.build.json
 │   │
-│   └── soul-core/                       ← NanoSoul 官方基础实现，需补 npm 发布（当前 0.1.0 npm 404）
+│   └── soul-core/                       ← NanoSoul 官方基础实现，真发布 npm（已 0.1.0）
 │       ├── src/                         ← SoulEngine + facet merge candidates；不把整套 soul 解释权外包
 │       ├── package.json
 │       └── tsconfig.build.json
@@ -332,17 +332,23 @@ nanoPencil/
   "name": "@pencil-agent/nano-pencil",
   "version": "1.15.0",                          // ★ 顶层重构建议 minor bump
   "dependencies": {
-    "@pencil-agent/extension-sdk": "workspace:^",  // ★ 真依赖
-    "@pencil-agent/mem-core": "workspace:^",       // ★ 真依赖
-    "@pencil-agent/soul-core": "workspace:^",      // ★ 真依赖
+    "@pencil-agent/extension-sdk": "^0.1.0",       // ★ 真依赖，npm 可解析
+    "@pencil-agent/mem-core": "^1.1.0",            // ★ 真依赖，npm 可解析
+    "@pencil-agent/soul-core": "^0.1.0",           // ★ 真依赖，npm 可解析
     // ... 其他第三方
   },
   "workspaces": [
-    "core/lib/*",                                // 内部库（提供路径解析，不发布）
+    "core/lib/*",                                // 内部库（开发期路径解析；发布时内嵌到 dist/node_modules）
     "packages/*"                                 // 真发布的包
   ]
 }
 ```
+
+发布期解析规则：
+
+- `packages/*` 中保留的 first-party 包必须是 npm 可解析的公网 semver 依赖（当前：`extension-sdk` / `mem-core` / `soul-core`）。
+- `core/lib/*` 是 host 内部库，不作为公网依赖。构建后通过 `copy:internal-libs` 放入 `dist/node_modules/@pencil-agent/*`，供 `dist/*.js` 中保留的 bare import 就近解析。
+- 禁止恢复“发布前剥离/改写 package.json 依赖”的脚本路径；缺公网包就先发包，缺内部库就修 host 打包。
 
 `core/lib/<name>/package.json` 显式标 `"private": true`，禁止 npm publish。
 
@@ -430,7 +436,7 @@ nanoPencil/
 **本轮重构范围（behavior-preserving）**：
 
 - `packages/mem-core/` `packages/soul-core/`：**两个真发布的官方基础实现包**，对应 README 力推的 NanoMem / NanoSoul。本轮只调整其**发布/依赖身份**，不改其行为
-- 为什么是 packages 而非 core/lib：**maintainer 明确战略保留独立发布身份**（注：soul-core 当前 npm 404、0 消费者，属"战略保留"例外，已在顶层评审记名）
+- 为什么是 packages 而非 core/lib：**maintainer 明确战略保留独立发布身份**。截至 beta.2，`mem-core` / `soul-core` / `extension-sdk` 都按公网 npm 包处理；若未来新增 packages 成员，必须先独立发布，再让 host 依赖公网版本
 - **修 U3 反向依赖（S3 接缝）**：mem-core 不再 import `@pencil-agent/nano-pencil`，只 import `@pencil-agent/extension-sdk` 的低层协议契约。这是为未来 continuity 内核插入预留的干净接口
 - `extensions/builtin/sal/`：留在扩展形态（不升包），通过 `core/platform/telemetry/` 通道写 `eval_*` 表（1.14.3 已完成，行为不变）
 

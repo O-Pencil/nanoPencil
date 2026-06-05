@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0-beta.2] - 2026-06-05
+
+### Fixed
+- fix(packaging): `npm install` of beta.1 still 404'd on `@pencil-agent/soul-core` (and would warn on
+  `@pencil-agent/extension-sdk` via mem-core's peer). These are first-party packages that simply had
+  not been published to npm yet. The complete fix publishes them as the standalone packages they are
+  (matching `@pencil-agent/mem-core`, already on npm) and restores all three as normal `dependencies`
+  of the host — no reference rewrite. Install `beta.2`; `beta.0`/`beta.1` are unusable.
+  - Required publish: `@pencil-agent/soul-core@0.1.0`, `@pencil-agent/extension-sdk@0.1.0`.
+
 ## [2.0.0-beta.1] - 2026-06-05
 
 ### Fixed

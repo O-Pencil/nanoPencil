@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0-beta.5] - 2026-06-05
+
+### Fixed
+- fix(packaging): beta.4 still loaded the published `@pencil-agent/mem-core@1.1.0`, whose npm
+  tarball is missing at least `dist/config.js` even though the repository build output contains it.
+  `mem-core` must be republished as `1.1.1`, then the host beta depends on `^1.1.1` so extension
+  loading resolves to the corrected public package.
+
 ## [2.0.0-beta.4] - 2026-06-05
 
 ### Fixed

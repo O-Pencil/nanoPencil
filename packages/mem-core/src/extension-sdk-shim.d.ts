@@ -20,6 +20,14 @@ declare module "@pencil-agent/extension-sdk" {
 		hasUI: boolean;
 		sessionManager: SessionManagerContract;
 		ui: ExtensionUi;
+		getSettings?: () => { nanomem?: Record<string, any> } | undefined;
+		completeSimple?: (systemPrompt: string, userMessage: string) => Promise<string | undefined>;
+		completeJson?: (
+			systemPrompt: string,
+			userMessage: string,
+			schema: Record<string, unknown>,
+			options?: { toolName?: string; resultKey?: string },
+		) => Promise<string | undefined>;
 	}
 
 	export type HookEventName =
@@ -35,11 +43,14 @@ declare module "@pencil-agent/extension-sdk" {
 		| "tool_execution_start"
 		| "tool_execution_end";
 
-	export type HookHandler = (event: unknown, ctx: ExtensionContext) => void | Promise<void>;
+	export type HookHandler = (event: any, ctx: ExtensionContext) => any | Promise<any>;
 
 	export interface ExtensionCommand {
 		description?: string;
-		getArgumentCompletions?: (argumentPrefix: string) => Array<{ value: string; label: string }> | null;
+		getArgumentCompletions?: (
+			argumentPrefix: string,
+			context?: { tokenIndex?: number; [key: string]: any },
+		) => Array<{ value: string; label: string }> | null;
 		handler: (args: string | undefined, ctx: ExtensionContext) => void | Promise<void>;
 	}
 

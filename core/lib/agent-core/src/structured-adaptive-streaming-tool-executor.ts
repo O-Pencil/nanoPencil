@@ -10,7 +10,8 @@
  * [HERE]: core/lib/agent-core/src/structured-adaptive-streaming-tool-executor.ts - streaming tool scheduling for weak-model-compatible loop
  */
 
-import { EventStream, type ToolResultMessage } from "@pencil-agent/ai";
+import type { ToolResultMessage } from "@pencil-agent/ai/types";
+import { EventStream } from "@pencil-agent/ai/events";
 import type { AgentToolResult } from "./types.js";
 import type {
 	AgentEvent,

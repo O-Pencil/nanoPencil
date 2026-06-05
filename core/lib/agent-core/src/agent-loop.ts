@@ -13,14 +13,14 @@
 import {
 	type AssistantMessage,
 	type Context,
-	EventStream,
 	isContextOverflow,
 	streamSimple,
 	type TextContent,
 	type ToolResultMessage,
 	type Usage,
-	validateToolArguments,
 } from "@pencil-agent/ai";
+import { EventStream } from "@pencil-agent/ai/events";
+import { validateToolArguments } from "@pencil-agent/ai/schema";
 import type {
 	AgentContext,
 	AgentEvent,

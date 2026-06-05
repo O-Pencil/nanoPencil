@@ -1,12 +1,12 @@
 import {
 	type AssistantMessage,
 	type AssistantMessageEvent,
-	EventStream,
 	type Message,
 	type Model,
 	type UserMessage,
-} from "@pencil-agent/ai";
-import { Type } from "@sinclair/typebox";
+} from "@pencil-agent/ai/types";
+import { EventStream } from "@pencil-agent/ai/events";
+import { Type } from "@pencil-agent/ai/schema";
 import { describe, expect, it } from "vitest";
 import { agentLoop, agentLoopContinue } from "../src/agent-loop.js";
 import { structuredAdaptiveAgentLoop } from "../src/structured-adaptive-agent-loop.js";

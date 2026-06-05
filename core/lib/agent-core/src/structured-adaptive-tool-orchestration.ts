@@ -12,11 +12,11 @@
 
 import {
 	type AssistantMessage,
-	EventStream,
 	type TextContent,
 	type ToolResultMessage,
-	validateToolArguments,
 } from "@pencil-agent/ai";
+import { EventStream } from "@pencil-agent/ai/events";
+import { validateToolArguments } from "@pencil-agent/ai/schema";
 import { ToolNotFoundError } from "./errors.js";
 import type {
 	AgentEvent,

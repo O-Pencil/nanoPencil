@@ -17,7 +17,7 @@ import type {
 	Usage,
 } from "@pencil-agent/ai/types";
 import type { streamSimple } from "@pencil-agent/ai/stream";
-import type { Static, TSchema } from "@sinclair/typebox";
+import type { Static, TSchema } from "@pencil-agent/ai/schema";
 
 /** Stream function - can return sync or Promise for async config lookup */
 export type StreamFn = (

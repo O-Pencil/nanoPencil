@@ -4,16 +4,16 @@
  * [TO]: Consumed by index.ts, main.ts, nanopencil-defaults.ts, core/runtime/sdk.ts, core/runtime/agent-session.ts, core/extensions-host/runner.ts, core/extensions-host/types.ts, cli/list-models.ts, modes/interactive/components/model-selector.ts, and test files
  * [HERE]: core/model-registry.ts - model catalog and credential management
  */
-import {
-	type Api,
-	type AssistantMessageEventStream,
-	type Context,
-	type KnownProvider,
-	type Model,
-	type OpenAICompletionsCompat,
-	type OpenAIResponsesCompat,
-	type SimpleStreamOptions,
-} from "@pencil-agent/ai";
+import type {
+	Api,
+	Context,
+	KnownProvider,
+	Model,
+	OpenAICompletionsCompat,
+	OpenAIResponsesCompat,
+	SimpleStreamOptions,
+} from "@pencil-agent/ai/types";
+import type { AssistantMessageEventStream } from "@pencil-agent/ai/events";
 import { getModels, getProviders } from "@pencil-agent/ai/models";
 import { registerOAuthProvider, type OAuthProviderInterface } from "@pencil-agent/ai/oauth";
 import { registerApiProvider } from "@pencil-agent/ai/registry";

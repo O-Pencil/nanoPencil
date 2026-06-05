@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0-beta.4] - 2026-06-05
+
+### Fixed
+- fix(packaging): beta.3 bundled the private internal runtime libraries, but extension loading still
+  failed because the loader resolves aliases through `require.resolve()`. The bundled
+  `@pencil-agent/ai` package exports now include `default` conditions that point at the ESM entry
+  files, allowing both ESM imports and loader resolution to find the same internal package.
+
 ## [2.0.0-beta.3] - 2026-06-05
 
 ### Fixed

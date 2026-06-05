@@ -36,7 +36,23 @@ function copyPackage(lib) {
 	delete packageJson.devDependencies;
 	delete packageJson.files;
 	delete packageJson.bin;
+	normalizeExportsForRuntimeResolution(packageJson);
 	writeFileSync(join(target, "package.json"), `${JSON.stringify(packageJson, null, 2)}\n`);
+}
+
+function normalizeExportsForRuntimeResolution(packageJson) {
+	if (!packageJson.exports || typeof packageJson.exports !== "object") {
+		return;
+	}
+
+	for (const [key, value] of Object.entries(packageJson.exports)) {
+		if (!value || typeof value !== "object" || Array.isArray(value)) {
+			continue;
+		}
+		if (typeof value.import === "string" && typeof value.default !== "string") {
+			packageJson.exports[key] = { ...value, default: value.import };
+		}
+	}
 }
 
 for (const lib of INTERNAL_LIBS) {

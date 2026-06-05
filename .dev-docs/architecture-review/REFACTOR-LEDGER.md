@@ -94,7 +94,7 @@ updated_at: 2026-06-05
 | public 符号 | 296 | — | **296** | ✅ public API 未变（EV-G4 / S-1 利好）|
 | dist `du -sh` | — | 5.2M | **6.8M** | +1.6M = D2 修复后 browser `agent-workspace` 终于正确打包（**非回归**）|
 | dist `--build`(collect-baseline) | 3.61 MB | — | 4.89 MB | 同上口径差异；增长大头 = D2(+1.6M 资产) + P5 结构性新文件(.js/.d.ts) |
-| cold-start | 未采 | — | **待测**（见 §7）| EV02/EV04 的真收益在此 |
+| cold-start `--list-models` | 未采(P0 漏) | mean 2.772s / min 2.149s | **mean 1.028s / min 0.508s** | ✅ **V6-1 通过**：mean −63% / min −76%（hyperfine -w3 -r10，2026-06-05）。EV02+EV04 显著。P6 σ 大含 outlier(系统干扰)，min 最可信 |
 | cycle(verify-quality SCC) | — | 0 | 0 | ✅ 无环 |
 
 **dist 增长结论（已接受，记录原因）**：HEAD dist > main 基线，原因有二且**均非性能回归**：

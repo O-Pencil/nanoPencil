@@ -4,15 +4,15 @@
  * [TO]: Consumed by index.ts, main.ts, nanopencil-defaults.ts, core/runtime/sdk.ts, core/model-registry.ts, core/mcp/mcp-client.ts, extensions/builtin/mcp/index.ts, and test files
  * [HERE]: core/platform/config/auth-storage.ts - credential storage for API keys and OAuth
  */
+import { getEnvApiKey } from "@pencil-agent/ai";
 import {
-	getEnvApiKey,
 	getOAuthApiKey,
 	getOAuthProvider,
 	getOAuthProviders,
 	type OAuthCredentials,
 	type OAuthLoginCallbacks,
 	type OAuthProviderId,
-} from "@pencil-agent/ai";
+} from "@pencil-agent/ai/oauth";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";

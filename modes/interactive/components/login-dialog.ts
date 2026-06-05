@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/login-dialog.ts - OAuth login dialog
  */
 
-import { getOAuthProviders } from "@pencil-agent/ai";
+import { getOAuthProviders } from "@pencil-agent/ai/oauth";
 import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import { exec } from "child_process";
 import { theme } from "../theme/theme.js";

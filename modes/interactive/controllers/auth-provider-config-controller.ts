@@ -9,7 +9,8 @@
  * callbacks through a narrow bridge.
  */
 
-import { getOAuthProviders, type Model, type OAuthProvider } from "@pencil-agent/ai";
+import type { Model } from "@pencil-agent/ai/types";
+import { getOAuthProviders, type OAuthProvider } from "@pencil-agent/ai/oauth";
 import type { Component, Container, TUI } from "@pencil-agent/tui";
 import { getAuthPath, getModelsPath } from "../../../config.js";
 import {

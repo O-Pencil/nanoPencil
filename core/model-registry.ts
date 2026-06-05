@@ -10,14 +10,13 @@ import {
 	type Context,
 	type KnownProvider,
 	type Model,
-	type OAuthProviderInterface,
 	type OpenAICompletionsCompat,
 	type OpenAIResponsesCompat,
 	registerApiProvider,
-	registerOAuthProvider,
 	type SimpleStreamOptions,
 } from "@pencil-agent/ai";
 import { getModels, getProviders } from "@pencil-agent/ai/models";
+import { registerOAuthProvider, type OAuthProviderInterface } from "@pencil-agent/ai/oauth";
 import { type Static, Type } from "@sinclair/typebox";
 import AjvModule from "ajv";
 import { existsSync, readFileSync, writeFileSync } from "fs";

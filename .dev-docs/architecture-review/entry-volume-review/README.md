@@ -41,6 +41,12 @@ P6 code landing is still blocked by P5 DoD. This review can run in parallel with
 | [EV04](./findings/EV04-ai-provider-lazy-boundary.md) | selected-runtime-first | Provider metadata/runtime loading split is defined; first code slice is runtime lazy resolver, metadata chunking is deferred |
 | [EV05](./findings/EV05-package-surface-stability.md) | selected-compatible-subpaths | Package surface reviewed; Q3 selects additive subpaths plus internal migration, root narrowing deferred |
 
+## Package Layer Reviews
+
+| Review | Status | Purpose |
+|--------|--------|---------|
+| [AI package layer review](./ai-package-layer-review/README.md) | reviewed | Defines what belongs in `@pencil-agent/ai` before explicit subpaths are implemented |
+
 ## Workflow
 
 1. **Calibrate**: read [entry-architecture-calibration.md](./entry-architecture-calibration.md) before changing code.

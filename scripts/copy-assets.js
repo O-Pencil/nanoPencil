@@ -38,7 +38,7 @@ function copyTreeAssets(srcDir, destDir, options = {}) {
 }
 
 const extensionRoots = [
-	join(ROOT, "extensions", "defaults"),
+	join(ROOT, "extensions", "builtin"),
 	join(ROOT, "extensions", "optional"),
 ];
 

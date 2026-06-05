@@ -452,7 +452,7 @@ test("discipline discovers bundled skills and injects bootstrap prompt when asse
 
 		const resources = discover() as { skillPaths?: string[] } | undefined;
 		assert.equal(resources?.skillPaths?.length, 1);
-		assert.match(resources?.skillPaths?.[0] ?? "", /extensions\/defaults\/discipline\/skills$/);
+		assert.match(resources?.skillPaths?.[0] ?? "", /extensions\/builtin\/discipline\/skills$/);
 		assert.equal(existsSync(resources?.skillPaths?.[0] ?? ""), true);
 
 		const prompt = beforeAgentStart() as { appendSystemPrompt?: string } | undefined;

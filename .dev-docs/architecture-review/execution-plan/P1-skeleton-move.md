@@ -26,7 +26,7 @@ classification: migration-classification.md
 - [ ] `packages/{ai,agent-core,tui}` → `core/lib/`（保留包名 → import 几乎不变；各 `package.json` 标 `"private": true`）
 - [ ] `core/{i18n,telemetry,utils,config,keybindings.ts}` → `core/platform/`
 - [ ] `core/extensions/` → `core/extensions-host/`（rename）
-- [ ] `extensions/defaults/` → `extensions/builtin/`（rename）
+- [x] `extensions/defaults/` → `extensions/builtin/`（rename；活跃源码/脚本/测试接线已收口）
 - [ ] **U 项**：按 P0 补好的 §4 落点搬迁 10 个 core/ 根散文件 + modes 未列项
 
 ### R 整块 blob 安置（**禁止拆**，门 GA-6）

@@ -62,7 +62,7 @@ function findInternetSearchSkillPath(): string | undefined {
 	// Walk up from idle-think/ to extensions/builtin/, then into link-world/
 	const candidates = [
 		join(__dirname, "..", "link-world", "internet-search", "internet-search.md"),
-		join(__dirname, "..", "..", "..", "extensions", "defaults", "link-world", "internet-search", "internet-search.md"),
+		join(__dirname, "..", "..", "..", "extensions", "builtin", "link-world", "internet-search", "internet-search.md"),
 	];
 	for (const path of candidates) {
 		if (existsSync(path)) return path;

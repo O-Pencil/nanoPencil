@@ -15,7 +15,7 @@ import { applyTomlStyleFilter } from "../extensions/builtin/token-save/toml-dsl.
 test("builtin extensions include token-save by default", () => {
 	const paths = getBuiltinExtensionPaths();
 	assert.ok(
-		paths.some((entry) => entry.includes("extensions") && entry.includes("defaults") && entry.includes("token-save")),
+		paths.some((entry) => entry.includes("extensions") && entry.includes("builtin") && entry.includes("token-save")),
 		`Expected token-save extension in builtin paths, got: ${paths.join(", ")}`,
 	);
 });

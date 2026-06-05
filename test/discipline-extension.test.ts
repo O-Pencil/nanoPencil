@@ -60,7 +60,7 @@ test("builtin extensions include discipline metadata and load path", () => {
 
 	const paths = getBuiltinExtensionPaths();
 	assert.ok(
-		paths.some((entry) => entry.includes("extensions") && entry.includes("defaults") && entry.includes("discipline")),
+		paths.some((entry) => entry.includes("extensions") && entry.includes("builtin") && entry.includes("discipline")),
 		`Expected discipline extension in builtin paths, got: ${paths.join(", ")}`,
 	);
 });

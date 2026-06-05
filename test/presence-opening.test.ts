@@ -14,7 +14,7 @@ import { setLocale, tValue } from "../core/platform/i18n/index.js";
 import { __testUtils } from "../extensions/builtin/presence/index.js";
 
 function presenceExtensionPath(cwd: string): string {
-	return join(cwd, "extensions", "defaults", "presence", "index.ts");
+	return join(cwd, "extensions", "builtin", "presence", "index.ts");
 }
 
 async function waitForPresenceMessage(messages: Array<{ customType: string; content: unknown }>) {

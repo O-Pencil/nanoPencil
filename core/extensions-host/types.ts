@@ -1,7 +1,7 @@
 /**
  * [WHO]: All extension types: Extension, ExtensionContext, HookEvent types, ToolDefinition, etc.
  * [FROM]: Depends on agent-core, ai, tui - all extension-related types
- * [TO]: Consumed by core/extensions-host/index.ts, core/extensions-host/runner.ts, core/extensions-host/wrapper.ts, all extension entry points (defaults/loop, defaults/team, defaults/mcp, defaults/soul, defaults/presence, defaults/security-audit, defaults/link-world, defaults/interview, optional/simplify, optional/export-html), modes/interactive/components/tool-execution.ts, modes/interactive/components/custom-message.ts, modes/acp/acp-mode.ts
+ * [TO]: Consumed by core/extensions-host/index.ts, core/extensions-host/runner.ts, core/extensions-host/wrapper.ts, all extension entry points (builtin/loop, builtin/team, builtin/mcp, builtin/soul, builtin/presence, builtin/security-audit, builtin/link-world, builtin/interview, optional/simplify, optional/export-html), modes/interactive/components/tool-execution.ts, modes/interactive/components/custom-message.ts, modes/acp/acp-mode.ts
  * [HERE]: core/extensions-host/types.ts - type definitions for extension system API
  */
 import type {

@@ -239,4 +239,4 @@ Root `@pencil-agent/ai` remains legacy-compatible.
 
 ## Next Step
 
-Continue internal import migration by capability group. The first slice migrates pure type-only imports; mixed value/type imports remain on the root barrel until the relevant value subpaths are migrated.
+Internal import migration is complete for ordinary nanoPencil code. The remaining root `@pencil-agent/ai` import is `core/extensions-host/loader.ts`, which intentionally bundles the legacy-compatible root package for extension virtual modules. Further P6 work should move to EV04 metadata chunking or EV03 browser physical/package decisions, not more AI import slicing.

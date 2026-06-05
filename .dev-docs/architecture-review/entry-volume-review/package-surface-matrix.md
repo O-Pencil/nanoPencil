@@ -138,4 +138,4 @@ After code:
 
 ## Implementation Result
 
-Additive `@pencil-agent/ai/*` subpaths have been added while preserving the root entry. Maintainer confirmed build/quality validation passed. Internal import migration started with type-only imports and is continuing by capability group. Type-only, models, OAuth, registry, events, and schema slices have passed maintainer build/quality validation; the current code slice adds `env`, `overflow`, and `json` helper subpaths and moves the remaining internal runtime helper imports off the root barrel.
+Additive `@pencil-agent/ai/*` subpaths have been added while preserving the root entry. Maintainer confirmed build/quality validation passed. Internal import migration is complete for ordinary nanoPencil code: type-only, models, OAuth, registry, events, schema, stream, env, overflow, and json slices all passed maintainer build/quality validation. The only internal root import intentionally retained is the extension-loader bundling shim that exposes the legacy-compatible root package to extension code.

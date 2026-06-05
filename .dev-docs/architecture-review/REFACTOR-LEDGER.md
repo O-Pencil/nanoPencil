@@ -134,6 +134,37 @@ for i in 1 2 3 4 5; do time node dist/cli.js --list-models >/dev/null; done
 
 ---
 
+## 8b. 门组 A 验收清单（O1 展开 · sign-off 大阶段一硬门）
+
+> 选定 path A（2026-06-05）：不开 P7/P8，先收口 + 推 sign-off 前置。门组 A = P0/P1 目录级出口。
+> ✅=已确认 · 🖥=需 maintainer 算力机 · 📝=需 maintainer 落字。
+
+| 门 | 内容 | 状态 | 怎么验 |
+|----|------|------|--------|
+| GA-1 结构同构 | 目录树 == §4 端态树 | 🟡 强指标✅ | `core/lib`/`core/platform`/`core/extensions-host`/`core/runtime` 已就位、`bundle-deps.js` 已删（✅ 我确认）；完整 tree-diff vs §4 端态树 = 人工核 |
+| GA-2 行为不变(硬) | 公共 API 符号 | 🟡 强指标✅ | 符号数 296=296（✅ 已确认，未变）；**完整 diff 需 🖥**：`npm run wiki:all` 重生成 → `symbols.md` 对 `baseline/public-api-symbols-main.txt` diff，应仅路径变化 |
+| GA-3 逻辑零改(硬) | 被搬文件体内无逻辑 diff | 🟡 | `git diff` 抽查 P1 搬迁 commit（`332551f` 等）确认仅 path/import 行，文件体无逻辑变化（半人工，可抽样）|
+| GA-4 可编译可跑 | tsc + 测试 + 4 mode smoke | 🟡 部分 | tsc ✅（你 build 已过）；**🖥 待**：全量 `vitest`（注意 D1 修复后 `defaults`→`builtin` 的 6 测试应已不再 ENOENT）+ CLI 4-mode smoke（见 beta-smoke-checklist §2）|
+| GA-5 DIP 同构 | CLAUDE.md member + P3 + verify-dip | ✅ | `verify-dip.ts` exit 0（✅ 我确认，550 文件）|
+| GA-6 R/U 已消化 | R blob 安置 + 拆分票；U 落点 | 🟡 📝 | R 单元（agent-session/interactive-mode 等）整块挪 ✅ 且拆分票=已完成的 P4/P5 评审；**待 📝**：`migration-classification.md` 仍 `draft`，R 4 行处置待落字（口头=整块挪）+ U 行补齐 → 转 `active` |
+| 增量守门 | verify-quality 只 gate 增量 | ✅ | `verify-quality.ts` 绿（✅ 我确认）|
+
+**maintainer 算力机命令集（GA-2 + GA-4）：**
+```bash
+# GA-4 测试 + tsc
+npm run build && npx tsc --noEmit
+npx vitest run                                  # 全量;关注 D1 后那 6 个 ex-defaults 测试
+# GA-4 四 mode smoke → 见 beta-smoke-checklist.md §1/§2
+# GA-2 符号 diff
+npm run wiki:all
+diff <(grep -oE '^[^ ]+' .baseline-out/public-api-symbols.txt | sort) \
+     <(sort .dev-docs/architecture-review/baseline/public-api-symbols-main.txt)   # 应仅路径类变化
+```
+
+**门组 A 收口后** → P2/P3..P6 的门组 B 各域（多已 ✅）→ sign-off S-1..S-6 + 签字。
+
+---
+
 ## 8. 维护约定
 
 - 每完成一项 O*：把状态翻绿、补 commit 号、必要时挪进 §2。

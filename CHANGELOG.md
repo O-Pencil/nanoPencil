@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0-beta.1] - 2026-06-05
+
+### Fixed
+- fix(packaging): `npm install` of the beta failed with a 404 for
+  `@pencil-agent/extension-sdk`. That package is an internal workspace package used only for
+  **types** in the host (`import type` only — erased at runtime) and is not published to npm. It was
+  incorrectly listed in `dependencies`, so installs tried to fetch it from the registry. Moved to
+  `devDependencies` (the host has no runtime dependency on it). `beta.0` is unusable; install `beta.1`.
+
 ## [2.0.0-beta.0] - 2026-06-05
 
 > **Beta of a large internal architecture refactor.** This release decomposes the two biggest

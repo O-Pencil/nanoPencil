@@ -1,6 +1,6 @@
 {
   "name": "@pencil-agent/nano-pencil",
-  "version": "2.0.0-beta.0",
+  "version": "2.0.0-beta.1",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Supports DashScope and Ali Token Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
@@ -117,7 +117,6 @@
     "yaml": "^2.8.2",
     "zod": "^4.3.6",
     "zod-to-json-schema": "^3.24.6",
-    "@pencil-agent/extension-sdk": "^0.1.0",
     "@pencil-agent/mem-core": "^1.1.0",
     "@pencil-agent/soul-core": "^0.1.0"
   },
@@ -125,6 +124,7 @@
     "koffi": "^2.9.0"
   },
   "devDependencies": {
+    "@pencil-agent/extension-sdk": "^0.1.0",
     "@types/hosted-git-info": "^3.0.5",
     "@types/node": "^22.15.0",
     "@types/proper-lockfile": "^4.1.4",

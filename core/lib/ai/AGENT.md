@@ -7,9 +7,9 @@ config-path.ts: getDebugLogPath, debug log file path resolution, respects NANOPE
 debug-logger.ts: DebugLogLevel, DebugLogger, debug logging system for troubleshooting AI provider issues
 cli.ts: OAuth CLI tool, AI package CLI for managing credentials, handles login/token operations
 env-api-keys.ts: getEnvApiKey, environment-based API key utilities, lazy-loaded for browser/Vite compatibility
-stream.ts: stream, streamSimple, streaming entry functions, dispatches to registered API providers, retry wrapper and abort event handling
+stream.ts: stream, streamSimple, streaming entry functions, lazily resolves registered API providers, retry wrapper and abort event handling
 types.ts: ThinkingBudgets, StreamOptions, SimpleStreamOptions, TextContent, ThinkingContent, core AI types, foundational for all modules
-api-registry.ts: ApiProvider, registerApiProvider, getApiProvider, API endpoint registry for provider dispatch
+api-registry.ts: ApiProvider, registerApiProvider, registerApiProviderLoader, ensureApiProvider, API endpoint registry for provider dispatch
 index.ts: ai barrel exports, entry point for package, exports all providers, models, types, utilities
 models.ts: getModel, getProviders, getModels, calculateCost, supportsXhigh, model registry and lookup functions
 models.generated.ts: MODELS, auto-generated model definitions from scripts/generate-models.ts
@@ -24,7 +24,7 @@ providers/transform-messages.ts: transformMessages, message normalization for cr
 providers/google-vertex.ts: GoogleVertexOptions, streamGoogleVertex, streamSimpleGoogleVertex, Google Vertex AI provider
 providers/google.ts: GoogleOptions, streamGoogle, streamSimpleGoogle, Google Gemini API provider
 providers/google-shared.ts: isThinkingPart, retainThoughtSignature, convertMessages, convertTools, shared Google utilities
-providers/register-builtins.ts: registerBuiltInApiProviders, resetApiProviders, built-in provider registration
+providers/register-builtins.ts: registerBuiltInApiProviders, resetApiProviders, built-in provider lazy-loader registration
 providers/openai-responses-shared.ts: convertResponsesMessages, convertResponsesTools, shared OpenAI Responses utilities
 providers/amazon-bedrock.ts: BedrockOptions, streamBedrock, streamSimpleBedrock, AWS Bedrock Converse API provider
 providers/azure-openai-responses.ts: AzureOpenAIResponsesOptions, streamAzureOpenAIResponses, Azure OpenAI Responses provider

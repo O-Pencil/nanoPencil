@@ -1,74 +1,92 @@
 /**
  * [WHO]: registerBuiltInApiProviders, resetApiProviders
- * [FROM]: Depends on ../api-registry.js, ./amazon-bedrock.js, ./anthropic.js, ./azure-openai-responses.js, ./google.js
- * [TO]: Consumed by core/lib/ai/src/index.ts
- * [HERE]: core/lib/ai/src/providers/register-builtins.ts -
+ * [FROM]: Depends on ../api-registry.js and dynamic imports for built-in provider runtime modules
+ * [TO]: Consumed by core/lib/ai/src/stream.ts and core/lib/ai/src/index.ts for built-in provider availability
+ * [HERE]: core/lib/ai/src/providers/register-builtins.ts - lazy registration boundary for built-in AI providers
  */
 
-import { clearApiProviders, registerApiProvider } from "../api-registry.js";
-import { streamBedrock, streamSimpleBedrock } from "./amazon-bedrock.js";
-import { streamAnthropic, streamSimpleAnthropic } from "./anthropic.js";
-import { streamAzureOpenAIResponses, streamSimpleAzureOpenAIResponses } from "./azure-openai-responses.js";
-import { streamGoogle, streamSimpleGoogle } from "./google.js";
-import { streamGoogleGeminiCli, streamSimpleGoogleGeminiCli } from "./google-gemini-cli.js";
-import { streamGoogleVertex, streamSimpleGoogleVertex } from "./google-vertex.js";
-import { streamOpenAICodexResponses, streamSimpleOpenAICodexResponses } from "./openai-codex-responses.js";
-import { streamOpenAICompletions, streamSimpleOpenAICompletions } from "./openai-completions.js";
-import { streamOpenAIResponses, streamSimpleOpenAIResponses } from "./openai-responses.js";
+import { clearApiProviders, registerApiProviderLoader } from "../api-registry.js";
 
 export function registerBuiltInApiProviders(): void {
-	registerApiProvider({
-		api: "anthropic-messages",
-		stream: streamAnthropic,
-		streamSimple: streamSimpleAnthropic,
+	registerApiProviderLoader("anthropic-messages", async () => {
+		const { streamAnthropic, streamSimpleAnthropic } = await import("./anthropic.js");
+		return {
+			api: "anthropic-messages",
+			stream: streamAnthropic,
+			streamSimple: streamSimpleAnthropic,
+		};
 	});
 
-	registerApiProvider({
-		api: "openai-completions",
-		stream: streamOpenAICompletions,
-		streamSimple: streamSimpleOpenAICompletions,
+	registerApiProviderLoader("openai-completions", async () => {
+		const { streamOpenAICompletions, streamSimpleOpenAICompletions } = await import("./openai-completions.js");
+		return {
+			api: "openai-completions",
+			stream: streamOpenAICompletions,
+			streamSimple: streamSimpleOpenAICompletions,
+		};
 	});
 
-	registerApiProvider({
-		api: "openai-responses",
-		stream: streamOpenAIResponses,
-		streamSimple: streamSimpleOpenAIResponses,
+	registerApiProviderLoader("openai-responses", async () => {
+		const { streamOpenAIResponses, streamSimpleOpenAIResponses } = await import("./openai-responses.js");
+		return {
+			api: "openai-responses",
+			stream: streamOpenAIResponses,
+			streamSimple: streamSimpleOpenAIResponses,
+		};
 	});
 
-	registerApiProvider({
-		api: "azure-openai-responses",
-		stream: streamAzureOpenAIResponses,
-		streamSimple: streamSimpleAzureOpenAIResponses,
+	registerApiProviderLoader("azure-openai-responses", async () => {
+		const { streamAzureOpenAIResponses, streamSimpleAzureOpenAIResponses } = await import("./azure-openai-responses.js");
+		return {
+			api: "azure-openai-responses",
+			stream: streamAzureOpenAIResponses,
+			streamSimple: streamSimpleAzureOpenAIResponses,
+		};
 	});
 
-	registerApiProvider({
-		api: "openai-codex-responses",
-		stream: streamOpenAICodexResponses,
-		streamSimple: streamSimpleOpenAICodexResponses,
+	registerApiProviderLoader("openai-codex-responses", async () => {
+		const { streamOpenAICodexResponses, streamSimpleOpenAICodexResponses } = await import("./openai-codex-responses.js");
+		return {
+			api: "openai-codex-responses",
+			stream: streamOpenAICodexResponses,
+			streamSimple: streamSimpleOpenAICodexResponses,
+		};
 	});
 
-	registerApiProvider({
-		api: "google-generative-ai",
-		stream: streamGoogle,
-		streamSimple: streamSimpleGoogle,
+	registerApiProviderLoader("google-generative-ai", async () => {
+		const { streamGoogle, streamSimpleGoogle } = await import("./google.js");
+		return {
+			api: "google-generative-ai",
+			stream: streamGoogle,
+			streamSimple: streamSimpleGoogle,
+		};
 	});
 
-	registerApiProvider({
-		api: "google-gemini-cli",
-		stream: streamGoogleGeminiCli,
-		streamSimple: streamSimpleGoogleGeminiCli,
+	registerApiProviderLoader("google-gemini-cli", async () => {
+		const { streamGoogleGeminiCli, streamSimpleGoogleGeminiCli } = await import("./google-gemini-cli.js");
+		return {
+			api: "google-gemini-cli",
+			stream: streamGoogleGeminiCli,
+			streamSimple: streamSimpleGoogleGeminiCli,
+		};
 	});
 
-	registerApiProvider({
-		api: "google-vertex",
-		stream: streamGoogleVertex,
-		streamSimple: streamSimpleGoogleVertex,
+	registerApiProviderLoader("google-vertex", async () => {
+		const { streamGoogleVertex, streamSimpleGoogleVertex } = await import("./google-vertex.js");
+		return {
+			api: "google-vertex",
+			stream: streamGoogleVertex,
+			streamSimple: streamSimpleGoogleVertex,
+		};
 	});
 
-	registerApiProvider({
-		api: "bedrock-converse-stream",
-		stream: streamBedrock,
-		streamSimple: streamSimpleBedrock,
+	registerApiProviderLoader("bedrock-converse-stream", async () => {
+		const { streamBedrock, streamSimpleBedrock } = await import("./amazon-bedrock.js");
+		return {
+			api: "bedrock-converse-stream",
+			stream: streamBedrock,
+			streamSimple: streamSimpleBedrock,
+		};
 	});
 }
 

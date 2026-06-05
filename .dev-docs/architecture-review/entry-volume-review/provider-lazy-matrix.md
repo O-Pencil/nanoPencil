@@ -4,13 +4,13 @@
 review_id: entry-volume-review
 finding: EV04
 classification: provider loading
-status: draft-review
+status: runtime-slice-implemented
 created_at: 2026-06-04
 ```
 
 ## Scope
 
-EV04 reviews AI provider lazy loading from the top-level entry/volume perspective. It does not change code in this slice.
+EV04 reviews AI provider lazy loading from the top-level entry/volume perspective. The first runtime slice now changes code only at the provider resolver boundary; metadata chunking and public export narrowing remain deferred.
 
 The current implementation has two eager costs:
 
@@ -19,7 +19,7 @@ The current implementation has two eager costs:
 
 Those are different costs and must not be collapsed into one "provider service".
 
-## Current Dependency Shape
+## Dependency Shape Before Runtime Slice
 
 ```text
 @pencil-agent/ai/index.ts
@@ -31,6 +31,19 @@ Those are different costs and must not be collapsed into one "provider service".
   │         └─ registers all API runtimes as a side effect
   └─ exports OAuth index
        └─ imports all built-in OAuth providers eagerly
+```
+
+## Dependency Shape After Runtime Slice
+
+```text
+core/lib/ai/src/stream.ts
+  └─ imports providers/register-builtins.ts
+       └─ registers API-keyed lazy proxy providers
+            └─ first stream/streamSimple call imports the matching provider runtime
+
+@pencil-agent/ai/index.ts
+  └─ still re-exports provider modules for public compatibility
+       └─ root-barrel import cost remains an EV05/Q3 package-surface topic
 ```
 
 `ModelRegistry` consumes `getProviders()` and `getModels()` synchronously. Many runtime and test call sites consume `getModel()`, `getModels()`, `stream()`, and `complete()` as synchronous/sync-return APIs. Changing these to async would be a public compatibility break.
@@ -149,6 +162,28 @@ Minimum provider smoke set:
 - Do not change `ModelRegistry` constructor/refresh to async.
 - Do not narrow `@pencil-agent/ai` public exports.
 - Do not change model selection, provider config, token accounting, prompt payloads, or OAuth provider list.
+
+## Runtime Slice Result
+
+Implemented boundary:
+
+```text
+api-registry.ts
+  registerApiProvider(...)        # sync custom/provider registration remains
+  registerApiProviderLoader(...)  # built-in runtime loader table
+  ensureApiProvider(api)          # loads built-in runtime only on first use
+
+providers/register-builtins.ts
+  registers API-keyed dynamic imports instead of importing provider runtimes eagerly
+
+stream.ts
+  still returns AssistantMessageEventStream synchronously
+  awaits provider resolution inside the retry wrapper before piping inner events
+```
+
+Compatibility constraint still open:
+
+- `@pencil-agent/ai/index.ts` still re-exports provider modules. P6 intentionally does not narrow public exports, so root-barrel import cost must be handled by EV05/Q3 before claiming full package-entry lazy loading.
 
 ## Review Verdict
 

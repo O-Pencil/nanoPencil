@@ -4,7 +4,7 @@
 phase: P6
 macro_stage: B        # 功能级
 batch: B4
-status: review-only-while-p5-active
+status: active-runtime-slice-validation-pending
 risk: medium
 depends_on: [P5]
 blocks: [P7, P8]
@@ -17,7 +17,7 @@ gate: gates.md#门组-b
 
 lazy 入口分派、browser opt-in、ai lazy provider；改善冷启动与安装体积，**不劣化功能**。
 
-> **专项评审**：P6 代码依赖 P5，但评审可并行推进。先按 [entry-volume-review/](../entry-volume-review/README.md) 从顶层 entry shape / optional capability / provider loading / package surface 重审；代码落地等 P5 entry 稳定。
+> **专项评审**：P6 代码依赖 P5。P5 entry 稳定后，P6 按 [entry-volume-review/](../entry-volume-review/README.md) 从顶层 entry shape / optional capability / provider loading / package surface 重审并分片落地。
 
 ## 进入条件
 
@@ -30,7 +30,7 @@ lazy 入口分派、browser opt-in、ai lazy provider；改善冷启动与安装
 - [x] **F07 短期 / EV03 registration slice**：browser 退出默认加载（metadata optional + `getBuiltinExtensionPaths()` 不返回 browser）；行为变更按 GB-2 记录
 - [ ] **F07 短期 / EV03 physical/package slice**：browser `extensions/builtin/` → `extensions/optional/` 或独立包/lazy-extract（✦**Q2** opt-in 形态）
 - [x] **EV04 review**：provider lazy matrix 完成；runtime lazy 与 metadata chunking 分离
-- [ ] **F07 短期 / EV04 runtime slice**：provider runtime lazy resolver（按 `model.api` 首次使用加载 provider implementation）
+- [x] **F07 短期 / EV04 runtime slice**：provider runtime lazy resolver（按 `model.api` 首次使用加载 provider implementation；验证待 capable machine）
 - [ ] **F07 短期 / EV04 metadata slice**：`models.generated.ts` provider 分片（generator-backed，后续单独切片）
 - [ ] 触碰 SOP §3.3 的变更走 REVIEW（package `files` / 公共 exports）
 

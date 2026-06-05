@@ -1,14 +1,14 @@
 /**
  * [WHO]: getEnvApiKey, stream, streamSimple, complete, completeSimple, RetryOptions
- * [FROM]: Depends on ./api-registry.js
+ * [FROM]: Depends on ./api-registry.js, providers/register-builtins.js, and utils/http-proxy.js
  * [TO]: Consumed by core/lib/ai/src/index.ts
- * [HERE]: core/lib/ai/src/stream.ts - provider streaming entrypoint with retry, abort, and factory-error event handling
+ * [HERE]: core/lib/ai/src/stream.ts - provider streaming entrypoint with lazy provider resolution, retry, abort, and factory-error event handling
  */
 
 import "./providers/register-builtins.js";
 import "./utils/http-proxy.js";
 
-import { getApiProvider } from "./api-registry.js";
+import { ensureApiProvider } from "./api-registry.js";
 import type {
 	Api,
 	AssistantMessage,
@@ -226,8 +226,8 @@ function waitForStreamEvent<T>(
 // Provider Resolution
 // =============================================================================
 
-function resolveApiProvider(api: Api) {
-	const provider = getApiProvider(api);
+async function resolveApiProvider(api: Api) {
+	const provider = await ensureApiProvider(api);
 	if (!provider) {
 		throw new Error(`No API provider registered for api: ${api}`);
 	}
@@ -243,14 +243,16 @@ export function stream<TApi extends Api>(
 	context: Context,
 	options?: ProviderStreamOptions,
 ): AssistantMessageEventStream {
-	const provider = resolveApiProvider(model.api);
 	const retryOptions: Required<RetryOptions> = {
 		...DEFAULT_RETRY_OPTIONS,
 		...options?.retry,
 	};
 	return wrapWithRetry(
 		model,
-		() => provider.stream(model, context, options as StreamOptions),
+		async () => {
+			const provider = await resolveApiProvider(model.api);
+			return provider.stream(model, context, options as StreamOptions);
+		},
 		retryOptions,
 		options?.signal,
 	);
@@ -270,14 +272,16 @@ export function streamSimple<TApi extends Api>(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
-	const provider = resolveApiProvider(model.api);
 	const retryOptions: Required<RetryOptions> = {
 		...DEFAULT_RETRY_OPTIONS,
 		...options?.retry,
 	};
 	return wrapWithRetry(
 		model,
-		() => provider.streamSimple(model, context, options),
+		async () => {
+			const provider = await resolveApiProvider(model.api);
+			return provider.streamSimple(model, context, options);
+		},
 		retryOptions,
 		options?.signal,
 	);
@@ -302,7 +306,7 @@ export async function completeSimple<TApi extends Api>(
  */
 function wrapWithRetry<TApi extends Api>(
 	model: Pick<Model<TApi>, "api" | "provider" | "id">,
-	createStream: () => AssistantMessageEventStreamContract,
+	createStream: () => AssistantMessageEventStreamContract | Promise<AssistantMessageEventStreamContract>,
 	retryOptions: Required<RetryOptions>,
 	signal?: AbortSignal,
 ): AssistantMessageEventStream {
@@ -319,7 +323,7 @@ function wrapWithRetry<TApi extends Api>(
 
 			let innerStream: AssistantMessageEventStreamContract;
 			try {
-				innerStream = createStream();
+				innerStream = await createStream();
 			} catch (error) {
 				const errorMessage = createStreamErrorMessage(model, error);
 				const delayMs = getRetryDelayMs(errorMessage, attempt, retryOptions);

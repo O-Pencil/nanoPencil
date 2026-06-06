@@ -49,3 +49,8 @@ Do not blur these with ad hoc publish scripts.
 - Public package versions used by host are resolvable by `npm view`.
 - `mem-core` publish build is self-contained and its published tarball imports `./extension`.
 
+## Executable Guard
+
+- `npm run verify:package-boundary` performs static manifest checks and is safe on low-power machines.
+- `npm run verify:package-boundary:dist` performs post-build dist resolution checks and should run only after `npm run build` on a capable machine.
+- The guard intentionally does not call the npm registry; public package publication remains verified by release-machine `npm view` and fresh-install smoke.

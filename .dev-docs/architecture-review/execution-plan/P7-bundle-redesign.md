@@ -29,7 +29,7 @@ P7 原始目标是引入 esbuild 分片构建、拆分 `models.generated.ts`（1
 
 - [x] 建立 [bundle-redesign-review/](../bundle-redesign-review/README.md) 专项评审（BR01-BR04）
 - [ ] **BR01**：发布边界硬化（public packages vs host-embedded private libs；`verify:package-boundary`/dist smoke；publish order）
-- [ ] **BR02**：browser asset optionalization（独立包 / lazy-extract / 保持现状的 Q2 决策）
+- [ ] **BR02**：browser extension packaging（UX-first；Browser Harness 属于 Browser extension 能力，不先拆 raw asset package）
 - [ ] **BR03**：`core/lib/ai/models.generated.ts` 按 provider 拆分（仅在 metrics 证明收益后）
 - [ ] **BR04**：esbuild 构建管线（deferred；仅在 BR01-BR03 后仍有明确收益时重开）
 
@@ -41,6 +41,8 @@ P7 原始目标是引入 esbuild 分片构建、拆分 `models.generated.ts`（1
 | V7-1a | 静态守卫 | `npm run verify:package-boundary` 通过 |
 | V7-1b | 产物守卫 | capable machine 上 build 后 `npm run verify:package-boundary:dist` 通过 |
 | V7-2 | 安装冒烟 | fresh global beta install + `nanopencil -v` 无 package/extension load 错 |
+| V7-2a | Browser 默认缺省 | fresh host install 下 browser 不默认加载，`/browser` 仍是清晰发现入口 |
+| V7-2b | Browser 显式启用 | 显式 opt-in 后 `/browser status` 可运行；用户不需要理解内部 harness/package 拆分 |
 | V7-3 | 构建等价 | 产物功能与 P6 等价 |
 | V7-4 | 体积 | 若声明 size win，提供 tarball/unpacked before-after 数据 |
 | V7-5 | 测试 | 全量测试 + provider 切换 smoke |

@@ -52,7 +52,7 @@ P7 must preserve this distinction:
 | `core/lib/ai` | private internal lib embedded in host tarball | not currently a public dependency in candidate D; host runtime imports it by package name |
 | `core/lib/agent-core` | private internal lib embedded in host tarball | same |
 | `core/lib/tui` | private internal lib embedded in host tarball | same |
-| `extensions/builtin/browser` | optional capability, still physically shipped today | registration is opt-in, but install-size cost still remains |
+| `extensions/builtin/browser` | optional Browser extension capability | registration is opt-in; Browser Harness assets are implementation details of the same extension |
 
 The `dist/node_modules/@pencil-agent/*` embedding is not a regression to old `bundle-deps.js`; it is the formal runtime resolution strategy for private internal libs while they remain in `core/lib`.
 
@@ -61,7 +61,7 @@ The `dist/node_modules/@pencil-agent/*` embedding is not a regression to old `bu
 | Finding | Status | Purpose |
 |---------|--------|---------|
 | [BR01](./findings/BR01-package-boundary-hardening.md) | selected-first | Make package boundary/package smoke the first P7 slice |
-| [BR02](./findings/BR02-browser-asset-optionalization.md) | selected-after-BR01 | Largest real install-size reduction is browser asset optionalization |
+| [BR02](./findings/BR02-browser-asset-optionalization.md) | recalibrated-ux-first | Browser packaging must preserve extension UX before chasing install-size reduction |
 | [BR03](./findings/BR03-model-metadata-chunking.md) | selected-after-measurement | Split `models.generated.ts` only if metrics show meaningful benefit |
 | [BR04](./findings/BR04-esbuild-risk-deferral.md) | deferred | Defer esbuild until boundaries and asset strategy are stable |
 
@@ -74,7 +74,7 @@ The `dist/node_modules/@pencil-agent/*` embedding is not a regression to old `bu
 
 ## Recommended Next Step
 
-Start P7 with BR01 only:
+BR01 is the foundation:
 
 ```text
 package boundary hardening
@@ -83,11 +83,12 @@ package boundary hardening
   -> public package publish order checks
 ```
 
-Only after beta install/runtime is boring should P7 take a size-reduction slice:
+After beta install/runtime is boring, take BR02 as an extension-boundary slice before any size-reduction implementation:
 
 ```text
-BR02 browser optionalization first
+BR02 browser extension capability boundary first
 BR03 model metadata chunking second if metrics justify it
 BR04 esbuild last, if still needed
 ```
 
+BR02 should treat Browser as one pluggable extension capability. A raw `browser-harness` asset package is not recommended as the first slice because it optimizes initial install size while worsening first-use flow. If Browser leaves the host tarball later, package the whole Browser extension behind a first-class install/enable UX. Do not add any browser package to host dependencies or optionalDependencies, because npm installs optional dependencies by default.

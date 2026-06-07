@@ -13,7 +13,7 @@ created_at: 2026-06-06
 |-------|-------|---------|-------------------|-------|
 | 0 | Review/postmortem | BR01-BR04 | docs only | This document set |
 | 1 | Package boundary hardening | BR01 | yes | Add manifest/dist guards and formalize public packages vs embedded private libs |
-| 2 | Browser asset optionalization | BR02 | after Q2 | Biggest real install-size win; user-facing opt-in path required |
+| 2 | Browser extension packaging | BR02 | after maintainer accepts UX-first recommendation | Keep Browser as one extension capability; do not split raw harness assets first |
 | 3 | Model metadata chunking | BR03 | after size/startup metrics | Generator-backed only; preserve synchronous catalog APIs unless explicitly changed |
 | 4 | esbuild/chunked build pipeline | BR04 | deferred | Do not start until package boundaries are stable and prior slices are measured |
 
@@ -42,6 +42,18 @@ Do not start these until BR01 is green:
 - publishing `@pencil-agent/ai` as a new public package
 - moving browser source/assets
 - changing `models.generated.ts` generator output
+
+## Recalibrated Second Implementation Slice
+
+BR02 should harden the Browser **extension capability** boundary before any size-driven package split:
+
+```text
+Browser extension               # commands + tools + Python harness + skills + workspace seed
+npm package                     # distribution unit, not automatically the same thing as an extension
+interactive /browser fallback   # host-owned discovery / enable guidance
+```
+
+The previous "asset package first" idea is rejected for now: it reduces initial install size but worsens first-use flow and splits one extension capability across two concepts. If Browser leaves the host tarball later, move/package the whole Browser extension behind a first-class install/enable UX.
 
 ## Exit Criteria For P7 Review
 

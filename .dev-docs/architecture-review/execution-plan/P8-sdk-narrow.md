@@ -4,7 +4,7 @@
 phase: P8
 macro_stage: B        # 功能级（可选）；含 root index.ts 这个 R 单元的最终拆分
 batch: B6
-status: optional
+status: review-open
 risk: high
 depends_on: [P6]
 blocks: []
@@ -24,10 +24,28 @@ gate: gates.md#门组-b
 
 ## 任务清单
 
+- [x] 建立 [sdk-surface-review/](../sdk-surface-review/README.md) 专项评审（docs-only）
 - [ ] **F03** 步骤 3：`index.ts` 仅 stable SDK 接口（✦**Q3** major vs deprecate 6mo）
 - [ ] **F06**：deprecate root exports；子路径暴露 `InteractiveMode` 等
 - [ ] **纪律**：新协议类型只进 `extension-sdk`，不进 host `index.ts`（`../evolution/dev-conventions.md` §3）
 - [ ] CHANGELOG + migration guide
+
+## 当前评审结论
+
+P8 可以与 sign-off 验证并行做专项评审，但不建议在当前 sign-off 分支直接实现。
+
+默认建议：
+
+```text
+current sign-off: P8 skipped / review-only
+future API window: choose breaking narrow or deprecation path
+```
+
+原因：
+
+- P8 会制造有意 public API diff。
+- 当前 sign-off 主目标是证明 P1-P7 功能行为稳定。
+- 若 P8 同步实现，S-1 需要改成“接受 intentional API break”，并补 migration guide / external consumer smoke。
 
 ## 验证门控（DoD）
 
@@ -50,3 +68,4 @@ gate: gates.md#门组-b
 ## 参考
 
 - Finding：`../findings/F03-root-barrel-causes-cycles.md`
+- Review：`../sdk-surface-review/README.md`

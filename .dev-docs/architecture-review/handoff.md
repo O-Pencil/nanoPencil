@@ -1,3 +1,5 @@
+> 🗄️ **历史文档（重构期 Arch-Agent 操作手册）**：重构已结案（cutover 2026-06-09）。本文是当时执行一次性重构评审的操作说明，仅作历史参考、不再维护。日常开发流程见 [`../feature-workflow.md`](../feature-workflow.md)；活文档索引见 [`README.md`](./README.md)。
+
 # Handoff — boundaries with other agents
 
 The Arch Agent does not work in isolation. Three adjacent agents share the nanoPencil data and code surface but operate independently — the Diagnosis Agent and its dedicated Review Agent (the two-agent diagnosis pair documented at `.dev-docs/diagnosis/sop.md` and `.dev-docs/diagnosis/review-sop.md`), plus a hypothetical SAL Agent. This file defines who owns what and how findings cross boundaries (when they cross at all).

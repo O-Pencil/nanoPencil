@@ -1,3 +1,5 @@
+> 🗄️ **历史文档（重构期 Arch-Agent 操作手册）**：重构已结案（cutover 2026-06-09）。本文是当时执行一次性重构评审的操作说明，仅作历史参考、不再维护。日常开发流程见 [`../feature-workflow.md`](../feature-workflow.md)；活文档索引见 [`README.md`](./README.md)。
+
 # Methodology
 
 The Arch Agent's reasoning runs on two reinforcing lenses:

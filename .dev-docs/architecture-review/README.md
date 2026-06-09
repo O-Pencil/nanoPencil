@@ -37,38 +37,37 @@ This is a one-shot exercise. After the maintainer has acted on the Arch Agent's 
 └── handoff.md               ← boundary contract between the Arch Agent and the self-diagnosis agent
 ```
 
-### Outputs map（产物分两组 · 2026-05-29）
+### Outputs map（重构已结案 · cutover 2026-06-09 · 文档分类索引）
 
-评审产物分为**重构组**（behavior-preserving，目标"功能不变"）与**演进组**（net-new，重构后按需 gate）：
+> 重构 **P0–P6 已合 main + sign-off**（P7/P8 deferred，见 REFACTOR-LEDGER §1/§4）。本目录大部分是**历史决策记录**——日常开发只看 **✅ 活文档**即可。
+> **图例**：✅ 活文档（持续维护，日常入口）· 📦 已结案专项评审（WHY 归档，改对应代码时回查）· 🗄️ 重构期操作手册（历史留存，不再维护）· 🌱 演进组（net-new，按需）
 
-```
-architecture-review/
-│  ── 重构组 ──
-├── REFACTOR-LEDGER.md              ★ 活文档总清单：设计/已解决/已发现/未解决（持续更新，sign-off 已知问题索引）
-│   └── ↳ 日常开发 workflow 已毕业到 ../feature-workflow.md（评审思路→功能开发流程，从根 AGENTS.md 链入）
-├── beta-smoke-checklist.md         beta 发布前人工冒烟清单 + 每轮 beta 结果记录（S-1/EV-G6 人工证据）
-├── top-level-structure-review.md   决策依据（为什么候选 D）
-├── target-architecture.md          架构改造结论（端态目录 + 功能域映射）
-├── refactor-plan.md                架构改造计划（批次 + 单一 ADR 状态表 + S1/S2/S3 接缝验收）
-├── execution-plan/                 可执行 runbook（README + P0–P8 分 Phase + sign-off）
-│   ├── README.md                   分支策略 + Phase 索引 + 总进度
-│   ├── P0-prepare.md … P8-sdk-narrow.md
-│   └── sign-off-main.md            两分支对比 + 合 main 签字
-├── execution-plan.md               → 指向 execution-plan/ 的入口
-├── refactor-validation.md          重构验收（功能不变，溯源 llm-wiki；重构后填充）
-├── findings/F01–F08                微观判断
-├── runtime-session-review/         F01 子评审：AgentSession 等核心复杂拆分的专项评审模板
-├── interactive-ui-review/          F02/P5 子评审：InteractiveMode UI 拆分边界、验收与执行顺序
-├── entry-volume-review/            F06/F07/P6 子评审：入口形态、可选能力、provider lazy、包表面
-│
-└── evolution/                      ── 演进组 ──
-    ├── PARP.md                      PARP 协议定义（原 target-arch §3.5 迁入）
-    ├── industry-protocol-survey.md  协议对位证据
-    ├── product-roadmap.md           产品演进规划
-    └── dev-conventions.md           重构后未来开发约规
-```
+**✅ 活文档（日常入口）**
+- `../feature-workflow.md` — ★ **开发前必读**：层级归属决策 + 四步循环 + 验收门（从根 `AGENTS.md` 链入）
+- `REFACTOR-LEDGER.md` — ★ 收益结论 / 已发现问题(D1-D5) / 未完成项(P7/P8) / 已接受 trade-off
+- `target-architecture.md` — 端态目录 + 功能域映射（结构权威，层级归属判据）
+- `beta-smoke-checklist.md` — beta/发版前人工冒烟清单
+- `baseline/public-api-symbols-main.txt` — P0 符号快照，**仍是 S-1 符号 diff 基准（留）**
 
-> 注：本 handbook 原定位是 one-shot 重构评审（见 §"What this handbook is NOT"）。演进组（PARP/路线/约规）是 grilling 期间衍生的产品方向，独立成册以免污染重构组的"功能不变"验收。
+**📦 已结案专项评审（WHY 归档 — 改对应代码前回查决策依据）**
+- `runtime-session-review/` — P4 AgentSession 拆（AS01–12，closed）
+- `interactive-ui-review/` — P5 InteractiveMode 拆（UI01–08，structurally-complete）
+- `entry-volume-review/` — P6 入口/lazy/包表面（EV01–05，closed）
+- `bundle-redesign-review/` — P7 体积/构建（BR01–04，closed-as-gated；BR02-04 代码未执行）
+- `sdk-surface-review/` — P8 SDK 收窄（SK01–03，**review-open = 未实现，deferred 到 major 窗口**）
+- `findings/` F01–F08 — 微观判断（决策起点）
+- `top-level-structure-review.md` — 为什么选候选 D
+- `refactor-plan.md` / `refactor-validation.md` — 计划 + 验收结论
+- `execution-plan/` — P0–P8 runbook + `sign-off-main.md`（签字记录）+ `sign-off-readiness.md`
+
+**🗄️ 重构期 Arch-Agent 操作手册（历史留存，不再维护）**
+- `methodology.md` · `handoff.md` · `inputs.md` · `machine-constraints.md` · `output-format.md` · `project-context.md` · `workflow.md` · `execution-plan.md`
+- 这些是"如何执行那次一次性重构评审"的操作说明；重构已结案，仅作历史参考。**日常开发不看这些，看 `../feature-workflow.md`。**
+
+**🌱 演进组（net-new，重构后按需）**
+- `evolution/` — PARP / industry-protocol-survey / product-roadmap / dev-conventions
+
+> 注：本 handbook 原定位是 one-shot 重构评审。评审思路已毕业为日常开发流程 `../feature-workflow.md`。
 
 **Read order for the Arch Agent** (this is also `inputs.md` §1):
 

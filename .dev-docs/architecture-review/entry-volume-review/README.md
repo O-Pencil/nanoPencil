@@ -11,7 +11,7 @@ scope:
   - root/package exports
   - extensions/builtin/browser
   - core/lib/ai provider/model loading
-status: active
+status: closed   # P6 EV01-05 已落地/结案（2026-06-09）；体积收缩刀 deferred 到 P7（见 bundle-redesign-review）
 created_at: 2026-06-04
 phase: P6
 ```

@@ -21,6 +21,8 @@ This file provides guidance for **@o-pencil-agent** tooling and contributors whe
 - `@pencil-agent/ai` - Model APIs and types
 - `@pencil-agent/tui` - Terminal UI components
 
+> 🧭 **开发新功能 / 重构前必读**：[`.dev-docs/feature-workflow.md`](.dev-docs/feature-workflow.md) — 四步循环（intake → feasibility → architecture-fit → acceptance）、何时升级专项评审、验收门。它把 `.dev-docs/architecture-review/` 的评审思路固化成日常开发流程。重构收益结论与未完成项见 [`REFACTOR-LEDGER.md`](.dev-docs/architecture-review/REFACTOR-LEDGER.md)。
+
 ---
 
 ## Identity

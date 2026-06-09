@@ -45,6 +45,7 @@ This is a one-shot exercise. After the maintainer has acted on the Arch Agent's 
 architecture-review/
 │  ── 重构组 ──
 ├── REFACTOR-LEDGER.md              ★ 活文档总清单：设计/已解决/已发现/未解决（持续更新，sign-off 已知问题索引）
+│   └── ↳ 日常开发 workflow 已毕业到 ../feature-workflow.md（评审思路→功能开发流程，从根 AGENTS.md 链入）
 ├── beta-smoke-checklist.md         beta 发布前人工冒烟清单 + 每轮 beta 结果记录（S-1/EV-G6 人工证据）
 ├── top-level-structure-review.md   决策依据（为什么候选 D）
 ├── target-architecture.md          架构改造结论（端态目录 + 功能域映射）

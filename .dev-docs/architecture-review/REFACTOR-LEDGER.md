@@ -67,46 +67,11 @@ updated_at: 2026-06-09
 
 ## 1c. 评审认知更新：从一次性架构评审到日常功能 workflow
 
-`.dev-docs/architecture-review/` 最初是一次性 Arch Agent handbook：Explore → Report → Grilling → 形成重构计划。重构收尾后，它不能继续只作为历史评审目录存在；需要沉淀成后续开发功能的架构质量 workflow。
+`.dev-docs/architecture-review/` 最初是一次性 Arch Agent handbook（Explore → Report → Grilling → 重构计划）。重构收尾后它不能只作历史评审目录存在——评审思路（如何顶层设计、如何评审功能质量）已**毕业成日常开发流程**：
 
-### 新功能 / 重构必须走的四步
+➡️ **canonical workflow：[`.dev-docs/feature-workflow.md`](../feature-workflow.md)**（四步循环 + 专项评审触发条件 + 5 道验收门 + 模板），并从根 P1 [`AGENTS.md`](../../AGENTS.md) 链入。
 
-| Step | 问题 | 必看材料 | 输出 |
-|------|------|----------|------|
-| 1. Feature intake | 这个需求要改变什么能力？是 core、mode、extension、package、platform 还是 build/release？ | `target-architecture.md`、相关 P2 `AGENT.md` | 一句话意图 + 影响面列表 |
-| 2. Feasibility & boundary review | 当前架构是否已有 owner？是否会跨层、反向 import、重复规则？ | 相关 P2/P3、`evolution/dev-conventions.md`、历史 finding/review | 落点判断：纯搬 / 局部改 / hybrid / 需要专项评审 |
-| 3. Architecture-fit design | 如何在现有分层里实现，而不是新增耦合？ | capability-context、single owner、DIP P2/P3、package boundary | 设计草案：owner、ports、依赖方向、兼容性、token/perf 影响 |
-| 4. Acceptance review | 功能是否不变或按预期变化？架构文档是否同步？守门是否自动化？ | `verify-dip`、`verify-quality`、package/public API 检查、人工 smoke 清单 | 验收结论：通过 / 需补测 / 需 ADR 接受 trade-off |
-
-### 是否需要专项评审的触发条件
-
-满足任一条件，就不要直接开写，应先在 `.dev-docs/architecture-review/<topic>-review/` 建专项评审：
-
-- 修改 runtime/session、interactive mode、extension host、package/public API、build/release 这类 load-bearing 区域。
-- 单文件预计超过 400 行，或新增 controller/context 需要 8 个以上能力 port。
-- 需要重写而不是纯搬，或存在 token 消耗、兼容性、性能、发布体积影响。
-- 会改变 public API、npm package dependencies、默认启用 extension、CLI/TUI 用户路径。
-- 找不到明确 owner，或者同一规则需要在两个模块重复实现。
-
-专项评审最小产物：
-
-```text
-<topic>-review/
-  README.md        # scope / status / decision / acceptance
-  findings/*.md    # 必要时，按 one card per finding
-```
-
-### 未来开发的验收门
-
-| 门 | 目的 | 说明 |
-|----|------|------|
-| DIP 门 | 保证 map-terrain 同构 | 新文件补 P3；新目录/模块补 P2；删除/移动文件同步 P2 |
-| Quality 门 | 保证无循环和边界污染 | `verify-quality` / SCC / package boundary |
-| Public API 门 | 保证兼容性显式 | P0-P6 默认不破；P8 类任务必须先声明 intentional API diff |
-| Token/perf 门 | 保证重构不隐性涨成本 | LLM 调用链、provider lazy、prompt/context 注入必须说明是否 token 中性 |
-| UX smoke 门 | 保证用户路径可用 | TUI/CLI/extension 功能按清单主观验收，重点走默认路径和错误兜底 |
-
-**认知更新**：架构评审不是"写代码前多写文档"，而是把每次功能开发都纳入同一套判断：**需求是否有明确 owner，改动是否符合现有分层，收益是否超过引入的新抽象，验收是否能自动或人工复现**。
+**认知更新（一句话）**：架构评审不是"写代码前多写文档"，而是把每次功能开发都纳入同一套判断——**需求是否有明确 owner、改动是否符合现有分层、收益是否超过引入的新抽象、验收是否能自动或人工复现**。
 
 ---
 

@@ -35,13 +35,16 @@ baseline_source:
 
 ## 2. 验收维度（重构后逐项填充）
 
-| 维度 | 验收方法（待重构后执行）| 工具 / 来源 | 结论 |
+> **结论填充 2026-06-09（sign-off 签字）**。详细 record 见 [execution-plan/sign-off-main.md](./execution-plan/sign-off-main.md)。
+> 范围 = 行为不变结构重构（P0-P6）；**P7 体积/构建 + P8 SDK 收窄未执行（deferred）**。
+
+| 维度 | 验收方法 | 工具 / 来源 | 结论 |
 |------|------------------------|------------|------|
-| **功能不变** | 公共 API 符号表 diff（对照 llm-wiki symbols）；两分支行为/快照对比；CLI 关键路径 e2e | llm-wiki diff + characterization tests | _待填_ |
-| **分层清晰** | 无循环依赖；`platform 不依赖业务` 单向；`extension-sdk` 不被 host 内部反向依赖 | `scripts/verify-quality.ts`（F08）+ madge | _待填_ |
-| **逻辑精准 / 无冗余** | dead-code 扫描；重复 export / 重复实现检测；god 文件拆分后无残留巨石 | verify-quality + 行数门槛 | _待填_ |
-| **性能** | 冷启动时间、安装体积前后对照（F06/F07 指标）| 手测 + dist 体积 du | _待填_ |
-| **接缝预留** | S1/S2/S3 接缝存在且形状正确（见 refactor-plan §接缝验收）| 代码 review | _待填_ |
+| **功能不变** | 公共 API 符号表 diff；两分支行为/快照对比；CLI 关键路径 e2e | llm-wiki diff + characterization | ✅ **符号 296=296（0 diff）**；wiki:all 0 fail；characterization golden 仅 temp-dir 非确定性差异（非回归）；vitest 失败均 pre-existing |
+| **分层清晰** | 无循环依赖；platform 单向；extension-sdk 不被反向依赖 | `verify-quality.ts`（F08）+ madge | ✅ verify-quality 552 文件 **0 环**；verify-package-boundary(+dist) 绿 |
+| **逻辑精准 / 无冗余** | dead-code；重复 export/实现；god 拆后无残留巨石 | verify-quality + 行数 | ✅ P4 agent-session 拆 7 子模块、P5 interactive 拆 12 controller；无白名单 |
+| **性能** | 冷启动 + 安装体积前后对照（F06/F07）| 手测 + du | ✅ 冷启动 `--list-models` mean 2.087s vs main ~4.1s = **−49%**；⚠️ dist 7.5MB > main 3.61MB（D2 资产 +1.6M + P5 结构，**已接受**）；**真正缩体积(P7)未执行** |
+| **接缝预留** | S1/S2/S3 接缝形状正确 | 代码 review | ✅ P4 12 卡终态、P5 结案、BR01 guard landed、P7 closed-as-gated |
 
 ---
 

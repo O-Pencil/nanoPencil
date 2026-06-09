@@ -55,9 +55,9 @@ main (冻结基线)
 
 | Phase | 文件 | 内容 | 状态 | 依赖 |
 |-------|------|------|------|------|
-| **P0** 基线+分类 | [P0-prepare.md](./P0-prepare.md) | 基线数字 + characterization(含 TUI) + 补 §4 的 U 落点 + 冻结 D/R/N 清单 | 🟡 进行中 | — |
-| **P1** 骨架搬迁 | [P1-skeleton-move.md](./P1-skeleton-move.md) | D 直接搬 + R blob 安置 + workspace 接线(仅现存包) + 删 bundle-deps + DIP 同步 + 增量守门预上线 | 🟡 实现完成；门组 A 重型验证待补 | P0 |
-| — | **门组 A 验收** + maintainer 功能维度评审 → 定稿门组 B | — | ⬜ | P1 |
+| **P0** 基线+分类 | [P0-prepare.md](./P0-prepare.md) | 基线数字 + characterization(含 TUI) + 补 §4 的 U 落点 + 冻结 D/R/N 清单 | ✅ done | — |
+| **P1** 骨架搬迁 | [P1-skeleton-move.md](./P1-skeleton-move.md) | D 直接搬 + R blob 安置 + workspace 接线(仅现存包) + 删 bundle-deps + DIP 同步 + 增量守门预上线 | ✅ done（门组 A 经 sign-off runbook 跑绿）| P0 |
+| — | **门组 A 验收** + maintainer 功能维度评审 → 定稿门组 B | — | ✅ | P1 |
 
 ### 大阶段二 · 功能级（逐域过门组 B）
 
@@ -92,7 +92,9 @@ main (冻结基线)
 - [x] 切执行分支 + 执行方案目录化 + 两大阶段模型
 - [x] 【A】[P0](./P0-prepare.md)：补 §4(U) + 冻结分类 + 基线（符号 296 名快照入库 + dist 3.61MB；tsc/cycle 非阻塞后补；TUI 黄金留 P5）
 - [x] 【A】[P1](./P1-skeleton-move.md)：目录级骨架实现完成
-- [ ] 【A】门组 A 重型验收补齐（symbols diff / characterization / verify-dip / test / smoke）
+- [x] 【A】门组 A 重型验收（symbols 296=296 / verify-dip / verify-quality 0环 / 冷启动 / smoke 经 sign-off runbook 跑绿）
+- [x] 【B】P2–P6 各域 + sign-off S-1..S-6 **已签（2026-06-09）** → **cutover：main=重构，旧 main=v1.0**
+- [ ] 【遗留】**P7 体积/构建（BR02-04 未执行）+ P8 SDK 收窄（未实现）** —— 重构未完成部分，deferred follow-up（见 REFACTOR-LEDGER §4 O8/O9）
 - [ ] ★ maintainer 功能维度评审 → 定稿 [门组 B](./gates.md)
 - [x] 【B】[P2](./P2-cycles-gate.md) 治环+守门 → [P3](./P3-extension-sdk.md) extension-sdk + S1/S3 + 4-tier loader（2026-05-31 build/verify:quality/test 全绿）
 - [ ] 【B】[P4](./P4-runtime-split.md) / [P5](./P5-ui-split.md) → [P6](./P6-entry-volume.md) → [P7?](./P7-bundle-redesign.md) / [P8?](./P8-sdk-narrow.md)

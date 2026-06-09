@@ -5,29 +5,37 @@
 
 ```yaml
 doc: REFACTOR-LEDGER
-branch: refactor/arch-candidate-d        # 签字前禁止合 main
-baseline_main: 0eea985 (frozen)
-updated_at: 2026-06-07
+branch: main                             # cutover 2026-06-09：main=重构内容；旧 main 保存为 v1.0
+baseline_main: 0eea985 (frozen → v1.0)
+signoff: signed 2026-06-09（scope=行为不变结构重构 P0-P6；P7-code/P8 显式 deferred）
+refactor_complete: partial               # 结构重构✅合 main；体积/构建(P7)+SDK收窄(P8)未执行
+updated_at: 2026-06-09
 ```
 
 ---
 
 ## 1. 范围与阶段状态
 
-执行分支 `refactor/arch-candidate-d`，全程不合 main，sign-off 签字后一次 PR 合入。
+~~执行分支 `refactor/arch-candidate-d`，全程不合 main~~ → **已合 main（cutover 2026-06-09）**：
+`origin/main` reset 到 refactor tip（cb8c78d，force-push）；旧 main（0eea985）保存为 `origin/v1.0`。
+后续开发基于 main。
+
+> **重构完成度（诚实口径）**：**结构重构（P0–P6）+ 行为不变已完成并合 main**（public API 296=296）。
+> **但重构整体未 100% 完成**：**P7 体积/构建优化（BR02 browser 包 / BR03 metadata chunking / BR04 esbuild）与 P8 SDK 收窄都只评审、未执行代码**。
+> 包体积与 tsc 构建方式**仍是重构前的样子**——这两块是**遗留的后续重构任务**（见 §4 O3/O8/O9），不是"已完成"。
 
 | Phase | 内容 | 状态 | 专项评审 |
 |-------|------|------|----------|
-| P0 基线 | baseline 数字 + characterization | 🟡 数字已采(main dist 3.61MB / 符号 296)；门组 A 重型验证待补 | — |
-| P1 骨架搬迁 | D 直搬 + R blob + workspace 接线 + DIP | 🟡 实现完成；门组 A 待补 | — |
-| P2 治环+守门 | F03/F04 治环、F08 守门、telemetry | 🟡 实现完成，重型验证待补 | — |
+| P0 基线 | baseline 数字 + characterization | ✅ done（sign-off Set A/D 验证；符号 296=296）| — |
+| P1 骨架搬迁 | D 直搬 + R blob + workspace 接线 + DIP | ✅ done（门组 A 经 sign-off runbook 跑绿）| — |
+| P2 治环+守门 | F03/F04 治环、F08 守门、telemetry | ✅ done（verify-quality 0 环）| — |
 | P3 扩展 SDK | extension-sdk(N) + 4-tier loader + S3 依赖反转 | ✅ done | — |
 | P4 runtime 拆 | `agent-session.ts` 拆 7 子模块 + S2 | ✅ done | runtime-session-review（AS01–AS12）|
 | P5 UI 拆 | `interactive-mode.ts` 拆 controllers/state/mount | ✅ 结构完成（scope C）| interactive-ui-review（F02 + UI01–UI08）|
-| P6 入口体积 | lazy 入口 / browser opt-in / ai lazy provider | 🟡 代码大半 landed；DoD 测量 + 收缩刀未完 | entry-volume-review（EV01–EV05）|
-| P7 体积重设计 | 发布边界硬化 / browser optional / model metadata chunking / esbuild deferred | ✅ closed-as-gated（BR01 guard landed；BR02-BR04 gated） | bundle-redesign-review（BR01–BR04 + closure）|
-| P8 SDK 收窄 | index.ts 收窄 | 🟡 review-open（docs-only；实现默认跳过当前 sign-off） | sdk-surface-review（SK01–SK03） |
-| Sign-off | S-1..S-6 跨分支验收 + 签字 | ⬜ 待全 phase landed | execution-plan/sign-off-main.md |
+| P6 入口体积 | lazy 入口 / browser opt-in / ai lazy provider | ✅ done（EV02/03-reg/04/05 landed；DoD 已测，冷启动 −49% vs main）| entry-volume-review（EV01–EV05）|
+| P7 体积重设计 | 发布边界硬化 / browser 包 / metadata chunking / esbuild | ⚠️ **评审完成、代码未执行**：仅 BR01 guard landed；**BR02/BR03/BR04 全 deferred（包体积+构建方式未改）** | bundle-redesign-review（BR01–BR04 + closure）|
+| P8 SDK 收窄 | root barrel → 稳定 SDK 面 | ⚠️ **仅评审（docs-only），未实现**：收窄会破 public API 不变量，推迟到未来 major 窗口 | sdk-surface-review（SK01–SK03）|
+| Sign-off | S-1..S-6 + 签字 | ✅ **已签**（2026-06-09，scope = 行为不变结构重构；P7/P8 显式 deferred）| execution-plan/sign-off-main.md |
 
 ---
 
@@ -66,15 +74,16 @@ updated_at: 2026-06-07
 
 ## 4. 未解决 / 待办（按优先级）
 
-| # | 待办 | 类型 | 阻塞了什么 |
-|---|------|------|-----------|
-| O1 | **P0/P1/P2 门组 A 重型验证**（build + characterization + mode smoke on 算力机）| 验证 | sign-off 大阶段一 |
-| O2 | **P6 DoD 测量**：V6-1 冷启动 / V6-2 dist / V6-3 mode smoke / V6-5 provider smoke matrix（需算力机）| 验证 | P6 收口 |
-| O3 | **dist 收缩刀**（若产品要求安装体积↓）：EV04 metadata chunking（models.generated 分片）/ EV03 browser 独立包（Q2①，砍 1.6M）| 代码（可选）| F07 体积目标 |
-| O4 | **EV03 browser 物理迁移**：`builtin/`→`optional/` 或独立包（Q2 当前选 scope A = 暂不移）| 代码（暂停）| — |
-| O5 | **interactive 域内 post-P5 清理**：resources-display(481) / slash-handlers(981) 等扁平 handler（**非** phase P6）| 代码（可选 backlog）| — |
-| O6 | **sign-off S-1..S-6**：llm-wiki 重生成 + symbols diff + characterization + 性能基线 + 接缝 review + 用户态 smoke + 签字 | 验证 | 合 main |
-| O7 | **P8（可选）**：评审可并行；实现默认跳过当前 sign-off，除非 maintainer 接受 intentional public API diff | 代码（可选）| sign-off S-1 |
+> ✅ 已完成：O1 门组 A（sign-off Set A/C/D 跑过）· O2 P6 DoD（冷启动 −49% / dist 已接受）· O6 sign-off（2026-06-09 已签）· cutover（main=refactor，v1.0=旧）。
+> ⬇️ 以下是**重构尚未完成的部分** + 收尾杂项。**P7-code / P8 是真正的"重构未完成"，不是可有可无的 backlog**——它们是当初规划进重构、但因不影响用户功能而 deferred 的硬任务。
+
+| # | 待办 | 类型 | 性质 |
+|---|------|------|------|
+| **O8** | **P7 体积/构建未执行（重构未完成）**：BR03 `models.generated.ts`(14505 行) per-provider chunking + BR04 esbuild 构建管线 —— **包体积 + 构建方式至今没改，仍是重构前的 tsc 全量**。closure 已给 reopen 条件（要 metrics + 先 transpile-only）| **代码（重构遗留）** | bundle-redesign-review/closure.md Reopen Matrix |
+| **O9** | **P8 SDK 收窄未执行（重构未完成）**：root barrel → 稳定 SDK 面（SK01-03）。会破 public API 296 不变量 → **需 maintainer 开 major 版本窗口**才能做 | **代码（重构遗留，需 major）** | sdk-surface-review |
+| O3 | **EV03 browser 独立包**（Q2①，砍 1.6M 安装体积）：UX-first，要先有 install/enable UX（与 O8 同属 P7 体积线）| 代码（可选）| BR02 reopen 条件 |
+| O5 | interactive 域内 post-P5 清理：resources-display(481) / slash-handlers(981) 扁平 handler | 代码（可选 backlog）| — |
+| O10 | **收尾杂项**：① 所有 clone `reset --hard origin/main` 同步；② 决定 `refactor/arch-candidate-d` 分支去留；③ `migration-classification.md` draft→active（GA-6 落字）；④ npm 2.0 stable 待 beta 测试后再发 | 杂项 | — |
 
 ---
 

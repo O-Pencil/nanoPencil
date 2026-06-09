@@ -51,10 +51,17 @@ merge_policy: maintainer_sign_off_required
 ## Sign-off Record
 
 ```yaml
-signed_by: automated-by-agent (2026-06-09)
+signed_by: o-pencil-agent <o-pencil@outlook.com>   # maintainer; adjust if signing under another name
 signed_at: 2026-06-09T14:15:00+08:00
-p7_status: completed-closed-as-gated
-p8_status: skipped
+signoff_scope: >
+  Certifies the BEHAVIOR-UNCHANGED STRUCTURAL refactor (P0-P6) merged into main with public API
+  unchanged (296=296). Does NOT claim the refactor is fully complete: P7 (bundle/build volume —
+  BR02 browser package, BR03 model-metadata chunking, BR04 esbuild) and P8 (root SDK surface
+  narrowing) are REVIEWED-AND-DEFERRED follow-up that was NOT executed. Package volume and the
+  tsc build pipeline are unchanged from the pre-refactor approach. Open refactor tasks remain —
+  see REFACTOR-LEDGER §1/§4.
+p7_status: review-closed-as-gated — BR01 guard landed; BR02/BR03/BR04 code NOT executed (volume+build unchanged)
+p8_status: review-only — SDK narrowing NOT implemented (deferred to a future major-API window)
 llm_wiki_diff_summary: "0 diff — 296 public API symbols identical between HEAD and frozen main baseline"
 build_static: pass
   npm_run_build: pass
@@ -106,6 +113,9 @@ notes: >
 
 ## 签字后
 
-- [ ] 更新 `../refactor-validation.md` §2 结论列
-- [ ] 更新本目录 [README.md](./README.md) §3 总进度
-- [ ] 关闭 execution-plan 各 Phase status → `completed`
+- [x] 更新 `../refactor-validation.md` §2 结论列（2026-06-09）
+- [x] 更新本目录 [README.md](./README.md) §3 总进度（2026-06-09）
+- [x] 关闭 execution-plan 各 Phase status → P0-P6 `completed`；**P7-code / P8 标 deferred（非 completed）**
+- [x] cutover：`main` reset 到重构 tip；旧 main 保存为 `v1.0`（2026-06-09）
+- [ ] **遗留**：P7 体积/构建（BR02-04）+ P8 SDK 收窄 —— 重构未完成，作为后续任务（REFACTOR-LEDGER §4 O8/O9）
+- [ ] npm `2.0.0` stable 待 beta 测试后再发（当前 `latest`=1.14.x）

@@ -225,7 +225,7 @@ export function createAgentTool(config: AgentToolConfig): AgentTool<typeof agent
       if (agentDef.requiredMcpServers?.length) {
         const available = await checkMcpAvailability(
           agentDef.requiredMcpServers,
-          config.mcpTools ?? [],
+          () => config.mcpTools ?? [],
         );
         if (!available) {
           throw new Error(
@@ -861,29 +861,35 @@ function resolveModelForAgent(
 /** Check MCP server availability (CC §VI step 6). */
 async function checkMcpAvailability(
   requiredServers: string[],
-  mcpTools: AgentTool[],
+  getMcpTools: () => AgentTool[],
 ): Promise<boolean> {
-  // Check if any MCP tools from the required servers are available
-  // MCP tools are prefixed with "mcp_<serverName>_" in nanoPencil
-  const availableServerNames = new Set<string>();
-  for (const tool of mcpTools) {
-    if (tool.name.startsWith("mcp_")) {
-      const serverName = tool.name.split("_")[1];
-      if (serverName) availableServerNames.add(serverName);
-    }
-  }
+  // CC §VI step 6: check MCP server availability, wait up to 30s for pending connections.
+  // The MCP tools list may grow over time as servers finish connecting,
+  // so we re-scan after each wait instead of using a stale snapshot.
 
-  for (const required of requiredServers) {
-    if (!availableServerNames.has(required)) {
-      // Wait for pending MCP connections (CC: up to 30 seconds)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // Re-check
-      if (!availableServerNames.has(required)) {
-        return false;
+  const maxAttempts = 30; // 30 × 1s = 30s (CC: MCP_AVAILABILITY_CHECK_TIMEOUT_MS)
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const currentMcpTools = getMcpTools();
+    const availableServerNames = new Set<string>();
+    for (const tool of currentMcpTools) {
+      if (tool.name.startsWith("mcp_")) {
+        // MCP tools are prefixed with "mcp_<serverName>_" in nanoPencil
+        const parts = tool.name.split("_");
+        const serverName = parts.length >= 2 ? parts[1] : undefined;
+        if (serverName) availableServerNames.add(serverName);
       }
     }
+
+    const allAvailable = requiredServers.every((required) => availableServerNames.has(required));
+    if (allAvailable) return true;
+
+    // Wait 1 second before re-checking (MCP servers may still be connecting)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  return true;
+
+  // After 30 seconds, still not available
+  return false;
 }
 
 /** Get the HEAD commit hash from a workspace path (for worktree change detection). */

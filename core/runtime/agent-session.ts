@@ -92,7 +92,7 @@ import {
 } from "./slash-command-catalog.js";
 import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } from "./retry-coordinator.js";
 import { createLogger, type AgentLogger } from "../platform/utils/logger.js";
-import { createAgentTool, createTaskToolAlias, AGENT_TOOL_NAME, TASK_TOOL_NAME, type CreateSessionFn } from "../sub-agent/index.js";
+import { createAgentTool, createTaskToolAlias, createSendMessageTool, AGENT_TOOL_NAME, TASK_TOOL_NAME, SEND_MESSAGE_TOOL_NAME, type CreateSessionFn } from "../sub-agent/index.js";
 
 export type { SessionSlashCommandDescriptor } from "./slash-command-catalog.js";
 export { CycleModelError } from "./model-controller.js";
@@ -1993,10 +1993,33 @@ export class AgentSession {
     });
     toolRuntime.activeTools.push(taskTool as unknown as AgentTool);
     this._toolOrchestrator.registerTool(TASK_TOOL_NAME, taskTool as unknown as AgentTool);
+
+    // --- SendMessage tool (CC §XI: inter-agent messaging) ---
+    const sendMessageTool = createSendMessageTool({
+      parentSession: this as any,
+      parentPermissionMode: "default",
+      parentModel: this.model,
+      createSession: this._createSessionFactory!,
+    });
+    toolRuntime.activeTools.push(sendMessageTool as unknown as AgentTool);
+    this._toolOrchestrator.registerTool(SEND_MESSAGE_TOOL_NAME, sendMessageTool as unknown as AgentTool);
+
     // Also register Task alias name for system prompt tool name list
     if (!toolRuntime.systemPromptToolNames.includes(AGENT_TOOL_NAME)) {
       toolRuntime.systemPromptToolNames.push(AGENT_TOOL_NAME);
     }
+
+    // --- CC-style SendMessage tool injection ---
+    // Allows parent agent to send messages to named running sub-agents (CC §XI)
+    const sendMessageTool = createSendMessageTool({
+      parentSession: this as any,
+      parentPermissionMode: "default",
+      parentModel: this.model,
+      createSession: this._createSessionFactory!,
+    });
+    toolRuntime.activeTools.push(sendMessageTool as unknown as AgentTool);
+    this._toolOrchestrator.registerTool(SEND_MESSAGE_TOOL_NAME, sendMessageTool as unknown as AgentTool);
+    toolRuntime.systemPromptToolNames.push(SEND_MESSAGE_TOOL_NAME);
     this.agent.setTools(toolRuntime.activeTools);
     this._baseSystemPrompt = this._rebuildSystemPrompt(
       toolRuntime.systemPromptToolNames,

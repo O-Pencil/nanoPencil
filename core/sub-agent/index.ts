@@ -75,6 +75,11 @@ export {
 } from "./agent-tool.js";
 
 export {
+  createSendMessageTool,
+  SEND_MESSAGE_TOOL_NAME,
+} from "./send-message-tool.js";
+
+export {
   extractAgentResult,
   truncateResult,
 } from "./agent-result-extractor.js";

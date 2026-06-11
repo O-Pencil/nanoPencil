@@ -8,6 +8,7 @@
 
 import type { AgentDefinition } from "./agent-definition.js";
 import { BUILT_IN_AGENT_DEFINITIONS, DEFAULT_FORK_AGENT } from "./agent-definition.js";
+import { loadCustomAgentDefinitions } from "./agent-definition-loader.js";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 
@@ -35,6 +36,10 @@ export class AgentDefinitionRegistry {
   private failedFiles: Array<{ path: string; error: string }> = [];
   /** Path for persisting agentNameRegistry to disk (CC §XIV, §18.6) */
   private persistencePath: string | undefined;
+  /** Project cwd for loading custom agent definitions from .nanopencil/agents/ */
+  private cwd: string | undefined;
+  /** Global agent config directory for user-scoped agent definitions */
+  private agentDir: string | undefined;
 
   /**
    * @param persistencePath Optional path for agentNameRegistry JSON persistence.
@@ -63,9 +68,10 @@ export class AgentDefinitionRegistry {
       this.activeAgents.set(agentType, definition);
     }
 
-    // 2. Load custom agents from .nanopencil/agents/*.md (future: agent-loader.ts)
-    // This is a placeholder — the actual file scanning will be in agent-loader.ts
-    // For now, built-in agents are the only source.
+    // 2. Load custom agents from .nanopencil/agents/*.md and ~/.pencils/agents/<id>/agents/*.md (CC §XIV)
+    // Note: loadCustomAgentDefinitions is async; reload() is synchronous for built-in agents.
+    // Custom agents are loaded via configureDirectories() or loadCustomAgents().
+    // This keeps the constructor simple (no async required).
 
     // 3. Load plugin-defined agents (future: from extension system)
     // Placeholder — plugins will register via registerPluginAgent()
@@ -201,6 +207,28 @@ export class AgentDefinitionRegistry {
   /** Get the current persistence path (if configured). */
   getPersistencePath(): string | undefined {
     return this.persistencePath;
+  }
+
+  /** Configure directories for custom agent loading and trigger async reload. */
+  async configureDirectories(cwd: string, agentDir: string): Promise<void> {
+    this.cwd = cwd;
+    this.agentDir = agentDir;
+    await this.loadCustomAgents();
+  }
+
+  /** Load custom agent definitions from configured directories (async). */
+  async loadCustomAgents(): Promise<void> {
+    if (!this.cwd || !this.agentDir) return;
+    try {
+      const custom = await loadCustomAgentDefinitions(this.cwd, this.agentDir);
+      for (const def of custom.definitions) {
+        this.allAgents.set(def.agentType, def);
+        this.activeAgents.set(def.agentType, def);
+      }
+      this.failedFiles.push(...custom.failedFiles);
+    } catch {
+      // Custom agent loading failed — log but don't block
+    }
   }
 
   /**

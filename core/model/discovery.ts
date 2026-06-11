@@ -110,7 +110,7 @@ export async function discoverOpenAIModels(
 			return [];
 		}
 
-		const data = await res.json();
+		const data = (await res.json()) as { data?: unknown };
 		const items = Array.isArray(data?.data) ? data.data : [];
 
 		return items

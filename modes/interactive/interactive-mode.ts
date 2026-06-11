@@ -218,21 +218,21 @@ export class InteractiveMode {
   private isInitialized = false;
   private onInputCallback?: (text: string) => void;
   private readonly catWorkingMessages = [
-    "Chasing laser pointers...",
-    "Knocking things off tables...",
-    "Plotting world domination...",
-    "Taking a catnap...",
-    "Shredding important documents...",
-    "Judging you silently...",
-    "Pushing your code off the desk...",
-    "Sniffing the keyboard...",
-    "Hiding in a cardboard box...",
-    "Purring on your lap...",
-    "Staring at the wall...",
-    "Making biscuits on the mouse...",
-    "Watching birds through the window...",
-    "Stealing your chair...",
-    "Zooming at 3am...",
+    "Purring…",
+    "Meowing…",
+    "Napping…",
+    "Stretching…",
+    "Zooming…",
+    "Sneaking…",
+    "Pouncing…",
+    "Scratching…",
+    "Yawning…",
+    "Blinking…",
+    "Kneading…",
+    "Crouching…",
+    "Spinning…",
+    "Twitching…",
+    "Hiding…",
   ];
   private catMessageIndex = Math.floor(Math.random() * 15);
   private catMessageLastSwitch = 0;

@@ -17,7 +17,6 @@ import type {
   AgentEffort,
   ForksParentContext,
 } from "./agent-definition.js";
-import { agentDefinitionRegistry } from "./agent-registry.js";
 
 // ============================================================================
 // Custom Agent Definition: Markdown Format (CC §15.1 — mM4)

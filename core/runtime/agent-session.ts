@@ -2009,16 +2009,6 @@ export class AgentSession {
       toolRuntime.systemPromptToolNames.push(AGENT_TOOL_NAME);
     }
 
-    // --- CC-style SendMessage tool injection ---
-    // Allows parent agent to send messages to named running sub-agents (CC §XI)
-    const sendMessageTool = createSendMessageTool({
-      parentSession: this as any,
-      parentPermissionMode: "default",
-      parentModel: this.model,
-      createSession: this._createSessionFactory!,
-    });
-    toolRuntime.activeTools.push(sendMessageTool as unknown as AgentTool);
-    this._toolOrchestrator.registerTool(SEND_MESSAGE_TOOL_NAME, sendMessageTool as unknown as AgentTool);
     toolRuntime.systemPromptToolNames.push(SEND_MESSAGE_TOOL_NAME);
     this.agent.setTools(toolRuntime.activeTools);
     this._baseSystemPrompt = this._rebuildSystemPrompt(

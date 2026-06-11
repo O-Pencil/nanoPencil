@@ -86,6 +86,7 @@ export function createSendMessageTool(
               text: `No running agent found with name '${input.to}'. The agent may have completed or was never registered with that name.`,
             },
           ],
+          details: { to: input.to, delivered: false },
         };
       }
 
@@ -103,6 +104,7 @@ export function createSendMessageTool(
             text: `Message sent to agent '${input.to}' (agentId: ${agentId}).`,
           },
         ],
+        details: { to: input.to, agentId, delivered: true },
       };
     },
   };

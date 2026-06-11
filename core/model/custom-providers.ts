@@ -77,6 +77,7 @@ function writeModelsConfig(modelsPath: string, config: ModelsConfigFile): void {
 function createCustomModelDefinition(
 	provider: CustomProtocolProviderId,
 	modelName: string,
+	overrides?: { contextWindow?: number; maxTokens?: number },
 ): CustomProviderModelDefinition {
 	const definition = getCustomProtocolProviderDefinition(provider);
 	const normalizedModelName = modelName.trim() || DEFAULT_CUSTOM_MODEL_NAME;
@@ -86,9 +87,120 @@ function createCustomModelDefinition(
 		name: normalizedModelName,
 		api: definition.api,
 		input: definition.defaultInput,
-		contextWindow: 256000,
-		maxTokens: 32768,
+		contextWindow: overrides?.contextWindow ?? 256000,
+		maxTokens: overrides?.maxTokens ?? 32768,
 	};
+}
+
+/**
+ * Probe provider API for model context window and max output tokens.
+ * Returns null if probing is unsupported or fails silently.
+ */
+async function probeModelContextWindow(
+	provider: CustomProtocolProviderId,
+	baseUrl: string,
+	apiKey: string | undefined,
+	modelName: string,
+): Promise<{ contextWindow?: number; maxTokens?: number } | null> {
+	try {
+		// Anthropic-compatible: no /v1/models endpoint
+		if (provider === CUSTOM_ANTHROPIC_PROVIDER) {
+			return null;
+		}
+
+		// Ollama: use /api/show (more reliable than /v1/models for context_length)
+		if (baseUrl.includes("localhost:11434") || baseUrl.includes("127.0.0.1:11434")) {
+			const ollamaResult = await probeOllamaModelInfo(modelName);
+			if (ollamaResult) return ollamaResult;
+		}
+
+		// OpenAI-compatible: GET /v1/models
+		if (!apiKey) return null;
+		return await probeOpenAICompatibleModels(baseUrl, apiKey, modelName);
+	} catch {
+		return null;
+	}
+}
+
+/** Probe Ollama /api/show for model metadata. */
+async function probeOllamaModelInfo(
+	modelName: string,
+): Promise<{ contextWindow?: number; maxTokens?: number } | null> {
+	try {
+		const ollamaBase = "http://localhost:11434";
+		const resp = await fetch(`${ollamaBase}/api/show`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: modelName }),
+			signal: AbortSignal.timeout(5000),
+		});
+		if (!resp.ok) return null;
+
+		const data = await resp.json() as Record<string, unknown>;
+		const modelInfo = data.model_info as Record<string, unknown> | undefined;
+		if (!modelInfo) return null;
+
+		// Ollama stores context_length in model_info["general.context_length"]
+		const contextLength = modelInfo["general.context_length"];
+		if (typeof contextLength === "number" && contextLength > 0) {
+			return { contextWindow: contextLength };
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/** Probe OpenAI-compatible /v1/models for model metadata. */
+async function probeOpenAICompatibleModels(
+	baseUrl: string,
+	apiKey: string,
+	modelName: string,
+): Promise<{ contextWindow?: number; maxTokens?: number } | null> {
+	try {
+		// Normalize: strip trailing path beyond /v1 to get /v1/models endpoint
+		const modelsUrl = buildModelsEndpoint(baseUrl);
+		const resp = await fetch(modelsUrl, {
+			headers: { Authorization: `Bearer ${apiKey}` },
+			signal: AbortSignal.timeout(5000),
+		});
+		if (!resp.ok) return null;
+
+		const data = await resp.json() as Record<string, unknown>;
+		const models = data.data as Array<Record<string, unknown>> | undefined;
+		if (!Array.isArray(models)) return null;
+
+		const match = models.find((m) => m.id === modelName);
+		if (!match) return null;
+
+		// Extract context_length — different providers use different fields
+		const contextLength =
+			(match.context_length as number | undefined) ??
+			(match.max_context_length as number | undefined) ??
+			((match.top_provider as Record<string, unknown> | undefined)?.context_length as number | undefined);
+
+		if (typeof contextLength === "number" && contextLength > 0) {
+			return { contextWindow: contextLength };
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+/** Build /v1/models URL from a baseUrl that may point to chat/completions. */
+function buildModelsEndpoint(baseUrl: string): string {
+	const url = baseUrl.replace(/\/+$/, "");
+	// If URL ends with /chat/completions, strip it
+	if (url.endsWith("/chat/completions")) {
+		return url.slice(0, -"/chat/completions".length) + "/models";
+	}
+	// If URL ends with /v1, append /models
+	if (url.endsWith("/v1")) {
+		return url + "/models";
+	}
+	// Otherwise assume it's already a /v1-compatible base
+	return url + "/models";
 }
 
 function getStoredProviderConfig(
@@ -221,14 +333,15 @@ export function ensureCustomProtocolProvidersInModels(modelsPath: string): void 
 	}
 }
 
-export function saveCustomProtocolProviderConfig(
+export async function saveCustomProtocolProviderConfig(
 	modelsPath: string,
 	provider: CustomProtocolProviderId,
 	configUpdate: {
 		baseUrl: string;
 		modelName: string;
+		apiKey?: string;
 	},
-): void {
+): Promise<{ contextWindow?: number; maxTokens?: number } | null> {
 	const trimmedBaseUrl = configUpdate.baseUrl.trim();
 	const trimmedModelName = configUpdate.modelName.trim();
 	if (!trimmedBaseUrl) {
@@ -238,6 +351,14 @@ export function saveCustomProtocolProviderConfig(
 		throw new Error("Model name cannot be empty.");
 	}
 
+	// Probe for real context window (silently falls back to defaults on failure)
+	const probed = await probeModelContextWindow(
+		provider,
+		trimmedBaseUrl,
+		configUpdate.apiKey,
+		trimmedModelName,
+	);
+
 	const config = readModelsConfig(modelsPath);
 	config.providers ??= {};
 
@@ -245,9 +366,10 @@ export function saveCustomProtocolProviderConfig(
 		...(config.providers[provider] ?? {}),
 		baseUrl: trimmedBaseUrl,
 		customProviderVersion: CUSTOM_PROVIDER_CONFIG_VERSION,
-		models: [createCustomModelDefinition(provider, trimmedModelName)],
+		models: [createCustomModelDefinition(provider, trimmedModelName, probed ?? undefined)],
 	};
 	writeModelsConfig(modelsPath, config);
+	return probed;
 }
 
 export function saveCustomProtocolProviderApiKey(

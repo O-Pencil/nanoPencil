@@ -233,6 +233,7 @@ export class InteractiveMode {
     "Zooming at 3am...",
   ];
   private catMessageIndex = Math.floor(Math.random() * 15);
+  private catMessageLastSwitch = 0;
 
   /** Consolidated render/turn UI state (streaming, tools, loaders, run timers, status, queues). */
   private readonly state = new InteractiveState();
@@ -1895,9 +1896,12 @@ export class InteractiveMode {
   }
 
   private getNextCatMessage(): string {
-    const msg = this.catWorkingMessages[this.catMessageIndex % this.catWorkingMessages.length]!;
-    this.catMessageIndex++;
-    return msg;
+    const now = Date.now();
+    if (now - this.catMessageLastSwitch >= 1000) {
+      this.catMessageIndex++;
+      this.catMessageLastSwitch = now;
+    }
+    return this.catWorkingMessages[this.catMessageIndex % this.catWorkingMessages.length]!;
   }
 
   private buildWorkingMessage(): string {

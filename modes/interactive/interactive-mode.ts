@@ -796,6 +796,7 @@ export class InteractiveMode {
           void this.flushCompactionQueue(options),
         checkShutdownRequested: () => this.checkShutdownRequested(),
         clearAttachments: () => this.imagePipeline.clearAttachments(),
+        getAgentDir: () => this.session.agentDir,
       },
       escape: {
         getHandler: () => this.defaultEditor.onEscape,

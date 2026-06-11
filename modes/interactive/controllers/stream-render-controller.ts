@@ -41,8 +41,12 @@ import { PencilLoader } from "../components/pencil-loader.js";
 import { ToolExecutionComponent } from "../components/tool-execution.js";
 import { SubAgentPanelComponent } from "../components/sub-agent-panel.js";
 import { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";
+import { StreamingPreviewComponent } from "../components/streaming-preview.js";
+import { TaskStatusPanelComponent, type TaskStatusEntry } from "../components/task-status-panel.js";
 import type { InteractiveState, PlanProgressState, SubAgentState } from "../state/interactive-state.js";
 import { theme } from "../theme/theme.js";
+import { listTasks, onTasksUpdated, resetTaskList } from "../../../extensions/builtin/task/task-store.js";
+import { DEFAULT_TASK_LIST_ID } from "../../../extensions/builtin/task/task-types.js";
 
 export interface StreamRenderStatePort {
   get(): InteractiveState;
@@ -89,6 +93,7 @@ export interface StreamRenderRuntimePort {
   flushCompactionQueue(options: { willRetry: boolean }): void;
   checkShutdownRequested(): Promise<void>;
   clearAttachments(): void;
+  getAgentDir(): string;
 }
 
 /** The single controlled channel onto defaultEditor.onEscape, shared with InterruptController. */
@@ -116,10 +121,16 @@ export interface StreamRenderContext {
   surface: StreamRenderSurfacePort;
 }
 
+/** Task tool names that should trigger a task panel refresh. */
+const TASK_TOOL_NAMES = new Set(["TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TaskStop", "TaskDelete"]);
+
 const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
 function dbg(msg: string): void {
 	fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [render] ${msg}\n`);
 }
+
+/** Delay before auto-hiding the task panel after all tasks complete. */
+const TASK_AUTO_HIDE_DELAY_MS = 5000;
 
 export class StreamRenderController {
   // Auto-compaction / auto-retry overlay state — zero external readers, owned here.
@@ -127,6 +138,10 @@ export class StreamRenderController {
   private autoCompactionEscapeHandler: (() => void) | undefined = undefined;
   private retryLoader: Component | undefined = undefined;
   private retryEscapeHandler: (() => void) | undefined = undefined;
+
+  // Task status panel subscription
+  private taskUpdateUnsubscribe: (() => void) | undefined = undefined;
+  private taskAutoHideTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 
   constructor(private readonly ctx: StreamRenderContext) {}
 
@@ -179,6 +194,15 @@ export class StreamRenderController {
           statusContainer.addChild(state.planProgressPanel);
           state.planProgressPanel.update(state.planProgress);
         }
+        // Create streaming preview panel
+        state.streamingPreview = new StreamingPreviewComponent(ui, theme);
+        statusContainer.addChild(state.streamingPreview);
+        // Load existing tasks and subscribe to task updates
+        this.refreshTaskPanel(state, ui, statusContainer).catch(() => {});
+        this.taskUpdateUnsubscribe?.();
+        this.taskUpdateUnsubscribe = onTasksUpdated(() => {
+          this.refreshTaskPanel(state, ui, statusContainer).catch(() => {});
+        });
         this.ctx.surface.restoreEditorFocusIfPossible();
         this.ctx.layout.requestRender();
         break;
@@ -250,6 +274,15 @@ export class StreamRenderController {
                   chatContainer.markDirty(component);
                 }
               }
+            }
+          }
+          // Update streaming preview with latest text content
+          if (state.streamingPreview) {
+            const textParts = state.streamingMessage.content
+              .filter((c): c is { type: "text"; text: string } => c.type === "text" && !!(c as { type: "text"; text: string }).text)
+              .map((c) => c.text);
+            if (textParts.length > 0) {
+              state.streamingPreview.update(textParts.join("\n"));
             }
           }
           this.ctx.layout.requestRender();
@@ -385,6 +418,20 @@ export class StreamRenderController {
           state.planProgressPanel = undefined;
         }
         state.planProgress = undefined;
+        // Clean up task status panel
+        if (state.taskStatusPanel) {
+          statusContainer.removeChild(state.taskStatusPanel);
+          state.taskStatusPanel = undefined;
+        }
+        if (this.taskAutoHideTimer) {
+          clearTimeout(this.taskAutoHideTimer);
+          this.taskAutoHideTimer = undefined;
+        }
+        // Clean up streaming preview
+        if (state.streamingPreview) {
+          statusContainer.removeChild(state.streamingPreview);
+          state.streamingPreview = undefined;
+        }
         // Clear any leftover attachments when the turn ends so the bar doesn't
         // accumulate across conversations (sent attachments are already cleared
         // at submit; this also covers images consumed via on-disk file reads).
@@ -566,6 +613,89 @@ export class StreamRenderController {
         this.ctx.layout.requestRender();
         break;
       }
+    }
+  }
+
+  // ── Task status panel helpers ────────────────────────────────────────
+
+  /** Task tool names that should trigger a panel refresh. */
+  private static readonly TASK_TOOL_NAMES = new Set([
+    "TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TaskStop", "TaskDelete",
+  ]);
+
+  /** Refresh the task status panel from disk. */
+  private async refreshTaskPanel(
+    state: InteractiveState,
+    ui: TUI,
+    statusContainer: Container,
+  ): Promise<void> {
+    const agentDir = this.ctx.runtime.getAgentDir();
+    if (!agentDir) return;
+
+    try {
+      const rawTasks = await listTasks(agentDir, DEFAULT_TASK_LIST_ID);
+      // Filter out internal tasks
+      const tasks = rawTasks
+        .filter((t) => !(t.metadata as Record<string, unknown>)?._internal)
+        .map((t) => ({
+          id: t.id,
+          subject: t.subject,
+          status: t.status as "pending" | "in_progress" | "completed",
+          activeForm: t.activeForm,
+          blockedBy: t.blockedBy.filter((id) => {
+            // Only show unresolved blockers
+            return rawTasks.some((bt) => bt.id === id && bt.status !== "completed");
+          }),
+        }));
+
+      if (tasks.length === 0) {
+        // No tasks — remove panel if it exists
+        if (state.taskStatusPanel) {
+          statusContainer.removeChild(state.taskStatusPanel);
+          state.taskStatusPanel = undefined;
+        }
+        if (this.taskAutoHideTimer) {
+          clearTimeout(this.taskAutoHideTimer);
+          this.taskAutoHideTimer = undefined;
+        }
+        return;
+      }
+
+      // Create panel if it doesn't exist
+      if (!state.taskStatusPanel) {
+        state.taskStatusPanel = new TaskStatusPanelComponent(ui, theme);
+        statusContainer.addChild(state.taskStatusPanel);
+      }
+
+      state.taskStatusPanel.update(tasks);
+      this.ctx.layout.requestRender();
+
+      // Auto-hide after all tasks complete (like CC)
+      const allDone = tasks.every((t) => t.status === "completed");
+      if (allDone) {
+        if (!this.taskAutoHideTimer) {
+          this.taskAutoHideTimer = setTimeout(async () => {
+            this.taskAutoHideTimer = undefined;
+            // Verify still all done
+            const currentTasks = await listTasks(agentDir, DEFAULT_TASK_LIST_ID)
+              .catch(() => []);
+            const stillAllDone = currentTasks.length > 0 &&
+              currentTasks.every((t) => t.status === "completed");
+            if (stillAllDone) {
+              await resetTaskList(agentDir, DEFAULT_TASK_LIST_ID).catch(() => {});
+              // Panel will be removed by the next task signal notification
+            }
+          }, TASK_AUTO_HIDE_DELAY_MS);
+        }
+      } else {
+        // Not all done — cancel any pending auto-hide
+        if (this.taskAutoHideTimer) {
+          clearTimeout(this.taskAutoHideTimer);
+          this.taskAutoHideTimer = undefined;
+        }
+      }
+    } catch {
+      // Ignore errors reading tasks
     }
   }
 }

@@ -11,6 +11,26 @@ import type { Task, TaskStatus } from "./task-types.js";
 import { sanitizePathComponent, DEFAULT_TASK_LIST_ID } from "./task-types.js";
 
 // ============================================================================
+// Task update signal (in-process notification)
+// ============================================================================
+
+type TaskUpdateListener = () => void;
+const taskUpdateListeners = new Set<TaskUpdateListener>();
+
+/** Notify all listeners that tasks have changed. */
+function notifyTasksUpdated(): void {
+	for (const listener of taskUpdateListeners) {
+		try { listener(); } catch { /* ignore */ }
+	}
+}
+
+/** Subscribe to task update notifications. Returns unsubscribe function. */
+export function onTasksUpdated(listener: TaskUpdateListener): () => void {
+	taskUpdateListeners.add(listener);
+	return () => { taskUpdateListeners.delete(listener); };
+}
+
+// ============================================================================
 // Path helpers
 // ============================================================================
 
@@ -115,6 +135,7 @@ export async function createTask(
 	const task: Task = { id, ...taskData };
 	const path = getTaskPath(agentDir, taskListId, id);
 	await atomicWriteJson(path, task);
+	notifyTasksUpdated();
 	return task;
 }
 
@@ -153,6 +174,7 @@ export async function updateTask(
 	const updated: Task = { ...existing, ...updates, id: taskId };
 	const path = getTaskPath(agentDir, taskListId, taskId);
 	await atomicWriteJson(path, updated);
+	notifyTasksUpdated();
 	return updated;
 }
 
@@ -177,6 +199,7 @@ export async function deleteTask(
 		}
 
 		await unlink(path);
+		notifyTasksUpdated();
 
 		// Clean up references from other tasks
 		const allTasks = await listTasks(agentDir, taskListId);
@@ -271,4 +294,5 @@ export async function resetTaskList(
 			await unlink(join(dir, file)).catch(() => {});
 		}
 	}
+	notifyTasksUpdated();
 }

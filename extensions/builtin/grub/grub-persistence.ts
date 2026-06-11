@@ -4,8 +4,9 @@
  * [TO]: Consumed by ./grub-controller.ts and ./index.ts for cross-session persistence
  * [HERE]: extensions/builtin/grub/grub-persistence.ts - atomic JSON persistence for GrubTaskState under .grub/<id>/state.json
  */
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { isFeatureList } from "./grub-feature-list.js";
 import {
 	PERSISTED_GRUB_STATE_VERSION,
@@ -38,7 +39,7 @@ function ensureDirectory(path: string): void {
 
 function atomicWrite(path: string, payload: string): void {
 	ensureDirectory(dirname(path));
-	const tmp = `${path}.tmp`;
+	const tmp = `${path}.${randomBytes(6).toString("hex")}.tmp`;
 	writeFileSync(tmp, payload, "utf-8");
 	renameSync(tmp, path);
 }
@@ -63,6 +64,7 @@ function isGrubTaskState(value: unknown): value is GrubTaskState {
 	if (!isPositiveInteger(task.currentIteration)) return false;
 	if (typeof task.awaitingTurn !== "boolean") return false;
 	if (!isNonNegativeInteger(task.consecutiveFailures)) return false;
+	if (task.consecutiveBlockedAttempts !== undefined && !isNonNegativeInteger(task.consecutiveBlockedAttempts)) return false;
 	if (!isPositiveInteger(task.maxIterations) || !isPositiveInteger(task.maxConsecutiveFailures)) return false;
 	if (task.maxInitializerFailures !== undefined && !isPositiveInteger(task.maxInitializerFailures)) return false;
 	if (!isNonEmptyString(task.harnessDirectory)) return false;
@@ -173,10 +175,13 @@ export function pruneStale(cwd: string, maxAgeMs: number = DEFAULT_STALE_MS): nu
 	} catch {
 		return 0;
 	}
+	const resolvedRoot = resolve(root);
 	const now = Date.now();
 	let removed = 0;
 	for (const entry of entries) {
 		const harnessDir = join(root, entry);
+		// Guard against symlink-based directory traversal
+		if (!resolve(harnessDir).startsWith(resolvedRoot + "/")) continue;
 		let isDir = false;
 		try {
 			isDir = statSync(harnessDir).isDirectory();

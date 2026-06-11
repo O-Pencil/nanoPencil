@@ -27,6 +27,9 @@ export interface GrubTaskState {
 	currentIteration: number;
 	awaitingTurn: boolean;
 	consecutiveFailures: number;
+	/** Tracks how many consecutive turns the agent reported status:"blocked".
+	 *  Only allowed to actually block after reaching the threshold (default 3). */
+	consecutiveBlockedAttempts: number;
 	maxIterations: number;
 	maxConsecutiveFailures: number;
 	/** Failure budget during the initializer phase; falls back to a default when absent (older saved tasks). */
@@ -52,6 +55,7 @@ export interface GrubTaskSnapshot {
 	updatedAt: number;
 	completedIterations: number;
 	consecutiveFailures: number;
+	consecutiveBlockedAttempts: number;
 	harnessDirectory: string;
 	featureChecklistPath: string;
 	featureListPath: string;

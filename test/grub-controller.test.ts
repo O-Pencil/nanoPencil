@@ -769,3 +769,157 @@ test("persisted state reflects start and finishTurn", () => {
 		cleanup(cwd);
 	}
 });
+
+test("blocked decision rejected until threshold reached, then stops", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		const { task } = enterExecutionPhase(controller, "blocked threshold test", cwd);
+
+		// First two blocked attempts should be rejected and forced to continue
+		for (let i = 1; i <= 2; i++) {
+			controller.markDispatched();
+			const result = controller.finishTurn({
+				status: "blocked",
+				summary: "cannot proceed",
+				nextStep: "need user input",
+			});
+			assert.equal(result.action, "continue");
+			const active = controller.getActiveTask();
+			assert.ok(active);
+			assert.equal(active.lastDecision?.status, "continue");
+			assert.match(active.lastDecision?.nextStep ?? "", /rejected/i);
+			assert.equal(active.consecutiveBlockedAttempts, i);
+		}
+
+		// Third blocked attempt should actually stop
+		controller.markDispatched();
+		const result = controller.finishTurn({
+			status: "blocked",
+			summary: "still stuck",
+		});
+		assert.equal(result.action, "stop");
+		assert.ok(result.snapshot);
+		assert.equal(result.snapshot.status, "blocked");
+		assert.equal(result.snapshot.consecutiveBlockedAttempts, 3);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("blocked counter resets after a successful continue", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		const { task } = enterExecutionPhase(controller, "blocked reset test", cwd);
+
+		// One blocked attempt
+		controller.markDispatched();
+		controller.finishTurn({ status: "blocked", summary: "stuck" });
+		assert.equal(controller.getActiveTask()?.consecutiveBlockedAttempts, 1);
+
+		// Successful continue resets counter
+		controller.markDispatched();
+		controller.finishTurn({ status: "continue", summary: "made progress", nextStep: "next" });
+		assert.equal(controller.getActiveTask()?.consecutiveBlockedAttempts, 0);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("getActiveTask returns shallow copy", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		controller.start("shallow copy test", cwd);
+		const copy1 = controller.getActiveTask();
+		const copy2 = controller.getActiveTask();
+		assert.ok(copy1);
+		assert.ok(copy2);
+		assert.notEqual(copy1, copy2);
+		assert.deepEqual(copy1, copy2);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("completedIterations accounts for awaitingTurn", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		controller.start("iteration count test", cwd);
+		controller.markDispatched();
+		// Stop while awaitingTurn=true (iteration 1 was dispatched but not finished)
+		const snapshot = controller.stop("user cancelled", "stopped");
+		assert.ok(snapshot);
+		// When awaiting, the dispatched iteration hasn't completed
+		assert.equal(snapshot.completedIterations, 0);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("completedIterations counts finished iterations", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		// enterExecutionPhase does start + markDispatched + finishTurn (initializer→execution)
+		enterExecutionPhase(controller, "iteration count test 2", cwd);
+		// That's 1 completed iteration; now do a second
+		controller.markDispatched();
+		controller.finishTurn({ status: "continue", summary: "done", nextStep: "next" });
+		const snapshot = controller.stop("user cancelled", "stopped");
+		assert.ok(snapshot);
+		// enterExecutionPhase completes iteration 1 (initializer→execution), this one completes iteration 2
+		assert.ok(snapshot.completedIterations >= 2, `expected >=2, got ${snapshot.completedIterations}`);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("finishTurn with complete does not advance to next iteration", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		const { task, baseline } = enterExecutionPhase(controller, "complete no advance", cwd);
+		writeFeatureList(task.featureListPath, {
+			...baseline,
+			features: baseline.features.map((f) => ({ ...f, passes: true, evidence: "verified" })),
+		});
+		controller.markDispatched();
+		const iterBefore = controller.getActiveTask()?.currentIteration;
+		controller.finishTurn({ status: "complete", summary: "all done" });
+		// Task stopped, no iteration advancement
+		assert.equal(controller.getActiveTask(), undefined);
+		assert.equal(controller.getState().lastTerminal?.status, "complete");
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("validateFeatureListDiff rejects evidence removal", () => {
+	const before = featureList("goal", 2);
+	before.features[0] = { ...before.features[0], passes: true, evidence: "some proof" };
+	const after = {
+		...before,
+		features: before.features.map((f, i) => (i === 0 ? { ...f, evidence: undefined } : f)),
+	};
+	assert.throws(() => validateFeatureListDiff(before, after), FeatureListDiffError);
+});
+
+test("consecutiveBlockedAttempts persists across round trips", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		const { task } = enterExecutionPhase(controller, "persist blocked count", cwd);
+
+		controller.markDispatched();
+		controller.finishTurn({ status: "blocked", summary: "stuck" });
+
+		const loaded = loadState(task.stateFilePath);
+		assert.ok(loaded);
+		assert.equal(loaded.task.consecutiveBlockedAttempts, 1);
+	} finally {
+		cleanup(cwd);
+	}
+});

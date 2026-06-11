@@ -91,14 +91,41 @@ Every turn you MUST:
 7) End with exactly one XML block:
    <loop-state>{"status":"continue|complete|blocked","summary":"...","nextStep":"..."}</loop-state>
 
-You may only declare status:"complete" when every feature in
-feature-list.json has passes:true. The harness will reject premature
-completion and keep you iterating.
+Completion audit:
+Before deciding status:"complete", treat completion as unproven and verify
+against the actual current state:
+- For every feature in feature-list.json, confirm passes:true AND that
+  "evidence" references a real, inspectable artifact (git sha, test output,
+  runtime proof). Empty or placeholder evidence does not count.
+- Run the full verification suite (init.sh, tests, smoke checks) and confirm
+  everything passes in the current working tree.
+- Do NOT mark complete merely because you are stopping work, the budget is
+  exhausted, or you cannot think of more to do. Only mark complete when every
+  feature has been genuinely implemented and verified.
+- If any feature lacks real evidence or any test fails, keep iterating.
+
+Blocked audit:
+- Do NOT report status:"blocked" the first time a blocker appears.
+- Only use status:"blocked" when the same blocking condition has repeated for
+  at least three consecutive grub turns.
+- Use status:"blocked" only when you are truly at an impasse and cannot make
+  meaningful progress without user input or an external change.
+- Never use status:"blocked" merely because the work is hard, slow, or
+  uncertain.
 
 Do not remove or rewrite tests. Treat tests as ground truth.
 Do not wrap the loop-state JSON in markdown fences.
 ${languageLine}
 `.trim();
+}
+
+/**
+ * Strip `<loop-state>` XML tags from agent-echoed text to prevent stale blocks
+ * from being re-parsed as new decisions when the text is interpolated into the
+ * next prompt. Also escapes `<` to prevent any other XML injection.
+ */
+function sanitizeForPrompt(text: string): string {
+	return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export function buildGrubTaskPrompt(task: GrubTaskState): string {
@@ -170,15 +197,15 @@ export function buildGrubTaskPrompt(task: GrubTaskState): string {
 	}
 
 	if (task.lastDecision?.summary) {
-		sections.push("", task.locale === "zh" ? "上次总结：" : "Previous summary:", task.lastDecision.summary);
+		sections.push("", task.locale === "zh" ? "上次总结：" : "Previous summary:", sanitizeForPrompt(task.lastDecision.summary));
 	}
 
 	if (task.lastDecision?.nextStep) {
-		sections.push("", task.locale === "zh" ? "上次计划的下一步：" : "Previous planned next step:", task.lastDecision.nextStep);
+		sections.push("", task.locale === "zh" ? "上次计划的下一步：" : "Previous planned next step:", sanitizeForPrompt(task.lastDecision.nextStep));
 	}
 
 	if (task.lastError) {
-		sections.push("", task.locale === "zh" ? "恢复提示：" : "Recovery note:", task.lastError);
+		sections.push("", task.locale === "zh" ? "恢复提示：" : "Recovery note:", sanitizeForPrompt(task.lastError));
 	}
 
 	sections.push(

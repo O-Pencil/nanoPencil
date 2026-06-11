@@ -25,6 +25,7 @@ const DEFAULT_MAX_CONSECUTIVE_FAILURES = 3;
 // complete feature list. Give it a more forgiving budget than execution so a
 // few setup hiccups don't burn the whole task before any real work begins.
 const DEFAULT_MAX_INITIALIZER_FAILURES = 5;
+const BLOCKED_THRESHOLD = 3;
 const INITIALIZER_MIN_FEATURES = 15;
 const INITIALIZER_MAX_FEATURES = 40;
 
@@ -51,7 +52,7 @@ export class GrubController {
 	}
 
 	getActiveTask(): GrubTaskState | undefined {
-		return this.activeTask;
+		return this.activeTask ? { ...this.activeTask } : undefined;
 	}
 
 	start(goal: string, cwd: string, options: GrubStartOptions = {}): GrubTaskState {
@@ -77,6 +78,7 @@ export class GrubController {
 			currentIteration: 1,
 			awaitingTurn: false,
 			consecutiveFailures: 0,
+			consecutiveBlockedAttempts: 0,
 			maxIterations: options.maxIterations ?? DEFAULT_MAX_ITERATIONS,
 			maxConsecutiveFailures: options.maxConsecutiveFailures ?? DEFAULT_MAX_CONSECUTIVE_FAILURES,
 			maxInitializerFailures: options.maxInitializerFailures ?? DEFAULT_MAX_INITIALIZER_FAILURES,
@@ -101,7 +103,7 @@ export class GrubController {
 		if (this.activeTask && this.activeTask.id !== task.id) {
 			throw new Error(`Cannot adopt task ${task.id}; ${this.activeTask.id} is already active.`);
 		}
-		const resumed: GrubTaskState = { ...task, locale: task.locale ?? "en", awaitingTurn: false, updatedAt: Date.now() };
+		const resumed: GrubTaskState = { ...task, locale: task.locale ?? "en", consecutiveBlockedAttempts: task.consecutiveBlockedAttempts ?? 0, awaitingTurn: false, updatedAt: Date.now() };
 		this.activeTask = resumed;
 		this.safePersist(resumed);
 		return resumed;
@@ -113,6 +115,7 @@ export class GrubController {
 		}
 
 		const task = this.activeTask;
+		const wasAwaiting = task.awaitingTurn;
 		const finalTask: GrubTaskState = { ...task, status, updatedAt: Date.now(), awaitingTurn: false };
 		this.safePersist(finalTask);
 
@@ -124,8 +127,9 @@ export class GrubController {
 			phase: finalTask.phase,
 			startedAt: finalTask.startedAt,
 			updatedAt: finalTask.updatedAt,
-			completedIterations: Math.max(0, finalTask.currentIteration - (task.awaitingTurn ? 1 : 0)),
+			completedIterations: Math.max(0, finalTask.currentIteration - (wasAwaiting ? 1 : 0)),
 			consecutiveFailures: finalTask.consecutiveFailures,
+			consecutiveBlockedAttempts: finalTask.consecutiveBlockedAttempts,
 			harnessDirectory: finalTask.harnessDirectory,
 			featureChecklistPath: finalTask.featureChecklistPath,
 			featureListPath: finalTask.featureListPath,
@@ -198,8 +202,13 @@ export class GrubController {
 				try {
 					writeFeatureList(task.featureListPath, sanitized);
 				} catch {
-					// Best effort: even if the rewrite fails, we adopt the
-					// sanitized shape as the baseline so execution starts clean.
+					// Write failed — use the on-disk list as baseline to avoid
+					// divergence between memory and disk that would cause every
+					// subsequent validateFeatureListDiff to reject the turn.
+					const onDisk = readFeatureList(task.featureListPath);
+					task.featureListBaseline = this.cloneFeatureList(onDisk ?? list);
+					this.safePersist(task);
+					return { ok: true };
 				}
 			}
 			task.featureListBaseline = this.cloneFeatureList(sanitized);
@@ -293,9 +302,6 @@ export class GrubController {
 		task.lastError = undefined;
 		task.lastDecision = decision;
 		task.updatedAt = Date.now();
-		if (task.phase === "initializer") {
-			task.phase = "execution";
-		}
 
 		if (decision.status === "complete") {
 			return {
@@ -304,10 +310,26 @@ export class GrubController {
 			};
 		}
 		if (decision.status === "blocked") {
-			return {
-				action: "stop",
-				snapshot: this.stop(task.locale === "zh" ? "Grub 报告任务被阻塞。" : "Grub reported it is blocked.", "blocked"),
-			};
+			task.consecutiveBlockedAttempts += 1;
+			if (task.consecutiveBlockedAttempts < BLOCKED_THRESHOLD) {
+				// Not enough consecutive blocked turns yet — force continue
+				decision = {
+					status: "continue",
+					summary: decision.summary,
+					nextStep: task.locale === "zh"
+						? `阻塞报告被拒绝（第 ${task.consecutiveBlockedAttempts}/${BLOCKED_THRESHOLD} 次）。同一个阻塞条件需要连续出现 ${BLOCKED_THRESHOLD} 次才能标记 blocked。请换一种方式尝试推进。`
+						: `Blocked report rejected (${task.consecutiveBlockedAttempts}/${BLOCKED_THRESHOLD}). The same blocker must repeat for ${BLOCKED_THRESHOLD} consecutive turns before you may report blocked. Try a different approach.`,
+				};
+				task.lastDecision = decision;
+			} else {
+				return {
+					action: "stop",
+					snapshot: this.stop(task.locale === "zh" ? "Grub 报告任务被阻塞。" : "Grub reported it is blocked.", "blocked"),
+				};
+			}
+		} else {
+			// Successful turn — reset blocked counter
+			task.consecutiveBlockedAttempts = 0;
 		}
 
 		if (task.currentIteration >= task.maxIterations) {
@@ -322,6 +344,9 @@ export class GrubController {
 			};
 		}
 
+		if (task.phase === "initializer") {
+			task.phase = "execution";
+		}
 		task.currentIteration += 1;
 		this.safePersist(task);
 		return { action: "continue", task: { ...task } };

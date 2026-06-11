@@ -4,7 +4,8 @@
  * [TO]: Consumed by ./grub-controller.ts, ./index.ts for structured feature tracking
  * [HERE]: extensions/builtin/grub/grub-feature-list.ts - JSON feature list IO with diff validation that limits agent mutations to passes/evidence fields
  */
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
 	FEATURE_LIST_VERSION,
@@ -60,7 +61,7 @@ export function writeFeatureList(path: string, list: FeatureList): void {
 		throw new FeatureListDiffError("Refusing to write invalid feature list shape.");
 	}
 	const serialized = `${JSON.stringify(list, null, 2)}\n`;
-	const tmp = `${path}.tmp`;
+	const tmp = `${path}.${randomBytes(6).toString("hex")}.tmp`;
 	writeFileSync(tmp, serialized, "utf-8");
 	renameSync(tmp, path);
 }
@@ -112,6 +113,9 @@ export function validateFeatureListDiff(before: FeatureList, after: FeatureList)
 			if (afterItem.steps[i] !== beforeItem.steps[i]) {
 				throw new FeatureListDiffError(`steps[${i}] for ${afterItem.id} is immutable`);
 			}
+		}
+		if (beforeItem.evidence !== undefined && afterItem.evidence === undefined) {
+			throw new FeatureListDiffError(`evidence for ${afterItem.id} may not be removed once set`);
 		}
 	}
 	return after;
@@ -251,11 +255,6 @@ export function defaultFeatureListPath(harnessDirectory: string): string {
 export function ensureParentDirectory(path: string): void {
 	const parent = dirname(path);
 	if (!existsSync(parent)) {
-		// Lazy import to keep this module lightweight when dir already exists.
-		// Callers in grub/index.ts already mkdir the harness directory; this is
-		// a defensive fallback for standalone usage.
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const fs = require("node:fs") as typeof import("node:fs");
-		fs.mkdirSync(parent, { recursive: true });
+		mkdirSync(parent, { recursive: true });
 	}
 }

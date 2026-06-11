@@ -266,8 +266,8 @@ test("Format: validateObjective / validateBudget / format helpers", () => {
 });
 
 test("Format: formatGoalElapsedSeconds / formatTokens", () => {
-	assert.equal(formatGoalElapsedSeconds(0), "0s");
-	assert.equal(formatGoalElapsedSeconds(45), "45s");
+	assert.equal(formatGoalElapsedSeconds(0), "0.0s");
+	assert.equal(formatGoalElapsedSeconds(45), "45.0s");
 	assert.equal(formatGoalElapsedSeconds(60), "1m");
 	assert.equal(formatGoalElapsedSeconds(3600), "1h");
 	assert.equal(formatGoalElapsedSeconds(3600 * 25), "1d 1h 0m");

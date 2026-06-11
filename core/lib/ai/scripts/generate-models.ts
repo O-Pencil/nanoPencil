@@ -1341,11 +1341,74 @@ async function generateModels() {
 	const ALI_TOKEN_PLAN_ANTHROPIC_BASE_URL = "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic";
 	const aliTokenPlanTextModels = [
 		{
+			id: "qwen3.7-plus",
+			name: "Qwen3.7 Plus",
+			reasoning: true,
+			contextWindow: 1000000,
+			maxTokens: 65536,
+		},
+		{
+			id: "qwen3.7-max",
+			name: "Qwen3.7 Max",
+			reasoning: true,
+			contextWindow: 1000000,
+			maxTokens: 65536,
+		},
+		{
 			id: "qwen3.6-plus",
 			name: "Qwen3.6 Plus",
 			reasoning: true,
 			contextWindow: 262144,
 			maxTokens: 65536,
+		},
+		{
+			id: "qwen3.6-flash",
+			name: "Qwen3.6 Flash",
+			reasoning: true,
+			contextWindow: 262144,
+			maxTokens: 65536,
+		},
+		{
+			id: "deepseek-v4-pro",
+			name: "DeepSeek V4 Pro",
+			reasoning: true,
+			contextWindow: 262144,
+			maxTokens: 65536,
+		},
+		{
+			id: "deepseek-v4-flash",
+			name: "DeepSeek V4 Flash",
+			reasoning: true,
+			contextWindow: 262144,
+			maxTokens: 65536,
+		},
+		{
+			id: "deepseek-v3.2",
+			name: "DeepSeek V3.2",
+			reasoning: false,
+			contextWindow: 262144,
+			maxTokens: 65536,
+		},
+		{
+			id: "kimi-k2.6",
+			name: "Kimi K2.6",
+			reasoning: true,
+			contextWindow: 262144,
+			maxTokens: 65536,
+		},
+		{
+			id: "kimi-k2.5",
+			name: "Kimi K2.5",
+			reasoning: true,
+			contextWindow: 262144,
+			maxTokens: 65536,
+		},
+		{
+			id: "glm-5.1",
+			name: "GLM-5.1",
+			reasoning: false,
+			contextWindow: 202752,
+			maxTokens: 16384,
 		},
 		{
 			id: "glm-5",
@@ -1362,13 +1425,39 @@ async function generateModels() {
 			maxTokens: 65536,
 		},
 		{
-			id: "deepseek-v3.2",
-			name: "DeepSeek V3.2",
+			id: "qwen-image-2.0",
+			name: "Qwen Image 2.0",
 			reasoning: false,
-			contextWindow: 262144,
-			maxTokens: 65536,
+			contextWindow: 32768,
+			maxTokens: 4096,
+		},
+		{
+			id: "qwen-image-2.0-pro",
+			name: "Qwen Image 2.0 Pro",
+			reasoning: false,
+			contextWindow: 32768,
+			maxTokens: 4096,
+		},
+		{
+			id: "wan2.7-image",
+			name: "Wan2.7 Image",
+			reasoning: false,
+			contextWindow: 32768,
+			maxTokens: 4096,
+		},
+		{
+			id: "wan2.7-image-pro",
+			name: "Wan2.7 Image Pro",
+			reasoning: false,
+			contextWindow: 32768,
+			maxTokens: 4096,
 		},
 	] as const;
+
+	const aliTokenPlanAnthropicExcluded = new Set([
+		"deepseek-v3.2", "deepseek-v4-pro", "deepseek-v4-flash",
+		"qwen-image-2.0", "qwen-image-2.0-pro", "wan2.7-image", "wan2.7-image-pro",
+	]);
 
 	for (const model of aliTokenPlanTextModels) {
 		allModels.push({
@@ -1389,7 +1478,7 @@ async function generateModels() {
 			},
 		});
 
-		if (model.id !== "deepseek-v3.2") {
+		if (!aliTokenPlanAnthropicExcluded.has(model.id)) {
 			allModels.push({
 				id: model.id,
 				name: `${model.name} (Ali Token Plan Anthropic)`,

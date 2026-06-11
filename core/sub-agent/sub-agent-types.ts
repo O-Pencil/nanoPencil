@@ -8,6 +8,7 @@
 
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { ImageContent, Model } from "@pencil-agent/ai/types";
+import type { AgentUsage } from "./agent-input-output.js";
 import type { Tool } from "../tools/index.js";
 
 /** Realtime lifecycle event emitted by a running SubAgent. */
@@ -56,6 +57,12 @@ export interface SubAgentResult {
   response?: string;
   /** Error message if unsuccessful */
   error?: string;
+  /** Total tokens consumed by the SubAgent */
+  totalTokens?: number;
+  /** Total number of tool calls made */
+  totalToolUseCount?: number;
+  /** Token usage breakdown */
+  usage?: AgentUsage;
 }
 
 /**

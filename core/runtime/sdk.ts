@@ -666,6 +666,7 @@ export async function createAgentSession(
     soulManagerFactory,
     signal: options.signal,
     theme: options.theme,
+    createSession: createAgentSession,
   });
 
   time("session.construct");

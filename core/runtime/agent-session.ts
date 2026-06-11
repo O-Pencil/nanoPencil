@@ -92,6 +92,7 @@ import {
 } from "./slash-command-catalog.js";
 import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } from "./retry-coordinator.js";
 import { createLogger, type AgentLogger } from "../platform/utils/logger.js";
+import { createAgentTool, createTaskToolAlias, AGENT_TOOL_NAME, TASK_TOOL_NAME, type CreateSessionFn } from "../sub-agent/index.js";
 
 export type { SessionSlashCommandDescriptor } from "./slash-command-catalog.js";
 export { CycleModelError } from "./model-controller.js";
@@ -263,6 +264,12 @@ export interface AgentSessionConfig {
    * importing the modes/ UI theme singleton (U2).
    */
   theme?: ThemeContract;
+  /**
+   * Factory for creating child AgentSession instances (used by the Agent sub-agent tool).
+   * Injected by the composition root (sdk.ts) to avoid a circular dependency
+   * between agent-session.ts and sdk.ts.
+   */
+  createSession?: CreateSessionFn;
 }
 
 export interface ExtensionBindings {
@@ -359,6 +366,10 @@ export class AgentSession {
   private _mcpToolsFactory?: () => Promise<ToolDefinition[]>;
   private _soulManagerFactory?: () => Promise<any | null>;
   private _baseToolRegistry: Map<string, AgentTool> = new Map();
+  /** CC-style Agent tool — recreated on each _buildRuntime() */
+  private _agentTool?: any;
+  /** Factory for creating child sessions (injected via config to avoid sdk.ts cycle) */
+  private _createSessionFactory?: CreateSessionFn;
   private _cwd: string;
   private _extensionRunnerRef?: { current?: ExtensionRunner };
   private _soulManager?: any; // SoulManager from nanosoul
@@ -426,6 +437,7 @@ export class AgentSession {
     this._extensionRunnerRef = config.extensionRunnerRef;
     this._soulManager = config.soulManager;
     this._baseToolsOverride = config.baseToolsOverride;
+    this._createSessionFactory = config.createSession;
     this._extensionEventBridge = new ExtensionEventBridge({
       getExtensionRunner: () => this._extensionRunner,
     });
@@ -1961,6 +1973,30 @@ export class AgentSession {
       includeAllExtensionTools: options.includeAllExtensionTools,
       extensionRunner: this._extensionRunner,
     });
+
+    // --- CC-style Agent tool injection ---
+    // Recreate on each build so the tool always references current model & MCP tools.
+    this._agentTool = createAgentTool({
+      parentSession: this as any,  // any to avoid circular type reference
+      parentPermissionMode: "default",
+      parentModel: this.model,
+      createSession: this._createSessionFactory!,
+    });
+    toolRuntime.activeTools.push(this._agentTool as unknown as AgentTool);
+    this._toolOrchestrator.registerTool(AGENT_TOOL_NAME, this._agentTool as unknown as AgentTool);
+    // Register Task alias too
+    const taskTool = createTaskToolAlias({
+      parentSession: this as any,
+      parentPermissionMode: "default",
+      parentModel: this.model,
+      createSession: this._createSessionFactory!,
+    });
+    toolRuntime.activeTools.push(taskTool as unknown as AgentTool);
+    this._toolOrchestrator.registerTool(TASK_TOOL_NAME, taskTool as unknown as AgentTool);
+    // Also register Task alias name for system prompt tool name list
+    if (!toolRuntime.systemPromptToolNames.includes(AGENT_TOOL_NAME)) {
+      toolRuntime.systemPromptToolNames.push(AGENT_TOOL_NAME);
+    }
     this.agent.setTools(toolRuntime.activeTools);
     this._baseSystemPrompt = this._rebuildSystemPrompt(
       toolRuntime.systemPromptToolNames,

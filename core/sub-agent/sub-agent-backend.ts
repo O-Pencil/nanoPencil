@@ -5,18 +5,31 @@
  * [HERE]: core/sub-agent/sub-agent-backend.ts - in-process SubAgent implementation
  */
 
-import { createAgentSession, type CreateAgentSessionOptions } from "../runtime/sdk.js";
+import type { CreateAgentSessionOptions } from "../runtime/sdk.js";
+import type { AgentSession } from "../runtime/agent-session.js";
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { AgentSessionEvent } from "../runtime/agent-session.js";
 import type { SubAgentBackend, SubAgentEvent, SubAgentHandle, SubAgentSpec, SubAgentResult } from "./sub-agent-types.js";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
+import { calculateTotalTokens, calculateTotalToolUseCount, calculateUsage } from "./agent-result-extractor.js";
+
+/**
+ * Factory function type for creating an AgentSession.
+ * Injected by the caller (agent-session.ts) to avoid a circular dependency
+ * between core/sub-agent/ and core/runtime/sdk.ts.
+ */
+export type CreateSessionFn = (
+  options: CreateAgentSessionOptions,
+) => Promise<{ session: AgentSession }>;
 
 /**
  * In-process SubAgent backend.
  * Wraps createAgentSession() to run SubAgent in the same process.
  */
 export class InProcessSubAgentBackend implements SubAgentBackend {
+  constructor(private createSession: CreateSessionFn) {}
+
   async spawn(spec: SubAgentSpec): Promise<SubAgentHandle> {
     const id = crypto.randomUUID();
     const prompt = await buildPromptWithContextFiles(spec);
@@ -40,7 +53,7 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
       model: spec.model,
     };
 
-    const { session } = await createAgentSession(options);
+    const { session } = await this.createSession(options);
     const unsubscribe = session.subscribe((event) => {
       const subAgentEvent = toSubAgentEvent(id, event);
       if (subAgentEvent) {
@@ -76,9 +89,14 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
         const lastAssistant = assistantMessages[assistantMessages.length - 1];
         const responseText = lastAssistant ? extractTextFromContent(lastAssistant.content) : "";
 
+        // Compute usage metadata from session messages (CC §11.2)
+        const messages = session.messages;
         result = {
           success: true,
           response: responseText,
+          totalTokens: calculateTotalTokens(messages),
+          totalToolUseCount: calculateTotalToolUseCount(messages),
+          usage: calculateUsage(messages),
         };
       } catch (error: unknown) {
         if (error instanceof Error && error.name === "AbortError") {

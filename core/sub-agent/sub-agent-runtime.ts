@@ -5,7 +5,6 @@
  * [HERE]: core/sub-agent/sub-agent-runtime.ts - SubAgent runtime implementation
  */
 
-import { InProcessSubAgentBackend } from "./sub-agent-backend.js";
 import type { SubAgentBackend, SubAgentHandle, SubAgentSpec } from "./sub-agent-types.js";
 
 /**
@@ -16,7 +15,7 @@ export class SubAgentRuntime {
   private backend: SubAgentBackend;
   private activeAgents: Map<string, SubAgentHandle> = new Map();
 
-  constructor(backend: SubAgentBackend = new InProcessSubAgentBackend()) {
+  constructor(backend: SubAgentBackend) {
     this.backend = backend;
   }
 
@@ -58,8 +57,3 @@ export class SubAgentRuntime {
     await Promise.all(Array.from(this.activeAgents.values()).map((agent) => agent.terminate()));
   }
 }
-
-/**
- * Default global SubAgent runtime instance.
- */
-export const subAgentRuntime = new SubAgentRuntime();

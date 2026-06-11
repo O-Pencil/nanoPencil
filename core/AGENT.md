@@ -82,12 +82,25 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `figma-auth.ts`: Figma OAuth integration for MCP servers
 
-### SubAgent Runtime (`core/sub-agent/`)
+### SubAgent + CC Agent System (`core/sub-agent/`)
 
-`sub-agent-types.ts`: Core SubAgent interfaces — SubAgentSpec, SubAgentHandle, SubAgentResult, SubAgentBackend; consumed by backend and runtime
-`sub-agent-backend.ts`: InProcessSubAgentBackend — wraps createAgentSession() with AbortSignal forwarding and optional timeout
-`sub-agent-runtime.ts`: SubAgentRuntime class — active agent registry, spawn/abortAll/terminateAll, default global instance
-`index.ts`: Barrel exports for sub-agent module
+`index.ts`: Barrel exports for both SubAgent runtime and CC-style Agent tool system
+`sub-agent-types.ts`: Core SubAgent interfaces — SubAgentSpec, SubAgentHandle, SubAgentResult, SubAgentBackend
+`sub-agent-backend.ts`: InProcessSubAgentBackend — wraps createAgentSession() with AbortSignal forwarding
+`sub-agent-runtime.ts`: SubAgentRuntime class — active agent registry, spawn/abortAll/terminateAll
+`subprocess-backend.ts`: SubprocessSubAgentBackend — worker_threads-based crash-isolated backend (future)
+`subprocess-worker.ts`: Minimal worker entry for subprocess backend
+`agent-definition.ts`: AgentDefinition interface (25+ fields), built-in agent definitions per CC §IV, §V
+`agent-definition-loader.ts`: Custom agent definition loader from .nanopencil/agents/ markdown/JSON files per CC §XV
+`agent-input-output.ts`: AgentInput (TypeBox schema), AgentOutputCompleted/Async types per CC §III
+`agent-registry.ts`: AgentDefinitionRegistry — name registry, definition cache, lookup per CC §XIV
+`agent-tool.ts`: createAgentTool/createTaskToolAlias — full CC §VI spawn flow with auto-background, telemetry, worktree isolation
+`agent-tool-filter.ts`: filterToolsForAgent — tool filtering by definition and permission mode per CC §IX
+`agent-result-extractor.ts`: extractAgentResult, truncateResult — result extraction with 100k truncation per CC §11.2
+`agent-handoff-safety.ts`: checkHandoffSafety — handoff classifier, recursion limits per CC §XII
+`agent-output-persistence.ts`: File-based background task output persistence to .nanopencil/tasks/ per CC §XI.3
+`agent-prompt-builder.ts`: System prompt Notes section injection per CC §X
+`agent-telemetry.ts`: Structured telemetry events per CC §XVI
 
 ### Workspace Management (`core/workspace/`)
 

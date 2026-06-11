@@ -5,7 +5,8 @@
  * [HERE]: extensions/builtin/idle-think/thinker.ts - background code exploration via SubAgent
  */
 
-import { SubAgentRuntime } from "../../../core/sub-agent/index.js";
+import { SubAgentRuntime, InProcessSubAgentBackend } from "../../../core/sub-agent/index.js";
+import { createAgentSession } from "../../../core/runtime/sdk.js";
 import type { SubAgentSpec } from "../../../core/sub-agent/index.js";
 import {
 	createReadOnlyTools,
@@ -230,7 +231,7 @@ export async function runExploration(options: ExplorationOptions): Promise<Think
 		const skillPath = networkAvailable ? findInternetSearchSkillPath() : undefined;
 
 		const projectContext = await collectProjectContext(cwd);
-		const subAgentRuntime = new SubAgentRuntime();
+		const subAgentRuntime = new SubAgentRuntime(new InProcessSubAgentBackend(createAgentSession));
 		const tools = buildReadOnlyTools(cwd);
 
 		const spec: SubAgentSpec = {

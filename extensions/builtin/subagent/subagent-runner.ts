@@ -8,7 +8,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Model } from "@pencil-agent/ai/types";
-import { SubAgentRuntime } from "../../../core/sub-agent/index.js";
+import { SubAgentRuntime, InProcessSubAgentBackend } from "../../../core/sub-agent/index.js";
+import { createAgentSession } from "../../../core/runtime/sdk.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
 import { WorktreeManager } from "../../../core/workspace/index.js";
 import {
@@ -32,7 +33,7 @@ export class SubAgentRunner {
   private currentBaseCwd: string | null = null;
 
   constructor() {
-    this.runtime = new SubAgentRuntime();
+    this.runtime = new SubAgentRuntime(new InProcessSubAgentBackend(createAgentSession));
     this.worktreeManager = new WorktreeManager();
   }
 

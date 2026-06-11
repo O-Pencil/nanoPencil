@@ -5,7 +5,8 @@
  * [HERE]: extensions/builtin/team/team-runtime.ts
  */
 
-import { SubAgentRuntime } from "../../../core/sub-agent/index.js";
+import { SubAgentRuntime, InProcessSubAgentBackend } from "../../../core/sub-agent/index.js";
+import { createAgentSession } from "../../../core/runtime/sdk.js";
 import type { SubAgentEvent, SubAgentHandle, SubAgentSpec } from "../../../core/sub-agent/index.js";
 import { WorktreeManager } from "../../../core/workspace/index.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
@@ -88,7 +89,7 @@ export class TeamRuntime {
 	constructor(options: TeamRuntimeOptions = {}) {
 		this.store = new TeamStateStore(options.storageDir);
 		this.worktreeManager = new WorktreeManager();
-		this.subAgentRuntime = new SubAgentRuntime();
+		this.subAgentRuntime = new SubAgentRuntime(new InProcessSubAgentBackend(createAgentSession));
 		this.permissions = new PermissionStore();
 		this.mailbox = new TeamMailbox(1000, join(this.store.directory, "mailbox.jsonl"));
 		this.tasks = new TeamTaskStore(this.store.directory);

@@ -4,6 +4,16 @@
 
 Member List
 diagnostics/index.ts: Diagnostics extension entry, subscribes to diagnostic:event, buffers session-local diagnostic records, prompts only after threshold at agent_end, registers /report-issue
+goal/index.ts: Goal extension entry, per-thread GoalController, /goal command and goal subcommand autocomplete, get_goal/create_goal/update_goal tools, turn/account lifecycle hooks, idle-continuation prompt dispatch, GOAL_MESSAGE_TYPE renderer, session_start/shutdown hooks, persistent per-thread status footer indicator
+goal/goal-types.ts: ThreadGoalStatus enum (active/paused/blocked/usage_limited/budget_limited/complete), ThreadGoal record, GoalSetMode, GoalAccountingMode, GoalTurnAccounting, GoalControllerState, validation constants
+goal/goal-store.ts: GoalStore JSON-file persistence layer; get/replace/insert/update/delete/account_usage primitives, atomic temp-file rename, status-filtered accounting modes, budget-limit auto-downgrade
+goal/goal-format.ts: formatGoalElapsedSeconds, formatTokens, goalStatusLabel, goalUsageSummary, goalSummaryLines, goalStatusIndicator, shouldConfirmBeforeReplacing, editedGoalStatus, validateObjective, validateBudget
+goal/goal-prompts.ts: buildContinuationPrompt, buildBudgetLimitPrompt, buildObjectiveUpdatedPrompt - three steering templates mirroring codex-rs prompts/templates/goals/*
+goal/goal-controller.ts: GoalController class, per-thread mutex, on_turn_start/on_token_usage/on_tool_finish/on_turn_end/on_turn_abort/on_turn_error/on_usage_limit hooks, idle continuation followUp injection, blocked-signal escalation counter, budget-limit steering emission
+goal/goal-tools.ts: get_goal/create_goal/update_goal LLM tool factories, TypeBox parameter schemas, host singleton for controller lookup, renderGoalResponse formatter
+goal/goal-parser.ts: parseGoalCommand, buildGoalHelp, getGoalArgumentCompletions for /goal subcommand autocomplete
+goal/goal-command.ts: runGoalCommand handler for /goal show/clear/edit/pause/resume/set with ConfirmIfExists dialog, multi-line summary renderer
+goal/README.md: Goal extension documentation - usage, LLM tools, lifecycle, persistence, status indicator, file-by-file architecture
 diagnostics/types.ts: Diagnostic event/report type contract and diagnostic:event channel name
 diagnostics/diagnostic-buffer.ts: DiagnosticBuffer, event coercion, fingerprint dedupe, prompt gating
 diagnostics/reporter.ts: User-approved InsForge pencil_issue_events reporter, configured via NANOPENCIL_ISSUE_* env vars

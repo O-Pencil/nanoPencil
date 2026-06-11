@@ -5,7 +5,7 @@
  * [HERE]: extensions/builtin/plan/plan-workflow-prompt.ts - workflow prompt generation for plan mode
  */
 
-import type { PlanSessionState } from "./types.js";
+import type { PlanModeConfig, PlanSessionState } from "./types.js";
 
 // ============================================================================
 // Plan mode workflow instructions
@@ -16,12 +16,20 @@ export function getPlanModeInstructions(
 	planFilePath: string,
 	existingPlan: string | null,
 	reminderType: "full" | "sparse",
+	config?: PlanModeConfig,
 ): string {
+	const interviewEnabled = config?.interviewPhaseEnabled
+		|| process.env.NANOPENCIL_PLAN_INTERVIEW === "true";
+
 	if (reminderType === "sparse") {
-		return getSparseReminder(planFilePath, existingPlan !== null);
+		return interviewEnabled
+			? getInterviewSparseReminder(planFilePath, existingPlan !== null)
+			: getSparseReminder(planFilePath, existingPlan !== null);
 	}
 
-	return getFullWorkflow(planFilePath, existingPlan !== null ? true : null);
+	return interviewEnabled
+		? getInterviewWorkflow(planFilePath, existingPlan !== null ? true : null)
+		: getFullWorkflow(planFilePath, existingPlan !== null ? true : null);
 }
 
 function getSparseReminder(planFilePath: string, planExists: boolean): string {
@@ -118,6 +126,89 @@ This is critical - your turn should only end with either using the AskUserQuesti
 NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications using the AskUserQuestion tool. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.`);
 
 	return sections.join("\n\n");
+}
+
+// ============================================================================
+// Interview workflow (iterative, CC-aligned)
+// ============================================================================
+
+function getInterviewWorkflow(planFilePath: string, existingPlan: boolean | null): string {
+	const planExists = existingPlan !== null;
+
+	const sections: string[] = [];
+
+	// Hard constraint header (same as 5-phase)
+	sections.push(
+		`Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supercedes any other instructions you have received.`,
+	);
+
+	// Plan file info
+	if (!planExists) {
+		sections.push(
+			`No plan file exists yet. You should create your plan at ${planFilePath} using the FileWrite tool.`,
+		);
+	} else {
+		sections.push(
+			`A plan file already exists at ${planFilePath}. You can read it and make incremental edits using FileEdit.`,
+		);
+	}
+
+	sections.push(`## Iterative Planning Workflow
+
+You are pair-planning with the user. Explore the code to build context, ask the user questions when you hit decisions you can't make alone, and write your findings into the plan file as you go. The plan file (above) is the ONLY file you may edit -- it starts as a rough skeleton and gradually becomes the final plan.
+
+### The Loop
+
+Repeat this cycle until the plan is complete:
+
+1. **Explore** -- Use read-only tools (Read, Grep, Find, Bash with read-only commands) to read code. Look for existing functions, utilities, and patterns to reuse. You can use the Explore agent type to parallelize complex searches without filling your context, though for straightforward queries direct tools are simpler.
+2. **Update the plan file** -- After each discovery, immediately capture what you learned. Don't wait until the end.
+3. **Ask the user** -- When you hit an ambiguity or decision you can't resolve from code alone, use AskUserQuestion. Then go back to step 1.
+
+### First Turn
+
+Start by quickly scanning a few key files to form an initial understanding of the task scope. Then write a skeleton plan (headers and rough notes) and ask the user your first round of questions. Don't explore exhaustively before engaging the user.
+
+### Asking Good Questions
+
+- Never ask what you could find out by reading the code
+- Batch related questions together (use multi-question AskUserQuestion calls)
+- Focus on things only the user can answer: requirements, preferences, tradeoffs, edge case priorities
+- Scale depth to the task -- a vague feature request needs many rounds; a focused bug fix may need one or none
+
+### Plan File Structure
+
+Your plan file should be divided into clear sections using markdown headers, based on the request. Fill out these sections as you go.
+- Begin with a **Context** section: explain why this change is being made
+- Include only your recommended approach, not all alternatives
+- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
+- Include the paths of critical files to be modified
+- Reference existing functions and utilities you found that should be reused, with their file paths
+- Include a verification section describing how to test the changes end-to-end
+
+### When to Converge
+
+Your plan is ready when you've addressed all ambiguities and it covers: what to change, which files to modify, what existing code to reuse (with file paths), and how to verify the changes. Call ExitPlanMode when the plan is ready for approval.
+
+### Ending Your Turn
+
+Your turn should only end by either:
+- Using AskUserQuestion to gather more information
+- Calling ExitPlanMode when the plan is ready for approval
+
+**Important:** Use ExitPlanMode to request plan approval. Do NOT ask about plan approval via text or AskUserQuestion. Phrases like "Is this plan okay?", "Should I proceed?", "How does this plan look?" MUST use ExitPlanMode.`);
+
+	return sections.join("\n\n");
+}
+
+function getInterviewSparseReminder(planFilePath: string, planExists: boolean): string {
+	return [
+		`Plan mode still active (iterative workflow). Read-only except plan file (${planFilePath}).`,
+		planExists
+			? `Continue exploring codebase, updating plan, and interviewing user at ${planFilePath}.`
+			: `Start by scanning key files, write a skeleton plan at ${planFilePath}, then ask your first questions.`,
+		"End turns with AskUserQuestion (for clarifications) or ExitPlanMode (for plan approval). Never ask about plan approval via text or AskUserQuestion.",
+	].join("\n");
 }
 
 // ============================================================================

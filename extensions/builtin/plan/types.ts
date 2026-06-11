@@ -141,6 +141,8 @@ export interface PlanModeConfig {
 	maxExploreAgents: number;
 	/** Maximum number of Plan subagents */
 	maxPlanAgents: number;
+	/** Use iterative interview workflow instead of sequential 5-phase */
+	interviewPhaseEnabled?: boolean;
 }
 
 export const DEFAULT_PLAN_CONFIG: PlanModeConfig = {
@@ -148,6 +150,7 @@ export const DEFAULT_PLAN_CONFIG: PlanModeConfig = {
 	fullReminderEveryN: 3,
 	maxExploreAgents: 3,
 	maxPlanAgents: 1,
+	interviewPhaseEnabled: false,
 };
 
 // ============================================================================

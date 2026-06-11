@@ -1,4 +1,9 @@
 /**
+ * [WHO]: FACET_EXTRACTION_PROMPT/SCHEMA, SUMMARIZE_CHUNK_PROMPT, INSIGHT_SECTIONS, buildAtAGlancePrompt
+ * [FROM]: Depends on ./types
+ * [TO]: Consumed by ./insights-engine
+ * [HERE]: extensions/builtin/insights/prompts.ts - LLM prompt templates and insight section definitions
+ *
  * Prompt templates for the /insights command.
  *
  * 1:1 port of Claude Code src/commands/insights.ts prompt templates.

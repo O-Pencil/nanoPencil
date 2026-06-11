@@ -1,4 +1,9 @@
 /**
+ * [WHO]: SchedulerLockOptions, tryAcquireSchedulerLock, releaseSchedulerLock
+ * [FROM]: Depends on node:fs/promises, node:path
+ * [TO]: Consumed by ./cron-scheduler, ./index
+ * [HERE]: extensions/builtin/loop/cron/cron-tasks-lock.ts - scheduler lease lock for scheduled_tasks.json
+ *
  * Scheduler lease lock for .claude/scheduled_tasks.json.
  *
  * 1:1 port of Claude Code src/utils/cronTasksLock.ts

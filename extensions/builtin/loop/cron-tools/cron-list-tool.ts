@@ -1,4 +1,9 @@
 /**
+ * [WHO]: createCronListTool, CronListInput
+ * [FROM]: Depends on @sinclair/typebox, @pencil-agent/agent-core, core/extensions-host/types, ../cron, ./prompt
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/loop/cron-tools/cron-list-tool.ts - CronList tool factory
+ *
  * CronList tool — lists all scheduled cron tasks.
  *
  * 1:1 port of Claude Code src/tools/ScheduleCronTool/CronListTool.ts

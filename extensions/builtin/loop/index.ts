@@ -1,4 +1,9 @@
 /**
+ * [WHO]: loop extension default export
+ * [FROM]: Depends on @pencil-agent/tui, core/extensions-host/types, ./cron/cron-scheduler, ./cron-tools, ./loop-skill
+ * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
+ * [HERE]: extensions/builtin/loop/index.ts - extension entry; /loop command, CronCreate/Delete/List tools, scheduler wiring
+ *
  * Loop extension — registers /loop command, CronCreate/Delete/List tools,
  * and the unified cron scheduler.
  *

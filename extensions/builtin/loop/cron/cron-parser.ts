@@ -1,4 +1,9 @@
 /**
+ * [WHO]: CronFields, parseCronExpression, computeNextCronRun, cronToHuman, intervalToCron
+ * [FROM]: No first-party dependencies
+ * [TO]: Consumed by ./cron-scheduler, ./cron-tasks, ./index
+ * [HERE]: extensions/builtin/loop/cron/cron-parser.ts - cron expression parsing and next-run calculation
+ *
  * Minimal cron expression parsing and next-run calculation.
  *
  * 1:1 port of Claude Code src/utils/cron.ts

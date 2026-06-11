@@ -1,4 +1,9 @@
 /**
+ * [WHO]: createCronCreateTool, CronCreateInput
+ * [FROM]: Depends on @sinclair/typebox, @pencil-agent/agent-core, core/extensions-host/types, ../cron, ./prompt
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/loop/cron-tools/cron-create-tool.ts - CronCreate tool factory
+ *
  * CronCreate tool — creates a scheduled cron task.
  *
  * 1:1 port of Claude Code src/tools/ScheduleCronTool/CronCreateTool.ts

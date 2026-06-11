@@ -1,4 +1,9 @@
 /**
+ * [WHO]: generateHtmlReport
+ * [FROM]: Depends on ./types
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/insights/html-report.ts - HTML usage-report renderer
+ *
  * HTML report generation for the /insights command.
  *
  * 1:1 port of Claude Code src/commands/insights.ts generateHtmlReport()

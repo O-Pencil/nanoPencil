@@ -1,4 +1,9 @@
 /**
+ * [WHO]: createCronDeleteTool, CronDeleteInput
+ * [FROM]: Depends on @sinclair/typebox, @pencil-agent/agent-core, core/extensions-host/types, ../cron, ./prompt
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/loop/cron-tools/cron-delete-tool.ts - CronDelete tool factory
+ *
  * CronDelete tool — deletes a scheduled cron task.
  *
  * 1:1 port of Claude Code src/tools/ScheduleCronTool/CronDeleteTool.ts

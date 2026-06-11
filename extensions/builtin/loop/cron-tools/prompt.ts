@@ -1,4 +1,9 @@
 /**
+ * [WHO]: CRON_*_TOOL_NAME constants, isKairosCronEnabled, isDurableCronEnabled, buildCronCreate/Delete/List descriptions and prompts
+ * [FROM]: No first-party dependencies
+ * [TO]: Consumed by ./cron-create-tool, ./cron-delete-tool, ./cron-list-tool, ../loop-skill
+ * [HERE]: extensions/builtin/loop/cron-tools/prompt.ts - cron tool prompts, names, and feature flags
+ *
  * Cron tool prompts and constants.
  *
  * 1:1 port of Claude Code src/tools/ScheduleCronTool/prompt.ts

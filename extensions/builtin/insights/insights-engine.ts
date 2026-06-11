@@ -1,4 +1,9 @@
 /**
+ * [WHO]: extractFacetsFromTranscript, generateParallelInsights
+ * [FROM]: Depends on core/session/session-manager, core/extensions-host/types, ./types, ./prompts, ./session-scanner
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/insights/insights-engine.ts - LLM facet extraction and parallel insight generation
+ *
  * LLM insight generation engine.
  *
  * Port of Claude Code src/commands/insights.ts:

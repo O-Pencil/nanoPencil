@@ -1,4 +1,9 @@
 /**
+ * [WHO]: buildLoopPrompt, getLoopUsageMessage
+ * [FROM]: Depends on ./cron-tools/prompt
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/loop/loop-skill.ts - /loop skill: prompt builder and usage message
+ *
  * /loop skill — translates user input into a CronCreate tool call.
  *
  * 1:1 port of Claude Code src/skills/bundled/loop.ts

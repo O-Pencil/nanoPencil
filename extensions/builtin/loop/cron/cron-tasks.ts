@@ -1,4 +1,9 @@
 /**
+ * [WHO]: CronTask, add/get/removeSessionCronTasks, getCronFilePath, scheduled-task storage primitives
+ * [FROM]: Depends on node:crypto, node:fs, node:fs/promises, node:path, ./cron-parser
+ * [TO]: Consumed by ./cron-scheduler, ./index
+ * [HERE]: extensions/builtin/loop/cron/cron-tasks.ts - scheduled-prompt storage in .claude/scheduled_tasks.json
+ *
  * Scheduled prompts, stored in <project>/.claude/scheduled_tasks.json.
  *
  * 1:1 port of Claude Code src/utils/cronTasks.ts

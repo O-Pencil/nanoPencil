@@ -1,4 +1,9 @@
 /**
+ * [WHO]: createCronScheduler, CronScheduler, isRecurringTaskAged, buildMissedTaskNotification
+ * [FROM]: Depends on chokidar, ./cron-parser, ./cron-tasks, ./cron-tasks-lock
+ * [TO]: Consumed by loop/index
+ * [HERE]: extensions/builtin/loop/cron/cron-scheduler.ts - non-React scheduler core for scheduled_tasks.json
+ *
  * Non-React scheduler core for .claude/scheduled_tasks.json.
  *
  * 1:1 port of Claude Code src/utils/cronScheduler.ts

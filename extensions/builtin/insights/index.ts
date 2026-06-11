@@ -1,4 +1,9 @@
 /**
+ * [WHO]: insights extension default export (/insights command)
+ * [FROM]: Depends on node:path, node:fs/promises, core/extensions-host/types, core/session/session-manager, ./types, ./stats, ./insights-engine, ./html-report, ./prompts, ./session-scanner
+ * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
+ * [HERE]: extensions/builtin/insights/index.ts - /insights command entry; usage-report pipeline
+ *
  * /insights command — generate a usage report analyzing nanoPencil sessions.
  *
  * 1:1 port of Claude Code src/commands/insights.ts generateUsageReport() pipeline.

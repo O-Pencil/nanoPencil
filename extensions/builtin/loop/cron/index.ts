@@ -1,4 +1,9 @@
 /**
+ * [WHO]: cron module barrel
+ * [FROM]: Re-exports ./cron-parser, ./cron-tasks, ./cron-scheduler, ./cron-tasks-lock
+ * [TO]: Consumed by loop/index, loop/cron-tools
+ * [HERE]: extensions/builtin/loop/cron/index.ts - cron module barrel export
+ *
  * Cron module exports: types, parser, task storage, scheduler, lock
  *
  * 1:1 port of Claude Code cron module public API

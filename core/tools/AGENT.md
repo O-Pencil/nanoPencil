@@ -16,6 +16,7 @@ edit.ts: EditTool, editTool, createEditTool, EditToolInput, EditOperations, Edit
 bash.ts: BashTool, bashTool, createBashTool, BashToolInput, BashToolDetails, createSandboxHook with optional simple write-path allowlist, shell command execution with timeout/streaming, consumed by orchestrator
 index.ts: Tool registry, all tool creators and types, tool system public API, passes edit/write options through createCodingTools/createAllTools, re-exports from all tool modules
 write.ts: WriteTool, writeTool, createWriteTool, WriteToolInput, WriteToolOptions.beforeWrite guard, filesystem creation/overwrite, consumed by orchestrator
+file-state-cache.ts: FileStateCache, FileState, fileStateCache singleton, LRU cache tracking file read state (content + mtime) for staleness detection, consumed by read/edit/write tools
 edit-diff.ts: detectLineEnding(), fuzzyFindText(), generateDiffString(), normalizeToLF(), restoreLineEndings(), shared diff computation for edit tool
 truncate.ts: TruncationResult, truncateHead(), truncateTail(), formatSize(), shared truncation utilities for tool outputs, constants: DEFAULT_MAX_LINES, DEFAULT_MAX_BYTES, GREP_MAX_LINE_LENGTH
 time.ts: TimeTool, timeTool, createTimeTool, current time tool with timezone/locale formatting, consumed by orchestrator

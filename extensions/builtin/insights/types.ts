@@ -1,4 +1,9 @@
 /**
+ * [WHO]: SessionMeta, SessionFacets, AggregatedData, InsightSection, InsightResults, InsightsExport, LiteSessionInfo type contracts
+ * [FROM]: No external dependencies (pure type definitions)
+ * [TO]: Consumed by ./stats, ./prompts, ./session-scanner, ./insights-engine, ./html-report, ./index
+ * [HERE]: extensions/builtin/insights/types.ts - type contracts for the /insights usage-report pipeline
+ *
  * Type definitions for the /insights command.
  *
  * 1:1 port of Claude Code src/commands/insights.ts type definitions.

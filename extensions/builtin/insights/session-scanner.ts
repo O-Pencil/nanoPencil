@@ -1,4 +1,9 @@
 /**
+ * [WHO]: scanAllSessions, entriesToSessionMeta, formatTranscriptForFacets, formatTranscriptWithSummarization, load/saveSessionMeta, load/saveFacets
+ * [FROM]: Depends on node:fs/promises, core/session/session-manager, core/lib/ai types, core/lib/agent-core types, ./types
+ * [TO]: Consumed by ./insights-engine, ./index
+ * [HERE]: extensions/builtin/insights/session-scanner.ts - session JSONL scanning, transcript formatting, meta/facets cache
+ *
  * Session scanner — adapts nanoPencil session entries to CC's SessionMeta format.
  *
  * Port of Claude Code src/commands/insights.ts data collection functions:

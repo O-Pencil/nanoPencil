@@ -1,4 +1,9 @@
 /**
+ * [WHO]: aggregateData
+ * [FROM]: Depends on ./types
+ * [TO]: Consumed by ./index
+ * [HERE]: extensions/builtin/insights/stats.ts - cross-session statistics aggregation
+ *
  * Statistics aggregation for the /insights command.
  *
  * 1:1 port of Claude Code src/commands/insights.ts aggregateData().

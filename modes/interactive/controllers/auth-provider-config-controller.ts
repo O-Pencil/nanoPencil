@@ -255,7 +255,7 @@ export class AuthProviderConfigController {
     return providerMap.get(normalized);
   }
 
-  private async promptForProviderApiKey(
+  async promptForProviderApiKey(
     provider: string,
     options: { title?: string } = {},
   ): Promise<boolean> {
@@ -427,9 +427,10 @@ export class AuthProviderConfigController {
       return false;
     }
 
-    saveCustomProtocolProviderConfig(modelsPath, provider, {
+    const probed = await saveCustomProtocolProviderConfig(modelsPath, provider, {
       baseUrl: trimmedBaseUrl,
       modelName: trimmedModelName,
+      apiKey: trimmedApiKey || undefined,
     });
     if (trimmedApiKey) {
       saveCustomProtocolProviderApiKey(authStorage, provider, trimmedApiKey);
@@ -437,7 +438,14 @@ export class AuthProviderConfigController {
 
     this.ctx.modelRegistry.refresh();
     await this.refreshCurrentModelForProvider(provider, trimmedModelName);
-    this.ctx.surface.showStatus(`Saved ${definition.label} configuration`);
+    if (probed?.contextWindow) {
+      const ctxK = probed.contextWindow >= 1000
+        ? `${Math.round(probed.contextWindow / 1000)}k`
+        : String(probed.contextWindow);
+      this.ctx.surface.showStatus(`Saved ${definition.label} configuration (context window: ${ctxK})`);
+    } else {
+      this.ctx.surface.showStatus(`Saved ${definition.label} configuration`);
+    }
     return true;
   }
 

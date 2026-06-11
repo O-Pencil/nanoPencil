@@ -75,6 +75,7 @@ export interface ProviderConfigPort {
     provider: string,
     done: () => void,
   ): Promise<void>;
+  promptForProviderApiKey(provider: string, options?: { title?: string }): Promise<boolean>;
 }
 
 /** Selector/status/error/prompt/render TUI surface. */
@@ -254,6 +255,16 @@ export class ModelOverlayController {
               this.ctx.surface.showError(
                 error instanceof Error ? error.message : String(error),
               );
+            }
+            this.showModelSelector(initialSearchInput, filterByProvider);
+          })();
+        },
+        () => {
+          void (async () => {
+            done();
+            const provider = filterByProvider ?? this.ctx.modelSession.getModel()?.provider;
+            if (provider) {
+              await this.ctx.providerConfig.promptForProviderApiKey(provider);
             }
             this.showModelSelector(initialSearchInput, filterByProvider);
           })();

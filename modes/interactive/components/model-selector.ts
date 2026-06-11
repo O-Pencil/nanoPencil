@@ -60,6 +60,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	private filterByProvider?: string;
 	/** When set, Ctrl+N runs this (parent closes selector and prompts for OpenRouter model id). */
 	private onAddOpenRouterModel?: () => void;
+	/** When set, Ctrl+K runs this (parent closes selector and prompts for API key). */
+	private onConfigureApiKey?: () => void;
 
 	get focused(): boolean {
 		return this._focused;
@@ -80,6 +82,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		initialSearchInput?: string,
 		filterByProvider?: string,
 		onAddOpenRouterModel?: () => void,
+		onConfigureApiKey?: () => void,
 	) {
 		super();
 
@@ -89,6 +92,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		this.scopedModels = scopedModels;
 		this.filterByProvider = filterByProvider;
 		this.onAddOpenRouterModel = onAddOpenRouterModel;
+		this.onConfigureApiKey = onConfigureApiKey;
 		this.scope = scopedModels.length > 0 && !filterByProvider ? "scoped" : "all";
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
@@ -361,6 +365,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			this.onCancelCallback();
 		} else if (this.onAddOpenRouterModel && matchesKey(keyData, "ctrl+n")) {
 			this.onAddOpenRouterModel();
+		} else if (this.onConfigureApiKey && matchesKey(keyData, "ctrl+k")) {
+			this.onConfigureApiKey();
 		} else {
 			this.searchInput.handleInput(keyData);
 			this.filterModels(this.searchInput.getValue());

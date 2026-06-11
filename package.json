@@ -26,8 +26,9 @@
   ],
   "scripts": {
     "dev": "tsx cli.ts",
-    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:internal-libs && npm run copy:theme:json && npm run copy:assets && npm run build:meta",
+    "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:internal-libs && npm run copy:theme:json && npm run copy:assets && npm run build:meta && npm run minify:dist",
     "build:meta": "node scripts/generate-build-meta.js",
+    "minify:dist": "node scripts/minify-dist.js",
     "build:release": "npm run generate-models --prefix core/lib/ai && npm run build",
     "build:deps": "node scripts/build-deps.js",
     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
@@ -139,6 +140,7 @@
     "@types/node": "^22.15.0",
     "@types/proper-lockfile": "^4.1.4",
     "cross-env": "^10.1.0",
+    "esbuild": "^0.27.3",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   },

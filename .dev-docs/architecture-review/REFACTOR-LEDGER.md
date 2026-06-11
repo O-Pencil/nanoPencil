@@ -118,7 +118,7 @@ updated_at: 2026-06-09
 | # | 待办 | 类型 | 性质 |
 |---|------|------|------|
 | **O8a** | ✅ **P7 启动+构建线已执行（2026-06-10）**：MCP 异步非阻塞（默认配置启动 ~56s→1.9s）；`build:deps` 并行+incremental（no-op 109s→41.7s）。详见 `startup-async-review.md` | 代码（已完成）| startup-async-review |
-| **O8b** | **P7 体积线（部分推进）**：✅ BR05 内嵌运行时库 .d.ts 剥离已落地（tarball −55K/−3%，2026-06-10）；✅ BR03 已采 metrics→chunking ≈0 收益**不做**（同步 API 约束下聚合仍 eager parse，gzip 24K 拆了不省）。⚠️ 仍 gated：BR02 browser 1.6M 独立包（UX-first）、BR04 esbuild/minify（真正的下一个体积杠杆，单独风险决策）| 代码（部分完成）| bundle-redesign-review/closure.md（2026-06-10 Addendum）|
+| **O8b** | **P7 体积线（大头已完成）**：✅ BR04 esbuild per-file minify 落地（**tarball −346K/−20%、unpacked 7.1→4.6M**，2026-06-11，transpile-only 不 bundle、keep-names）；✅ BR05 内嵌 .d.ts 剥离（−55K）；✅ BR03 metrics→≈0 收益**不做**。⚠️ 仅剩 BR02 browser 1.6M 独立包 gated（UX-first）| 代码（大头完成，仅 BR02 留）| bundle-redesign-review/closure.md（2026-06-11 Addendum）|
 | **O9** | **P8 SDK 收窄未执行（重构未完成）**：root barrel → 稳定 SDK 面（SK01-03）。会破 public API 296 不变量 → **需 maintainer 开 major 版本窗口**才能做 | **代码（重构遗留，需 major）** | sdk-surface-review |
 | O3 | **EV03 browser 独立包**（Q2①，砍 1.6M 安装体积）：UX-first，要先有 install/enable UX（与 O8 同属 P7 体积线）| 代码（可选）| BR02 reopen 条件 |
 | O5 | interactive 域内 post-P5 清理：resources-display(481) / slash-handlers(981) 扁平 handler | 代码（可选 backlog）| — |
@@ -150,6 +150,7 @@ updated_at: 2026-06-09
 | **build:deps no-op 重建** | — | — | **109s→41.7s（−62%）** | ✅ P7 build：并行（agent-core 依赖 ai 串后）+ tsc incremental。改文件时只重建受影响包 |
 | **public 符号（startup 改后复核）** | 296 | — | **296** | ✅ 顶层导出不变；新增 `warmupMcpTools()`/`deferMcpInit`/`sdk:mcp_ready` 均成员级 additive（GB-2 声明，非破坏）|
 | **发布 tarball（BR05 .d.ts 剥离）** | — | — | **1,805,318→1,750,161 B（−55K/−3.05%）；files 1075→988；unpacked 7.5→6.9M** | ✅ P7 size：剥离内嵌运行时库 dev-only .d.ts（运行时只用 .js）。同基线 `npm pack` before/after；BR01:dist 绿、运行时加载内嵌 ai registry 正常 |
+| **发布 tarball（BR04 minify）** | — | — | **1,733,504→1,387,300 B（−346K/−20%）；raw .js 4645→2251K（−52%）；unpacked 7.1→4.6M** | ✅ P7 size 大头：esbuild per-file transform（keep-names，不 bundle），接 build 末步。验证:package-boundary:dist 绿、25 扩展 0 错 35 工具、内嵌库 minified 仍解析。未测:真 model turn（需 key）/真终端渲染 |
 
 **dist 增长结论（已接受，记录原因）**：HEAD dist > main 基线，原因有二且**均非性能回归**：
 1. **D2 修复**：browser 1.6M 资产从"漏装"变"正确装"（本就该在包里）；

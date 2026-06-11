@@ -9,10 +9,10 @@ code_scope:
   implemented:
     - BR01 package-boundary guard
     - BR05 strip embedded runtime-lib .d.ts from tarball (2026-06-10)
+    - BR04 esbuild per-file minify (transpile-only, NO bundle) (2026-06-11)
   deferred:
     - BR02 browser package move
     - BR03 model metadata chunking (metrics captured 2026-06-10 → ~0 win, not pursued)
-    - BR04 esbuild bundling
 ```
 
 ## Closure Verdict
@@ -168,6 +168,32 @@ Behavior-neutral: `verify:package-boundary:dist` green (embed still resolves),
 `--list-models` loads the embedded ai registry, `verify:quality`/`verify:dip`
 green. Bigger size lever remaining is dist `.js` minify (BR04 transpile/minify-only,
 separate risk decision).
+
+## 2026-06-11 Addendum — BR04 minify (implemented, transpile-only)
+
+BR04 reopened per its gate ("start transpile-only, no bundling"). Implemented as
+`scripts/minify-dist.js` (`npm run minify:dist`, final step of `npm run build`):
+esbuild **transform** API per file, `minify: true, keepNames: true`. This is a
+per-file transform, **not a bundle** — import/export statements and module
+boundaries are byte-for-byte preserved, so the embedded private-lib strategy,
+jiti aliases, dynamic imports, and asset-relative paths are untouched.
+`keepNames` keeps Function/class `.name` at runtime (stack traces, error
+fingerprints, name-based wiring intact). Escape hatch: `NANOPENCIL_NO_MINIFY=1`.
+
+Measured (same tree, before/after `npm pack`):
+
+| Metric | before | after | Δ |
+|--------|--------|-------|---|
+| raw dist .js | 4645K | 2251K | **−52%** |
+| gzip tarball | 1,733,504 B | 1,387,300 B | **−346,204 B (−20%)** |
+| unpacked | 7.1 MB | 4.6 MB | −2.5 MB |
+
+Validated on a headless machine (the per-file-minify risk surface is all
+load-time): `verify:package-boundary:dist` green (embedded libs resolve
+minified), `--version`/`--help`/`--list-models` load the full graph, and all **25
+builtin extensions load with 0 errors registering 35 tools**. NOT yet validated:
+a live model turn (needs API key) and real-terminal TUI render — defer to the
+pre-publish beta-smoke-checklist on a maintainer machine.
 
 ## Handoff
 

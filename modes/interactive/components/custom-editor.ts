@@ -20,7 +20,10 @@ function buildSlashHighlighter(
 	getCommandNames: () => Set<string>,
 	theme: Theme,
 ): (text: string) => string {
-	const highlightColor = (text: string) => theme.fg("accent", text);
+	// Gold/yellow for slash commands — more visible than accent teal
+	const GOLD = "\x1b[33m";
+	const RESET = "\x1b[39m";
+	const highlightColor = (text: string) => theme.bold(`${GOLD}${text}${RESET}`);
 
 	return (text: string): string => {
 		if (!text.includes("/")) return text;
@@ -66,9 +69,8 @@ export class CustomEditor extends Editor {
 	public onExtensionShortcut?: (data: string) => boolean;
 	/** Handler for attachment navigation (arrow keys, delete). Returns true if handled. */
 	public onAttachmentKey?: (data: string) => boolean;
-	/** Slash command highlight function for input text. */
-	public highlightInput?: (text: string) => string;
-
+	/** Slash command highlight function. Exists on Editor but node_modules .d.ts is stale. */
+	declare public highlightInput: ((text: string) => string) | null;
 	constructor(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager, options?: EditorOptions) {
 		super(tui, theme, options);
 		this.keybindings = keybindings;

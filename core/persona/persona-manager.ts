@@ -12,6 +12,11 @@ type PersonaState = {
 	activePersonaId?: string;
 };
 
+// Backward-compatible renames: old id → new id
+const PERSONA_RENAMES: Record<string, string> = {
+	default: "pencil",
+};
+
 function normalizePersonaId(personaId: string): string {
 	// Allow alphanumeric, underscore, and hyphen; prevent path traversal
 	const trimmed = personaId.trim();
@@ -44,13 +49,19 @@ export class PersonaManager {
 
 	getActivePersonaId(): string | undefined {
 		try {
-			if (!existsSync(this.activePersonaStatePath)) return undefined;
+			if (!existsSync(this.activePersonaStatePath)) return "vex";
 			const raw = readFileSync(this.activePersonaStatePath, "utf-8");
 			const parsed = JSON.parse(raw) as PersonaState;
-			if (!parsed?.activePersonaId) return undefined;
-			return normalizePersonaId(String(parsed.activePersonaId));
+			if (!parsed?.activePersonaId) return "vex";
+			let id = normalizePersonaId(String(parsed.activePersonaId));
+			// Migrate renamed personas and persist the update
+			if (PERSONA_RENAMES[id]) {
+				id = PERSONA_RENAMES[id];
+				this.setActivePersonaId(id);
+			}
+			return id;
 		} catch {
-			return undefined;
+			return "vex";
 		}
 	}
 
@@ -119,6 +130,22 @@ export class PersonaManager {
 	getPersonaMcpConfigPath(personaId: string): string {
 		return join(this.getPersonaDir(personaId), "mcp.json");
 	}
+
+	getPersonaDescription(personaId: string): string {
+		try {
+			const pencilPath = this.getPersonaPencilPath(personaId);
+			if (!existsSync(pencilPath)) return "";
+			const raw = readFileSync(pencilPath, "utf-8");
+			for (const line of raw.split("\n")) {
+				const trimmed = line.trim();
+				if (!trimmed || trimmed.startsWith("#")) continue;
+				return trimmed.length > 60 ? trimmed.slice(0, 57) + "..." : trimmed;
+			}
+			return "";
+		} catch {
+			return "";
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +193,10 @@ export function getPersonaMemoryDir(personaId: string): string {
 
 export function getPersonaMcpConfigPath(personaId: string): string {
 	return defaultManager.getPersonaMcpConfigPath(personaId);
+}
+
+export function getPersonaDescription(personaId: string): string {
+	return defaultManager.getPersonaDescription(personaId);
 }
 
 /**

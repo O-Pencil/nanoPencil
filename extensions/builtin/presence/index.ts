@@ -11,7 +11,7 @@ import { getLocale, tValue } from "../../../core/platform/i18n/index.js";
 import { dirname, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	collectIdentityPreferenceHighlights,
@@ -33,8 +33,39 @@ const GREETING_TIMEOUT_MS = 8000;
 const PRESENCE_DEBOUNCE_MS = 30_000;
 const GIT_TIMEOUT_MS = 200;
 
+/**
+ * Read persona-specific presence lines from the active persona's PENCIL.md.
+ * Parses `## Presence` section for `### Opening Lines` or `### Idle Lines` blocks.
+ * Returns empty array if no persona or no matching section found.
+ */
+function getPersonaPresenceLines(kind: "opening" | "idle"): string[] {
+	const personaDir = process.env.NANO_PERSONA_DIR;
+	if (!personaDir) return [];
+	const pencilPath = join(personaDir, "PENCIL.md");
+	if (!existsSync(pencilPath)) return [];
+	try {
+		const content = readFileSync(pencilPath, "utf-8");
+		const presenceMatch = content.match(/## Presence\s*\n([\s\S]*?)(?=\n## |\n# |$)/);
+		if (!presenceMatch) return [];
+		const presenceSection = presenceMatch[1]!;
+		const heading = kind === "opening" ? "### Opening Lines" : "### Idle Lines";
+		const blockMatch = presenceSection.match(
+			new RegExp(`${heading}\\s*\\n([\\s\\S]*?)(?=\\n### |$)`),
+		);
+		if (!blockMatch) return [];
+		return blockMatch[1]!
+			.split("\n")
+			.map((l) => l.replace(/^\s*-\s*/, "").trim())
+			.filter((l) => l.length > 0);
+	} catch {
+		return [];
+	}
+}
+
 // Fallback messages for when AI generation fails or memory is empty
 function getFallbackOpeningLines(locale?: "en" | "zh"): string[] {
+	const personaLines = getPersonaPresenceLines("opening");
+	if (personaLines.length > 0) return personaLines;
 	const useLocale = locale || getLocale();
 	if (!locale || useLocale === getLocale()) {
 		const lines = tValue<string[]>("msg.presence.opening");
@@ -60,6 +91,8 @@ function getFallbackOpeningLines(locale?: "en" | "zh"): string[] {
 }
 
 function getFallbackIdleLines(locale?: "en" | "zh"): string[] {
+	const personaLines = getPersonaPresenceLines("idle");
+	if (personaLines.length > 0) return personaLines;
 	const useLocale = locale || getLocale();
 	if (!locale || useLocale === getLocale()) {
 		const lines = tValue<string[]>("msg.presence.idle");
@@ -920,6 +953,7 @@ export default async function presenceExtension(api: ExtensionAPI) {
 export const __testUtils = {
 	getFallbackOpeningLines,
 	getFallbackIdleLines,
+	getPersonaPresenceLines,
 	resolveBundledPackageEntry,
 	importRuntimeModule,
 	detectLanguageFromMemory,

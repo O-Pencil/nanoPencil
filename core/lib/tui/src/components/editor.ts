@@ -157,6 +157,8 @@ export interface EditorTheme {
 export interface EditorOptions {
 	paddingX?: number;
 	autocompleteMaxVisible?: number;
+	/** Optional callback to apply ANSI styling to input text (e.g. slash command highlighting). Called with plain display text, returns ANSI-escaped text. */
+	highlightInput?: (text: string) => string;
 }
 
 export class Editor implements Component, Focusable {
@@ -181,6 +183,9 @@ export class Editor implements Component, Focusable {
 
 	// Border color (can be changed dynamically)
 	public borderColor: (str: string) => string;
+
+	/** Optional input highlighter — called at render time to apply ANSI styling. */
+	public highlightInput: ((text: string) => string) | null = null;
 
 	// Autocomplete support
 	private autocompleteProvider?: AutocompleteProvider;
@@ -427,6 +432,22 @@ export class Editor implements Component, Focusable {
 						cursorInPadding = true;
 					}
 				}
+			}
+
+			// Apply input highlighting (e.g. slash commands) after cursor injection
+			if (this.highlightInput && layoutLine.hasCursor) {
+				const cursorRe = /\x1b\[7m[\s\S]*?\x1b\[0m/;
+				const cursorMatch = displayText.match(cursorRe);
+				if (cursorMatch && cursorMatch.index !== undefined) {
+					const ci = cursorMatch.index;
+					const beforeHL = this.highlightInput(displayText.slice(0, ci));
+					const afterHL = this.highlightInput(displayText.slice(ci + cursorMatch[0].length));
+					displayText = beforeHL + cursorMatch[0] + afterHL;
+					lineVisibleWidth = visibleWidth(displayText);
+				}
+			} else if (this.highlightInput) {
+				displayText = this.highlightInput(displayText);
+				lineVisibleWidth = visibleWidth(displayText);
 			}
 
 			// Calculate padding based on actual visible width

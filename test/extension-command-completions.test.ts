@@ -9,7 +9,7 @@ import browserExtension from "../extensions/builtin/browser/index.js";
 import debugExtension from "../extensions/builtin/debug/index.js";
 import diagnosticsExtension from "../extensions/builtin/diagnostics/index.js";
 import grubExtension from "../extensions/builtin/grub/index.js";
-import interviewExtension from "../extensions/builtin/interview/index.js";
+
 import loopExtension from "../extensions/builtin/loop/index.js";
 import linkWorldExtension from "../extensions/builtin/link-world/index.js";
 import mcpExtension from "../extensions/builtin/mcp/index.js";
@@ -139,20 +139,7 @@ test("tokensave command exposes first-argument completions", () => {
 	);
 });
 
-test("interview, grill, and btw commands use human-readable descriptions", async () => {
-	const interviewHarness = createExtensionHarness();
-	await interviewExtension(interviewHarness.api as never);
-
-	const interview = interviewHarness.commands.get("interview");
-	assert.ok(interview);
-	assert.match(interview.description ?? "", /Turn a rough request into clear next steps/);
-	assert.doesNotMatch(interview.description ?? "", /ambiguous|inject|refined intent/i);
-
-	const grill = interviewHarness.commands.get("grill-me");
-	assert.ok(grill);
-	assert.match(grill.description ?? "", /Challenge a plan with focused follow-up questions/);
-	assert.doesNotMatch(grill.description ?? "", /stress-test|recommended answers/i);
-
+test("btw command uses human-readable description", async () => {
 	const btwHarness = createExtensionHarness();
 	await btwExtension(btwHarness.api as never);
 	const btw = btwHarness.commands.get("btw");

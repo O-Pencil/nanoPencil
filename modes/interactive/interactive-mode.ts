@@ -71,6 +71,7 @@ import {
 import { t } from "../../core/platform/i18n/index.js";
 import {
   getActivePersonaId,
+  getPersonaDescription,
   getPersonaDir,
   getPersonaMcpConfigPath,
   getPersonaMemoryDir,
@@ -113,6 +114,7 @@ import { EditorBuddyLayout } from "./components/editor-buddy-layout.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
 import { PencilLoader } from "./components/pencil-loader.js";
 import { NotificationQueue } from "./components/notification-queue.js";
+import { PersonaSelectorComponent } from "./components/persona-selector.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
 import { CustomEditor } from "./components/custom-editor.js";
 import { CustomMessageComponent } from "./components/custom-message.js";
@@ -1904,23 +1906,25 @@ export class InteractiveMode {
     return this.catWorkingMessages[this.catMessageIndex % this.catWorkingMessages.length]!;
   }
 
-  private buildWorkingMessage(): string {
-    const baseMessage = this.state.workingMessageOverride || this.getNextCatMessage();
+  private buildWorkingMessage(): { base: string; suffix: string } {
+    const base = this.state.workingMessageOverride || this.getNextCatMessage();
     const interruptHint = `${appKey(this.keybindings, "interrupt")} to interrupt`;
     const elapsed =
       this.state.agentRunStartMs !== undefined
         ? this.formatElapsedSeconds(Date.now() - this.state.agentRunStartMs)
         : undefined;
-    return elapsed
-      ? `${baseMessage} (${elapsed}, ${interruptHint})`
-      : `${baseMessage} (${interruptHint})`;
+    const suffix = elapsed
+      ? `(${elapsed}, ${interruptHint})`
+      : `(${interruptHint})`;
+    return { base, suffix };
   }
 
   private updateWorkingMessage(options?: { resetStallTimer?: boolean }): void {
     if (!this.state.loadingAnimation) return;
+    const { base, suffix } = this.buildWorkingMessage();
     (this.state.loadingAnimation as PencilLoader).setMessage(
-      this.buildWorkingMessage(),
-      options,
+      base,
+      { ...options, suffix },
     );
   }
 
@@ -4324,6 +4328,7 @@ export class InteractiveMode {
     process.env.MCP_CONFIG_PATH = toAbsolutePath(
       getPersonaMcpConfigPath(personaId),
     );
+    process.env.NANO_PERSONA_DIR = toAbsolutePath(getPersonaDir(personaId));
 
     if (!this.session.isStreaming && !this.session.isCompacting) {
       await this.session.reload();
@@ -4363,26 +4368,28 @@ export class InteractiveMode {
     const action = (parts[1] ?? "list").toLowerCase();
     const personaArg = parts[2];
 
-    if (action === "list") {
-      const personas = listPersonas();
+    if (action === "list" || action === "use" && !personaArg) {
+      // Show interactive persona selector
+      const personaIds = listPersonas();
       const active = getActivePersonaId();
-      const lines: string[] = [];
-      lines.push(theme.bold("Personas"));
-      lines.push("");
-      if (personas.length === 0) {
-        lines.push(theme.fg("dim", `No personas found under ${this.session.agentDir}/personas/`));
-      } else {
-        for (const id of personas) {
-          const marker = active === id ? "*" : " ";
-          lines.push(`${marker} - ${id}`);
-        }
-      }
-      lines.push("");
-      lines.push(theme.fg("dim", "Use: /persona use <personaId>"));
 
-      this.chatContainer.addChild(new Spacer(1));
-      this.chatContainer.addChild(new Text(lines.join("\n"), 1, 0));
-      this.ui.requestRender();
+      this.showSelector((done) => {
+        const selector = new PersonaSelectorComponent(
+          this.ui,
+          personaIds,
+          active,
+          getPersonaDescription,
+          (personaId) => {
+            done();
+            void this.switchPersona(personaId);
+          },
+          () => {
+            done();
+            this.ui.requestRender();
+          },
+        );
+        return { component: selector, focus: selector };
+      });
       return;
     }
 
@@ -4392,7 +4399,7 @@ export class InteractiveMode {
         new Text(
           theme.fg(
             "dim",
-            "Usage:\n- /persona list\n- /persona use <personaId>",
+            "Usage:\n- /persona (open selector)\n- /persona use <personaId>",
           ),
           1,
           0,
@@ -4408,6 +4415,10 @@ export class InteractiveMode {
       return;
     }
 
+    await this.switchPersona(personaId);
+  }
+
+  private async switchPersona(personaId: string): Promise<void> {
     const personaDir = getPersonaDir(personaId);
     if (!fs.existsSync(personaDir)) {
       this.showError(`Persona not found: ${personaId}\nExpected: ${personaDir}`);
@@ -4445,6 +4456,7 @@ export class InteractiveMode {
     process.env.MCP_CONFIG_PATH = toAbsolutePath(
       getPersonaMcpConfigPath(personaId),
     );
+    process.env.NANO_PERSONA_DIR = toAbsolutePath(getPersonaDir(personaId));
 
     // Set flag to skip interview on first message after persona switch
     process.env.NANOPENCIL_JUST_SWITCHED_PERSONA = "true";

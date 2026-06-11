@@ -71,6 +71,8 @@ export function lookupKnownModel(modelId: string): KnownModelMetadata | undefine
 /**
  * Conservative defaults for completely unknown discovered models.
  * Used when lookupKnownModel() returns undefined.
+ *
+ * Note: `api` is intentionally omitted — it should come from the provider config.
  */
 export const UNKNOWN_MODEL_DEFAULTS = {
 	contextWindow: 128_000,

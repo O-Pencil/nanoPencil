@@ -31,6 +31,7 @@ export class PencilLoader extends Container {
 	private tui: TUI;
 	private theme: Theme;
 	private message: string;
+	private suffix = "";
 	private interval: NodeJS.Timeout | undefined;
 	private tipInterval: NodeJS.Timeout | undefined;
 	private currentFrame = 0;
@@ -104,7 +105,8 @@ export class PencilLoader extends Container {
 			const diamond = diamondColor(frameChar);
 
 			// Build display: spinner + highlighted message
-			const display = `${diamond} ${this.theme.fg("accent", this.message)}`;
+			const suffixPart = this.suffix ? ` ${this.theme.fg("dim", this.suffix)}` : "";
+			const display = `${diamond} ${this.theme.fg("accent", this.message)}${suffixPart}`;
 
 			this.textComponent.setText(display);
 			this.tui.requestRender();
@@ -157,15 +159,17 @@ export class PencilLoader extends Container {
 		this.lastTokenTime = Date.now();
 	}
 
-	setMessage(message: string, options?: { resetStallTimer?: boolean }): void {
+	setMessage(message: string, options?: { resetStallTimer?: boolean; suffix?: string }): void {
 		this.message = message;
+		this.suffix = options?.suffix ?? "";
 		if (options?.resetStallTimer !== false) {
 			this.resetStallTimer();
 		}
 		const frameChar = this.frames[this.currentFrame];
 		const diamondColor = this.getSpinnerColor();
 		const diamond = diamondColor(frameChar);
-		this.textComponent.setText(`${diamond} ${this.theme.fg("accent", this.message)}`);
+		const suffixPart = this.suffix ? ` ${this.theme.fg("dim", this.suffix)}` : "";
+		this.textComponent.setText(`${diamond} ${this.theme.fg("accent", this.message)}${suffixPart}`);
 		this.tui.requestRender();
 	}
 

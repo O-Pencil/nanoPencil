@@ -24,10 +24,26 @@ function formatTokenCount(count: number): string {
 }
 
 /**
- * List available models, optionally filtered by search pattern
+ * List available models, optionally filtered by search pattern.
+ *
+ * @param modelRegistry  Model registry to query
+ * @param searchPattern  Optional fuzzy filter pattern
+ * @param options        Optional flags:
+ *   - `refresh`: run discovery before listing (fetches remote /models endpoints)
  */
-export async function listModels(modelRegistry: ModelRegistry, searchPattern?: string): Promise<void> {
-	const models = modelRegistry.getAvailable();
+export async function listModels(
+	modelRegistry: ModelRegistry,
+	searchPattern?: string,
+	options?: { refresh?: boolean },
+): Promise<void> {
+	if (options?.refresh) {
+		const result = await modelRegistry.refreshWithDiscovery();
+		if (result.discovered > 0) {
+			console.log(`Discovered ${result.discovered} remote model(s).\n`);
+		}
+	}
+
+	const models = modelRegistry.getAll();
 
 	if (models.length === 0) {
 		console.log("No models available. Set API keys in environment variables.");

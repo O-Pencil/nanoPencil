@@ -135,6 +135,14 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		}
 
 		this.addChild(new Spacer(1));
+		this.addChild(
+			new Text(
+				theme.fg("muted", "Ctrl+R: refresh remote models (discovery)"),
+				0,
+				0,
+			),
+		);
+
 		this.listContainer = new Container();
 		this.addChild(this.listContainer);
 		this.addChild(new Spacer(1));
@@ -284,13 +292,15 @@ export class ModelSelectorComponent extends Container implements Focusable {
 				? theme.fg("accent", item.id)
 				: item.id;
 			const providerBadge = theme.fg("muted", `[${item.provider}]`);
+			const discoveredBadge =
+				item.model.source === "discovery" ? theme.fg("muted", " (remote)") : "";
 			const checkmark = isCurrent ? theme.fg("success", " [current]") : "";
 			const needsKeyHint = needsKey
 				? theme.fg("warning", " [needs API key]")
 				: "";
 
 			this.listContainer.addChild(
-				new Text(`${prefix}${modelText} ${providerBadge}${checkmark}${needsKeyHint}`, 0, 0),
+				new Text(`${prefix}${modelText} ${providerBadge}${discoveredBadge}${checkmark}${needsKeyHint}`, 0, 0),
 			);
 		}
 
@@ -367,10 +377,39 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			this.onAddOpenRouterModel();
 		} else if (this.onConfigureApiKey && matchesKey(keyData, "ctrl+k")) {
 			this.onConfigureApiKey();
+		} else if (matchesKey(keyData, "ctrl+r")) {
+			void this.refreshDiscovery();
 		} else {
 			this.searchInput.handleInput(keyData);
 			this.filterModels(this.searchInput.getValue());
 		}
+	}
+
+	/**
+	 * Trigger remote model discovery and reload the model list.
+	 * Shows a brief status message while refreshing.
+	 */
+	private async refreshDiscovery(): Promise<void> {
+		this.errorMessage = undefined;
+		this.listContainer.clear();
+		this.listContainer.addChild(
+			new Text(theme.fg("muted", "  Refreshing remote models..."), 0, 0),
+		);
+		this.tui.requestRender();
+
+		try {
+			await this.modelRegistry.refreshWithDiscovery();
+			await this.loadModels();
+			if (this.searchInput.getValue()) {
+				this.filterModels(this.searchInput.getValue());
+			} else {
+				this.updateList();
+			}
+		} catch {
+			this.errorMessage = "Failed to refresh remote models";
+			this.updateList();
+		}
+		this.tui.requestRender();
 	}
 
 	private async handleSelect(model: Model<any>): Promise<void> {

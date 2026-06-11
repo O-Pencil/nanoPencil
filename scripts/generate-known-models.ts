@@ -177,6 +177,11 @@ console.log("Extracting model metadata...");
 const models = extractModels(source);
 console.log(`Found ${models.length} models.`);
 
+if (models.length < 100) {
+	console.error(`ERROR: Only extracted ${models.length} models — expected 600+. The source file format may have changed.`);
+	process.exit(1);
+}
+
 console.log(`Writing ${OUTPUT_FILE}...`);
 const output = generateOutput(models);
 writeFileSync(OUTPUT_FILE, output, "utf-8");

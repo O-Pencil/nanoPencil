@@ -838,6 +838,12 @@ export async function main(args: string[]) {
 		await ensureNanopencilCodingPlanAuth(authStorage, modelRegistry);
 	}
 
+	// Fire-and-forget: discover remote models from /models endpoints.
+	// Non-blocking — results are cached and merged on next model list access.
+	modelRegistry.refreshWithDiscovery().catch(() => {
+		// Discovery failures are non-fatal; cached/stale data still works
+	});
+
 	const extensionFlags = new Map<string, { type: "boolean" | "string" }>();
 	for (const ext of extensionsResult.extensions) {
 		for (const [name, flag] of ext.flags) {
@@ -869,7 +875,7 @@ export async function main(args: string[]) {
 
 	if (parsed.listModels !== undefined) {
 		const searchPattern = typeof parsed.listModels === "string" ? parsed.listModels : undefined;
-		await listModels(modelRegistry, searchPattern);
+		await listModels(modelRegistry, searchPattern, { refresh: parsed.refreshModels });
 		process.exit(0);
 	}
 

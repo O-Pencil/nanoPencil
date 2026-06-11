@@ -350,4 +350,11 @@ export interface Model<TApi extends Api> {
 		: TApi extends "openai-responses"
 			? OpenAIResponsesCompat
 			: never;
+	/**
+	 * Origin of this model definition.
+	 * - "builtin": shipped in models.generated.ts
+	 * - "config": defined in user's models.json
+	 * - "discovery": discovered from remote /models endpoint
+	 */
+	source?: "builtin" | "config" | "discovery";
 }

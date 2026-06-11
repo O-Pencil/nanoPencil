@@ -20,10 +20,13 @@ import { registerApiProvider } from "@pencil-agent/ai/registry";
 import { type Static, Type } from "@sinclair/typebox";
 import AjvModule from "ajv";
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { getAgentDir } from "../config.js";
 import type { AuthStorage } from "./platform/config/auth-storage.js";
 import { clearConfigValueCache, resolveConfigValue, resolveHeaders } from "./platform/config/resolve-config-value.js";
+import { discoverModels, getDiscoveryProtocol, type DiscoveryResult, type DiscoveredModel } from "./model/discovery.js";
+import { DiscoveryCache } from "./model/discovery-cache.js";
+import { lookupKnownModel, UNKNOWN_MODEL_DEFAULTS } from "./model/known-models.js";
 
 const Ajv = (AjvModule as any).default || AjvModule;
 
@@ -136,6 +139,10 @@ const ProviderConfigSchema = Type.Object({
 	authHeader: Type.Optional(Type.Boolean()),
 	models: Type.Optional(Type.Array(ModelDefinitionSchema)),
 	modelOverrides: Type.Optional(Type.Record(Type.String(), ModelOverrideSchema)),
+	/** Enable remote model discovery from provider's /models endpoint. */
+	discovery: Type.Optional(Type.Boolean()),
+	/** Cache TTL for discovery results in seconds (default: 86400 = 24h). */
+	discoveryCacheTtl: Type.Optional(Type.Number()),
 });
 
 const ModelsConfigSchema = Type.Object({
@@ -259,6 +266,14 @@ export interface ModelRegistryOptions {
 	allowOptionalApiKeyForProvider?: string | string[];
 }
 
+/** Per-provider discovery configuration extracted from models.json. */
+interface DiscoveryProviderConfig {
+	provider: string;
+	baseUrl: string;
+	api: string;
+	cacheTtl: number;
+}
+
 export class ModelRegistry {
 	private models: Model<Api>[] = [];
 	private customProviderApiKeys: Map<string, string> = new Map();
@@ -266,6 +281,9 @@ export class ModelRegistry {
 	private loadError: string | undefined = undefined;
 	private useOnlyCustomModels: boolean;
 	private allowOptionalApiKeyForProvider: string | string[] | undefined;
+	private discoveryCache: DiscoveryCache;
+	private discoveryProviders: Map<string, DiscoveryProviderConfig> = new Map();
+	private discoveryRefreshing = false;
 
 	constructor(
 		readonly authStorage: AuthStorage,
@@ -274,6 +292,10 @@ export class ModelRegistry {
 	) {
 		this.useOnlyCustomModels = options.useOnlyCustomModels ?? false;
 		this.allowOptionalApiKeyForProvider = options.allowOptionalApiKeyForProvider;
+
+		// Initialize discovery cache
+		const agentDir = modelsJsonPath ? dirname(modelsJsonPath) : getAgentDir();
+		this.discoveryCache = new DiscoveryCache(join(agentDir, ".cache", "discovery"));
 
 		// Set up fallback resolver for custom provider API keys
 		this.authStorage.setFallbackResolver((provider) => {
@@ -334,6 +356,14 @@ export class ModelRegistry {
 				)
 			: this.loadBuiltInModels(overrides, modelOverrides);
 		let combined = this.mergeCustomModels(builtInModels, customModels);
+
+		// Merge cached discovery data for all discovery-enabled providers
+		for (const [providerName, discConfig] of this.discoveryProviders) {
+			const cached = this.discoveryCache.read(providerName, discConfig.cacheTtl);
+			if (cached) {
+				combined = this.mergeDiscoveredModels(combined, cached.models, providerName, discConfig);
+			}
+		}
 
 		// Let OAuth providers modify their models (e.g., update baseUrl)
 		for (const oauthProvider of this.authStorage.getOAuthProviders()) {
@@ -402,6 +432,47 @@ export class ModelRegistry {
 		return merged;
 	}
 
+	/**
+	 * Merge discovered models into the existing model list.
+	 * Hand-configured models (by provider+id) are NOT overwritten — they take priority.
+	 * Discovered models use known-metadata defaults for fields the /models endpoint doesn't provide.
+	 */
+	private mergeDiscoveredModels(
+		existing: Model<Api>[],
+		discovered: DiscoveredModel[],
+		providerName: string,
+		discConfig: DiscoveryProviderConfig,
+	): Model<Api>[] {
+		const merged = [...existing];
+		const existingIds = new Set(
+			existing.filter((m) => m.provider === providerName).map((m) => m.id),
+		);
+
+		for (const disc of discovered) {
+			if (existingIds.has(disc.id)) continue; // hand-configured wins
+
+			const known = lookupKnownModel(disc.id);
+			const fallback = known ?? UNKNOWN_MODEL_DEFAULTS;
+
+			merged.push({
+				id: disc.id,
+				name: disc.name ?? known?.name ?? disc.id,
+				// API comes from provider config first, then known metadata; fallback has no api
+				api: (discConfig.api ?? known?.api ?? "openai-completions") as Api,
+				provider: providerName,
+				baseUrl: discConfig.baseUrl,
+				reasoning: fallback.reasoning,
+				input: [...fallback.input],
+				cost: { ...fallback.cost },
+				contextWindow: fallback.contextWindow,
+				maxTokens: fallback.maxTokens,
+				source: "discovery",
+			} as Model<Api>);
+		}
+
+		return merged;
+	}
+
 	private loadCustomModels(modelsJsonPath: string): CustomModelsResult {
 		if (!existsSync(modelsJsonPath)) {
 			return emptyCustomModelsResult();
@@ -427,6 +498,9 @@ export class ModelRegistry {
 			const overrides = new Map<string, ProviderOverride>();
 			const modelOverrides = new Map<string, Map<string, ModelOverride>>();
 
+			// Reset discovery providers for this load cycle
+			this.discoveryProviders.clear();
+
 			for (const [providerName, providerConfig] of Object.entries(config.providers)) {
 				// Apply provider-level baseUrl/headers/apiKey override to built-in models when configured.
 				if (providerConfig.baseUrl || providerConfig.headers || providerConfig.apiKey) {
@@ -444,6 +518,16 @@ export class ModelRegistry {
 
 				if (providerConfig.modelOverrides) {
 					modelOverrides.set(providerName, new Map(Object.entries(providerConfig.modelOverrides)));
+				}
+
+				// Extract discovery configuration
+				if (providerConfig.discovery && providerConfig.baseUrl && providerConfig.api) {
+					this.discoveryProviders.set(providerName, {
+						provider: providerName,
+						baseUrl: providerConfig.baseUrl,
+						api: providerConfig.api,
+						cacheTtl: providerConfig.discoveryCacheTtl ?? 86400,
+					});
 				}
 			}
 
@@ -466,6 +550,10 @@ export class ModelRegistry {
 				providerConfig.modelOverrides && Object.keys(providerConfig.modelOverrides).length > 0;
 
 			if (models.length === 0) {
+				// Discovery-only config: needs baseUrl + api + discovery
+				if (providerConfig.discovery && providerConfig.baseUrl && providerConfig.api) {
+					continue; // Valid discovery-only config, skip further validation
+				}
 				// Override-only config: needs baseUrl OR modelOverrides (or both)
 				if (!providerConfig.baseUrl && !hasModelOverrides) {
 					throw new Error(`Provider ${providerName}: must specify "baseUrl", "modelOverrides", or "models".`);
@@ -588,6 +676,141 @@ export class ModelRegistry {
 			}
 		}
 		return result;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Model Discovery
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Fetch models from remote /models endpoints for all discovery-enabled providers.
+	 *
+	 * This is an async, non-blocking operation:
+	 * - Fetches all providers in parallel (Promise.allSettled)
+	 * - Updates the discovery cache with fresh results
+	 * - Re-runs loadModels() to merge fresh data
+	 *
+	 * Use this for:
+	 * - Fire-and-forget on startup
+	 * - Manual refresh from /model selector (Ctrl+R)
+	 * - CLI --list-models --refresh
+	 */
+	async refreshWithDiscovery(): Promise<{ discovered: number; errors: string[] }> {
+		if (this.discoveryRefreshing) return { discovered: 0, errors: [] };
+		this.discoveryRefreshing = true;
+
+		try {
+			const results = await Promise.allSettled(
+				Array.from(this.discoveryProviders.keys()).map((name) => this.discoverProvider(name)),
+			);
+
+			let discovered = 0;
+			const errors: string[] = [];
+
+			for (const result of results) {
+				if (result.status === "rejected") {
+					errors.push(result.reason?.message ?? "Unknown discovery error");
+					continue;
+				}
+				discovered += result.value.models.length;
+				if (result.value.error) {
+					errors.push(`${result.value.provider}: ${result.value.error}`);
+				}
+			}
+
+			// Reload models to merge fresh discovery data
+			this.loadModels();
+
+			// Re-apply registered provider configs
+			for (const [providerName, config] of this.registeredProviders.entries()) {
+				this.applyProviderConfig(providerName, config);
+			}
+
+			return { discovered, errors };
+		} finally {
+			this.discoveryRefreshing = false;
+		}
+	}
+
+	/**
+	 * Discover models for a single provider.
+	 * Fetches from remote, updates cache, returns result.
+	 */
+	async discoverProvider(providerName: string): Promise<DiscoveryResult> {
+		const discConfig = this.discoveryProviders.get(providerName);
+		if (!discConfig) {
+			return {
+				provider: providerName,
+				models: [],
+				fetchedAt: Date.now(),
+				ttl: 0,
+				error: `Provider "${providerName}" does not have discovery enabled`,
+			};
+		}
+
+		const protocol = getDiscoveryProtocol(discConfig.api);
+		if (protocol === "unsupported") {
+			return {
+				provider: providerName,
+				models: [],
+				fetchedAt: Date.now(),
+				ttl: 0,
+				error: `Discovery not supported for API type "${discConfig.api}"`,
+			};
+		}
+
+		const apiKey = await this.authStorage.getApiKey(providerName);
+		const result = await discoverModels(
+			providerName,
+			discConfig.baseUrl,
+			discConfig.api,
+			apiKey,
+		);
+
+		// Update cache with fresh result
+		if (result.models.length > 0 || !result.error) {
+			this.discoveryCache.write(result);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get discovery status for a provider.
+	 * Useful for debugging and UI indicators.
+	 */
+	getDiscoveryStatus(providerName: string): {
+		enabled: boolean;
+		cached: boolean;
+		lastFetched?: number;
+		modelCount: number;
+	} {
+		const discConfig = this.discoveryProviders.get(providerName);
+		if (!discConfig) {
+			return { enabled: false, cached: false, modelCount: 0 };
+		}
+
+		const cached = this.discoveryCache.read(providerName, discConfig.cacheTtl);
+		return {
+			enabled: true,
+			cached: cached !== undefined,
+			lastFetched: cached?.fetchedAt,
+			modelCount: cached?.models.length ?? 0,
+		};
+	}
+
+	/**
+	 * Check if a provider has discovery enabled.
+	 */
+	isDiscoveryEnabled(providerName: string): boolean {
+		return this.discoveryProviders.has(providerName);
+	}
+
+	/**
+	 * Clear all discovery cache data.
+	 */
+	clearDiscoveryCache(): void {
+		this.discoveryCache.clear();
 	}
 
 	/**

@@ -66,6 +66,7 @@ export interface Args {
 	themes?: string[];
 	noThemes?: boolean;
 	listModels?: string | true;
+	refreshModels?: boolean;
 	offline?: boolean;
 	/** Disable MCP (Model Context Protocol). Default: false (MCP enabled) */
 	noMcp?: boolean;
@@ -279,6 +280,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			} else {
 				result.listModels = true;
 			}
+		} else if (arg === "--refresh-models") {
+			result.refreshModels = true;
 		} else if (arg === "--verbose") {
 			result.verbose = true;
 		} else if (arg === "--offline") {
@@ -380,6 +383,7 @@ ${chalk.bold("Options:")}
   --no-themes                    Disable theme discovery and loading
   --export <file>                Export session file to HTML and exit
   --list-models [search]         List available models (with optional fuzzy search)
+  --refresh-models               Refresh remote model lists via discovery (use with --list-models)
   --verbose                      Force verbose startup (overrides quietStartup setting)
   --offline                      Disable startup network operations (same as NANOPENCIL_OFFLINE=1)
   --disable-soul                 Disable Soul (AI personality evolution)

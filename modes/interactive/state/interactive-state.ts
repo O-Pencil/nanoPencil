@@ -17,12 +17,40 @@ import type { AssistantMessage } from "@pencil-agent/ai/types";
 import type { Component, Spacer, Text } from "@pencil-agent/tui";
 import type { AssistantMessageComponent } from "../components/assistant-message.js";
 import type { CustomMessageComponent } from "../components/custom-message.js";
+import type { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";
 import type { ToolExecutionComponent } from "../components/tool-execution.js";
 
 export type CompactionQueuedMessage = {
   text: string;
   mode: "steer" | "followUp";
 };
+
+/** Per-sub-agent state tracked for TUI display. */
+export interface SubAgentState {
+  id: string;
+  agentType: string;
+  description: string;
+  isAsync: boolean;
+  isResolved: boolean;
+  isError: boolean;
+  toolUseCount: number;
+  lastToolName: string | null;
+  startTime: number;
+}
+
+/** Per-phase state for plan execution progress display. */
+export interface PlanPhaseState {
+  label: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
+/** Overall plan progress state for TUI rendering. */
+export interface PlanProgressState {
+  phases: PlanPhaseState[];
+  currentPhaseIndex: number;
+  startTime: number;
+  tokenCount?: number;
+}
 
 export class InteractiveState {
   // Working message / run timers
@@ -44,6 +72,14 @@ export class InteractiveState {
 
   // Tool execution tracking: toolCallId -> component
   pendingTools = new Map<string, ToolExecutionComponent>();
+
+  // Sub-agent tracking: subAgentId -> state
+  subAgentStates = new Map<string, SubAgentState>();
+  subAgentPanelComponent: Component | undefined = undefined;
+
+  // Plan execution progress tracking
+  planProgress: PlanProgressState | undefined = undefined;
+  planProgressPanel: PlanProgressPanelComponent | undefined = undefined;
 
   // Tool output expansion state
   toolOutputExpanded = false;

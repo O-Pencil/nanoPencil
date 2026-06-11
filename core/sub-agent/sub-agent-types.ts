@@ -13,7 +13,7 @@ import type { Tool } from "../tools/index.js";
 
 /** Realtime lifecycle event emitted by a running SubAgent. */
 export type SubAgentEvent =
-  | { type: "agent_start"; subAgentId: string; timestamp: number }
+  | { type: "agent_start"; subAgentId: string; timestamp: number; agentType: string; description: string; isAsync: boolean }
   | { type: "message_update"; subAgentId: string; timestamp: number; text: string; deltaType?: string }
   | { type: "message_end"; subAgentId: string; timestamp: number; text: string }
   | { type: "tool_start"; subAgentId: string; timestamp: number; toolName: string; args: unknown }
@@ -31,6 +31,12 @@ export interface SubAgentSpec {
   tools: Tool[];
   /** Working directory for the SubAgent (can be a worktree) */
   cwd: string;
+  /** Agent type label for TUI display (e.g. "Explore", "Plan", "general-purpose") */
+  agentType?: string;
+  /** Human-readable description of the task (e.g. "search codebase") */
+  description?: string;
+  /** Whether this agent was launched as a background/async agent */
+  isAsync?: boolean;
   /** Abort signal for stopping the SubAgent (required) */
   signal: AbortSignal;
   /** Optional timeout in milliseconds */

@@ -78,7 +78,14 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
     // Start the prompt
     const promptPromise = (async () => {
       try {
-        spec.onEvent?.({ type: "agent_start", subAgentId: id, timestamp: Date.now() });
+        spec.onEvent?.({
+          type: "agent_start",
+          subAgentId: id,
+          timestamp: Date.now(),
+          agentType: spec.agentType ?? "Agent",
+          description: spec.description ?? "",
+          isAsync: spec.isAsync ?? false,
+        });
         await session.prompt(prompt, {
           images: spec.images,
         });

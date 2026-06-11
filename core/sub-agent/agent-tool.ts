@@ -484,6 +484,9 @@ async function executeSync(
       signal: abortController.signal,
       model,
       contextFiles: [],
+      agentType: agentDef.agentType,
+      description: args.description,
+      isAsync: metadata.isAsync,
       onEvent: (event: SubAgentEvent) => {
         // Forward sub-agent events to parent session's UI display (CC §XV)
         config.onSubAgentEvent?.(event);
@@ -635,6 +638,9 @@ async function executeAsync(
     signal: abortController.signal,
     model,
     contextFiles: [],
+    agentType: agentDef.agentType,
+    description: args.description,
+    isAsync: metadata.isAsync,
     exitHook: async (result) => {
       // Write output to file when completed (CC §11.3)
       const completedOutput = buildCompletedOutput(result, agentId, metadata);

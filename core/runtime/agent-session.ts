@@ -4,7 +4,8 @@
  * [TO]: Consumed by core/index.ts, core/runtime/sdk.ts, modes/interactive/interactive-mode.ts, modes/print-mode.ts, modes/rpc/rpc-mode.ts, modes/acp/acp-mode.ts, modes/rpc/rpc-types.ts, modes/rpc/rpc-client.ts, modes/interactive/components/footer.ts, modes/interactive/components/skill-invocation-message.ts
  * [HERE]: Central runtime hub; all modes delegate to this class
  */
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type {
   Agent,
@@ -20,6 +21,7 @@ import type {
 } from "@pencil-agent/agent-core";
 import type {
   AssistantMessage,
+  DocumentContent,
   ImageContent,
   Message,
   Model,
@@ -92,7 +94,7 @@ import {
 } from "./slash-command-catalog.js";
 import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } from "./retry-coordinator.js";
 import { createLogger, type AgentLogger } from "../platform/utils/logger.js";
-import { createAgentTool, createTaskToolAlias, createSendMessageTool, AGENT_TOOL_NAME, TASK_TOOL_NAME, SEND_MESSAGE_TOOL_NAME, type CreateSessionFn } from "../sub-agent/index.js";
+import { createAgentTool, createTaskToolAlias, createSendMessageTool, AGENT_TOOL_NAME, TASK_TOOL_NAME, SEND_MESSAGE_TOOL_NAME, type CreateSessionFn, type SubAgentEvent } from "../sub-agent/index.js";
 
 export type { SessionSlashCommandDescriptor } from "./slash-command-catalog.js";
 export { CycleModelError } from "./model-controller.js";
@@ -215,10 +217,31 @@ export type AgentSessionEvent =
       // "MCP ready" status without blocking startup. See warmupMcpTools().
       type: "sdk:mcp_ready";
       toolCount: number;
-    };
+    }
+  // Sub-agent lifecycle events (forwarded from SubAgentEvent)
+  | { type: "sub_agent_start"; subAgentId: string; agentType: string; description: string; isAsync: boolean }
+  | { type: "sub_agent_tool_start"; subAgentId: string; toolName: string }
+  | { type: "sub_agent_tool_end"; subAgentId: string; toolName: string; isError: boolean }
+  | { type: "sub_agent_end"; subAgentId: string; success: boolean };
 
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
+
+/** Map SubAgentEvent to AgentSessionEvent for TUI display. */
+function mapSubAgentEvent(event: SubAgentEvent): AgentSessionEvent | undefined {
+  switch (event.type) {
+    case "agent_start":
+      return { type: "sub_agent_start", subAgentId: event.subAgentId, agentType: event.agentType, description: event.description, isAsync: event.isAsync };
+    case "tool_start":
+      return { type: "sub_agent_tool_start", subAgentId: event.subAgentId, toolName: event.toolName };
+    case "tool_end":
+      return { type: "sub_agent_tool_end", subAgentId: event.subAgentId, toolName: event.toolName, isError: event.isError };
+    case "agent_end":
+      return { type: "sub_agent_end", subAgentId: event.subAgentId, success: event.success };
+    default:
+      return undefined;
+  }
+}
 
 // ============================================================================
 // Types
@@ -361,6 +384,14 @@ export class AgentSession {
   private _resourceLoader: ResourceLoader;
   /** Injected theme for HTML-export custom-tool rendering (U2: no modes import). */
   private _theme?: ThemeContract;
+
+  private _dbg(msg: string): void {
+    if (process.env.NANOPENCIL_DEBUG_SESSION !== "1") return;
+    try {
+      const logFile = join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+      appendFileSync(logFile, `[${new Date().toISOString()}] [session] ${msg}\n`);
+    } catch { /* debug logging is best-effort */ }
+  }
   private _customTools: ToolDefinition[];
   private _staticCustomTools: ToolDefinition[];
   private _mcpToolsFactory?: () => Promise<ToolDefinition[]>;
@@ -1025,11 +1056,13 @@ export class AgentSession {
    */
   async prompt(text: string, options?: PromptOptions): Promise<void> {
     const expandPromptTemplates = options?.expandPromptTemplates ?? true;
+    this._dbg(`prompt: "${text.slice(0, 80)}" isStreaming=${this.isStreaming} hasModel=${!!this.model}`);
 
     // Handle slash commands first (execute immediately, even during streaming)
     // Built-in and extension commands manage their own interaction paths.
     if (expandPromptTemplates && text.startsWith("/")) {
       const handled = await this.executeSlashCommand(text);
+      this._dbg(`prompt: slash handled=${handled}`);
       if (handled) {
         // Extension command executed, no prompt to send
         return;
@@ -1172,7 +1205,9 @@ export class AgentSession {
       this.agent.setSystemPrompt(this._baseSystemPrompt);
     }
 
+    this._dbg(`calling agent.prompt with ${messages.length} message(s)`);
     await this.agent.prompt(messages);
+    this._dbg("agent.prompt returned");
     await this.waitForRetry();
   }
 
@@ -1393,7 +1428,7 @@ export class AgentSession {
    * @param options.deliverAs Delivery mode when streaming: "steer" or "followUp"
    */
   async sendUserMessage(
-    content: string | (TextContent | ImageContent)[],
+    content: string | (TextContent | ImageContent | DocumentContent)[],
     options?: { deliverAs?: "steer" | "followUp" },
   ): Promise<void> {
     // Normalize content to text string + optional images
@@ -1408,9 +1443,10 @@ export class AgentSession {
       for (const part of content) {
         if (part.type === "text") {
           textParts.push(part.text);
-        } else {
+        } else if (part.type === "image") {
           images.push(part);
         }
+        // DocumentContent blocks are not supported in sendUserMessage; skip them
       }
       text = textParts.join("\n");
       if (images.length === 0) images = undefined;
@@ -1465,6 +1501,7 @@ export class AgentSession {
     this.abortRetry();
     this.agent.abort();
     await this.agent.waitForIdle();
+    void this._extensionRunner?.emit({ type: "agent_abort" });
   }
 
   /**
@@ -1976,11 +2013,16 @@ export class AgentSession {
 
     // --- CC-style Agent tool injection ---
     // Recreate on each build so the tool always references current model & MCP tools.
+    const onSubAgentEvent = (event: SubAgentEvent) => {
+      const mapped = mapSubAgentEvent(event);
+      if (mapped) this._emit(mapped);
+    };
     this._agentTool = createAgentTool({
       parentSession: this as any,  // any to avoid circular type reference
       parentPermissionMode: "default",
       parentModel: this.model,
       createSession: this._createSessionFactory!,
+      onSubAgentEvent,
     });
     toolRuntime.activeTools.push(this._agentTool as unknown as AgentTool);
     this._toolOrchestrator.registerTool(AGENT_TOOL_NAME, this._agentTool as unknown as AgentTool);
@@ -1990,6 +2032,7 @@ export class AgentSession {
       parentPermissionMode: "default",
       parentModel: this.model,
       createSession: this._createSessionFactory!,
+      onSubAgentEvent,
     });
     toolRuntime.activeTools.push(taskTool as unknown as AgentTool);
     this._toolOrchestrator.registerTool(TASK_TOOL_NAME, taskTool as unknown as AgentTool);

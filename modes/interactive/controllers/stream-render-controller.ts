@@ -19,6 +19,9 @@
  * See ../../../.dev-docs/architecture-review/interactive-ui-review/handle-event-analysis.md
  */
 
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { Message } from "@pencil-agent/ai/types";
 import {
@@ -36,7 +39,9 @@ import { AssistantMessageComponent } from "../components/assistant-message.js";
 import type { BuddyState } from "../components/buddy/pet-sprites.js";
 import { PencilLoader } from "../components/pencil-loader.js";
 import { ToolExecutionComponent } from "../components/tool-execution.js";
-import type { InteractiveState } from "../state/interactive-state.js";
+import { SubAgentPanelComponent } from "../components/sub-agent-panel.js";
+import { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";
+import type { InteractiveState, PlanProgressState, SubAgentState } from "../state/interactive-state.js";
 import { theme } from "../theme/theme.js";
 
 export interface StreamRenderStatePort {
@@ -68,6 +73,7 @@ export interface StreamRenderLoadersPort {
   stopAgentRunTimer(): void;
   updateWorkingMessage(options?: { resetStallTimer?: boolean }): void;
   formatElapsedSeconds(ms: number): string;
+  isInPlanMode(): boolean;
 }
 
 export interface StreamRenderToolTracePort {
@@ -110,6 +116,11 @@ export interface StreamRenderContext {
   surface: StreamRenderSurfacePort;
 }
 
+const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+function dbg(msg: string): void {
+	fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [render] ${msg}\n`);
+}
+
 export class StreamRenderController {
   // Auto-compaction / auto-retry overlay state — zero external readers, owned here.
   private autoCompactionLoader: Component | undefined = undefined;
@@ -120,6 +131,7 @@ export class StreamRenderController {
   constructor(private readonly ctx: StreamRenderContext) {}
 
   async handle(event: AgentSessionEvent): Promise<void> {
+    dbg(`handle event: ${event.type}`);
     await this.ctx.surface.ensureInitialized();
 
     this.ctx.layout.invalidateFooter();
@@ -160,6 +172,13 @@ export class StreamRenderController {
         }
         this.ctx.loaders.startAgentRunTimer();
         this.ctx.loaders.updateWorkingMessage({ resetStallTimer: false });
+        // Create plan progress panel if in plan mode
+        if (this.ctx.loaders.isInPlanMode()) {
+          state.planProgress = createInitialPlanProgress();
+          state.planProgressPanel = new PlanProgressPanelComponent(ui, theme);
+          statusContainer.addChild(state.planProgressPanel);
+          state.planProgressPanel.update(state.planProgress);
+        }
         this.ctx.surface.restoreEditorFocusIfPossible();
         this.ctx.layout.requestRender();
         break;
@@ -283,6 +302,12 @@ export class StreamRenderController {
         break;
 
       case "tool_execution_start": {
+        // Detect plan phase transitions
+        if (state.planProgress && state.planProgressPanel) {
+          detectPlanPhaseTransition(state.planProgress, event.toolName, event.args);
+          state.planProgressPanel.update(state.planProgress);
+          this.ctx.layout.requestRender();
+        }
         if (!this.ctx.toolTrace.shouldRenderToolTrace(event.toolName)) {
           break;
         }
@@ -329,6 +354,7 @@ export class StreamRenderController {
       }
 
       case "agent_end": {
+        dbg("agent_end received");
         const finalElapsed =
           state.agentRunStartMs !== undefined
             ? this.ctx.loaders.formatElapsedSeconds(Date.now() - state.agentRunStartMs)
@@ -347,6 +373,18 @@ export class StreamRenderController {
           state.streamingMessage = undefined;
         }
         state.pendingTools.clear();
+        // Clean up sub-agent panel
+        if (state.subAgentPanelComponent) {
+          statusContainer.removeChild(state.subAgentPanelComponent);
+          state.subAgentPanelComponent = undefined;
+        }
+        state.subAgentStates.clear();
+        // Clean up plan progress panel
+        if (state.planProgressPanel) {
+          statusContainer.removeChild(state.planProgressPanel);
+          state.planProgressPanel = undefined;
+        }
+        state.planProgress = undefined;
         // Clear any leftover attachments when the turn ends so the bar doesn't
         // accumulate across conversations (sent attachments are already cleared
         // at submit; this also covers images consumed via on-disk file reads).
@@ -363,6 +401,68 @@ export class StreamRenderController {
 
         this.ctx.surface.restoreEditorFocusIfPossible();
         this.ctx.layout.requestRender();
+        break;
+      }
+
+      // ── Sub-agent lifecycle events ────────────────────────────────
+      case "sub_agent_start": {
+        const sa: SubAgentState = {
+          id: event.subAgentId,
+          agentType: event.agentType,
+          description: event.description,
+          isAsync: event.isAsync,
+          isResolved: false,
+          isError: false,
+          toolUseCount: 0,
+          lastToolName: null,
+          startTime: Date.now(),
+        };
+        state.subAgentStates.set(event.subAgentId, sa);
+        if (!state.subAgentPanelComponent) {
+          state.subAgentPanelComponent = new SubAgentPanelComponent(ui, theme);
+          statusContainer.addChild(state.subAgentPanelComponent);
+        }
+        (state.subAgentPanelComponent as SubAgentPanelComponent).update(state.subAgentStates);
+        this.ctx.layout.requestRender();
+        break;
+      }
+
+      case "sub_agent_tool_start": {
+        const sa = state.subAgentStates.get(event.subAgentId);
+        if (sa) {
+          sa.lastToolName = event.toolName;
+          if (state.subAgentPanelComponent) {
+            (state.subAgentPanelComponent as SubAgentPanelComponent).update(state.subAgentStates);
+          }
+          this.ctx.layout.requestRender();
+        }
+        break;
+      }
+
+      case "sub_agent_tool_end": {
+        const sa = state.subAgentStates.get(event.subAgentId);
+        if (sa) {
+          sa.toolUseCount += 1;
+          sa.lastToolName = null;
+          if (state.subAgentPanelComponent) {
+            (state.subAgentPanelComponent as SubAgentPanelComponent).update(state.subAgentStates);
+          }
+          this.ctx.layout.requestRender();
+        }
+        break;
+      }
+
+      case "sub_agent_end": {
+        const sa = state.subAgentStates.get(event.subAgentId);
+        if (sa) {
+          sa.isResolved = true;
+          sa.isError = !event.success;
+          sa.lastToolName = null;
+          if (state.subAgentPanelComponent) {
+            (state.subAgentPanelComponent as SubAgentPanelComponent).update(state.subAgentStates);
+          }
+          this.ctx.layout.requestRender();
+        }
         break;
       }
 
@@ -467,5 +567,84 @@ export class StreamRenderController {
         break;
       }
     }
+  }
+}
+
+// ============================================================================
+// Plan progress helpers
+// ============================================================================
+
+const PLAN_PHASE_LABELS = [
+  "Phase 1: Initial Understanding",
+  "Phase 2: Design",
+  "Phase 3: Review",
+  "Phase 4: Final Plan",
+  "Phase 5: Call ExitPlanMode",
+] as const;
+
+function createInitialPlanProgress(): PlanProgressState {
+  return {
+    phases: PLAN_PHASE_LABELS.map((label, i) => ({
+      label,
+      status: i === 0 ? "in_progress" : "pending",
+    })),
+    currentPhaseIndex: 0,
+    startTime: Date.now(),
+  };
+}
+
+/**
+ * Detect plan phase transitions based on tool execution events.
+ * Maps tool usage to plan workflow phases:
+ * - Agent (Explore) → Phase 1 (Initial Understanding)
+ * - Agent (Plan) → Phase 2 (Design)
+ * - Read/Grep/Find in plan mode → Phase 3 (Review)
+ * - Write/Edit targeting plan file → Phase 4 (Final Plan)
+ * - ExitPlanMode → Phase 5 (completed)
+ */
+function detectPlanPhaseTransition(
+  progress: PlanProgressState,
+  toolName: string,
+  args: Record<string, unknown>,
+): void {
+  let targetPhase: number;
+
+  if (toolName === "ExitPlanMode") {
+    // Mark all phases as completed
+    for (const phase of progress.phases) {
+      phase.status = "completed";
+    }
+    progress.currentPhaseIndex = progress.phases.length;
+    return;
+  }
+
+  if (toolName === "Agent") {
+    // Check agent type from args to distinguish Explore vs Plan
+    const agentType = (args.subagent_type as string) ?? "";
+    if (agentType.toLowerCase() === "plan") {
+      targetPhase = 1; // Phase 2: Design (0-indexed)
+    } else {
+      targetPhase = 0; // Phase 1: Initial Understanding (Explore or default)
+    }
+  } else if (toolName === "Read" || toolName === "Grep" || toolName === "Find") {
+    targetPhase = 2; // Phase 3: Review
+  } else if (toolName === "Write" || toolName === "Edit") {
+    targetPhase = 3; // Phase 4: Final Plan
+  } else if (toolName === "AskUserQuestion") {
+    // Stay in current phase — asking questions is part of any phase
+    return;
+  } else {
+    // Unknown tool — don't change phase
+    return;
+  }
+
+  // Only advance, never go backward
+  if (targetPhase > progress.currentPhaseIndex) {
+    // Mark all phases up to target as completed
+    for (let i = progress.currentPhaseIndex; i < targetPhase; i++) {
+      progress.phases[i].status = "completed";
+    }
+    progress.currentPhaseIndex = targetPhase;
+    progress.phases[targetPhase].status = "in_progress";
   }
 }

@@ -21,6 +21,18 @@ function ensureBuilt(lib) {
 	}
 }
 
+// These internal libs are embedded purely for runtime resolution (require.resolve
+// → .js). The host's own type-check resolves them via the root node_modules
+// workspace symlink to core/lib/* (the source libs, which keep their .d.ts), and
+// consumers of @pencil-agent/nano-pencil resolve types from dist/index.d.ts — TS
+// never looks inside this nested dist/node_modules. So declaration files and
+// source maps add ~590K of dead weight to the published tarball. Strip them.
+const RUNTIME_DROP_SUFFIXES = [".d.ts", ".d.ts.map", ".d.mts", ".d.cts", ".js.map", ".mjs.map", ".cjs.map", ".map"];
+
+function isRuntimeNeeded(srcPath) {
+	return !RUNTIME_DROP_SUFFIXES.some((suffix) => srcPath.endsWith(suffix));
+}
+
 function copyPackage(lib) {
 	ensureBuilt(lib);
 
@@ -28,7 +40,11 @@ function copyPackage(lib) {
 	rmSync(target, { recursive: true, force: true });
 	mkdirSync(target, { recursive: true });
 
-	cpSync(join(lib.source, "dist"), join(target, "dist"), { recursive: true });
+	cpSync(join(lib.source, "dist"), join(target, "dist"), {
+		recursive: true,
+		// Keep directories; drop dev-only declaration/map files (runtime needs only .js + data assets).
+		filter: (src) => isRuntimeNeeded(src),
+	});
 
 	const packageJson = JSON.parse(readFileSync(join(lib.source, "package.json"), "utf8"));
 	delete packageJson.private;

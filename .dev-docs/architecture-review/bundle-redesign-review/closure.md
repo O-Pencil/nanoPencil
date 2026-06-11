@@ -8,9 +8,10 @@ closed_at: 2026-06-07
 code_scope:
   implemented:
     - BR01 package-boundary guard
+    - BR05 strip embedded runtime-lib .d.ts from tarball (2026-06-10)
   deferred:
     - BR02 browser package move
-    - BR03 model metadata chunking
+    - BR03 model metadata chunking (metrics captured 2026-06-10 → ~0 win, not pursued)
     - BR04 esbuild bundling
 ```
 
@@ -120,6 +121,53 @@ Notes:
 | Browser package move | User-facing install/enable UX exists and browser opt-in smoke is defined | Move/package whole Browser extension, not raw harness assets |
 | Model metadata chunking | Startup/import/churn metrics justify generator complexity | Generated provider chunks plus sync aggregate compatibility wrapper |
 | Esbuild | Build/startup/size target is measured and unmet by safer slices | Transpile-only esbuild plus TypeScript declarations; no bundling |
+
+## 2026-06-10 Addendum — size metrics + first size slice
+
+A "package size" request reopened the size line. **Measured before acting** (the
+gate BR03 demanded):
+
+### BR03 (model metadata chunking) — measured, NOT pursued
+
+| Metric | Value |
+|--------|-------|
+| `models.generated.js` import/parse | ~30–43ms (one-time) on a now ~1.9s startup |
+| built JS | 460K raw / **24K gzip** |
+| providers / models | 25 / 846 |
+
+Verdict: chunking into per-provider files behind a **sync** aggregate index (the
+only API-preserving option; async load is rejected) **still eager-imports every
+chunk** → parse cost unchanged, and 25 small files gzip to ~the same 24K (file
+headers may even grow it). models.generated is **~1.3% of the 1.8MB tarball**.
+BR03 delivers no size/startup win — only generator-churn localization. **Not
+done.** The metrics gate is now satisfied with data: keep the monolith.
+
+The real tarball weight is browser `agent-workspace` markdown (~1.6M) — that is
+BR02, still UX-gated.
+
+### BR05 (implemented) — strip embedded runtime-lib `.d.ts`
+
+`scripts/copy-internal-libs.js` copied the full `dist` of each internal lib
+(`@pencil-agent/{ai,agent-core,tui}`) into `dist/node_modules/`, including `.d.ts`
+and `.map`. Those libs are embedded **purely for runtime `require.resolve` (.js)**:
+the host's own type-check resolves them via the root workspace symlink to
+`core/lib/*` (source, keeps `.d.ts`), and consumers resolve types from
+`dist/index.d.ts` — TS never reads a package's nested `dist/node_modules`. So the
+embedded declarations are dead weight. Added a copy filter dropping
+`.d.ts`/`.d.*ts`/`.map`.
+
+Same-dist before/after (`npm pack`):
+
+| Metric | before | after | Δ |
+|--------|--------|-------|---|
+| files | 1075 | 988 | **−87** (the embedded .d.ts) |
+| gzip tarball | 1,805,318 B | 1,750,161 B | **−55,157 B (−3.05%)** |
+| unpacked | 7.5 MB | 6.9 MB | −589K |
+
+Behavior-neutral: `verify:package-boundary:dist` green (embed still resolves),
+`--list-models` loads the embedded ai registry, `verify:quality`/`verify:dip`
+green. Bigger size lever remaining is dist `.js` minify (BR04 transpile/minify-only,
+separate risk decision).
 
 ## Handoff
 

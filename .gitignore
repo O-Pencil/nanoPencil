@@ -43,9 +43,6 @@ llm-wiki/site/
 # MCP server configs (may contain API keys)
 .mcp.json
 
-# Internal docs (Chinese development documentation)
-docs/
-
 # InsForge & AI agent skills
 .insforge
 .agent

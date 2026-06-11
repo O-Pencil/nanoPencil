@@ -38,6 +38,7 @@
     "benchmark": "node scripts/startup-benchmark.cjs",
     "benchmark:save": "node scripts/startup-benchmark.cjs --output .benchmarks/baseline.json",
     "benchmark:compare": "node scripts/startup-benchmark.cjs --baseline .benchmarks/baseline.json",
+    "scaffold:docs": "node --import tsx scripts/scaffold-feature-docs.ts",
     "verify:dip": "node --import tsx scripts/verify-dip.ts",
     "verify:quality": "node --import tsx scripts/verify-quality.ts",
     "verify:package-boundary": "node --import tsx scripts/verify-package-boundary.ts",

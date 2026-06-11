@@ -58,6 +58,7 @@ export interface InputSubmitRenderPort {
   showStatus(message: string): void;
   showWarning(message: string): void;
   showError(message: string): void;
+  notify(message: string, options?: { key?: string; priority?: "immediate" | "high" | "medium" | "low"; type?: "info" | "warning" | "error"; duration?: number }): void;
   requestRender(): void;
   flushPendingBashComponents(): void;
   updatePendingMessagesDisplay(): void;

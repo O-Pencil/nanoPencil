@@ -2008,8 +2008,9 @@ export class AgentSession {
     if (!toolRuntime.systemPromptToolNames.includes(AGENT_TOOL_NAME)) {
       toolRuntime.systemPromptToolNames.push(AGENT_TOOL_NAME);
     }
-
-    toolRuntime.systemPromptToolNames.push(SEND_MESSAGE_TOOL_NAME);
+    if (!toolRuntime.systemPromptToolNames.includes(SEND_MESSAGE_TOOL_NAME)) {
+      toolRuntime.systemPromptToolNames.push(SEND_MESSAGE_TOOL_NAME);
+    }
     this.agent.setTools(toolRuntime.activeTools);
     this._baseSystemPrompt = this._rebuildSystemPrompt(
       toolRuntime.systemPromptToolNames,

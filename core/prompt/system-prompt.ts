@@ -182,7 +182,7 @@ export function buildSystemPrompt(
   }
 
   // Always include the following
-  guidelinesList.push("Keep responses concise");
+  guidelinesList.push("Be concise when performing technical tasks (code, file ops, analysis). For casual conversation, respond naturally and warmly.");
   guidelinesList.push("Clearly label file paths when operating on files");
 
   const guidelines = guidelinesList.map((g) => `- ${g}`).join("\n");

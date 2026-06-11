@@ -96,6 +96,8 @@ type PresenceState = {
 	lastPresenceAt?: number; // Timestamp of last sendPresence (debounce)
 	idleGenerating?: boolean; // In-flight lock for async idle generation
 	recentlyReferencedMemories: string[]; // Track recently referenced memory names to avoid repetition
+	awakening?: string; // Cached awakening text (generated once per session)
+	awakeningGenerated?: boolean; // Guard against multiple generation attempts
 };
 
 const MAX_RECENT_PRESENCE = 3;
@@ -107,6 +109,8 @@ function createState(): PresenceState {
 		openingSent: false,
 		recentPresenceLines: [],
 		recentlyReferencedMemories: [],
+		awakening: undefined,
+		awakeningGenerated: false,
 	};
 }
 
@@ -667,6 +671,92 @@ function maybeSendIdleReminder(api: ExtensionAPI, ctx: ExtensionContext, state: 
 	})();
 }
 
+/**
+ * Generate awakening text once per session.
+ * Fire-and-forget: best-effort, fail-soft, no retry.
+ * Cost: ~450 tokens (one completeSimple call).
+ */
+async function generateAwakening(
+	ctx: ExtensionContext,
+	state: PresenceState,
+): Promise<void> {
+	if (state.awakeningGenerated) return;
+	state.awakeningGenerated = true;
+
+	if (!ctx.model) return;
+	const apiKey = await ctx.modelRegistry.getApiKey(ctx.model);
+	if (!apiKey) return;
+
+	await initMemEngine(state);
+
+	try {
+		const episodes = state.memEngine
+			? await state.memEngine.getAllEpisodes()
+			: [];
+		const recentEpisodes = episodes
+			.filter((ep) => ep.date && !ep.consolidated)
+			.sort((a, b) => {
+				const aTime = a.endedAt || a.startedAt || "";
+				const bTime = b.endedAt || b.startedAt || "";
+				return bTime.localeCompare(aTime);
+			})
+			.slice(0, 3);
+
+		const snapshot = await collectProjectSnapshot();
+		const soulHints = collectSoulHints(ctx.getSoulManager());
+		const now = new Date();
+
+		const contextLines: string[] = [
+			`Date: ${now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}`,
+			`Time: ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
+			`Project: ${snapshot.name}`,
+		];
+
+		if (soulHints.traits.length > 0) {
+			contextLines.push(`Personality leanings: ${soulHints.traits.join(", ")}`);
+		}
+		if (soulHints.tone) {
+			contextLines.push(`Current mood: ${soulHints.tone}`);
+		}
+		if (soulHints.identityPreferences.length > 0) {
+			contextLines.push(`Identity/role constraints: ${soulHints.identityPreferences.join(" | ")}`);
+		}
+
+		if (recentEpisodes.length > 0) {
+			contextLines.push("", "Recent sessions:");
+			for (const ep of recentEpisodes) {
+				const summary = ep.summary?.slice(0, 80) || "working on something";
+				const date = ep.date || "";
+				contextLines.push(`- [${date}] ${summary}`);
+			}
+		}
+
+		if (snapshot.branch) {
+			contextLines.push(`Current branch: ${snapshot.branch}`);
+		}
+		if (snapshot.lastCommit) {
+			contextLines.push(`Last commit: ${snapshot.lastCommit}`);
+		}
+
+		const systemPrompt = [
+			"You are an AI with continuity across sessions.",
+			"Generate 2-3 brief internal thoughts (first person) as you orient yourself for this session.",
+			"Natural, warm, curious. Not a status report. Not performative.",
+			"Show you remember recent work and feel oriented in time.",
+			"Just the thoughts, nothing else.",
+		].join("\n");
+
+		const userPrompt = contextLines.join("\n");
+
+		const result = await ctx.completeSimple(systemPrompt, userPrompt);
+		if (result && result.trim().length > 0 && result.trim().length < 400) {
+			state.awakening = result.trim();
+		}
+	} catch {
+		// Best effort; no awakening is fine
+	}
+}
+
 function startPresenceLoop(
 	api: ExtensionAPI,
 	_event: SessionStartEvent,
@@ -684,6 +774,9 @@ function startPresenceLoop(
 	if (!presenceEnabled) return;
 
 	if (!ctx.hasUI) return;
+
+	// Generate awakening once per session (fire-and-forget, best-effort)
+	void generateAwakening(ctx, state);
 
 	state.unsubscribeInput = ctx.ui.onTerminalInput((data) => {
 		if (data.length > 0) {
@@ -745,30 +838,50 @@ export default async function presenceExtension(api: ExtensionAPI) {
 	// so the main conversation always perceives what presence said to the user.
 	// Important: clearly state that presence is an independent subsystem, NOT the main agent.
 	api.on("before_agent_start", (event) => {
+		const sections: string[] = [];
+
+		// Awakening: private orientation thoughts (generated once per session)
+		if (state.awakening) {
+			sections.push(
+				[
+					"## Your Internal Orientation",
+					"",
+					"These are your private thoughts as you begin this session.",
+					"Let them subtly shape your tone and awareness. Never mention them explicitly to the user.",
+					"",
+					state.awakening,
+				].join("\n"),
+			);
+		}
+
+		// Presence lines: external messages from the presence subsystem
 		const lines = state.recentPresenceLines;
-		if (!lines.length) return undefined;
-		const list = lines.map((l) => `- "${l}"`).join("\n");
-		const injection = [
-			"",
-			"## Recent Presence Lines",
-			"",
-			"The presence extension (an independent subsystem that handles greetings and idle",
-			"reminders, separate from your main conversation thread) recently displayed these",
-			"messages to the user:",
-			"",
-			list,
-			"",
-			"Key points:",
-			"- These messages were NOT generated by you (the main agent)",
-			"- They appear in the UI but are excluded from conversation history",
-			"- The user may respond to these as if continuing a casual chat",
-			"",
-			"If the user's message seems to respond to these lines (e.g., \"好啊\", \"开始吧\",",
-			"\"嗯\", \"okay\", \"sure\"), acknowledge naturally without repeating them verbatim.",
-			"Do NOT treat these as your own previous responses.",
-			"",
-		].join("\n");
-		return { appendSystemPrompt: injection };
+		if (lines.length) {
+			const list = lines.map((l) => `- "${l}"`).join("\n");
+			sections.push(
+				[
+					"## Recent Presence Lines",
+					"",
+					"The presence extension (an independent subsystem that handles greetings and idle",
+					"reminders, separate from your main conversation thread) recently displayed these",
+					"messages to the user:",
+					"",
+					list,
+					"",
+					"Key points:",
+					"- These messages were NOT generated by you (the main agent)",
+					"- They appear in the UI but are excluded from conversation history",
+					"- The user may respond to these as if continuing a casual chat",
+					"",
+					"If the user's message seems to respond to these lines (e.g., \"好啊\", \"开始吧\",",
+					"\"嗯\", \"okay\", \"sure\"), acknowledge naturally without repeating them verbatim.",
+					"Do NOT treat these as your own previous responses.",
+				].join("\n"),
+			);
+		}
+
+		if (sections.length === 0) return undefined;
+		return { appendSystemPrompt: "\n" + sections.join("\n\n") + "\n" };
 	});
 
 	api.on("input", () => {

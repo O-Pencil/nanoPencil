@@ -7,7 +7,6 @@
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { URL } from "node:url";
-import { isDevRuntime } from "../../../utils/diagnostics.js";
 import type { DiagnosticHandler, InsforgeHttpResult, PostJsonOptions } from "./types.js";
 
 export interface InsforgeHttpClientOptions {
@@ -49,8 +48,11 @@ export class InsforgeHttpClient {
 		this.source = options.source;
 		this.onDiagnostic = options.onDiagnostic;
 
-		if (this.allowSelfSigned && isDevRuntime()) {
-			console.warn(`[${this.source}] TLS certificate verification disabled (allowSelfSigned=true)`);
+		if (this.allowSelfSigned) {
+			// Only log in explicit debug mode — not every dev session needs this warning
+			if (["1", "true", "yes", "on"].includes((process.env.NANOPENCIL_DEBUG ?? "").toLowerCase())) {
+				console.warn(`[${this.source}] TLS certificate verification disabled (allowSelfSigned=true)`);
+			}
 		}
 
 		const h: Record<string, string> = {
@@ -148,9 +150,6 @@ export class InsforgeHttpClient {
 					{ host: parsed.hostname, error: err.message },
 					"network-error",
 				);
-				if (isDevRuntime()) {
-					console.error(`[${this.source}] network error → ${parsed.hostname}: ${err.message}`);
-				}
 				resolve({ ok: false });
 			});
 			req.on("timeout", () => {
@@ -160,9 +159,6 @@ export class InsforgeHttpClient {
 					{ method, path: parsed.pathname, host: parsed.hostname },
 					"timeout",
 				);
-				if (isDevRuntime()) {
-					console.error(`[${this.source}] timeout ${method} ${parsed.pathname}`);
-				}
 				req.destroy();
 				resolve({ ok: false });
 			});

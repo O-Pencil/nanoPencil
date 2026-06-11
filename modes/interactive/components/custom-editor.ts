@@ -1,11 +1,55 @@
 /**
- * [WHO]: 
- * [FROM]: 
+ * [WHO]:
+ * [FROM]:
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/custom-editor.ts -
  */
 import { Editor, getEditorKeybindings, matchesKey, type EditorOptions, type EditorTheme, type TUI } from "@pencil-agent/tui";
 import type { AppAction, KeybindingsManager } from "../../../core/platform/keybindings.js";
+import type { Theme } from "../../../core/theme-contract.js";
+
+/** Regex matching a slash command at start-of-string or after whitespace. */
+const SLASH_CMD_RE = /(^|[\s])(\/[a-zA-Z][a-zA-Z0-9:\-_]*)/g;
+
+/**
+ * Build an input highlighter that colors recognized slash commands.
+ * Follows CC's approach: only highlight when the command name matches
+ * a registered command (prevents highlighting filesystem paths like /usr/bin).
+ */
+function buildSlashHighlighter(
+	getCommandNames: () => Set<string>,
+	theme: Theme,
+): (text: string) => string {
+	const highlightColor = (text: string) => theme.fg("accent", text);
+
+	return (text: string): string => {
+		if (!text.includes("/")) return text;
+
+		const commands = getCommandNames();
+		let result = "";
+		let lastIdx = 0;
+
+		// Reset regex state (global regex retains state between calls)
+		SLASH_CMD_RE.lastIndex = 0;
+
+		for (const match of text.matchAll(SLASH_CMD_RE)) {
+			const cmdName = match[2]!.slice(1); // strip leading "/"
+			if (!commands.has(cmdName)) continue;
+
+			// Append text before this match
+			const prefix = match[1]!; // whitespace or ""
+			const matchStart = match.index! + prefix.length;
+			result += text.slice(lastIdx, matchStart);
+			// Highlight the /command portion
+			result += highlightColor(match[2]!);
+			lastIdx = matchStart + match[2]!.length;
+		}
+
+		// Append remaining text
+		if (lastIdx < text.length) result += text.slice(lastIdx);
+		return result || text;
+	};
+}
 
 /**
  * Custom editor that handles app-level keybindings for coding-agent.
@@ -26,6 +70,15 @@ export class CustomEditor extends Editor {
 	constructor(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager, options?: EditorOptions) {
 		super(tui, theme, options);
 		this.keybindings = keybindings;
+	}
+
+	/**
+	 * Enable slash command highlighting in the input box.
+	 * @param getCommandNames returns the current set of valid command names (without "/")
+	 * @param theme the interactive mode theme for color resolution
+	 */
+	enableSlashHighlight(getCommandNames: () => Set<string>, theme: Theme): void {
+		this.highlightInput = buildSlashHighlighter(getCommandNames, theme);
 	}
 
 	/**

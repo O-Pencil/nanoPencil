@@ -158,16 +158,8 @@ function renderCallForAskUserQuestion(args: AskUserQuestionInput, theme: Theme):
 		container.addChild(
 			new Text(theme.fg("accent", theme.bold(header)) + " " + theme.fg("text", q.question), 0, 0),
 		);
-
-		for (const opt of q.options) {
-			const label = theme.fg("accent", `  ${opt.label}`);
-			const desc = theme.fg("muted", ` — ${opt.description}`);
-			container.addChild(new Text(label + desc, 0, 0));
-		}
-
-		if (q.multiSelect) {
-			container.addChild(new Text(theme.fg("muted", "  (multiple selections allowed)"), 0, 0));
-		}
+		// Options are displayed by the interactive selector component during execution;
+		// renderResult shows the selected answers after completion, so no need to duplicate here.
 	}
 
 	return container;

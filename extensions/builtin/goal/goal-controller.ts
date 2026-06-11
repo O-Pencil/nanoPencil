@@ -243,6 +243,12 @@ export class GoalController {
 	/**
 	 * Hook: turn_end. Final accounting, clear active-turn state, then
 	 * decide whether to inject an idle continuation prompt.
+	 *
+	 * Concurrency: `idleContinuationDispatched` is the sole guard against
+	 * double-dispatch. It resets at `on_turn_start` and sets here, so each
+	 * turn can dispatch at most once. agent-core guarantees one `turn_end`
+	 * per turn, so no additional lock is needed.  Mirrors Codex's
+	 * `continue_if_idle()` + `goal_state_lock` pattern.
 	 */
 	async on_turn_end(): Promise<GoalDispatchOutcome> {
 		const turn = this.state.currentTurn;
@@ -342,6 +348,7 @@ export class GoalController {
 		const prompt = buildObjectiveUpdatedPrompt(goal);
 		try {
 			this.api.sendUserMessage(prompt, { deliverAs: "followUp" });
+			this.state.idleContinuationDispatched = true;
 			return true;
 		} catch {
 			return false;

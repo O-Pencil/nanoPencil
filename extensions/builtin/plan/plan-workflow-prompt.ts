@@ -26,12 +26,12 @@ export function getPlanModeInstructions(
 
 function getSparseReminder(planFilePath: string, planExists: boolean): string {
 	return [
-		"Plan mode is active. You are in read-only planning mode.",
+		`Plan mode still active (see full instructions earlier in conversation). Read-only except plan file (${planFilePath}).`,
 		planExists
 			? `Continue editing your plan at ${planFilePath}.`
 			: `Create your plan at ${planFilePath}.`,
-		"Remember: Do not edit any files except the plan file. Do not run non-readonly tools.",
-	].join("\n\n");
+		"End turns with AskUserQuestion (for clarifications) or ExitPlanMode (for plan approval). Never ask about plan approval via text or AskUserQuestion.",
+	].join("\n");
 }
 
 function getFullWorkflow(planFilePath: string, existingPlan: boolean | null): string {

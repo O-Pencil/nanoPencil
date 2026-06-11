@@ -280,17 +280,17 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 function indicatorLabel(indicator: ReturnType<typeof goalStatusIndicator>): string {
 	switch (indicator.type) {
 		case "Active":
-			return `goal: active (${indicator.usage})`;
+			return `Pursuing goal (${indicator.usage})`;
 		case "Paused":
-			return "goal: paused";
+			return "Goal paused (/goal resume)";
 		case "Blocked":
-			return "goal: blocked";
+			return "Goal blocked (/goal resume)";
 		case "UsageLimited":
-			return "goal: usage_limited";
+			return "Goal hit usage limits (/goal resume)";
 		case "BudgetLimited":
-			return indicator.usage ? `goal: budget_limited (${indicator.usage})` : "goal: budget_limited";
+			return indicator.usage ? `Goal unmet (${indicator.usage})` : "Goal abandoned";
 		case "Complete":
-			return `goal: complete (${indicator.usage})`;
+			return `Goal achieved (${indicator.usage})`;
 	}
 }
 

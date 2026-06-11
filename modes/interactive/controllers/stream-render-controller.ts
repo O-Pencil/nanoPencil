@@ -22,6 +22,7 @@
 import type { AgentMessage } from "@pencil-agent/agent-core";
 import type { Message } from "@pencil-agent/ai/types";
 import {
+  type CachedContainer,
   type Component,
   type Container,
   type MarkdownTheme,
@@ -44,7 +45,7 @@ export interface StreamRenderStatePort {
 
 export interface StreamRenderLayoutPort {
   getUi(): TUI;
-  getChatContainer(): Container;
+  getChatContainer(): CachedContainer;
   getStatusContainer(): Container;
   addMessageToChat(message: AgentMessage): void;
   updatePendingMessagesDisplay(): void;
@@ -202,6 +203,7 @@ export class StreamRenderController {
           }
           state.streamingMessage = event.message;
           state.streamingComponent.updateContent(state.streamingMessage);
+          chatContainer.markDirty(state.streamingComponent);
 
           for (const content of state.streamingMessage.content) {
             if (content.type === "toolCall") {
@@ -226,6 +228,7 @@ export class StreamRenderController {
                 const component = state.pendingTools.get(content.id);
                 if (component) {
                   component.updateArgs(content.arguments);
+                  chatContainer.markDirty(component);
                 }
               }
             }
@@ -248,6 +251,7 @@ export class StreamRenderController {
             state.streamingMessage.errorMessage = errorMessage;
           }
           state.streamingComponent.updateContent(state.streamingMessage);
+          chatContainer.markDirty(state.streamingComponent);
 
           if (
             state.streamingMessage.stopReason === "aborted" ||
@@ -261,12 +265,14 @@ export class StreamRenderController {
                 content: [{ type: "text", text: errorMessage }],
                 isError: true,
               });
+              chatContainer.markDirty(component);
             }
             state.pendingTools.clear();
           } else {
             // Args are now complete - trigger diff computation for edit tools
             for (const [, component] of state.pendingTools.entries()) {
               component.setArgsComplete();
+              chatContainer.markDirty(component);
             }
           }
           state.streamingComponent = undefined;
@@ -305,6 +311,7 @@ export class StreamRenderController {
             { ...event.partialResult, isError: false },
             true,
           );
+          chatContainer.markDirty(component);
           this.ctx.layout.requestRender();
         }
         break;
@@ -314,6 +321,7 @@ export class StreamRenderController {
         const component = state.pendingTools.get(event.toolCallId);
         if (component) {
           component.updateResult({ ...event.result, isError: event.isError });
+          chatContainer.markDirty(component);
           state.pendingTools.delete(event.toolCallId);
           this.ctx.layout.requestRender();
         }

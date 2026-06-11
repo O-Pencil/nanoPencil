@@ -91,6 +91,8 @@ async function callJsonLlm<T>(
 	emptyShape: string,
 ): Promise<T> {
 	const raw = await llmFn(systemPrompt, userMessage);
+	// Empty output — return empty shape directly (no point retrying)
+	if (!raw.trim()) return JSON.parse(emptyShape) as T;
 	try {
 		return parseLlmJson<T>(raw);
 	} catch (firstError) {

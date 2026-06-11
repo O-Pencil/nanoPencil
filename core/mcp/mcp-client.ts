@@ -12,19 +12,20 @@ import { AuthStorage } from "../platform/config/auth-storage.js";
 import { getMCPConfigPath } from "./mcp-config.js";
 import type { MCPServerConfig, MCPTool, MCPToolResult } from "./mcp-types.js";
 
-// Log level control: DEBUG shows all MCP messages, RELEASE only shows summary
-// Check if running from installed location (production) vs development
-const isProductionBuild = typeof import.meta.url === "string" && import.meta.url.includes("node_modules");
-const isDebugMode = process.env.NODE_ENV === "development" || (process.env.NODE_ENV !== "production" && !isProductionBuild);
+// Log level control: MCP internal logs only shown with explicit NANOPENCIL_DEBUG.
+// Normal dev mode (npm run dev) does NOT print MCP server stderr or JSON-RPC traces.
+const isExplicitDebug = ["1", "true", "yes", "on"].includes(
+  (process.env.NANOPENCIL_DEBUG ?? "").toLowerCase(),
+);
 
 function mcpLog(...args: unknown[]): void {
-  if (isDebugMode) {
+  if (isExplicitDebug) {
     console.error(...args);
   }
 }
 
 function mcpWarn(...args: unknown[]): void {
-  if (isDebugMode) {
+  if (isExplicitDebug) {
     console.warn(...args);
   }
 }
@@ -51,8 +52,8 @@ function formatUnknownError(error: unknown): string {
 }
 
 /**
- * Per-server startup failure: in production only emit debug-level detail (summary is in sdk.ts).
- * In non-production, print one line with a readable message.
+ * Per-server startup failure: always log a one-liner via mcpLog (visible only with NANOPENCIL_DEBUG).
+ * sdk.ts prints the concise summary ("N failed") for all modes.
  */
 function logMcpStartupFailure(
   kind: "stdio" | "http",
@@ -60,19 +61,11 @@ function logMcpStartupFailure(
   error: unknown,
 ): void {
   const detail = formatUnknownError(error);
-  if (!isDebugMode) {
-    mcpLog(
-      kind === "http"
-        ? `[MCP] HTTP init failed ${serverId}: ${detail}`
-        : `[MCP] stdio start failed ${serverId}: ${detail}`,
-    );
-    return;
-  }
-  if (kind === "http") {
-    console.error(`Failed to initialize HTTP MCP server ${serverId}: ${detail}`);
-  } else {
-    console.error(`Failed to start MCP server ${serverId}: ${detail}`);
-  }
+  mcpLog(
+    kind === "http"
+      ? `[MCP] HTTP init failed ${serverId}: ${detail}`
+      : `[MCP] stdio start failed ${serverId}: ${detail}`,
+  );
 }
 
 interface JsonRpcMessage {
@@ -311,8 +304,8 @@ export class MCPClient {
     runtime.process.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString("utf8").trim();
       if (text.length > 0) {
-        // Only show stderr errors in debug mode
-        if (isDebugMode) {
+        // Only show stderr in explicit debug mode (NANOPENCIL_DEBUG=1)
+        if (isExplicitDebug) {
           mcpError(`[MCP:${serverId}] ${text}`);
         }
       }

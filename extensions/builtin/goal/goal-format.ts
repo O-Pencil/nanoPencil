@@ -82,8 +82,23 @@ export function goalSummaryLines(goal: ThreadGoal): string[] {
 	lines.push(`  Time used: ${summary.elapsed}`);
 	lines.push(`  Tokens used: ${summary.tokensLabel}${summary.hasBudget ? " tokens" : ""}`);
 	lines.push("");
-	lines.push("Commands: /goal edit, /goal pause, /goal resume, /goal clear");
+	const commands = commandsForStatus(goal.status);
+	lines.push(`Commands: ${commands}`);
 	return lines;
+}
+
+function commandsForStatus(status: ThreadGoalStatus): string {
+	switch (status) {
+		case "active":
+			return "/goal edit, /goal pause, /goal clear";
+		case "paused":
+		case "blocked":
+		case "usage_limited":
+			return "/goal edit, /goal resume, /goal clear";
+		case "budget_limited":
+		case "complete":
+			return "/goal edit, /goal clear";
+	}
 }
 
 export type GoalStatusIndicator =

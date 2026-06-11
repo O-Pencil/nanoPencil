@@ -5,7 +5,7 @@
  */
 /**
  * [WHO]: PencilLoader
- * [FROM]: Depends on @pencil-agent/tui, ../services/tips
+ * [FROM]: Depends on @pencil-agent/tui
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/pencil-loader.ts -
  */
@@ -13,13 +13,29 @@
 import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
 import type { Theme } from "../theme/theme.js";
 
+/** Tips shown below the spinner while waiting */
+const TIPS = [
+	"Press Tab to autocomplete slash commands",
+	"Type /help for available commands",
+	"Ctrl+C to interrupt the current task",
+	"Drag and drop images into the terminal",
+	"Use @filename to reference files in your message",
+	"Press ↑↓ to navigate command history",
+	"Type /compact to summarize and free context",
+	"Shift+Enter for a new line in the editor",
+	"Use /model to switch AI models",
+	"Type /theme to change the color theme",
+];
+
 export class PencilLoader extends Container {
 	private tui: TUI;
 	private theme: Theme;
 	private message: string;
 	private interval: NodeJS.Timeout | undefined;
+	private tipInterval: NodeJS.Timeout | undefined;
 	private currentFrame = 0;
 	private textComponent: Text;
+	private tipComponent: Text;
 	private isStopped = false;
 
 	// Time tracking for stalled animation
@@ -47,12 +63,36 @@ export class PencilLoader extends Container {
 		this.lastTokenTime = Date.now();
 
 		this.textComponent = new Text("", 0, 0);
+		this.tipComponent = new Text("", 1, 0);
 
 		this.addChild(new Spacer(1));
 		this.addChild(this.textComponent);
+		this.addChild(this.tipComponent);
 		this.addChild(new Spacer(1));
 
 		this.startAnimation();
+		this.startTipRotation();
+	}
+
+	private getRandomTip(): string {
+		return TIPS[Math.floor(Math.random() * TIPS.length)]!;
+	}
+
+	private startTipRotation(): void {
+		// Show first tip after a short delay (only if still loading)
+		setTimeout(() => {
+			if (!this.isStopped) {
+				this.tipComponent.setText(this.theme.fg("dim", `  tip: ${this.getRandomTip()}`));
+				this.tui.requestRender();
+			}
+		}, 2000);
+
+		// Rotate tips every 6 seconds
+		this.tipInterval = setInterval(() => {
+			if (this.isStopped) return;
+			this.tipComponent.setText(this.theme.fg("dim", `  tip: ${this.getRandomTip()}`));
+			this.tui.requestRender();
+		}, 6000);
 	}
 
 	private startAnimation(): void {
@@ -62,7 +102,6 @@ export class PencilLoader extends Container {
 			const frameChar = this.frames[this.currentFrame];
 			const diamondColor = this.getSpinnerColor();
 			const diamond = diamondColor(frameChar);
-			const stallDuration = this.getStallDuration();
 
 			// Build display: spinner + message
 			const display = `${diamond} ${this.message}`;
@@ -139,6 +178,10 @@ export class PencilLoader extends Container {
 		if (this.interval) {
 			clearInterval(this.interval);
 			this.interval = undefined;
+		}
+		if (this.tipInterval) {
+			clearInterval(this.tipInterval);
+			this.tipInterval = undefined;
 		}
 	}
 

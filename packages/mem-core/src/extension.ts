@@ -143,6 +143,8 @@ function getMemoryJsonContract(systemPrompt: string): (typeof memoryJsonContract
 }
 
 function looksLikeJson(value: string): boolean {
+	// Use the same tolerant extraction as parseLlmJson (balanced-brace scan)
+	// so we don't warn on outputs that have chat prefixes but contain valid JSON.
 	return hasParseableLlmJson(value);
 }
 

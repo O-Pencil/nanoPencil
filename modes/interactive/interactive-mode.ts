@@ -24,6 +24,7 @@ import type {
 import {
   CombinedAutocompleteProvider,
   type Component,
+  CachedContainer,
   Container,
   Loader,
   Markdown,
@@ -111,6 +112,7 @@ import { BuddyPetComponent, type BuddyState } from "./components/buddy/pet-sprit
 import { EditorBuddyLayout } from "./components/editor-buddy-layout.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
 import { PencilLoader } from "./components/pencil-loader.js";
+import { NotificationQueue } from "./components/notification-queue.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
 import { CustomEditor } from "./components/custom-editor.js";
 import { CustomMessageComponent } from "./components/custom-message.js";
@@ -190,7 +192,7 @@ export interface InteractiveModeOptions {
 export class InteractiveMode {
   private session: AgentSession;
   private ui: TUI;
-  private chatContainer: Container;
+  private chatContainer: CachedContainer;
   private pendingMessagesContainer: Container;
   private statusContainer: Container;
   private defaultEditor: CustomEditor;
@@ -231,6 +233,12 @@ export class InteractiveMode {
 
   // Shutdown state
   private shutdownRequested = false;
+
+  // Auto-dismiss timers for status/warning messages
+  private statusTimers = new Set<ReturnType<typeof setTimeout>>();
+
+  // Priority notification queue
+  private notificationQueue: NotificationQueue;
 
   // Extension UI state
   private extensionTerminalInputUnsubscribers = new Set<() => void>();
@@ -287,11 +295,12 @@ export class InteractiveMode {
     );
     this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
     this.headerContainer = new Container();
-    this.chatContainer = new Container();
+    this.chatContainer = new CachedContainer();
     this.pendingMessagesContainer = new Container();
     this.statusContainer = new Container();
     this.widgetContainerAbove = new Container();
     this.widgetContainerBelow = new Container();
+    this.notificationQueue = new NotificationQueue(this.ui, theme);
     this.keybindings = KeybindingsManager.create();
     const editorPaddingX = this.settingsManager.getEditorPaddingX();
     const autocompleteMaxVisible =
@@ -466,7 +475,7 @@ export class InteractiveMode {
         getUi: () => this.ui,
         getChatContainer: () => this.chatContainer,
         getStatusContainer: () => this.statusContainer,
-        clearChat: () => this.chatContainer.clear(),
+        clearChat: () => { this.clearStatusTimers(); this.chatContainer.clear(); },
         clearTransientSessionUi: () => {
           if (this.state.loadingAnimation) {
             (this.state.loadingAnimation as PencilLoader).stop();
@@ -551,6 +560,7 @@ export class InteractiveMode {
               child.setHideThinkingBlock(hidden);
             }
           }
+          this.clearStatusTimers();
           this.chatContainer.clear();
         },
         rebuildChatFromMessages: () => this.rebuildChatFromMessages(),
@@ -665,6 +675,7 @@ export class InteractiveMode {
         showStatus: (message) => this.showStatus(message),
         showWarning: (message) => this.showWarning(message),
         showError: (message) => this.showError(message),
+        notify: (message, options) => this.notify(message, options),
         requestRender: () => this.ui.requestRender(),
         flushPendingBashComponents: () => this.flushPendingBashComponents(),
         updatePendingMessagesDisplay: () => this.updatePendingMessagesDisplay(),
@@ -960,6 +971,13 @@ export class InteractiveMode {
     if (this.editor !== this.defaultEditor) {
       this.editor.setAutocompleteProvider?.(this.autocompleteProvider);
     }
+
+    // Enable slash command highlighting in the input box
+    const allCommandNames = new Set(
+      [...slashCommands, ...templateCommands, ...extensionCommands, ...skillCommandList]
+        .map((c) => c.name),
+    );
+    this.defaultEditor.enableSlashHighlight(() => allCommandNames, theme);
   }
 
   private prewarmStartupTools(): void {
@@ -1051,6 +1069,7 @@ export class InteractiveMode {
       this.headerContainer.addChild(this.builtInHeader);
     }
 
+    this.ui.addChild(this.notificationQueue);
     this.ui.addChild(this.chatContainer);
     this.ui.addChild(this.pendingMessagesContainer);
     this.ui.addChild(this.statusContainer);
@@ -1717,6 +1736,7 @@ export class InteractiveMode {
           }
 
           // Clear UI state
+          this.clearStatusTimers();
           this.chatContainer.clear();
           this.pendingMessagesContainer.clear();
           this.state.compactionQueuedMessages = [];
@@ -1736,6 +1756,7 @@ export class InteractiveMode {
             return { cancelled: true };
           }
 
+          this.clearStatusTimers();
           this.chatContainer.clear();
           this.imagePipeline.clearAttachments();
           this.addSessionNavigationBanner("Forked session");
@@ -1756,6 +1777,7 @@ export class InteractiveMode {
             return { cancelled: true };
           }
 
+          this.clearStatusTimers();
           this.chatContainer.clear();
           this.imagePipeline.clearAttachments();
           this.addSessionNavigationBanner("Navigated session tree");
@@ -2229,6 +2251,7 @@ export class InteractiveMode {
    *
    * If multiple status messages are emitted back-to-back (without anything else being added to the chat),
    * we update the previous status line instead of appending new ones to avoid log spam.
+   * Auto-dismisses after 5 seconds.
    */
   private showStatus(message: string): void {
     const children = this.chatContainer.children;
@@ -2244,6 +2267,7 @@ export class InteractiveMode {
       secondLast === this.state.lastStatusSpacer
     ) {
       this.state.lastStatusText.setText(theme.fg("dim", message));
+      this.scheduleStatusDismiss(this.state.lastStatusSpacer!, this.state.lastStatusText);
       this.ui.requestRender();
       return;
     }
@@ -2254,6 +2278,7 @@ export class InteractiveMode {
     this.chatContainer.addChild(text);
     this.state.lastStatusSpacer = spacer;
     this.state.lastStatusText = text;
+    this.scheduleStatusDismiss(spacer, text);
     this.ui.requestRender();
   }
 
@@ -2622,6 +2647,7 @@ export class InteractiveMode {
   }
 
   private rebuildChatFromMessages(): void {
+    this.clearStatusTimers();
     this.chatContainer.clear();
     const context = this.sessionManager.buildSessionContext();
     this.renderSessionContext(context);
@@ -2935,15 +2961,52 @@ export class InteractiveMode {
   }
 
   showWarning(warningMessage: string): void {
-    this.chatContainer.addChild(new Spacer(1));
-    this.chatContainer.addChild(
-      new Text(theme.fg("warning", `Warning: ${warningMessage}`), 1, 0),
-    );
+    const spacer = new Spacer(1);
+    const text = new Text(theme.fg("warning", `Warning: ${warningMessage}`), 1, 0);
+    this.chatContainer.addChild(spacer);
+    this.chatContainer.addChild(text);
+    this.scheduleStatusDismiss(spacer, text);
     this.setBuddyPetState("error", "Careful.", {
       resetTo: "idle",
       afterMs: 1800,
     });
     this.ui.requestRender();
+  }
+
+  /**
+   * Schedule auto-removal of a status/warning message after 5 seconds.
+   */
+  private scheduleStatusDismiss(spacer: Spacer, text: Text): void {
+    const timer = setTimeout(() => {
+      this.statusTimers.delete(timer);
+      this.chatContainer.removeChild(spacer);
+      this.chatContainer.removeChild(text);
+      // Clear lastStatus tracking if it matches the removed message
+      if (this.state.lastStatusText === text) {
+        this.state.lastStatusText = undefined;
+        this.state.lastStatusSpacer = undefined;
+      }
+      this.ui.requestRender();
+    }, 5000);
+    this.statusTimers.add(timer);
+  }
+
+  /**
+   * Cancel all pending status dismiss timers (e.g., on /clear).
+   */
+  private clearStatusTimers(): void {
+    for (const timer of this.statusTimers) {
+      clearTimeout(timer);
+    }
+    this.statusTimers.clear();
+    this.notificationQueue.clearAll();
+  }
+
+  /**
+   * Show a priority notification (floating, auto-dismiss, dedup by key).
+   */
+  notify(message: string, options?: { key?: string; priority?: "immediate" | "high" | "medium" | "low"; type?: "info" | "warning" | "error"; duration?: number }): void {
+    this.notificationQueue.notify(message, options);
   }
 
   /**
@@ -3915,6 +3978,7 @@ export class InteractiveMode {
     await this.session.newSession();
 
     // Clear UI state
+    this.clearStatusTimers();
     this.chatContainer.clear();
     this.pendingMessagesContainer.clear();
     this.state.compactionQueuedMessages = [];

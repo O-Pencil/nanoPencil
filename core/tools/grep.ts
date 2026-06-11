@@ -33,12 +33,23 @@ const grepSchema = Type.Object({
 	context: Type.Optional(
 		Type.Integer({ minimum: 0, description: "Number of lines to show before and after each match (default: 0)" }),
 	),
-	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Maximum number of matches to return (default: 100)" })),
+	output_mode: Type.Optional(
+		Type.Union([Type.Literal("content"), Type.Literal("files_with_matches"), Type.Literal("count")], {
+			description: "Output mode: 'content' (default) returns matching lines, 'files_with_matches' returns only file paths, 'count' returns match counts per file",
+		}),
+	),
+	type: Type.Optional(Type.String({ description: "File type filter, e.g. 'js', 'py', 'rust' (maps to rg --type)" })),
+	contextBefore: Type.Optional(Type.Integer({ minimum: 0, description: "Lines to show before each match (overrides context)" })),
+	contextAfter: Type.Optional(Type.Integer({ minimum: 0, description: "Lines to show after each match (overrides context)" })),
+	offset: Type.Optional(Type.Integer({ minimum: 0, description: "Skip first N matches" })),
+	multiline: Type.Optional(Type.Boolean({ description: "Enable multiline matching (default: false)" })),
+	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Maximum number of matches to return (default: 250)" })),
+	head_limit: Type.Optional(Type.Integer({ minimum: 1, description: "Alias for limit (CC compatibility)" })),
 });
 
 export type GrepToolInput = Static<typeof grepSchema>;
 
-const DEFAULT_LIMIT = 100;
+const DEFAULT_LIMIT = 250;
 
 export interface GrepToolDetails {
 	truncation?: TruncationResult;
@@ -73,7 +84,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 	return {
 		name: "grep",
 		label: "grep",
-		description: `Search file contents for a pattern. Returns matching lines with file paths and line numbers. Respects .gitignore. Output is truncated to ${DEFAULT_LIMIT} matches or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Long lines are truncated to ${GREP_MAX_LINE_LENGTH} chars.`,
+		description: `Search file contents for a pattern. Supports multiple output modes (content, files_with_matches, count), file type filters, multiline matching, and per-side context control (-A/-B). Respects .gitignore. Output is truncated to ${DEFAULT_LIMIT} matches or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Long lines are truncated to ${GREP_MAX_LINE_LENGTH} chars.`,
 		parameters: grepSchema,
 		isConcurrencySafe: true,
 		execute: async (
@@ -85,7 +96,14 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 				ignoreCase,
 				literal,
 				context,
+				output_mode,
+				type: fileType,
+				contextBefore,
+				contextAfter,
+				offset,
+				multiline,
 				limit,
+				head_limit,
 			}: {
 				pattern: string;
 				path?: string;
@@ -93,12 +111,28 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 				ignoreCase?: boolean;
 				literal?: boolean;
 				context?: number;
+				output_mode?: "content" | "files_with_matches" | "count";
+				type?: string;
+				contextBefore?: number;
+				contextAfter?: number;
+				offset?: number;
+				multiline?: boolean;
 				limit?: number;
+				head_limit?: number;
 			},
 			signal?: AbortSignal,
 		) => {
 			validateIntegerWindowOption({ name: "context", value: context, minimum: 0 });
 			validateIntegerWindowOption({ name: "limit", value: limit, minimum: 1 });
+			validateIntegerWindowOption({ name: "head_limit", value: head_limit, minimum: 1 });
+			validateIntegerWindowOption({ name: "offset", value: offset, minimum: 0 });
+
+			const effectiveLimit = head_limit ?? limit ?? DEFAULT_LIMIT;
+			const effectiveOffset = offset ?? 0;
+			const effectiveMode = output_mode ?? "content";
+			// -A/-B override context when specified
+			const beforeLines = contextBefore ?? context ?? 0;
+			const afterLines = contextAfter ?? context ?? 0;
 
 			return new Promise((resolve, reject) => {
 				if (signal?.aborted) {
@@ -132,8 +166,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 							settle(() => reject(new Error(`Path not found: ${searchPath}`)));
 							return;
 						}
-						const contextValue = context ?? 0;
-						const effectiveLimit = limit ?? DEFAULT_LIMIT;
+
 
 						const formatPath = (filePath: string): string => {
 							if (isDirectory) {
@@ -172,6 +205,14 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 
 						if (glob) {
 							args.push("--glob", glob);
+						}
+
+						if (fileType) {
+							args.push("--type", fileType);
+						}
+
+						if (multiline) {
+							args.push("--multiline-dotall");
 						}
 
 						args.push(pattern, searchPath);
@@ -217,8 +258,8 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 							}
 
 							const block: string[] = [];
-							const start = contextValue > 0 ? Math.max(1, lineNumber - contextValue) : lineNumber;
-							const end = contextValue > 0 ? Math.min(lines.length, lineNumber + contextValue) : lineNumber;
+							const start = beforeLines > 0 ? Math.max(1, lineNumber - beforeLines) : lineNumber;
+							const end = afterLines > 0 ? Math.min(lines.length, lineNumber + afterLines) : lineNumber;
 
 							for (let current = start; current <= end; current++) {
 								const lineText = lines[current - 1] ?? "";
@@ -243,9 +284,11 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 
 						// Collect matches during streaming, format after
 						const matches: Array<{ filePath: string; lineNumber: number }> = [];
+						const matchedFiles = new Set<string>();
+						const perFileCounts = new Map<string, number>();
 
 						rl.on("line", (line) => {
-							if (!line.trim() || matchCount >= effectiveLimit) {
+							if (!line.trim() || matchCount >= effectiveLimit + effectiveOffset) {
 								return;
 							}
 
@@ -261,11 +304,22 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 								const filePath = event.data?.path?.text;
 								const lineNumber = event.data?.line_number;
 
-								if (filePath && typeof lineNumber === "number") {
-									matches.push({ filePath, lineNumber });
+								// Track per-file counts regardless of mode
+								if (filePath) {
+									perFileCounts.set(filePath, (perFileCounts.get(filePath) ?? 0) + 1);
 								}
 
-								if (matchCount >= effectiveLimit) {
+								// Skip matches before offset
+								if (matchCount <= effectiveOffset) {
+									return;
+								}
+
+								if (filePath && typeof lineNumber === "number") {
+									matches.push({ filePath, lineNumber });
+									matchedFiles.add(filePath);
+								}
+
+								if (matchCount >= effectiveLimit + effectiveOffset) {
 									matchLimitReached = true;
 									stopChild(true);
 								}
@@ -298,6 +352,63 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 								return;
 							}
 
+							const details: GrepToolDetails = {};
+							const notices: string[] = [];
+
+							if (effectiveMode === "files_with_matches") {
+								// Only return unique file paths
+								const fileList = [...matchedFiles].sort();
+								let output = fileList.join("\n");
+
+								if (matchLimitReached) {
+									notices.push(
+										`${effectiveLimit} matches limit reached. Use limit=${effectiveLimit * 2} for more, or refine pattern`,
+									);
+									details.matchLimitReached = effectiveLimit;
+								}
+								if (notices.length > 0) {
+									output += `\n\n[${notices.join(". ")}]`;
+								}
+
+								settle(() =>
+									resolve({
+										content: [{ type: "text", text: output }],
+										details: Object.keys(details).length > 0 ? details : undefined,
+									}),
+								);
+								return;
+							}
+
+							if (effectiveMode === "count") {
+								// Return per-file match counts
+								const countLines = [...perFileCounts.entries()]
+									.sort(([a], [b]) => a.localeCompare(b))
+									.map(([filePath, count]) => {
+										const relativePath = formatPath(filePath);
+										return `${relativePath}: ${count}`;
+									});
+								let output = countLines.join("\n");
+
+								if (matchLimitReached) {
+									notices.push(
+										`${effectiveLimit} matches limit reached. Use limit=${effectiveLimit * 2} for more, or refine pattern`,
+									);
+									details.matchLimitReached = effectiveLimit;
+								}
+								if (notices.length > 0) {
+									output += `\n\n[${notices.join(". ")}]`;
+								}
+
+								settle(() =>
+									resolve({
+										content: [{ type: "text", text: output }],
+										details: Object.keys(details).length > 0 ? details : undefined,
+									}),
+								);
+								return;
+							}
+
+							// content mode (default)
 							// Format matches (async to support remote file reading)
 							for (const match of matches) {
 								const block = await formatBlock(match.filePath, match.lineNumber);
@@ -309,10 +420,6 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 							const truncation = truncateHead(rawOutput, { maxLines: Number.MAX_SAFE_INTEGER });
 
 							let output = truncation.content;
-							const details: GrepToolDetails = {};
-
-							// Build notices
-							const notices: string[] = [];
 
 							if (matchLimitReached) {
 								notices.push(

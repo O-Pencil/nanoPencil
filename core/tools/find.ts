@@ -21,6 +21,7 @@ const findSchema = Type.Object({
 	}),
 	path: Type.Optional(Type.String({ description: "Directory to search in (default: current directory)" })),
 	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Maximum number of results (default: 1000)" })),
+	sort: Type.Optional(Type.String({ description: "Sort results by: 'modified' (most recent first)" })),
 });
 
 export type FindToolInput = Static<typeof findSchema>;
@@ -67,7 +68,7 @@ export function createFindTool(cwd: string, options?: FindToolOptions): AgentToo
 		isConcurrencySafe: true,
 		execute: async (
 			_toolCallId: string,
-			{ pattern, path: searchDir, limit }: { pattern: string; path?: string; limit?: number },
+			{ pattern, path: searchDir, limit, sort }: { pattern: string; path?: string; limit?: number; sort?: string },
 			signal?: AbortSignal,
 		) => {
 			validateIntegerWindowOption({ name: "limit", value: limit, minimum: 1 });
@@ -161,6 +162,10 @@ export function createFindTool(cwd: string, options?: FindToolOptions): AgentToo
 							"--max-results",
 							String(effectiveLimit),
 						];
+
+						if (sort === "modified") {
+							args.push("--sort", "modified");
+						}
 
 						// Include .gitignore files
 						const gitignoreFiles = new Set<string>();

@@ -206,6 +206,158 @@ function execAgentReach(args: string[], timeoutSeconds: number, signal?: AbortSi
 	});
 }
 
+// ============================================================================
+// Native fallback: zero-config web access (no agent-reach needed)
+// Tries multiple providers in order: Jina → DuckDuckGo → direct fetch
+// ============================================================================
+
+const JINA_READER_BASE = "https://r.jina.ai";
+const JINA_SEARCH_BASE = "https://s.jina.ai";
+const NATIVE_TIMEOUT_MS = 30_000;
+
+/** Try Jina Reader → direct fetch for page content */
+async function nativeWebFetch(url: string, signal?: AbortSignal): Promise<string> {
+	const targetUrl = url.startsWith("http") ? url : `https://${url}`;
+	const fallbackSignal = signal ?? AbortSignal.timeout(NATIVE_TIMEOUT_MS);
+
+	// 1. Try Jina Reader (returns clean markdown)
+	try {
+		const res = await fetch(`${JINA_READER_BASE}/${targetUrl}`, {
+			signal: fallbackSignal,
+			headers: { Accept: "text/markdown" },
+		});
+		if (res.ok) {
+			const text = await res.text();
+			if (text.trim()) return text;
+		}
+	} catch {
+		// Jina unavailable, fall through
+	}
+
+	// 2. Direct fetch + basic HTML-to-text
+	try {
+		const res = await fetch(targetUrl, { signal: fallbackSignal });
+		if (!res.ok) {
+			throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+		}
+		const html = await res.text();
+		return htmlToPlainText(html, targetUrl);
+	} catch (err) {
+		throw new Error(`Failed to fetch ${targetUrl}: ${err instanceof Error ? err.message : err}`);
+	}
+}
+
+/** Try Jina Search → DuckDuckGo HTML for search results */
+async function nativeWebSearch(query: string, limit: number, signal?: AbortSignal): Promise<string> {
+	const fallbackSignal = signal ?? AbortSignal.timeout(NATIVE_TIMEOUT_MS);
+	// 1. Try Jina Search (returns structured markdown)
+	try {
+		const params = new URLSearchParams({ q: query });
+		if (limit > 0) params.set("num", String(Math.min(limit, 10)));
+		const res = await fetch(`${JINA_SEARCH_BASE}?${params}`, {
+			signal: fallbackSignal,
+			headers: { Accept: "text/markdown" },
+		});
+		if (res.ok) {
+			const text = await res.text();
+			if (text.trim()) return text;
+		}
+	} catch {
+		// Jina unavailable, fall through
+	}
+
+	// 2. Try DuckDuckGo HTML
+	try {
+		const params = new URLSearchParams({ q: query });
+		const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
+			signal: fallbackSignal,
+			headers: { "User-Agent": "Mozilla/5.0 (compatible; NanoPencil/1.0)" },
+		});
+		if (res.ok) {
+			const html = await res.text();
+			const results = parseDuckDuckGoResults(html, limit || 5);
+			if (results.length > 0) return results;
+		}
+	} catch {
+		// DDG unavailable, fall through
+	}
+
+	// 3. Try DuckDuckGo Instant Answer API
+	try {
+		const params = new URLSearchParams({ q: query, format: "json", no_html: "1" });
+		const res = await fetch(`https://api.duckduckgo.com/?${params}`, { signal: fallbackSignal });
+		if (res.ok) {
+			const data = (await res.json()) as Record<string, unknown>;
+			const abstract = typeof data.AbstractText === "string" ? data.AbstractText : "";
+			const source = typeof data.AbstractSource === "string" ? data.AbstractSource : "";
+			const url = typeof data.AbstractURL === "string" ? data.AbstractURL : "";
+			if (abstract) {
+				return [`## ${query}`, "", abstract, source ? `Source: ${source}` : "", url ? `URL: ${url}` : ""].filter(Boolean).join("\n");
+			}
+		}
+	} catch {
+		// API unavailable
+	}
+
+	throw new Error(`Search failed for "${query}": all providers returned errors. Check your network connection.`);
+}
+
+// ============================================================================
+// HTML helpers (minimal, no external dependencies)
+// ============================================================================
+
+/** Strip HTML tags and decode entities to get readable text */
+function htmlToPlainText(html: string, baseUrl: string): string {
+	let text = html;
+	// Remove script/style/nav/header/footer
+	text = text.replace(/<(script|style|nav|header|footer|noscript)[^>]*>[\s\S]*?<\/\1>/gi, "");
+	// Remove HTML tags
+	text = text.replace(/<[^>]+>/g, " ");
+	// Decode common entities
+	text = text
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&nbsp;/g, " ");
+	// Collapse whitespace
+	text = text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+	return `# Content from ${baseUrl}\n\n${text}`;
+}
+
+/** Extract search results from DuckDuckGo HTML response */
+function parseDuckDuckGoResults(html: string, limit: number): string {
+	const results: string[] = [];
+	const linkRegex = /<a[^>]+class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+	const snippetRegex = /<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+
+	const links: Array<{ url: string; title: string }> = [];
+	const snippets: string[] = [];
+
+	let match;
+	while ((match = linkRegex.exec(html)) !== null) {
+		const rawUrl = match[1];
+		const title = match[2].replace(/<[^>]+>/g, "").trim();
+		// DDG wraps URLs in a redirect; extract the actual URL
+		const urlMatch = rawUrl.match(/uddg=([^&]+)/);
+		const url = urlMatch ? decodeURIComponent(urlMatch[1]) : rawUrl;
+		if (title) links.push({ url, title });
+	}
+	while ((match = snippetRegex.exec(html)) !== null) {
+		const snippet = match[1].replace(/<[^>]+>/g, "").trim();
+		if (snippet) snippets.push(snippet);
+	}
+
+	for (let i = 0; i < Math.min(links.length, limit); i++) {
+		const entry = [`### ${links[i].title}`, links[i].url];
+		if (snippets[i]) entry.push(snippets[i]);
+		results.push(entry.join("\n"));
+	}
+
+	return results.length > 0 ? results.join("\n\n") : "";
+}
+
 function installHelpText(): string {
 	const doc = getInstallDoc();
 	if (doc) {
@@ -231,17 +383,17 @@ function getStatusText(): string {
 	const lines = [
 		"Link-world status",
 		"",
-		`agent-reach installed: ${installed ? "yes" : "no"}`,
+		`agent-reach installed: ${installed ? "yes" : "no (native fallback active)"}`,
 		`internet-search skill bundled: ${existsSync(SKILL_PATH) ? "yes" : "no"}`,
 		`agent guidance bundled: ${existsSync(AGENT_SKILL_PATH) ? "yes" : "no"}`,
-		`web_search enabled: ${capabilities.search ? "yes" : "no"}`,
-		`web_fetch enabled: ${capabilities.fetch ? "yes" : "no"}`,
+		`web_search: ${capabilities.search ? "agent-reach" : "native (Jina Search)"}`,
+		`web_fetch: ${capabilities.fetch ? "agent-reach" : "native (Jina Reader)"}`,
 	];
 
 	if (!installed) {
 		lines.push("");
-		lines.push("Run `/link-world install` to view the installation guide.");
-		lines.push("After installation, run `/link-world doctor` to validate the setup.");
+		lines.push("Native fallback provides basic search and page fetching without agent-reach.");
+		lines.push("For advanced platform channels (Twitter, YouTube, etc.), run `/link-world install`.");
 	}
 
 	return lines.join("\n");
@@ -330,31 +482,33 @@ function createWebSearchTool(): ToolDefinition<typeof WebSearchInputSchema> {
 		guidance:
 			"Use this for ordinary web search and lightweight research tasks. Use link_world_exec only when you need a lower-level agent-reach command that this tool does not model.",
 		execute: async (_toolCallId, input: WebSearchInput, signal) => {
-			if (!isAgentReachInstalled()) {
-				throw new Error(`${getStatusText()}\n\n${installHelpText()}`);
-			}
-			if (!getLinkWorldCapabilities().search) {
-				throw new Error(
-					"web_search is disabled because the installed agent-reach runtime does not advertise a `search` command.\n\nUse `link_world_admin` with action `status` to inspect capabilities, or use the browser tool family for live web interaction.",
-				);
+			// Try agent-reach first if installed with search capability
+			if (isAgentReachInstalled() && getLinkWorldCapabilities().search) {
+				const args = ["search", input.query];
+				if (input.provider) {
+					args.push("--provider", input.provider);
+				}
+				if (typeof input.limit === "number" && Number.isFinite(input.limit)) {
+					args.push("--limit", String(input.limit));
+				}
+
+				const result = await execAgentReach(args, input.timeout ?? DEFAULT_TIMEOUT_SECONDS, signal);
+				if (result.exitCode && result.exitCode !== 0) {
+					throw new Error(result.output);
+				}
+
+				return {
+					content: [{ type: "text", text: result.output }],
+					details: { exitCode: result.exitCode, args },
+				};
 			}
 
-			const args = ["search", input.query];
-			if (input.provider) {
-				args.push("--provider", input.provider);
-			}
-			if (typeof input.limit === "number" && Number.isFinite(input.limit)) {
-				args.push("--limit", String(input.limit));
-			}
-
-			const result = await execAgentReach(args, input.timeout ?? DEFAULT_TIMEOUT_SECONDS, signal);
-			if (result.exitCode && result.exitCode !== 0) {
-				throw new Error(result.output);
-			}
-
+			// Native fallback: Jina Search (zero-config, no dependencies)
+			const limit = typeof input.limit === "number" && Number.isFinite(input.limit) ? input.limit : 5;
+			const text = await nativeWebSearch(input.query, limit, signal);
 			return {
-				content: [{ type: "text", text: result.output }],
-				details: { exitCode: result.exitCode, args },
+				content: [{ type: "text", text }],
+				details: { fallback: "jina", query: input.query },
 			};
 		},
 	};
@@ -370,28 +524,29 @@ function createWebFetchTool(): ToolDefinition<typeof WebFetchInputSchema> {
 		guidance:
 			"Use this when the user provides a URL or when a prior search result should be fetched directly. If the task requires page interaction, use the browser tool family instead.",
 		execute: async (_toolCallId, input: WebFetchInput, signal) => {
-			if (!isAgentReachInstalled()) {
-				throw new Error(`${getStatusText()}\n\n${installHelpText()}`);
-			}
-			if (!getLinkWorldCapabilities().fetch) {
-				throw new Error(
-					"web_fetch is disabled because the installed agent-reach runtime does not advertise a `fetch` command.\n\nUse `link_world_admin` with action `status` to inspect capabilities, or use the browser tool family when direct page interaction is required.",
-				);
+			// Try agent-reach first if installed with fetch capability
+			if (isAgentReachInstalled() && getLinkWorldCapabilities().fetch) {
+				const args = ["fetch", input.url];
+				if (input.provider) {
+					args.push("--provider", input.provider);
+				}
+
+				const result = await execAgentReach(args, input.timeout ?? DEFAULT_TIMEOUT_SECONDS, signal);
+				if (result.exitCode && result.exitCode !== 0) {
+					throw new Error(result.output);
+				}
+
+				return {
+					content: [{ type: "text", text: result.output }],
+					details: { exitCode: result.exitCode, args },
+				};
 			}
 
-			const args = ["fetch", input.url];
-			if (input.provider) {
-				args.push("--provider", input.provider);
-			}
-
-			const result = await execAgentReach(args, input.timeout ?? DEFAULT_TIMEOUT_SECONDS, signal);
-			if (result.exitCode && result.exitCode !== 0) {
-				throw new Error(result.output);
-			}
-
+			// Native fallback: Jina Reader (zero-config, no dependencies)
+			const text = await nativeWebFetch(input.url, signal);
 			return {
-				content: [{ type: "text", text: result.output }],
-				details: { exitCode: result.exitCode, args },
+				content: [{ type: "text", text }],
+				details: { fallback: "jina", url: input.url },
 			};
 		},
 	};
@@ -412,13 +567,8 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 
 	api.registerTool(createLinkWorldAdminTool());
 	api.registerTool(createLinkWorldExecTool());
-	const capabilities = getLinkWorldCapabilities();
-	if (capabilities.search) {
-		api.registerTool(createWebSearchTool());
-	}
-	if (capabilities.fetch) {
-		api.registerTool(createWebFetchTool());
-	}
+	api.registerTool(createWebSearchTool());
+	api.registerTool(createWebFetchTool());
 
 	api.on("session_start", (_event, ctx) => {
 		ensureLinkWorldWorkspace();
@@ -436,16 +586,14 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 			const action = (args.trim().split(/\s+/)[0] || "help").toLowerCase();
 
 			if (action === "help") {
-				const capabilityLines = [
-					`High-level tool availability: web_search=${capabilities.search ? "enabled" : "disabled"}, web_fetch=${capabilities.fetch ? "enabled" : "disabled"}`,
-					"",
-				];
+				const mode = isAgentReachInstalled() ? "agent-reach" : "native (Jina)";
 				api.sendMessage({
 					customType: LINK_WORLD_CUSTOM_TYPE,
 					content: [
 						"Link-world is NanoPencil's built-in internet access integration point.",
 						"",
-						...capabilityLines,
+						`Mode: ${mode}`,
+						"",
 						"Commands:",
 						"/link-world status  - show whether agent-reach is installed and whether skills are bundled",
 						"/link-world doctor  - run `agent-reach doctor`",
@@ -453,7 +601,7 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 						"/link-world install - show the bundled installation guide",
 						"/link-world workspace - show the project-local link-world workspace",
 						"",
-						`Tools: \`link_world_admin\`, \`link_world_exec\`${capabilities.search ? ", `web_search`" : ""}${capabilities.fetch ? ", `web_fetch`" : ""}`,
+						"Tools: `web_search`, `web_fetch`, `link_world_admin`, `link_world_exec`",
 					].join("\n"),
 					display: true,
 				});

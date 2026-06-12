@@ -1,5 +1,5 @@
 /**
- * [WHO]: GoalController class - per-thread runtime; serializes goal mutations via mutex; tracks per-turn accounting; emits idle continuation messages and budget-limit steering
+ * [WHO]: GoalController class - per-thread runtime; serializes goal mutations via mutex; tracks per-turn accounting (on_turn_end); dispatches pull-model continuations at the agent idle point (maybe_dispatch_continuation) and budget-limit steering
  * [FROM]: Depends on ./goal-store, ./goal-types, ./goal-prompts, ./goal-format, core/extensions-host/types (ExtensionAPI)
  * [TO]: Consumed by ./index (lifecycle hooks) and ./goal-tools / ./goal-command (mutations)
  * [HERE]: extensions/builtin/goal/goal-controller.ts - thin per-thread state owner; pure logic, no I/O beyond the store
@@ -18,10 +18,11 @@ import {
 	type UpdateGoalArgs,
 } from "./goal-types.js";
 import { GoalStore } from "./goal-store.js";
-import { buildBudgetLimitPrompt, buildContinuationPrompt, buildObjectiveUpdatedPrompt } from "./goal-prompts.js";
+import { buildBudgetLimitPrompt, buildCompletionAuditPrompt, buildContinuationPrompt, buildObjectiveUpdatedPrompt } from "./goal-prompts.js";
 
 const CONSECUTIVE_BLOCKED_THRESHOLD = 3;
 const CONSECUTIVE_CONTINUATION_THRESHOLD = 5;
+const MAX_TOTAL_CONTINUATION_TURNS = 15;
 
 interface GoalDispatchOutcome {
 	dispatched: boolean;
@@ -31,10 +32,19 @@ interface GoalDispatchOutcome {
 		| "plan_mode"
 		| "already_dispatched"
 		| "no_pending_messages"
+		| "pending_messages"
 		| "continuation_limit_reached"
+		| "total_continuation_limit_reached"
 		| "completed";
 	goal?: ThreadGoal;
 	consecutiveContinuations?: number;
+}
+
+/** Outcome of per-turn accounting at turn_end. Dispatch decisions live in
+ *  maybe_dispatch_continuation (called when the agent run actually ends). */
+interface GoalTurnEndOutcome {
+	reason: "no_active_goal" | "not_active_status" | "active";
+	goal?: ThreadGoal;
 }
 
 export class GoalController {
@@ -48,6 +58,15 @@ export class GoalController {
 		pendingContinuationDispatch: false,
 	};
 	private mutex: Promise<void> = Promise.resolve();
+	/** Monotonic counter of all continuation dispatches for the current goal.
+	 *  Never resets on user turns — only resets when the goal itself changes. */
+	private totalContinuationTurns = 0;
+	/** Set when the goal transitions to a terminal status during the current turn.
+	 *  Prevents on_turn_end from dispatching a continuation for a just-completed goal. */
+	private goalJustTransitionedToTerminal = false;
+	/** stopReason of the most recent agent run (from agent_result).
+	 *  Consulted at agent_end before dispatching a continuation. */
+	private lastRunStopReason: string | null = null;
 
 	constructor(private readonly api: ExtensionAPI, private readonly threadId: string) {
 		this.store = new GoalStore(api.agentDir, threadId);
@@ -108,6 +127,7 @@ export class GoalController {
 				this.state.idleContinuationDispatched = false;
 				this.state.pendingContinuationDispatch = false;
 				this.state.consecutiveIdleContinuations = 0;
+				this.totalContinuationTurns = 0;
 				return { kind: "ok" as const, goal: created, replaced: existing !== null };
 			}
 			if (mode === "ReplaceExisting") {
@@ -115,6 +135,7 @@ export class GoalController {
 				this.state.idleContinuationDispatched = false;
 				this.state.pendingContinuationDispatch = false;
 				this.state.consecutiveIdleContinuations = 0;
+				this.totalContinuationTurns = 0;
 				return { kind: "ok" as const, goal: replaced, replaced: true };
 			}
 			const next = this.store.update_goal({
@@ -128,6 +149,7 @@ export class GoalController {
 			this.state.idleContinuationDispatched = false;
 			this.state.pendingContinuationDispatch = false;
 			this.state.consecutiveIdleContinuations = 0;
+			this.totalContinuationTurns = 0;
 			return { kind: "ok" as const, goal: next, replaced: false };
 		});
 	}
@@ -141,6 +163,7 @@ export class GoalController {
 			this.state.idleContinuationDispatched = false;
 			this.state.pendingContinuationDispatch = false;
 			this.state.consecutiveIdleContinuations = 0;
+			this.totalContinuationTurns = 0;
 			return ok;
 		});
 	}
@@ -167,6 +190,7 @@ export class GoalController {
 				this.state.pendingContinuationDispatch = false;
 				this.state.consecutiveIdleContinuations = 0;
 				this.state.budgetLimitReportedGoalId = null;
+				this.totalContinuationTurns = 0;
 			}
 			return created;
 		});
@@ -184,6 +208,7 @@ export class GoalController {
 			}
 			const next = this.store.update_goal({ status: args.status });
 			if (next) {
+				this.goalJustTransitionedToTerminal = true;
 				this.clearActiveTurn();
 			}
 			void mode;
@@ -275,16 +300,14 @@ export class GoalController {
 	}
 
 	/**
-	 * Hook: turn_end. Final accounting, clear active-turn state, then
-	 * decide whether to inject an idle continuation prompt.
+	 * Hook: turn_end. Final accounting and active-turn cleanup only.
 	 *
-	 * Concurrency: `idleContinuationDispatched` is the sole guard against
-	 * double-dispatch. It resets at `on_turn_start` and sets here, so each
-	 * turn can dispatch at most once. agent-core guarantees one `turn_end`
-	 * per turn, so no additional lock is needed.  Mirrors Codex's
-	 * `continue_if_idle()` + `goal_state_lock` pattern.
+	 * agent-core fires turn_end per assistant cycle — a single prompt loop can
+	 * end many turns before the agent is actually idle. Continuation dispatch
+	 * therefore lives in maybe_dispatch_continuation(), called at agent_end
+	 * (the true idle point, mirroring Codex's continue_if_idle()).
 	 */
-	async on_turn_end(): Promise<GoalDispatchOutcome> {
+	async on_turn_end(): Promise<GoalTurnEndOutcome> {
 		const turn = this.state.currentTurn;
 		if (turn && turn.activeGoalId) {
 			const delta = Math.max(0, turn.tokensNow - turn.tokensLastAccounted);
@@ -294,44 +317,101 @@ export class GoalController {
 		const goal = this.store.get_goal();
 		this.clearActiveTurn();
 
+		// If the goal just transitioned to terminal (complete/blocked) during this
+		// turn via the update_goal tool, surface it as not_active_status so the
+		// extension can clear stale followUps and report the terminal state.
+		if (this.goalJustTransitionedToTerminal) {
+			this.goalJustTransitionedToTerminal = false;
+			this.state.consecutiveIdleContinuations = 0;
+			return { reason: "not_active_status", goal: goal ?? undefined };
+		}
+
 		if (!goal) {
 			this.state.consecutiveIdleContinuations = 0;
-			return { dispatched: false, reason: "no_active_goal" };
+			return { reason: "no_active_goal" };
 		}
 		if (!isActiveStatus(goal.status)) {
 			if (isStoppedStatus(goal.status)) {
 				this.state.consecutiveBlocked = 0;
 			}
 			this.state.consecutiveIdleContinuations = 0;
-			return { dispatched: false, reason: "not_active_status", goal };
+			return { reason: "not_active_status", goal };
 		}
 		// Active goal on successful turn — reset blocked counter
 		this.state.consecutiveBlocked = 0;
+		return { reason: "active", goal };
+	}
+
+	/**
+	 * Pull-model continuation: called when the agent run truly ends (agent_end,
+	 * after retry/compaction settle and the agent is idle). Reads goal state and
+	 * decides whether to start a new continuation turn — the equivalent of
+	 * Codex's continue_if_idle(): non-Active state means no new turn, cleanly.
+	 *
+	 * `idleContinuationDispatched` guards double-dispatch within one idle window;
+	 * it resets at the next on_turn_start.
+	 */
+	maybe_dispatch_continuation(options: { hasPendingMessages: boolean }): GoalDispatchOutcome {
+		const goal = this.store.get_goal();
+		if (!goal) {
+			return { dispatched: false, reason: "no_active_goal" };
+		}
+		if (!isActiveStatus(goal.status)) {
+			return { dispatched: false, reason: "not_active_status", goal };
+		}
 		if (this.state.idleContinuationDispatched) {
 			return { dispatched: false, reason: "already_dispatched", goal };
 		}
+		// Something else is already queued (e.g. a user followUp typed during the
+		// run) — let it drive the next turn; its turn_end/agent_end will re-check.
+		if (options.hasPendingMessages) {
+			return { dispatched: false, reason: "pending_messages", goal };
+		}
 
-		// Guard: too many consecutive idle continuations → pause goal to break the loop
+		// Guard: too many consecutive idle continuations → stop dispatching.
+		// Goal stays active — user can manually continue or the agent can still complete it.
 		if (this.state.consecutiveIdleContinuations >= CONSECUTIVE_CONTINUATION_THRESHOLD) {
-			this.store.set_status("paused");
 			const count = this.state.consecutiveIdleContinuations;
-			this.state.consecutiveIdleContinuations = 0;
 			this.state.pendingContinuationDispatch = false;
 			return { dispatched: false, reason: "continuation_limit_reached", goal, consecutiveContinuations: count };
 		}
 
-		const prompt = buildContinuationPrompt(goal);
+		// Hard cap: total continuation turns across the goal's lifetime.
+		// Prevents the agent from running indefinitely when it keeps finding work.
+		if (this.totalContinuationTurns >= MAX_TOTAL_CONTINUATION_TURNS) {
+			this.state.pendingContinuationDispatch = false;
+			const paused = this.store.set_status("paused");
+			return { dispatched: false, reason: "total_continuation_limit_reached", goal: paused ?? goal, consecutiveContinuations: this.totalContinuationTurns };
+		}
+
+		// Every 3rd continuation: inject a focused completion audit instead of the
+		// full continuation prompt. Short messages are harder to ignore.
+		const isAuditTurn = this.totalContinuationTurns > 0 && this.totalContinuationTurns % 3 === 0;
+		const prompt = isAuditTurn ? buildCompletionAuditPrompt(goal) : buildContinuationPrompt(goal);
 		try {
 			this.state.pendingContinuationDispatch = true;
+			// The agent is idle here, so sendUserMessage starts a fresh turn
+			// directly instead of sitting in the followUp queue.
 			this.api.sendUserMessage(prompt, { deliverAs: "followUp" });
 			this.state.idleContinuationDispatched = true;
 			this.state.consecutiveIdleContinuations += 1;
+			this.totalContinuationTurns += 1;
 			return { dispatched: true, reason: "completed", goal };
 		} catch {
 			// Dispatch failed — keep flag false so next attempt can retry
 			this.state.pendingContinuationDispatch = false;
 			return { dispatched: false, reason: "no_pending_messages", goal };
 		}
+	}
+
+	/** Hook: agent_result. Records the run's stopReason for the agent_end decision. */
+	note_run_stop_reason(stopReason: string | undefined): void {
+		this.lastRunStopReason = stopReason ?? null;
+	}
+
+	/** stopReason recorded from the most recent agent_result, if any. */
+	get runStopReason(): string | null {
+		return this.lastRunStopReason;
 	}
 
 	/** Hook: turn aborted (different from error). Final accounting. */
@@ -414,11 +494,14 @@ export class GoalController {
 		const goal = this.store.get_goal();
 		if (!goal || !isActiveStatus(goal.status)) return false;
 		if (this.state.idleContinuationDispatched) return false;
+		if (this.totalContinuationTurns >= MAX_TOTAL_CONTINUATION_TURNS) return false;
 		const prompt = buildContinuationPrompt(goal);
 		try {
 			this.state.pendingContinuationDispatch = true;
 			this.api.sendUserMessage(prompt, { deliverAs: "followUp" });
 			this.state.idleContinuationDispatched = true;
+			this.state.consecutiveIdleContinuations += 1;
+			this.totalContinuationTurns += 1;
 			return true;
 		} catch {
 			this.state.pendingContinuationDispatch = false;
@@ -445,7 +528,7 @@ export class GoalController {
 				content,
 				display: true,
 				details,
-			});
+			}, { triggerTurn: false });
 		} catch {
 			// Non-critical; UI feedback should not break the flow
 		}

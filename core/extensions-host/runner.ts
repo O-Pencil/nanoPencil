@@ -330,6 +330,7 @@ export class ExtensionRunner {
 		this.runtime.isIdle = () => this.isIdleFn();
 		this.abortFn = contextActions.abort;
 		this.clearFollowUpQueueFn = contextActions.clearFollowUpQueue;
+		this.runtime.clearFollowUpQueue = () => this.clearFollowUpQueueFn();
 		this.hasPendingMessagesFn = contextActions.hasPendingMessages;
 		this.shutdownHandler = contextActions.shutdown;
 		this.getContextUsageFn = contextActions.getContextUsage;

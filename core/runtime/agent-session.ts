@@ -1947,7 +1947,12 @@ export class AgentSession {
       setModel: (model) => this.setModel(model),
       setThinkingLevel: (level) => this.setThinkingLevel(level),
       abort: () => this.abort(),
-      clearFollowUpQueue: () => this.agent.clearFollowUpQueue(),
+      clearFollowUpQueue: () => {
+        this.agent.clearFollowUpQueue();
+        // Keep the UI mirror in sync: cleared messages will never be delivered,
+        // so the message_start removal path can never prune them.
+        this._followUpMessages = [];
+      },
       getContextUsage: () => this.getContextUsage(),
       compact: (customInstructions) => this.compact(customInstructions),
     });

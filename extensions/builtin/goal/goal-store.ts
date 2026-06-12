@@ -241,6 +241,9 @@ export class GoalStore {
 	stop_active_as_blocked(): ThreadGoal | null {
 		const current = this.get_goal();
 		if (!current) return null;
+		// Only an active goal can be stopped as blocked (mirrors Codex's
+		// stop_active_thread_goal); paused/complete/budget_limited stay as-is.
+		if (current.status !== "active") return current;
 		return this.update_goal({ status: "blocked" });
 	}
 }

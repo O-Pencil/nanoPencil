@@ -324,3 +324,147 @@ test("Controller: apply_update_goal returns null when no goal exists", async () 
 		rmSync(agentDir, { recursive: true, force: true });
 	}
 });
+
+test("Controller: turn_end does accounting only; dispatch happens at agent_end", async () => {
+	const agentDir = createTempAgentDir();
+	try {
+		const controller = makeController(agentDir);
+		await controller.set_objective("Pull model goal", "ConfirmIfExists");
+
+		controller.on_turn_start("turn-1", "normal", 0);
+		controller.on_token_usage(100);
+		const turnOutcome = await controller.on_turn_end();
+		assert.equal(turnOutcome.reason, "active");
+		// Accounting happened, but no continuation was dispatched yet.
+		assert.equal((controller as any).totalContinuationTurns, 0);
+
+		const dispatched = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(dispatched.dispatched, true);
+		assert.equal((controller as any).totalContinuationTurns, 1);
+	} finally {
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+});
+
+test("Controller: total continuation limit pauses goal after 15 dispatches", async () => {
+	const agentDir = createTempAgentDir();
+	try {
+		const controller = makeController(agentDir);
+		await controller.set_objective("Long running task", "ConfirmIfExists");
+
+		// Directly set the total continuation counter to just below the limit
+		// to avoid fighting with the consecutive counter in the simulation.
+		(controller as any).totalContinuationTurns = 14;
+
+		// Simulate an idle point that dispatches the 15th continuation
+		controller.on_turn_start("turn-14", "normal", 0);
+		controller.on_token_usage(100);
+		await controller.on_turn_end();
+		const dispatched = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(dispatched.dispatched, true);
+		assert.equal((controller as any).totalContinuationTurns, 15);
+
+		// Next idle point should hit the total limit
+		controller.on_turn_start("turn-15", "normal", 0);
+		controller.on_token_usage(200);
+		await controller.on_turn_end();
+		const finalOutcome = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(finalOutcome.dispatched, false);
+		assert.equal(finalOutcome.reason, "total_continuation_limit_reached");
+
+		const goal = await controller.get_goal();
+		assert.equal(goal?.status, "paused");
+	} finally {
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+});
+
+test("Controller: dispatch skipped while messages are still queued", async () => {
+	const agentDir = createTempAgentDir();
+	try {
+		const controller = makeController(agentDir);
+		await controller.set_objective("Busy goal", "ConfirmIfExists");
+
+		controller.on_turn_start("turn-1", "normal", 0);
+		controller.on_token_usage(100);
+		await controller.on_turn_end();
+
+		// A user followUp is already queued — let it drive the next turn instead.
+		const skipped = controller.maybe_dispatch_continuation({ hasPendingMessages: true });
+		assert.equal(skipped.dispatched, false);
+		assert.equal(skipped.reason, "pending_messages");
+
+		// Once the queue is empty, dispatch proceeds as usual.
+		const dispatched = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(dispatched.dispatched, true);
+	} finally {
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+});
+
+test("Controller: dispatch refused for paused/terminal goals (continue_if_idle semantics)", async () => {
+	const agentDir = createTempAgentDir();
+	try {
+		const controller = makeController(agentDir);
+		await controller.set_objective("Pausable goal", "ConfirmIfExists");
+		await controller.set_status("paused");
+
+		const outcome = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(outcome.dispatched, false);
+		assert.equal(outcome.reason, "not_active_status");
+
+		await controller.apply_update_goal({ status: "complete" });
+		const completeOutcome = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(completeOutcome.dispatched, false);
+		assert.equal(completeOutcome.reason, "not_active_status");
+	} finally {
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+});
+
+test("Controller: on_turn_error blocks an active goal but never a terminal one", async () => {
+	const agentDir = createTempAgentDir();
+	try {
+		const controller = makeController(agentDir);
+		await controller.set_objective("Erroring goal", "ConfirmIfExists");
+
+		const blocked = controller.on_turn_error();
+		assert.equal(blocked?.status, "blocked");
+
+		// A completed goal must not be demoted to blocked by a later run error.
+		await controller.set_objective("Second goal", "ReplaceExisting");
+		await controller.apply_update_goal({ status: "complete" });
+		const stillComplete = controller.on_turn_error();
+		assert.equal(stillComplete?.status, "complete");
+	} finally {
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+});
+
+test("Controller: total continuation counter resets on new goal", async () => {
+	const agentDir = createTempAgentDir();
+	try {
+		const controller = makeController(agentDir);
+		await controller.set_objective("Task 1", "ConfirmIfExists");
+
+		// Exhaust continuation dispatches (consecutive limit stops them first)
+		for (let i = 0; i < 15; i++) {
+			controller.on_turn_start(`turn-${i}`, "normal", 0);
+			controller.on_token_usage(100 * (i + 1));
+			await controller.on_turn_end();
+			controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		}
+
+		// Set a new goal — counter should reset
+		await controller.set_objective("Task 2", "ReplaceExisting");
+
+		// First continuation on new goal should work
+		controller.on_turn_start("turn-new-0", "normal", 0);
+		controller.on_token_usage(100);
+		await controller.on_turn_end();
+		const outcome = controller.maybe_dispatch_continuation({ hasPendingMessages: false });
+		assert.equal(outcome.dispatched, true);
+	} finally {
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+});

@@ -1,5 +1,5 @@
 /**
- * [WHO]: goalExtension default export - wires the GoalController per thread; registers /goal command + completions; registers get_goal/create_goal/update_goal tools; subscribes to session/turn/tool/message lifecycle hooks for accounting, idle continuation, and budget-limit steering; renders GOAL_MESSAGE_TYPE custom messages
+ * [WHO]: goalExtension default export - wires the GoalController per thread; registers /goal command + completions; registers get_goal/create_goal/update_goal tools; subscribes to lifecycle hooks for accounting (turn_end), pull-model continuation + run-error blocking (agent_end, mirrors Codex continue_if_idle), and budget-limit steering; renders GOAL_MESSAGE_TYPE custom messages
  * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions-host/types, ./goal-controller, ./goal-tools, ./goal-command, ./goal-parser, ./goal-types, ./goal-format
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/goal/index.ts - extension entry; owns the per-thread controller and the controller host singleton
@@ -44,6 +44,26 @@ function dbg(msg: string): void {
 	fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [goal] ${msg}\n`);
 }
 
+function truncate(s: string, max: number): string {
+	return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
+function extractContentPreview(message: { role?: string; content?: unknown }): string {
+	const content = message.content;
+	if (typeof content === "string") return truncate(content, 150);
+	if (Array.isArray(content)) {
+		const textParts = content
+			.filter((p): p is { type: string; text?: string } => p.type === "text" && typeof p.text === "string")
+			.map((p) => p.text!);
+		if (textParts.length > 0) return truncate(textParts.join(" "), 150);
+		const toolParts = content
+			.filter((p): p is { type: string; name?: string } => p.type === "tool_use")
+			.map((p) => `[tool_use:${p.name ?? "?"}]`);
+		if (toolParts.length > 0) return toolParts.join(" ");
+	}
+	return "(empty)";
+}
+
 /**
  * The GoalController is per-thread. We key it by `ExtensionAPI` (the runner's bus)
  * so that switching sessions rebuilds cleanly. The agent exposes the active api in
@@ -52,10 +72,12 @@ function dbg(msg: string): void {
 const controllersByBus = new Map<string, GoalController>();
 let currentKey: string | null = null;
 let activeController: GoalController | null = null;
-/** Guard: tracks the goal ID whose terminal state has already been reported,
- *  preventing the onTurnEnd handler from re-sending "Goal complete/budget_limited"
- *  messages on every subsequent turn (which would cause an infinite loop). */
+/** Guard: tracks the goal ID + terminal status already reported,
+ *  preventing the onTurnEnd handler from re-sending the same terminal message
+ *  on every subsequent turn (which would cause an infinite loop).
+ *  Tracks status so that a transition like paused → complete still reports. */
 let reportedTerminalGoalId: string | null = null;
+let reportedTerminalStatus: string | null = null;
 
 function resolveController(api: unknown, ctx: ExtensionContext | ExtensionCommandContext): GoalController | null {
 	const sessionId = ctx.sessionManager.getSessionId();
@@ -156,6 +178,7 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 			await runGoalCommand(args, ctx, controller);
 			// Reset terminal-state guard so a newly set goal's completion can be reported
 			reportedTerminalGoalId = null;
+			reportedTerminalStatus = null;
 			dbg(`/goal command done, reportedTerminalGoalId reset`);
 		},
 	});
@@ -167,6 +190,7 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 		const controller = ensureController(ctx);
 		controller?.resetIdleContinuationFlag();
 		reportedTerminalGoalId = null;
+		reportedTerminalStatus = null;
 	});
 
 	api.on("session_shutdown", () => {
@@ -178,24 +202,28 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 	// ── Turn lifecycle ───────────────────────────────────────────────
 
 	const onTurnStart: ExtensionHandler<TurnStartEvent> = (event, ctx) => {
-		dbg(`turn_start index=${event.turnIndex}`);
+		dbg(`turn_start index=${event.turnIndex} timestamp=${event.timestamp}`);
 		const controller = ensureController(ctx);
 		if (!controller) return;
 		const runKind: GoalRunKind = isPlanMode(ctx) ? "plan" : "normal";
-		// Token start is set to 0; real usage accrues via on_token_usage (message_end hook)
 		controller.on_turn_start(`turn-${event.turnIndex}-${event.timestamp}`, runKind, 0);
 	};
 	api.on("turn_start", onTurnStart);
 
-	const onMessageStart: ExtensionHandler<MessageStartEvent> = (_event, ctx) => {
+	const onMessageStart: ExtensionHandler<MessageStartEvent> = (event, ctx) => {
 		ensureController(ctx);
+		const msg = event.message as { role?: string; content?: unknown };
+		dbg(`message_start role=${msg.role ?? "?"}`);
 	};
 	api.on("message_start", onMessageStart);
 
 	const onMessageEnd: ExtensionHandler<MessageEndEvent> = (event, ctx) => {
 		const controller = ensureController(ctx);
 		if (!controller) return;
-		const message = event.message as { role?: string; usage?: { totalTokens?: number } };
+		const message = event.message as { role?: string; usage?: { totalTokens?: number }; content?: unknown };
+		// Log message content preview
+		const contentPreview = extractContentPreview(message);
+		dbg(`message_end role=${message.role ?? "?"} tokens=${message.usage?.totalTokens ?? "?"} content=${contentPreview}`);
 		if (message.role !== "assistant") return;
 		const total = message.usage?.totalTokens;
 		if (typeof total !== "number") return;
@@ -215,6 +243,7 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 	api.on("message_end", onMessageEnd);
 
 	const onToolExecutionEnd: ExtensionHandler<ToolExecutionEndEvent> = (event, ctx) => {
+		dbg(`tool_execution_end name=${event.toolName} isError=${event.isError} result=${truncate(JSON.stringify(event.result ?? ""), 200)}`);
 		const controller = ensureController(ctx);
 		if (!controller) return;
 		if (event.isError) return;
@@ -223,65 +252,136 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 	};
 	api.on("tool_execution_end", onToolExecutionEnd);
 
-	const onTurnEnd: ExtensionHandler<TurnEndEvent> = async (_event, ctx) => {
+	const onTurnEnd: ExtensionHandler<TurnEndEvent> = async (event, ctx) => {
+		try {
 		const controller = ensureController(ctx);
 		if (!controller) return;
+		const turnSnapshot = controller.currentTurnSnapshot();
+		const turnDuration = turnSnapshot ? ((Date.now() - turnSnapshot.turnStartedAt) / 1000).toFixed(1) : "?";
+		dbg(`turn_end BEGIN index=${event.turnIndex} duration=${turnDuration}s tokens=${turnSnapshot?.tokensNow ?? "?"}`);
 		const outcome = await controller.on_turn_end();
-		dbg(`turn_end: dispatched=${outcome.dispatched} reason=${outcome.reason} goalId=${outcome.goal?.goal_id} goalStatus=${outcome.goal?.status} reportedTerminalGoalId=${reportedTerminalGoalId}`);
-		if (outcome.dispatched) {
-			dbg("turn_end → sending continuation message");
+		dbg(`turn_end RESULT: reason=${outcome.reason} goalId=${outcome.goal?.goal_id} goalStatus=${outcome.goal?.status} reportedTerminalGoalId=${reportedTerminalGoalId}`);
+		if (outcome.reason !== "not_active_status" || !outcome.goal) return;
+		// If the goal just transitioned to terminal (complete/blocked/paused/budget_limited),
+		// clear stale continuation followUps that were queued in previous turns.
+		// turn_end fires BEFORE the followUp queue is drained in runLoop(),
+		// so clearing here prevents the outer loop from processing them.
+		const s = outcome.goal.status;
+		if (s === "complete" || s === "blocked" || s === "budget_limited" || s === "paused") {
+			dbg(`turn_end → clearing followUp queue (goal is ${s})`);
+			try {
+				api.clearFollowUpQueue();
+			} catch (e) {
+				dbg(`turn_end → clearFollowUpQueue FAILED: ${e}`);
+			}
+		}
+		// Surface terminal states for visibility — but only once per goal+status.
+		// Without this guard, every subsequent turn_end re-sends the message,
+		// causing an infinite loop of "Goal complete" notifications.
+		const goalId = outcome.goal.goal_id;
+		const goalStatus = outcome.goal.status;
+		if (reportedTerminalGoalId === goalId && reportedTerminalStatus === goalStatus) {
+			return;
+		}
+		const indicator = goalStatusIndicator(outcome.goal, null);
+		if (indicator.type === "Complete" || indicator.type === "BudgetLimited") {
+			reportedTerminalGoalId = goalId;
+			reportedTerminalStatus = goalStatus;
+			dbg(`turn_end → sending terminal message: ${indicator.type} for goal ${goalId}`);
 			api.sendMessage({
 				customType: GOAL_MESSAGE_TYPE,
-				content: `Goal continuation dispatched.\n${summarizeGoalStatus(outcome.goal)}`,
+				content: `Goal ${indicator.type === "Complete" ? "complete" : "budget_limited"}.\n${summarizeGoalStatus(outcome.goal)}`,
 				display: true,
-				details: { kind: "continuation", goal: outcome.goal },
-			});
-		} else if (outcome.goal && outcome.reason === "continuation_limit_reached") {
-			dbg(`turn_end → continuation limit reached, goal paused: ${outcome.goal.goal_id}`);
-			reportedTerminalGoalId = outcome.goal.goal_id;
-			api.sendMessage({
-				customType: GOAL_MESSAGE_TYPE,
-				content: `Goal paused — no progress after ${outcome.consecutiveContinuations ?? "?"} continuation attempts.\n${summarizeGoalStatus(outcome.goal)}`,
-				display: true,
-				details: { kind: "continuation_limit", goal: outcome.goal },
-			});
-		} else if (outcome.goal && outcome.reason === "not_active_status") {
-			// Surface terminal states for visibility — but only once per goal.
-			// Without this guard, every subsequent turn_end re-sends the message,
-			// causing an infinite loop of "Goal complete" notifications.
-			if (reportedTerminalGoalId === outcome.goal.goal_id) {
-				dbg(`turn_end → BLOCKED by guard (already reported goal ${outcome.goal.goal_id})`);
-				return;
-			}
-			const indicator = goalStatusIndicator(outcome.goal, null);
-			if (indicator.type === "Complete" || indicator.type === "BudgetLimited") {
-				reportedTerminalGoalId = outcome.goal.goal_id;
-				dbg(`turn_end → sending terminal message: ${indicator.type} for goal ${outcome.goal.goal_id}`);
-				api.sendMessage({
-					customType: GOAL_MESSAGE_TYPE,
-					content: `Goal ${indicator.type === "Complete" ? "complete" : "budget_limited"}.\n${summarizeGoalStatus(outcome.goal)}`,
-					display: true,
-					details: { kind: indicator.type.toLowerCase(), goal: outcome.goal },
-				});
-			}
+				details: { kind: indicator.type.toLowerCase(), goal: outcome.goal },
+			}, { triggerTurn: false });
+			// No steering followUp here: the pull model (maybe_dispatch_continuation
+			// at agent_end) refuses to start a new turn when the goal is not Active,
+			// so the agent stops cleanly (aligns with Codex's continue_if_idle).
+		}
+		} catch (e) {
+			dbg(`turn_end EXCEPTION: ${e instanceof Error ? e.message : String(e)}\n${e instanceof Error ? e.stack : ""}`);
 		}
 	};
 	api.on("turn_end", onTurnEnd);
 
 	// ── Agent-level lifecycle ────────────────────────────────────────
 
+	// agent_end is the true idle point: the runtime emits it only after retries
+	// and compaction settle, with the agent no longer streaming. This is where
+	// the pull-model continuation decision happens (mirrors Codex's
+	// on_thread_idle → continue_if_idle()).
 	const onAgentEnd = async (event: { messages: AgentMessage[] }, ctx: ExtensionContext) => {
+		try {
 		const controller = ensureController(ctx);
 		if (!controller) return;
 		// Final accounting using aggregate usage from the run.
 		const total = getRunningTotalTokens(event.messages);
 		controller.on_token_usage(total);
+
+		const stopReason = controller.runStopReason;
+		dbg(`agent_end stopReason=${stopReason ?? "unknown"}`);
+		if (stopReason === "aborted") {
+			// onAgentAbort pauses the goal; never restart a run the user stopped.
+			return;
+		}
+		if (stopReason === "error") {
+			// Run ended with a non-recoverable error (retries already exhausted by
+			// the retry coordinator). Mirror Codex's on_turn_error: stop the active
+			// goal as blocked instead of looping continuations against a failing run.
+			const stopped = controller.on_turn_error();
+			if (stopped && stopped.status === "blocked") {
+				dbg(`agent_end → goal ${stopped.goal_id} blocked after run error`);
+				api.sendMessage({
+					customType: GOAL_MESSAGE_TYPE,
+					content: `Goal blocked: the run ended with an error. Use /goal resume to continue.\n${summarizeGoalStatus(stopped)}`,
+					display: true,
+					details: { kind: "blocked_on_error", goal: stopped },
+				}, { triggerTurn: false });
+			}
+			return;
+		}
+
+		const outcome = controller.maybe_dispatch_continuation({
+			hasPendingMessages: ctx.hasPendingMessages(),
+		});
+		dbg(`agent_end DISPATCH: dispatched=${outcome.dispatched} reason=${outcome.reason} goalStatus=${outcome.goal?.status}`);
+		if (outcome.dispatched) {
+			api.sendMessage({
+				customType: GOAL_MESSAGE_TYPE,
+				content: `Goal continuation dispatched.\n${summarizeGoalStatus(outcome.goal)}`,
+				display: true,
+				details: { kind: "continuation", goal: outcome.goal },
+			}, { triggerTurn: false });
+		} else if (outcome.goal && outcome.reason === "continuation_limit_reached") {
+			// Silent: goal is still active; status bar tick already shows pursuit state.
+			// User can /goal resume or send a message to continue.
+			if (ctx.hasUI) {
+				ctx.ui.setStatus("goal", "Continuation limit — /goal resume to continue");
+			}
+		} else if (outcome.goal && outcome.reason === "total_continuation_limit_reached") {
+			// Guard: only send once per goal+status
+			if (reportedTerminalGoalId === outcome.goal.goal_id && reportedTerminalStatus === "paused") {
+				return;
+			}
+			reportedTerminalGoalId = outcome.goal.goal_id;
+			reportedTerminalStatus = "paused";
+			api.sendMessage({
+				customType: GOAL_MESSAGE_TYPE,
+				content: `Goal auto-paused after ${outcome.consecutiveContinuations ?? "?"} continuation turns. Use /goal resume to continue.\n${summarizeGoalStatus(outcome.goal)}`,
+				display: true,
+				details: { kind: "total_continuation_limit", goal: outcome.goal },
+			}, { triggerTurn: false });
+		}
+		} catch (e) {
+			dbg(`agent_end EXCEPTION: ${e instanceof Error ? e.message : String(e)}\n${e instanceof Error ? e.stack : ""}`);
+		}
 	};
 	api.on("agent_end", onAgentEnd as ExtensionHandler<{ type: "agent_end"; messages: AgentMessage[] }>);
 
 	const onAgentResult: ExtensionHandler<AgentResultEvent> = (event, ctx) => {
 		const controller = ensureController(ctx);
 		if (!controller) return;
+		controller.note_run_stop_reason(event.stopReason);
 		const usage = event.usage;
 		if (usage && typeof usage.totalTokens === "number") {
 			controller.on_token_usage(usage.totalTokens);
@@ -302,6 +402,7 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 		dbg(`agent_abort → pausing goal ${goal.goal_id}`);
 		await controller.set_status("paused");
 		reportedTerminalGoalId = null;
+		reportedTerminalStatus = null;
 		if (ctx.hasUI) {
 			ctx.ui.notify("Goal paused (agent aborted).", "info");
 		}
@@ -326,7 +427,7 @@ export default async function goalExtension(api: ExtensionAPI): Promise<void> {
 				ctx.ui.setStatus("goal", label);
 			}).catch(() => {});
 		};
-		const interval = setInterval(tick, 1000);
+		const interval = setInterval(tick, 200);
 		const cleanup = () => clearInterval(interval);
 		api.on("session_shutdown", () => cleanup());
 	});

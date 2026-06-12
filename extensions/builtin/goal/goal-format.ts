@@ -15,9 +15,9 @@ import {
 export function formatGoalElapsedSeconds(seconds: number): string {
 	const safe = Math.max(0, seconds);
 	if (safe < 60) return `${safe.toFixed(1)}s`;
-	const whole = Math.floor(safe);
-	const minutes = Math.floor(whole / 60);
-	if (minutes < 60) return `${minutes}m`;
+	const minutes = Math.floor(safe / 60);
+	const secs = safe - minutes * 60;
+	if (minutes < 60) return secs >= 0.1 ? `${minutes}m ${secs.toFixed(1)}s` : `${minutes}m`;
 	const hours = Math.floor(minutes / 60);
 	const remainingMinutes = minutes % 60;
 	if (hours >= 24) {

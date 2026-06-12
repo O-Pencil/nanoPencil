@@ -4321,14 +4321,7 @@ export class InteractiveMode {
     personaId = personaId ?? getActivePersonaId();
     if (!personaId) return;
 
-    const currentActive = getActivePersonaId();
-    if (currentActive === personaId && personaEntries.length === 0) {
-      // No session tag and persona already active — just ensure env vars are set
-      process.env.NANO_PERSONA_DIR ??= toAbsolutePath(getPersonaDir(personaId));
-      return;
-    }
-
-    if (personaEntries.length > 0) setActivePersonaId(personaId);
+    // Apply persona env vars so extensions (NanoMem, Soul, MCP) use persona dirs
     process.env.NANOMEM_MEMORY_DIR = toAbsolutePath(
       getPersonaMemoryDir(personaId),
     );
@@ -4338,7 +4331,13 @@ export class InteractiveMode {
     );
     process.env.NANO_PERSONA_DIR = toAbsolutePath(getPersonaDir(personaId));
 
-    if (personaEntries.length > 0 && !this.session.isStreaming && !this.session.isCompacting) {
+    // Persist persona id from session tag if needed
+    if (personaEntries.length > 0) setActivePersonaId(personaId);
+
+    // Reload to reinitialize extensions with persona env vars.
+    // Extensions were created during createAgentSession() with global defaults,
+    // so a reload is needed even when the persona was already active.
+    if (!this.session.isStreaming && !this.session.isCompacting) {
       await this.session.reload();
     }
   }

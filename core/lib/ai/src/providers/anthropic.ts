@@ -438,6 +438,15 @@ export const streamAnthropic: StreamFunction<"anthropic-messages", AnthropicOpti
 			for (const block of output.content) delete (block as any).index;
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
 			output.errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+			// Extract HTTP headers from API errors for retry-after support
+			if (error && typeof error === "object" && "headers" in error) {
+				const headers = (error as { headers: Record<string, string> }).headers;
+				if (headers && typeof headers === "object") {
+					output.errorHeaders = Object.fromEntries(
+						Object.entries(headers).map(([k, v]) => [k.toLowerCase(), String(v)]),
+					);
+				}
+			}
 			stream.push({ type: "error", reason: output.stopReason, error: output });
 			stream.end();
 		}

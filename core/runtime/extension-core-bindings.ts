@@ -88,6 +88,7 @@ export interface ExtensionCoreBindingHost {
 	setModel(model: Model<any>): Promise<void>;
 	setThinkingLevel(level: ThinkingLevel): void;
 	abort(): Promise<void> | void;
+	clearFollowUpQueue(): void;
 	getContextUsage(): ContextUsage | undefined;
 	compact(customInstructions?: string): Promise<CompactionResult>;
 }
@@ -313,6 +314,7 @@ export function bindExtensionCore(runner: ExtensionRunner, host: ExtensionCoreBi
 			abort: () => {
 				void host.abort();
 			},
+			clearFollowUpQueue: () => host.clearFollowUpQueue(),
 			hasPendingMessages: () => host.pendingMessageCount > 0,
 			shutdown: () => {
 				host.shutdownHandler?.();

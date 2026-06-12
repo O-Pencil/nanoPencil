@@ -69,14 +69,22 @@ export interface StreamOptions {
 	signal?: AbortSignal;
 		/** Retry configuration for automatic retry on retriable errors */
 		retry?: {
-			/** Maximum number of retry attempts (default: 3) */
+			/** Maximum number of retry attempts (default: 3). Ignored when persistentRetry is true. */
 			maxRetries?: number;
 			/** Base delay in ms for exponential backoff (default: 1000) */
 			baseDelayMs?: number;
-			/** Maximum delay cap in ms (default: 30000) */
+			/** Maximum delay cap in ms (default: 30000, or 300000 for persistentRetry) */
 			maxDelayMs?: number;
 			/** Whether to add jitter to avoid thundering herd (default: true) */
 			jitter?: boolean;
+			/**
+			 * Persistent/unattended retry mode for 429/529 overload errors.
+			 * When true, retries indefinitely with capped backoff and periodic heartbeat yields.
+			 * Only applies to overload errors (429, 529); other retriable errors still respect maxRetries.
+			 */
+			persistentRetry?: boolean;
+			/** Heartbeat interval in ms during persistent retry to prevent idle timeouts (default: 30000) */
+			heartbeatMs?: number;
 		};
 	apiKey?: string;
 	/**
@@ -210,6 +218,8 @@ export interface AssistantMessage {
 	usage: Usage;
 	stopReason: StopReason;
 	errorMessage?: string;
+	/** HTTP response headers from the error response, if available. Used for retry-after extraction. */
+	errorHeaders?: Record<string, string>;
 	timestamp: number; // Unix timestamp in milliseconds
 }
 

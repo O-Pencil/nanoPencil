@@ -318,6 +318,10 @@ export interface ExtensionContext {
 	isIdle(): boolean;
 	/** Abort the current agent operation */
 	abort(): void;
+	/** Clear the agent's follow-up message queue. Useful when an extension
+	 *  transitions to a terminal state and wants to prevent stale follow-ups
+	 *  from triggering additional turns. */
+	clearFollowUpQueue(): void;
 	/** Whether there are queued messages waiting */
 	hasPendingMessages(): boolean;
 	/** Gracefully shutdown NanoPencil and exit. Available in all contexts. */
@@ -1122,6 +1126,10 @@ export interface ExtensionAPI {
 	/** Whether the agent is idle (not streaming). For queueing loop tasks use with sendUserMessage. */
 	isIdle(): boolean;
 
+	/** Clear the agent's follow-up message queue. Prevents stale follow-ups
+	 *  from triggering additional turns after a terminal state transition. */
+	clearFollowUpQueue(): void;
+
 	/** Append a custom entry to the session for state persistence (not sent to LLM). */
 	appendEntry<T = unknown>(customType: string, data?: T): void;
 
@@ -1399,6 +1407,7 @@ export interface ExtensionContextActions {
 	) => Promise<string | undefined>;
 	isIdle: () => boolean;
 	abort: () => void;
+	clearFollowUpQueue: () => void;
 	hasPendingMessages: () => boolean;
 	shutdown: () => void;
 	getContextUsage: () => ContextUsage | undefined;
@@ -1435,6 +1444,8 @@ export interface ExtensionCommandContextActions {
 export interface ExtensionRuntime extends ExtensionRuntimeState, ExtensionActions {
 	/** Bound in runner.bindCore from ExtensionContextActions.isIdle */
 	isIdle: () => boolean;
+	/** Bound in runner.bindCore from ExtensionContextActions.clearFollowUpQueue */
+	clearFollowUpQueue: () => void;
 }
 
 /** Loaded extension with all registered items. */

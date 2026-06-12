@@ -41,6 +41,15 @@ export class PersonaManager {
 
 	private ensurePersonasDir(): void {
 		if (!existsSync(this.personasDir)) mkdirSync(this.personasDir, { recursive: true });
+		// Ensure the default "vex" persona exists so /persona has at least one option
+		const defaultDir = join(this.personasDir, "vex");
+		if (!existsSync(defaultDir)) {
+			mkdirSync(defaultDir, { recursive: true });
+			const pencilPath = join(defaultDir, "PENCIL.md");
+			if (!existsSync(pencilPath)) {
+				writeFileSync(pencilPath, "# vex\n\nDefault persona for nanoPencil.\n", "utf-8");
+			}
+		}
 	}
 
 	getPersonasDir(): string {

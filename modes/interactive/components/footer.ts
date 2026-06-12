@@ -107,66 +107,39 @@ export class FooterComponent implements Component {
 		}
 
 		// Calculate context usage from session (handles compaction correctly).
-		// After compaction, tokens are unknown until the next LLM response.
 		const contextUsage = this.session.getContextUsage();
 		const contextWindow = contextUsage?.contextWindow ?? state.model?.contextWindow ?? 0;
 		const contextPercentValue = contextUsage?.percent ?? 0;
 		const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
 
-		// Replace home directory with ~
+		// --- Left side: pwd (git branch) (session) ---
 		let pwd = this.session.cwd;
 		const home = process.env.HOME || process.env.USERPROFILE;
 		if (home && pwd.startsWith(home)) {
 			pwd = `~${pwd.slice(home.length)}`;
 		}
-
-		// Add git branch if available
 		const branch = this.footerData.getGitBranch();
 		if (branch) {
 			pwd = `${pwd} (${branch})`;
 		}
-
-		// Add session name if set
 		const sessionName = this.session.sessionManager.getSessionName();
 		if (sessionName) {
 			pwd = `${pwd} • ${sessionName}`;
 		}
 
-		// Truncate path if too long to fit width
-		if (pwd.length > width) {
-			const half = Math.floor(width / 2) - 2;
-			if (half > 1) {
-				const start = pwd.slice(0, half);
-				const end = pwd.slice(-(half - 1));
-				pwd = `${start}...${end}`;
-			} else {
-				pwd = pwd.slice(0, Math.max(1, width));
-			}
-		}
-
-		// Build stats line
+		// --- Middle: token stats + context ---
 		const statsParts: string[] = [];
-
-		// Token stats (can be hidden via showTokenStats setting)
 		if (this.showTokenStats) {
-			// Input/Output tokens with arrows
 			if (totalInput) statsParts.push(`↑${formatTokens(totalInput)}`);
 			if (totalOutput) statsParts.push(`↓${formatTokens(totalOutput)}`);
-
-			// Show cost with "(sub)" indicator if using OAuth subscription
 			const usingSubscription = state.model ? this.session.modelRegistry.isUsingOAuth(state.model) : false;
 			if (totalCost || usingSubscription) {
 				const costStr = `$${totalCost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`;
 				statsParts.push(costStr);
 			}
 		}
-
-		// Context percentage (always shown - it's useful)
-		let contextPercentStr: string;
 		const autoIndicator = this.autoCompactEnabled ? " (auto)" : "";
-		// Use contextUsage.tokens (current context size) when available; totalUsed is cumulative consumption
 		const contextTokens = contextUsage?.tokens ?? null;
-		// Build progress bar for context usage (only on wide terminals)
 		let contextBar = "";
 		if (width > 80 && contextPercentValue > 0 && contextPercent !== "?") {
 			contextBar = `${renderContextProgressBar(contextPercentValue)} `;
@@ -176,92 +149,88 @@ export class FooterComponent implements Component {
 				? `${contextBar}?/${formatTokens(contextWindow)}${autoIndicator}`
 				: `${contextBar}${contextPercent}% ${formatTokens(contextTokens ?? 0)}/${formatTokens(contextWindow)}${autoIndicator}`;
 		if (contextPercentValue > 90) {
-			contextPercentStr = theme.fg("error", contextPercentDisplay);
+			statsParts.push(theme.fg("error", contextPercentDisplay));
 		} else {
-			contextPercentStr = contextPercentDisplay;
+			statsParts.push(contextPercentDisplay);
 		}
-		statsParts.push(contextPercentStr);
+		const statsStr = statsParts.join(" ");
 
-		let statsLeft = statsParts.join(" ");
-
-		// Add model name on the right side, plus thinking level if model supports it
+		// --- Right side: model name + thinking level ---
 		const modelName = state.model?.id || "no-model";
-
-		let statsLeftWidth = visibleWidth(statsLeft);
-
-		// If statsLeft is too wide, truncate it
-		if (statsLeftWidth > width) {
-			// Truncate statsLeft to fit width (no room for right side)
-			const plainStatsLeft = statsLeft.replace(/\x1b\[[0-9;]*m/g, "");
-			statsLeft = `${plainStatsLeft.substring(0, width - 3)}...`;
-			statsLeftWidth = visibleWidth(statsLeft);
-		}
-
-		// Calculate available space for padding (minimum 2 spaces between stats and model)
-		const minPadding = 2;
-
-		// Add thinking level indicator if model supports reasoning
-		let rightSideWithoutProvider = modelName;
+		let rightSide = modelName;
 		if (state.model?.reasoning) {
 			const thinkingLevel = state.thinkingLevel || "off";
-			rightSideWithoutProvider =
-				thinkingLevel === "off" ? `${modelName} • thinking off` : `${modelName} • ${thinkingLevel}`;
+			rightSide = thinkingLevel === "off" ? `${modelName} • thinking off` : `${modelName} • ${thinkingLevel}`;
 		}
-
-		// Prepend the provider in parentheses if there are multiple providers and there's enough room
-		let rightSide = rightSideWithoutProvider;
 		if (this.footerData.getAvailableProviderCount() > 1 && state.model) {
-			rightSide = `(${state.model!.provider}) ${rightSideWithoutProvider}`;
-			if (statsLeftWidth + minPadding + visibleWidth(rightSide) > width) {
-				// Too wide, fall back
-				rightSide = rightSideWithoutProvider;
-			}
+			rightSide = `(${state.model!.provider}) ${rightSide}`;
 		}
 
-		const rightSideWidth = visibleWidth(rightSide);
-		const totalNeeded = statsLeftWidth + minPadding + rightSideWidth;
-
-		let statsLine: string;
-		if (totalNeeded <= width) {
-			// Both fit - add padding to right-align model
-			const padding = " ".repeat(width - statsLeftWidth - rightSideWidth);
-			statsLine = statsLeft + padding + rightSide;
-		} else {
-			// Need to truncate right side
-			const availableForRight = width - statsLeftWidth - minPadding;
-			if (availableForRight > 3) {
-				// Truncate to fit (strip ANSI codes for length calculation, then truncate raw string)
-				const plainRightSide = rightSide.replace(/\x1b\[[0-9;]*m/g, "");
-				const truncatedPlain = plainRightSide.substring(0, availableForRight);
-				// For simplicity, just use plain truncated version (loses color, but fits)
-				const padding = " ".repeat(width - statsLeftWidth - truncatedPlain.length);
-				statsLine = statsLeft + padding + truncatedPlain;
-			} else {
-				// Not enough space for right side at all
-				statsLine = statsLeft;
-			}
-		}
-
-		// Apply dim to each part separately. statsLeft may contain color codes (for context %)
-		// that end with a reset, which would clear an outer dim wrapper. So we dim the parts
-		// before and after the colored section independently.
-		const dimStatsLeft = theme.fg("dim", statsLeft);
-		const remainder = statsLine.slice(statsLeft.length); // padding + rightSide
-		const dimRemainder = theme.fg("dim", remainder);
-
-		const lines = [theme.fg("dim", pwd), dimStatsLeft + dimRemainder];
-
-		// Add extension statuses on a single line, sorted by key alphabetically
+		// --- Extension statuses (inline, only if space permits) ---
+		let extStr = "";
 		const extensionStatuses = this.footerData.getExtensionStatuses();
 		if (extensionStatuses.size > 0) {
 			const sortedStatuses = Array.from(extensionStatuses.entries())
 				.sort(([a], [b]) => a.localeCompare(b))
 				.map(([, text]) => sanitizeStatusText(text));
-			const statusLine = sortedStatuses.join(" ");
-			// Truncate to terminal width with dim ellipsis for consistency with footer style
-			lines.push(truncateToWidth(statusLine, width, theme.fg("dim", "...")));
+			extStr = sortedStatuses.join(" ");
 		}
 
-		return lines;
+		// --- Assemble single line: left | stats | right | ext ---
+		const sep = theme.fg("dim", " · ");
+		const sepWidth = 3;
+
+		// Plain text widths (strip ANSI for layout calculation)
+		const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+		const pwdWidth = pwd.length;
+		const statsWidth = stripAnsi(statsStr).length;
+		const rightWidth = stripAnsi(rightSide).length;
+		const extWidth = extStr.length;
+
+		// Try full layout: pwd · stats · right · ext
+		const extPart = extStr ? sep + extStr : "";
+		const fullNeeded = pwdWidth + sepWidth + statsWidth + sepWidth + rightWidth + (extStr ? sepWidth + extWidth : 0);
+		if (fullNeeded <= width) {
+			const padding = " ".repeat(Math.max(0, width - fullNeeded));
+			const line = theme.fg("dim", pwd) + sep + statsStr + sep + theme.fg("dim", rightSide) + extPart + padding;
+			return [line];
+		}
+
+		// Try without ext: pwd · stats · right
+		const noExtNeeded = pwdWidth + sepWidth + statsWidth + sepWidth + rightWidth;
+		if (noExtNeeded <= width) {
+			const padding = " ".repeat(Math.max(0, width - noExtNeeded));
+			const line = theme.fg("dim", pwd) + sep + statsStr + sep + theme.fg("dim", rightSide) + padding;
+			return [line];
+		}
+
+		// Try without right side: pwd · stats · ext
+		const partialNeeded = pwdWidth + sepWidth + statsWidth + (extStr ? sepWidth + extWidth : 0);
+		if (partialNeeded <= width) {
+			const padding = " ".repeat(Math.max(0, width - partialNeeded));
+			const line = theme.fg("dim", pwd) + sep + statsStr + extPart + padding;
+			return [line];
+		}
+
+		// Try just pwd · stats
+		const minimalNeeded = pwdWidth + sepWidth + statsWidth;
+		if (minimalNeeded <= width) {
+			const padding = " ".repeat(Math.max(0, width - minimalNeeded));
+			const line = theme.fg("dim", pwd) + sep + statsStr + padding;
+			return [line];
+		}
+
+		// Truncation fallback: truncate pwd to fit everything
+		const availableForPwd = Math.max(10, width - sepWidth - statsWidth - sepWidth - Math.min(rightWidth, 10));
+		const truncatedPwd = pwd.length > availableForPwd
+			? pwd.slice(0, availableForPwd - 1) + "…"
+			: pwd;
+		const remaining = width - truncatedPwd.length - sepWidth - statsWidth;
+		if (remaining > sepWidth + 3) {
+			const padding = " ".repeat(Math.max(0, remaining - sepWidth - rightWidth));
+			return [theme.fg("dim", truncatedPwd) + sep + statsStr + sep + theme.fg("dim", rightSide) + padding];
+		}
+		const padding = " ".repeat(Math.max(0, width - truncatedPwd.length - sepWidth - statsWidth));
+		return [theme.fg("dim", truncatedPwd) + sep + statsStr + padding];
 	}
 }

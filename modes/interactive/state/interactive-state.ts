@@ -18,7 +18,6 @@ import type { Component, Spacer, Text } from "@pencil-agent/tui";
 import type { AssistantMessageComponent } from "../components/assistant-message.js";
 import type { CustomMessageComponent } from "../components/custom-message.js";
 import type { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";
-import type { StreamingPreviewComponent } from "../components/streaming-preview.js";
 import type { TaskStatusPanelComponent } from "../components/task-status-panel.js";
 import type { ToolExecutionComponent } from "../components/tool-execution.js";
 
@@ -85,9 +84,6 @@ export class InteractiveState {
 
   // Task status panel (persistent task display)
   taskStatusPanel: TaskStatusPanelComponent | undefined = undefined;
-
-  // Streaming output preview panel
-  streamingPreview: StreamingPreviewComponent | undefined = undefined;
 
   // Tool output expansion state
   toolOutputExpanded = false;

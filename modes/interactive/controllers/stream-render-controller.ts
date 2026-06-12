@@ -41,7 +41,6 @@ import { PencilLoader } from "../components/pencil-loader.js";
 import { ToolExecutionComponent } from "../components/tool-execution.js";
 import { SubAgentPanelComponent } from "../components/sub-agent-panel.js";
 import { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";
-import { StreamingPreviewComponent } from "../components/streaming-preview.js";
 import { TaskStatusPanelComponent, type TaskStatusEntry } from "../components/task-status-panel.js";
 import type { InteractiveState, PlanProgressState, SubAgentState } from "../state/interactive-state.js";
 import { theme } from "../theme/theme.js";
@@ -194,9 +193,6 @@ export class StreamRenderController {
           statusContainer.addChild(state.planProgressPanel);
           state.planProgressPanel.update(state.planProgress);
         }
-        // Create streaming preview panel
-        state.streamingPreview = new StreamingPreviewComponent(ui, theme);
-        statusContainer.addChild(state.streamingPreview);
         // Load existing tasks and subscribe to task updates
         this.refreshTaskPanel(state, ui, statusContainer).catch(() => {});
         this.taskUpdateUnsubscribe?.();
@@ -274,15 +270,6 @@ export class StreamRenderController {
                   chatContainer.markDirty(component);
                 }
               }
-            }
-          }
-          // Update streaming preview with latest text content
-          if (state.streamingPreview) {
-            const textParts = state.streamingMessage.content
-              .filter((c): c is { type: "text"; text: string } => c.type === "text" && !!(c as { type: "text"; text: string }).text)
-              .map((c) => c.text);
-            if (textParts.length > 0) {
-              state.streamingPreview.update(textParts.join("\n"));
             }
           }
           this.ctx.layout.requestRender();
@@ -426,11 +413,6 @@ export class StreamRenderController {
         if (this.taskAutoHideTimer) {
           clearTimeout(this.taskAutoHideTimer);
           this.taskAutoHideTimer = undefined;
-        }
-        // Clean up streaming preview
-        if (state.streamingPreview) {
-          statusContainer.removeChild(state.streamingPreview);
-          state.streamingPreview = undefined;
         }
         // Clear any leftover attachments when the turn ends so the bar doesn't
         // accumulate across conversations (sent attachments are already cleared

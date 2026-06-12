@@ -235,6 +235,7 @@ export class ExtensionRunner {
 	private isIdleFn: () => boolean = () => true;
 	private waitForIdleFn: () => Promise<void> = async () => {};
 	private abortFn: () => void = () => {};
+	private clearFollowUpQueueFn: () => void = () => {};
 	private hasPendingMessagesFn: () => boolean = () => false;
 	private getContextUsageFn: () => ContextUsage | undefined = () => undefined;
 	private compactFn: (options?: CompactOptions) => void = () => {};
@@ -328,6 +329,7 @@ export class ExtensionRunner {
 		this.isIdleFn = contextActions.isIdle;
 		this.runtime.isIdle = () => this.isIdleFn();
 		this.abortFn = contextActions.abort;
+		this.clearFollowUpQueueFn = contextActions.clearFollowUpQueue;
 		this.hasPendingMessagesFn = contextActions.hasPendingMessages;
 		this.shutdownHandler = contextActions.shutdown;
 		this.getContextUsageFn = contextActions.getContextUsage;
@@ -803,6 +805,7 @@ export class ExtensionRunner {
 				: undefined,
 			isIdle: () => this.isIdleFn(),
 			abort: () => this.abortFn(),
+			clearFollowUpQueue: () => this.clearFollowUpQueueFn(),
 			hasPendingMessages: () => this.hasPendingMessagesFn(),
 			shutdown: () => this.shutdownHandler(),
 			getContextUsage: () => this.getContextUsageFn(),

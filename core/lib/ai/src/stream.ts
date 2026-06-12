@@ -31,14 +31,22 @@ export { getEnvApiKey } from "./env-api-keys.js";
 // =============================================================================
 
 export interface RetryOptions {
-	/** Maximum number of retry attempts (default: 3) */
+	/** Maximum number of retry attempts (default: 3). Ignored when persistentRetry is true. */
 	maxRetries?: number;
 	/** Base delay in ms for exponential backoff (default: 1000) */
 	baseDelayMs?: number;
-	/** Maximum delay cap in ms (default: 30000) */
+	/** Maximum delay cap in ms (default: 30000, or 300000 for persistentRetry) */
 	maxDelayMs?: number;
 	/** Whether to add jitter to avoid thundering herd (default: true) */
 	jitter?: boolean;
+	/**
+	 * Persistent/unattended retry mode for 429/529 overload errors.
+	 * When true, retries indefinitely with capped backoff and periodic heartbeat yields.
+	 * Only applies to overload errors (429, 529); other retriable errors still respect maxRetries.
+	 */
+	persistentRetry?: boolean;
+	/** Heartbeat interval in ms during persistent retry to prevent idle timeouts (default: 30000) */
+	heartbeatMs?: number;
 }
 
 const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
@@ -46,6 +54,8 @@ const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
 	baseDelayMs: 1000,
 	maxDelayMs: 30000,
 	jitter: true,
+	persistentRetry: false,
+	heartbeatMs: 30000,
 };
 
 function emptyUsage(): Usage {
@@ -60,7 +70,7 @@ function emptyUsage(): Usage {
 }
 
 /** Status codes and patterns that indicate a retriable error */
-const RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+const RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504, 529]);
 const RETRIABLE_ERROR_PATTERNS = [
 	/ECONNRESET/i,
 	/ETIMEDOUT/i,
@@ -110,10 +120,19 @@ function calculateDelay(attempt: number, options: Required<RetryOptions>): numbe
 }
 
 /**
- * Extract retry-after delay from a 429 error message, or return undefined.
+ * Extract retry-after delay from HTTP headers or error message text.
+ * Checks structured headers first (reliable), falls back to message regex (fragile).
  */
-function extractRetryAfterMs(errorMessage: string): number | undefined {
-	// Standard Retry-After header value
+function extractRetryAfterMs(errorMessage: string, errorHeaders?: Record<string, string>): number | undefined {
+	// 1. Check structured HTTP headers first (most reliable)
+	if (errorHeaders) {
+		const headerValue = errorHeaders["retry-after"] ?? errorHeaders["Retry-After"];
+		if (headerValue) {
+			const seconds = parseInt(headerValue, 10);
+			if (!isNaN(seconds)) return seconds * 1000;
+		}
+	}
+	// 2. Fallback: parse from error message text (fragile, provider-dependent)
 	const match = errorMessage.match(/retry[_-]after[:\s]+(\d+)/i);
 	if (match) {
 		return parseInt(match[1], 10) * 1000;
@@ -121,16 +140,37 @@ function extractRetryAfterMs(errorMessage: string): number | undefined {
 	return undefined;
 }
 
+/**
+ * Check if an error is an overload/rate-limit error (429 or 529).
+ * These are eligible for persistent retry mode.
+ */
+function isOverloadError(message: AssistantMessage): boolean {
+	return /^[45]29\b/.test(message.errorMessage ?? "");
+}
+
 function getRetryDelayMs(
 	message: AssistantMessage,
 	attempt: number,
 	retryOptions: Required<RetryOptions>,
 ): number | undefined {
-	if (attempt >= retryOptions.maxRetries || !isRetriableStreamError(message)) {
+	if (!isRetriableStreamError(message)) {
 		return undefined;
 	}
-	if (/^429\b/.test(message.errorMessage ?? "")) {
-		return extractRetryAfterMs(message.errorMessage ?? "") ?? calculateDelay(attempt, retryOptions);
+
+	// In persistent retry mode, overload errors (429/529) retry indefinitely
+	const isOverload = isOverloadError(message);
+	if (isOverload && retryOptions.persistentRetry) {
+		// Use larger backoff cap for persistent mode (5 min)
+		const persistentOptions = { ...retryOptions, maxDelayMs: Math.max(retryOptions.maxDelayMs, 300_000) };
+		return extractRetryAfterMs(message.errorMessage ?? "", message.errorHeaders) ?? calculateDelay(attempt, persistentOptions);
+	}
+
+	// Standard mode: respect maxRetries
+	if (attempt >= retryOptions.maxRetries) {
+		return undefined;
+	}
+	if (isOverload) {
+		return extractRetryAfterMs(message.errorMessage ?? "", message.errorHeaders) ?? calculateDelay(attempt, retryOptions);
 	}
 	return calculateDelay(attempt, retryOptions);
 }
@@ -144,6 +184,7 @@ function getErrorMessage(error: unknown): string {
 function createStreamErrorMessage<TApi extends Api>(
 	model: Pick<Model<TApi>, "api" | "provider" | "id">,
 	error: unknown,
+	errorHeaders?: Record<string, string>,
 ): AssistantMessage {
 	return {
 		role: "assistant",
@@ -153,6 +194,7 @@ function createStreamErrorMessage<TApi extends Api>(
 		model: model.id,
 		stopReason: "error",
 		errorMessage: getErrorMessage(error),
+		errorHeaders,
 		usage: emptyUsage(),
 		timestamp: Date.now(),
 	};
@@ -175,18 +217,29 @@ function emitAbortError<TApi extends Api>(
 	stream.push({ type: "error", reason: "error", error: createAbortMessage(model) });
 }
 
-function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<"elapsed" | "aborted"> {
+function waitForRetryDelay(
+	delayMs: number,
+	signal?: AbortSignal,
+	heartbeatMs?: number,
+	onHeartbeat?: () => void,
+): Promise<"elapsed" | "aborted"> {
 	if (signal?.aborted) return Promise.resolve("aborted");
 	return new Promise((resolve) => {
 		let timeout: ReturnType<typeof setTimeout> | undefined;
+		let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
 		const cleanup = () => {
 			if (timeout !== undefined) clearTimeout(timeout);
+			if (heartbeatInterval !== undefined) clearInterval(heartbeatInterval);
 			signal?.removeEventListener("abort", onAbort);
 		};
 		const onAbort = () => {
 			cleanup();
 			resolve("aborted");
 		};
+		// Periodic heartbeat during long retry delays (persistent mode)
+		if (heartbeatMs && heartbeatMs > 0 && heartbeatMs < delayMs && onHeartbeat) {
+			heartbeatInterval = setInterval(onHeartbeat, heartbeatMs);
+		}
 		timeout = setTimeout(() => {
 			cleanup();
 			resolve("elapsed");
@@ -303,6 +356,7 @@ export async function completeSimple<TApi extends Api>(
 /**
  * Wraps a stream factory with automatic retry on retriable errors.
  * On retriable failure, creates a new stream and replays it transparently.
+ * Supports persistent retry mode for overload (429/529) errors.
  */
 function wrapWithRetry<TApi extends Api>(
 	model: Pick<Model<TApi>, "api" | "provider" | "id">,
@@ -315,7 +369,21 @@ function wrapWithRetry<TApi extends Api>(
 	(async () => {
 		let attempt = 0;
 
-		while (attempt <= retryOptions.maxRetries) {
+		// Heartbeat callback for persistent retry mode
+		const onHeartbeat = retryOptions.persistentRetry
+			? () => {
+					// Emit a no-op text delta to keep the stream alive and signal activity
+					outerStream.push({
+						type: "text_delta",
+						contentIndex: 0,
+						delta: "",
+						partial: { role: "assistant", content: [], api: model.api, provider: model.provider, model: model.id, usage: emptyUsage(), stopReason: "error", timestamp: Date.now() },
+					});
+				}
+			: undefined;
+
+		// In persistent retry mode, loop indefinitely (getRetryDelayMs returns undefined only for non-overload exhaustion)
+		while (attempt <= retryOptions.maxRetries || retryOptions.persistentRetry) {
 			if (signal?.aborted) {
 				emitAbortError(outerStream, model);
 				return;
@@ -329,7 +397,7 @@ function wrapWithRetry<TApi extends Api>(
 				const delayMs = getRetryDelayMs(errorMessage, attempt, retryOptions);
 				if (delayMs !== undefined) {
 					attempt++;
-					if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+					if ((await waitForRetryDelay(delayMs, signal, retryOptions.heartbeatMs, onHeartbeat)) === "aborted") {
 						emitAbortError(outerStream, model);
 						return;
 					}
@@ -352,7 +420,7 @@ function wrapWithRetry<TApi extends Api>(
 					const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
 					if (delayMs !== undefined) {
 						attempt++;
-						if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+						if ((await waitForRetryDelay(delayMs, signal, retryOptions.heartbeatMs, onHeartbeat)) === "aborted") {
 							emitAbortError(outerStream, model);
 							return;
 						}
@@ -381,7 +449,7 @@ function wrapWithRetry<TApi extends Api>(
 					const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
 					if (delayMs !== undefined) {
 						attempt++;
-						if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+						if ((await waitForRetryDelay(delayMs, signal, retryOptions.heartbeatMs, onHeartbeat)) === "aborted") {
 							emitAbortError(outerStream, model);
 							return;
 						}
@@ -405,7 +473,7 @@ function wrapWithRetry<TApi extends Api>(
 				const delayMs = getRetryDelayMs(lastMessage, attempt, retryOptions);
 				if (delayMs !== undefined) {
 					attempt++;
-					if ((await waitForRetryDelay(delayMs, signal)) === "aborted") {
+					if ((await waitForRetryDelay(delayMs, signal, retryOptions.heartbeatMs, onHeartbeat)) === "aborted") {
 						emitAbortError(outerStream, model);
 						return;
 					}

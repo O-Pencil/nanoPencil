@@ -1947,6 +1947,7 @@ export class AgentSession {
       setModel: (model) => this.setModel(model),
       setThinkingLevel: (level) => this.setThinkingLevel(level),
       abort: () => this.abort(),
+      clearFollowUpQueue: () => this.agent.clearFollowUpQueue(),
       getContextUsage: () => this.getContextUsage(),
       compact: (customInstructions) => this.compact(customInstructions),
     });

@@ -87,7 +87,7 @@ function loadContextFileFromDir(dir: string): { path: string; content: string } 
 }
 
 function loadProjectContextFiles(
-	options: { cwd?: string; agentDir?: string } = {},
+	options: { cwd?: string; agentDir?: string; additionalAgentDirs?: string[] } = {},
 ): Array<{ path: string; content: string }> {
 	const resolvedCwd = options.cwd ?? process.cwd();
 	const resolvedAgentDir = options.agentDir ?? getAgentDir();
@@ -152,6 +152,15 @@ function loadProjectContextFiles(
 
 	contextFiles.push(...ancestorContextFiles);
 
+	// Additional agent directories (e.g. ~/.claude, project/.claude)
+	for (const additionalDir of (options.additionalAgentDirs ?? [])) {
+		const contextFile = loadContextFileFromDir(additionalDir);
+		if (contextFile && !seenPaths.has(contextFile.path)) {
+			contextFiles.push(contextFile);
+			seenPaths.add(contextFile.path);
+		}
+	}
+
 	// Project-specific context: .PENCIL.md in project root only (AGENTS.md/AGENT.md unchanged)
 	const pencilPath = join(resolvedCwd, ".PENCIL.md");
 	if (!seenPaths.has(pencilPath) && existsSync(pencilPath)) {
@@ -177,6 +186,7 @@ export interface DefaultResourceLoaderOptions {
 	additionalSkillPaths?: string[];
 	additionalPromptTemplatePaths?: string[];
 	additionalThemePaths?: string[];
+	additionalAgentDirs?: string[];
 	extensionFactories?: ExtensionFactory[];
 	noExtensions?: boolean;
 	noSkills?: boolean;
@@ -215,6 +225,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 	private additionalSkillPaths: string[];
 	private additionalPromptTemplatePaths: string[];
 	private additionalThemePaths: string[];
+	private additionalAgentDirs: string[];
 	private extensionFactories: ExtensionFactory[];
 	private noExtensions: boolean;
 	private noSkills: boolean;
@@ -271,6 +282,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 		this.additionalSkillPaths = options.additionalSkillPaths ?? [];
 		this.additionalPromptTemplatePaths = options.additionalPromptTemplatePaths ?? [];
 		this.additionalThemePaths = options.additionalThemePaths ?? [];
+		this.additionalAgentDirs = options.additionalAgentDirs ?? [];
 		this.extensionFactories = options.extensionFactories ?? [];
 		this.noExtensions = options.noExtensions ?? false;
 		this.noSkills = options.noSkills ?? false;
@@ -482,7 +494,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 			this.addDefaultMetadataForPath(extension.path);
 		}
 
-		const agentsFiles = { agentsFiles: loadProjectContextFiles({ cwd: this.cwd, agentDir: this.agentDir }) };
+		const agentsFiles = { agentsFiles: loadProjectContextFiles({ cwd: this.cwd, agentDir: this.agentDir, additionalAgentDirs: this.additionalAgentDirs }) };
 		const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
 		this.agentsFiles = resolvedAgentsFiles.agentsFiles;
 

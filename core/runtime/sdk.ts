@@ -164,6 +164,14 @@ export interface CreateAgentSessionOptions extends SoulOptionsContract {
   deferMcpInit?: boolean;
   /** Resource loader. When omitted, DefaultResourceLoader is used. */
   resourceLoader?: ResourceLoader;
+  /** Additional directories to search for skills. Appended to default paths. */
+  additionalSkillPaths?: string[];
+  /** Additional directories to search for AGENT.md/CLAUDE.md context files. */
+  additionalAgentDirs?: string[];
+  /** Custom MCP config file path. Overrides default agentDir/mcp.json. */
+  mcpConfigPath?: string;
+  /** Debug event verbosity level. "off" = none, "basic" = lifecycle, "verbose" = all. Default: "off" */
+  debugLevel?: "off" | "basic" | "verbose";
 
   /** Session manager. Default: SessionManager.create(cwd) */
   sessionManager?: SessionManager;
@@ -356,6 +364,8 @@ export async function createAgentSession(
       agentDir,
       settingsManager,
       agentCtx,
+      additionalSkillPaths: options.additionalSkillPaths,
+      additionalAgentDirs: options.additionalAgentDirs,
     });
     await resourceLoader.reload();
     time("resourceLoader.reload");
@@ -574,7 +584,7 @@ export async function createAgentSession(
       } catch {
         // ignore
       }
-      currentMcpManager = new MCPManager();
+      currentMcpManager = new MCPManager({ mcpConfigPath: options.mcpConfigPath });
       currentMcpManager.setWorkingDir(cwd);
       await currentMcpManager.initialize();
       time("mcp.initialize");
@@ -667,6 +677,7 @@ export async function createAgentSession(
     signal: options.signal,
     theme: options.theme,
     createSession: createAgentSession,
+    debugLevel: options.debugLevel,
   });
 
   time("session.construct");

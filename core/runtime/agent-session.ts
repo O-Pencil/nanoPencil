@@ -222,7 +222,15 @@ export type AgentSessionEvent =
   | { type: "sub_agent_start"; subAgentId: string; agentType: string; description: string; isAsync: boolean }
   | { type: "sub_agent_tool_start"; subAgentId: string; toolName: string }
   | { type: "sub_agent_tool_end"; subAgentId: string; toolName: string; isError: boolean }
-  | { type: "sub_agent_end"; subAgentId: string; success: boolean };
+  | { type: "sub_agent_end"; subAgentId: string; success: boolean }
+  | {
+      type: "debug";
+      level: "basic" | "verbose";
+      source: "session" | "mcp" | "model" | "tool" | "resource" | "extension";
+      message: string;
+      data?: Record<string, unknown>;
+      timestamp: number;
+    };
 
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
@@ -293,6 +301,8 @@ export interface AgentSessionConfig {
    * between agent-session.ts and sdk.ts.
    */
   createSession?: CreateSessionFn;
+  /** Debug event verbosity level. Default: "off" */
+  debugLevel?: "off" | "basic" | "verbose";
 }
 
 export interface ExtensionBindings {
@@ -384,6 +394,8 @@ export class AgentSession {
   private _resourceLoader: ResourceLoader;
   /** Injected theme for HTML-export custom-tool rendering (U2: no modes import). */
   private _theme?: ThemeContract;
+  /** Debug event verbosity level. */
+  private _debugLevel: "off" | "basic" | "verbose" = "off";
 
   private _dbg(msg: string): void {
     if (process.env.NANOPENCIL_DEBUG_SESSION !== "1") return;
@@ -436,6 +448,7 @@ export class AgentSession {
     this._scopedModels = config.scopedModels ?? [];
     this._resourceLoader = config.resourceLoader;
     this._theme = config.theme;
+    this._debugLevel = config.debugLevel ?? "off";
     this._bashRunner = new BashRunner({
       getCwd: () => this._cwd,
       getShellCommandPrefix: () => this.settingsManager.getShellCommandPrefix(),
@@ -610,6 +623,8 @@ export class AgentSession {
       sessionId: this.sessionManager.getSessionId(),
       component: "agent-session",
     });
+
+    this._emitDebug("basic", "session", "session_created", { sessionId: this.sessionManager.getSessionId() });
   }
 
   /** Model registry for API key resolution and model discovery */
@@ -674,6 +689,17 @@ export class AgentSession {
     this._listeners.emit(event);
   }
 
+  private _emitDebug(
+    level: "basic" | "verbose",
+    source: "session" | "mcp" | "model" | "tool" | "resource" | "extension",
+    message: string,
+    data?: Record<string, unknown>,
+  ): void {
+    if (this._debugLevel === "off") return;
+    if (level === "verbose" && this._debugLevel !== "verbose") return;
+    this._emit({ type: "debug", level, source, message, data, timestamp: Date.now() });
+  }
+
   // Track last assistant message for auto-compaction check
   private _lastAssistantMessage: AssistantMessage | undefined = undefined;
 
@@ -715,6 +741,12 @@ export class AgentSession {
     }
 
     // Handle session persistence
+    if (event.type === "tool_execution_start") {
+      this._emitDebug("verbose", "tool", "tool_start", { toolName: event.toolName, toolCallId: event.toolCallId });
+    } else if (event.type === "tool_execution_end") {
+      this._emitDebug("verbose", "tool", "tool_end", { toolName: event.toolName, isError: event.isError });
+    }
+
     if (event.type === "message_end") {
       // Check if this is a custom message from extensions
       if (event.message.role === "custom") {
@@ -1055,6 +1087,7 @@ export class AgentSession {
    * @throws Error if no model selected or no API key available (when not streaming)
    */
   async prompt(text: string, options?: PromptOptions): Promise<void> {
+    const _promptStart = performance.now();
     const expandPromptTemplates = options?.expandPromptTemplates ?? true;
     this._dbg(`prompt: "${text.slice(0, 80)}" isStreaming=${this.isStreaming} hasModel=${!!this.model}`);
 
@@ -1207,7 +1240,7 @@ export class AgentSession {
 
     this._dbg(`calling agent.prompt with ${messages.length} message(s)`);
     await this.agent.prompt(messages);
-    this._dbg("agent.prompt returned");
+    this._dbg(`agent.prompt returned (${(performance.now() - _promptStart).toFixed(0)}ms)`);
     await this.waitForRetry();
   }
 
@@ -1530,11 +1563,14 @@ export class AgentSession {
   /** Set model directly. @throws if no API key available. */
   async setModel(model: Model<any>): Promise<void> {
     await this._modelController.setModel(model);
+    this._emitDebug("basic", "model", "model_change", { provider: model.api, modelId: model.id });
   }
 
   /** Cycle to next/previous model. @returns new model info, or undefined if only one. */
   async cycleModel(direction: "forward" | "backward" = "forward"): Promise<ModelCycleResult | undefined> {
-    return this._modelController.cycleModel(direction);
+    const result = await this._modelController.cycleModel(direction);
+    if (result) this._emitDebug("basic", "model", "model_cycle", { direction, provider: result.model.api, modelId: result.model.id });
+    return result;
   }
 
   /** Set thinking level, clamped to model capabilities; persists on change. */
@@ -1830,6 +1866,7 @@ export class AgentSession {
       await this._extensionRunner.emit({ type: "session_start" });
       await this.extendResourcesFromExtensions("startup");
     }
+    this._emitDebug("basic", "extension", "extensions_bound");
   }
 
   private async extendResourcesFromExtensions(
@@ -2113,6 +2150,7 @@ export class AgentSession {
         includeAllExtensionTools: true,
       });
       this._emit({ type: "sdk:mcp_ready", toolCount });
+      this._emitDebug("basic", "mcp", "mcp_warmup_complete", { toolCount });
     } catch (error) {
       // MCP problems must never crash startup (background warmup is
       // fire-and-forget; one-shot modes await but should still boot).
@@ -2121,6 +2159,7 @@ export class AgentSession {
   }
 
   async reload(): Promise<void> {
+    this._emitDebug("basic", "resource", "reload_start");
     const previousFlagValues = this._extensionRunner?.getFlagValues();
     await this._extensionRunner?.emit({ type: "session_shutdown" });
     this.settingsManager.reload();
@@ -2156,6 +2195,7 @@ export class AgentSession {
       await this._extensionRunner.emit({ type: "session_start" });
       await this.extendResourcesFromExtensions("reload");
     }
+    this._emitDebug("basic", "resource", "reload_end");
   }
 
   // =========================================================================

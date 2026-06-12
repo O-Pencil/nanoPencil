@@ -10,6 +10,10 @@ import { loadMCPTools } from "./mcp-adapter.js";
 import { listEnabledMCPServers } from "./mcp-config.js";
 import type { ToolDefinition } from "../extensions-host/index.js";
 
+export interface MCPManagerOptions {
+  mcpConfigPath?: string;
+}
+
 export class MCPManager {
   private client: MCPClient;
   private tools: ToolDefinition[] = [];
@@ -17,9 +21,11 @@ export class MCPManager {
   private startedServerIds: string[] = [];
   private failedServerIds: string[] = [];
   private workingDir: string;
+  private mcpConfigPath?: string;
 
-  constructor() {
-    this.client = new MCPClient();
+  constructor(options?: MCPManagerOptions) {
+    this.mcpConfigPath = options?.mcpConfigPath;
+    this.client = new MCPClient(undefined, undefined, this.mcpConfigPath);
     this.workingDir = process.cwd();
   }
 
@@ -35,7 +41,7 @@ export class MCPManager {
    */
   async initialize(): Promise<void> {
     // Load enabled servers
-    let enabledServers = listEnabledMCPServers();
+    let enabledServers = listEnabledMCPServers(undefined, this.mcpConfigPath);
     this.enabledServerIds = enabledServers.map((s) => s.id);
     this.startedServerIds = [];
     this.failedServerIds = [];

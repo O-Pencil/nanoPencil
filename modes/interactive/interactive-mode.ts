@@ -1250,12 +1250,13 @@ export class InteractiveMode {
     // Main interactive loop
     while (true) {
       const userInput = await this.getUserInput();
+      const _loopStart = performance.now();
       _dbg(`main loop: got input "${userInput.slice(0, 80)}"`);
       try {
         await this.session.prompt(userInput);
-        _dbg("main loop: prompt returned normally");
+        _dbg(`main loop: prompt returned normally (${(performance.now() - _loopStart).toFixed(0)}ms)`);
       } catch (error: unknown) {
-        _dbg(`main loop: prompt threw: ${error}`);
+        _dbg(`main loop: prompt threw: ${error} (${(performance.now() - _loopStart).toFixed(0)}ms)`);
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error occurred";
         this.showError(errorMessage);

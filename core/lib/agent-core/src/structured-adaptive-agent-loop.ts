@@ -63,6 +63,27 @@ const DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS = 1;
 const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
 const DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS = 1;
 
+// --- Timing instrumentation (gated by NANOPENCIL_DEBUG=1) ---
+function _tlog(msg: string): void {
+	if (process.env.NANOPENCIL_DEBUG !== "1") return;
+	try {
+		const { appendFileSync } = require("fs");
+		const { join } = require("path");
+		const { homedir } = require("os");
+		appendFileSync(
+			join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log"),
+			`[${new Date().toISOString()}] [loop] ${msg}\n`,
+		);
+	} catch { /* best-effort */ }
+}
+
+interface LoopTiming {
+	loopStart: number;
+	streamStart: number;
+	firstTokenAt: number;
+	turnCount: number;
+}
+
 interface QueryLoopState {
 	config: AgentLoopConfig;
 	turnCount: number;
@@ -177,6 +198,8 @@ async function runStructuredAdaptiveQueryLoop(
 		config.getSteeringMessages ? config.getSteeringMessages() : [],
 		signal,
 	);
+	const timing: LoopTiming = { loopStart: performance.now(), streamStart: 0, firstTokenAt: 0, turnCount: 0 };
+	_tlog(`run_loop start (structured-adaptive)`);
 	const state: QueryLoopState = {
 		config,
 		turnCount: 0,
@@ -255,6 +278,7 @@ async function runStructuredAdaptiveQueryLoop(
 			resolveMaxToolConcurrency(config.maxToolConcurrency),
 			config.canUseTool,
 		);
+		timing.turnCount++;
 		const responseStartMessageCount = newMessages.length;
 		const message = await streamAssistantResponse(
 			currentContext,
@@ -264,6 +288,7 @@ async function runStructuredAdaptiveQueryLoop(
 			streamFn,
 			state.maxOutputTokensOverride,
 			streamingToolExecutor,
+			timing,
 		);
 		newMessages.push(message);
 		addUsage(state.usage, message.usage);
@@ -541,6 +566,7 @@ async function streamAssistantResponse(
 	streamFn?: StreamFn,
 	maxTokensOverride?: number,
 	streamingToolExecutor?: StructuredAdaptiveStreamingToolExecutor,
+	timing?: LoopTiming,
 ): Promise<AssistantMessage> {
 	let messages = context.messages;
 	if (config.transformContext) {
@@ -572,6 +598,10 @@ async function streamAssistantResponse(
 	}
 	const resolvedApiKey = apiKeyResult.value || config.apiKey;
 
+	if (timing) {
+		timing.streamStart = performance.now();
+		_tlog(`stream_request_start model=${config.model.id} provider=${config.model.provider} msgCount=${llmMessages.length} maxTokens=${maxTokensOverride ?? config.maxTokens} (+${(timing.streamStart - timing.loopStart).toFixed(0)}ms from loop_start)`);
+	}
 	stream.push({
 		type: "stream_request_start",
 		model: config.model.id,
@@ -638,6 +668,10 @@ async function streamAssistantResponse(
 			break;
 		}
 		const event = nextEvent.value;
+		if (timing && !timing.firstTokenAt) {
+			timing.firstTokenAt = performance.now();
+			_tlog(`first_token ttft=${(timing.firstTokenAt - timing.streamStart).toFixed(0)}ms (+${(timing.firstTokenAt - timing.loopStart).toFixed(0)}ms from loop_start)`);
+		}
 		switch (event.type) {
 			case "start":
 				partialMessage = event.partial;
@@ -690,6 +724,11 @@ async function streamAssistantResponse(
 				return finalMessage;
 			}
 		}
+	}
+
+	if (timing) {
+		const now = performance.now();
+		_tlog(`stream_end duration=${(now - timing.streamStart).toFixed(0)}ms total=${(now - timing.loopStart).toFixed(0)}ms`);
 	}
 
 	const finalMessage =
@@ -821,6 +860,7 @@ function finish(
 		errorMessage: state.finalErrorMessage,
 		errorSubtype: state.finalErrorSubtype,
 	});
+	_tlog(`loop_finished stopReason=${state.finalStopReason ?? inferStopReason(newMessages)} turns=${state.turnCount} tools=${state.toolCallCount} duration=${Date.now() - state.startedAt}ms`);
 	stream.push({ type: "agent_end", messages: newMessages });
 	stream.end(newMessages);
 }

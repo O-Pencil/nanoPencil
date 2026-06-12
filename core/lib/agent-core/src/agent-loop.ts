@@ -62,6 +62,27 @@ const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
 const DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS = 1;
 const DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS = 1;
 
+// --- Timing instrumentation (gated by NANOPENCIL_DEBUG=1) ---
+function _tlog(msg: string): void {
+	if (process.env.NANOPENCIL_DEBUG !== "1") return;
+	try {
+		const { appendFileSync } = require("fs");
+		const { join } = require("path");
+		const { homedir } = require("os");
+		appendFileSync(
+			join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log"),
+			`[${new Date().toISOString()}] [loop] ${msg}\n`,
+		);
+	} catch { /* best-effort */ }
+}
+
+interface LoopTiming {
+	loopStart: number;
+	streamStart: number;
+	firstTokenAt: number;
+	turnCount: number;
+}
+
 type StandardLoopFinishOptions = {
 	config: AgentLoopConfig;
 	turnCount: number;
@@ -233,6 +254,8 @@ async function runLoop(
 	let turnCount = 0;
 	let toolCallCount = 0;
 	const startedAt = Date.now();
+	const timing: LoopTiming = { loopStart: performance.now(), streamStart: 0, firstTokenAt: 0, turnCount: 0 };
+	_tlog(`run_loop start`);
 	const usage = emptyUsage();
 	const permissionDenials: AgentToolPermissionDenial[] = [];
 	const maxTurns = config.maxTurnsPerPrompt ?? DEFAULT_MAX_TURNS_PER_PROMPT;
@@ -339,6 +362,7 @@ async function runLoop(
 			}
 
 			// Stream assistant response
+			timing.turnCount++;
 			const responseStartMessageCount = newMessages.length;
 			const message = await streamAssistantResponse(
 				currentContext,
@@ -347,6 +371,7 @@ async function runLoop(
 				stream,
 				streamFn,
 				maxOutputTokensOverride,
+				timing,
 			);
 			addUsage(usage, message.usage);
 			maxOutputTokensOverride = undefined;
@@ -660,6 +685,7 @@ async function streamAssistantResponse(
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	streamFn?: StreamFn,
 	maxTokensOverride?: number,
+	timing?: LoopTiming,
 ): Promise<AssistantMessage> {
 	// Apply context transform if configured (AgentMessage[] → AgentMessage[])
 	let messages = context.messages;
@@ -697,6 +723,10 @@ async function streamAssistantResponse(
 	}
 	const resolvedApiKey = apiKeyResult.value || config.apiKey;
 
+	if (timing) {
+		timing.streamStart = performance.now();
+		_tlog(`stream_request_start model=${config.model.id} provider=${config.model.provider} msgCount=${llmMessages.length} maxTokens=${maxTokensOverride ?? config.maxTokens} (+${(timing.streamStart - timing.loopStart).toFixed(0)}ms from loop_start)`);
+	}
 	stream.push({
 		type: "stream_request_start",
 		model: config.model.id,
@@ -763,6 +793,10 @@ async function streamAssistantResponse(
 			break;
 		}
 		const event = nextEvent.value;
+		if (timing && !timing.firstTokenAt) {
+			timing.firstTokenAt = performance.now();
+			_tlog(`first_token ttft=${(timing.firstTokenAt - timing.streamStart).toFixed(0)}ms (+${(timing.firstTokenAt - timing.loopStart).toFixed(0)}ms from loop_start)`);
+		}
 		switch (event.type) {
 			case "start":
 				partialMessage = event.partial;
@@ -806,6 +840,11 @@ async function streamAssistantResponse(
 				return finalMessage;
 			}
 		}
+	}
+
+	if (timing) {
+		const now = performance.now();
+		_tlog(`stream_end duration=${(now - timing.streamStart).toFixed(0)}ms total=${(now - timing.loopStart).toFixed(0)}ms`);
 	}
 
 	const finalMessage =
@@ -876,6 +915,7 @@ function finishStandardLoop(
 		errorMessage: options.errorMessage,
 		errorSubtype: options.errorSubtype,
 	});
+	_tlog(`loop_finished stopReason=${options.stopReason ?? inferStopReason(newMessages)} turns=${options.turnCount} tools=${options.toolCallCount} duration=${Date.now() - options.startedAt}ms`);
 	stream.push({ type: "agent_end", messages: newMessages });
 	stream.end(newMessages);
 }
@@ -951,6 +991,7 @@ async function executeToolCalls(
 		const toolCall = toolCalls[index];
 		const tool = toolByName.get(toolCall.name);
 		const startedAt = Date.now();
+		_tlog(`tool_exec_start [${index}] name=${toolCall.name}`);
 
 		stream.push({
 			type: "tool_execution_start",
@@ -1020,14 +1061,16 @@ async function executeToolCalls(
 			isError = true;
 		}
 
+		const toolDurationMs = Date.now() - startedAt;
 		stream.push({
 			type: "tool_execution_end",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
 			result,
 			isError,
-			durationMs: Date.now() - startedAt,
+			durationMs: toolDurationMs,
 		});
+		_tlog(`tool_exec_end [${index}] name=${toolCall.name} duration=${toolDurationMs}ms`);
 
 		const toolResultMessage: ToolResultMessage = {
 			role: "toolResult",

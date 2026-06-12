@@ -140,7 +140,14 @@ const DEFAULT_MCP_CONFIG: MCPConfig = {
  * Get the path to the MCP configuration file
  * @param agentDir Optional agent directory. If omitted, uses getAgentDir().
  */
-export function getMCPConfigPath(agentDir?: string): string {
+export function getMCPConfigPath(agentDir?: string, configPathOverride?: string): string {
+	if (configPathOverride && configPathOverride.trim()) {
+		const trimmed = configPathOverride.trim();
+		if (trimmed === "~") return homedir();
+		if (trimmed.startsWith("~/")) return join(homedir(), trimmed.slice(2));
+		if (trimmed.startsWith("~")) return join(homedir(), trimmed.slice(1));
+		return resolve(trimmed);
+	}
 	const env = process.env.MCP_CONFIG_PATH;
 	if (env && env.trim()) {
 		const trimmed = env.trim();
@@ -157,8 +164,8 @@ export function getMCPConfigPath(agentDir?: string): string {
  * Load MCP configuration from file
  * @param agentDir Optional agent directory. If omitted, uses getAgentDir().
  */
-export function loadMCPConfig(agentDir?: string): MCPConfig {
-  const configPath = getMCPConfigPath(agentDir);
+export function loadMCPConfig(agentDir?: string, configPathOverride?: string): MCPConfig {
+  const configPath = getMCPConfigPath(agentDir, configPathOverride);
   const baseAgentDir = agentDir ?? getAgentDir();
 
   if (!existsSync(configPath)) {
@@ -289,7 +296,7 @@ export function listMCPServers(agentDir?: string): MCPServerConfig[] {
  * List enabled MCP servers
  * @param agentDir Optional agent directory. If omitted, uses getAgentDir().
  */
-export function listEnabledMCPServers(agentDir?: string): MCPServerConfig[] {
-  const config = loadMCPConfig(agentDir);
+export function listEnabledMCPServers(agentDir?: string, configPathOverride?: string): MCPServerConfig[] {
+  const config = loadMCPConfig(agentDir, configPathOverride);
   return config.mcpServers.filter((s) => s.enabled !== false);
 }

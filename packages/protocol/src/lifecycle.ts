@@ -1,10 +1,10 @@
 /**
  * [WHO]: Provides ExtensionAPI, ExtensionContext, ExtensionFactory, ExtensionUi, ExtensionCommand,
  *        SessionManagerContract, HookEventName, HookHandler — the extension lifecycle protocol
- * [FROM]: No dependencies — minimal structural protocol owned by extension-sdk (S3 dependency-inversion target)
+ * [FROM]: No dependencies — minimal structural protocol owned by protocol (S3 dependency-inversion target)
  * [TO]: Consumed by packages/mem-core (extension adapter) and third-party extensions; the host's
  *       richer ExtensionContext/ExtensionAPI satisfy these structurally (extensions load dynamically)
- * [HERE]: packages/extension-sdk/src/lifecycle.ts - the stable extension entry contract
+ * [HERE]: packages/protocol/src/lifecycle.ts - the stable extension entry contract
  *
  * Scope note: event payloads are intentionally loose (HookHandler's event is `unknown`) this round;
  * per-event typed payloads land in hooks.ts during P3.1. This file carries only the surface that

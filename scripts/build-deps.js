@@ -5,7 +5,7 @@
  * Replaces the serial `&& ` chain. The only build-time dependency among the
  * libs is agent-core → ai (agent-core imports `@pencil-agent/ai/*` declarations),
  * so:
- *   Phase 1 (parallel): extension-sdk, ai, tui   — mutually independent
+ *   Phase 1 (parallel): protocol, ai, tui   — mutually independent
  *   Phase 2:            agent-core               — needs ai's .d.ts
  *
  * Unlike a shell `p1 & p2 & wait` chain, this propagates any sub-build failure
@@ -15,7 +15,7 @@
 import { spawn } from "node:child_process";
 
 const PHASE_1 = [
-	"packages/extension-sdk",
+	"packages/protocol",
 	"core/lib/ai",
 	"core/lib/tui",
 ];

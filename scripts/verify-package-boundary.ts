@@ -43,7 +43,7 @@ interface InternalLibSpec {
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST_MAIN = join(REPO, "dist", "main.js");
 const PUBLIC_PACKAGES: PublicPackageSpec[] = [
-	{ name: "@pencil-agent/extension-sdk", path: "packages/extension-sdk", hostRange: "^0.1.0" },
+	{ name: "@pencil-agent/protocol", path: "packages/protocol", hostRange: "^0.1.0" },
 	{ name: "@pencil-agent/mem-core", path: "packages/mem-core", hostRange: "^1.1.2", requiredExports: [".", "./extension"] },
 	{ name: "@pencil-agent/soul-core", path: "packages/soul-core", hostRange: "^0.1.0" },
 ];
@@ -138,7 +138,7 @@ function checkSourcePackageManifests(violations: Violation[]): void {
 			const deps = dependencyMap(pkg, section);
 			for (const depName of Object.keys(deps)) {
 				if (depName === "@pencil-agent/nano-pencil") {
-					add(violations, scope, `${section} must not depend on the host package; use @pencil-agent/extension-sdk.`);
+					add(violations, scope, `${section} must not depend on the host package; use @pencil-agent/protocol.`);
 				}
 				if (internalNames.has(depName)) {
 					add(violations, scope, `${section} must not expose private embedded lib ${depName}.`);

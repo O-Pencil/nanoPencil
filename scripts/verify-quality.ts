@@ -48,7 +48,7 @@ const TEMPORARY_BOUNDARY_EXCEPTIONS = new Map<string, string>([
 ]);
 
 // Published packages must not depend on the host. S3 dependency inversion is complete:
-// mem-core/soul-core depend on @pencil-agent/extension-sdk, and the lone host-coupled
+// mem-core/soul-core depend on @pencil-agent/protocol, and the lone host-coupled
 // integration test was relocated to host-side test/. No exceptions remain.
 const HOST_PACKAGE = "@pencil-agent/nano-pencil";
 const PUBLISHED_PACKAGE_PREFIXES = ["packages/mem-core/", "packages/soul-core/"];
@@ -140,7 +140,7 @@ function checkEdge(edge: ImportEdge, violations: Violation[]): void {
     if (!HOST_REVERSE_DEP_EXCEPTIONS.has(from)) {
       violations.push({
         file: from,
-        message: `Published package must not depend on the host (${specifier}); invert via @pencil-agent/extension-sdk (S3).`,
+        message: `Published package must not depend on the host (${specifier}); invert via @pencil-agent/protocol (S3).`,
       });
     }
   }

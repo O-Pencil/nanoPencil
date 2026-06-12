@@ -1,4 +1,4 @@
-# @pencil-agent/extension-sdk
+# @pencil-agent/protocol
 
 Stable protocol contracts for NanoPencil extensions — the single, versioned surface a
 third-party extension (or the bundled `mem-core` / `soul-core` packages) depends on,

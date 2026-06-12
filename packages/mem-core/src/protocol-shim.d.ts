@@ -1,4 +1,4 @@
-declare module "@pencil-agent/extension-sdk" {
+declare module "@pencil-agent/protocol" {
 	import type { Static, TSchema } from "@sinclair/typebox";
 
 	export interface SessionManagerContract {

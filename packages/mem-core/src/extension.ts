@@ -1,6 +1,6 @@
 /**
  * [WHO]: default export (Extension), nanomem extension for NanoPencil integration
- * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/extension-sdk
+ * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @pencil-agent/protocol
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/extension.ts - thin adapter bridging NanoPencil events to host-agnostic NanoMemEngine
  */
@@ -9,7 +9,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { Type } from "@sinclair/typebox";
-import type { ExtensionAPI, ExtensionContext } from "@pencil-agent/extension-sdk";
+import type { ExtensionAPI, ExtensionContext } from "@pencil-agent/protocol";
 import { NanoMemEngine } from "./engine.js";
 import { reportDiagnostic } from "./diagnostics.js";
 import { readDreamLockMtimeMs, rollbackDreamLock, tryAcquireDreamLock } from "./dream-lock.js";

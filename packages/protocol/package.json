@@ -1,5 +1,5 @@
 {
-  "name": "@pencil-agent/extension-sdk",
+  "name": "@pencil-agent/protocol",
   "version": "0.1.0",
   "description": "Stable protocol contracts for NanoPencil extensions (tools, themes, hooks, commands, permissions, lifecycle)",
   "type": "module",

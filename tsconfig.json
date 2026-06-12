@@ -21,7 +21,7 @@
       "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
       "@pencil-agent/mem-core": ["./packages/mem-core/src"],
       "@pencil-agent/soul-core": ["./packages/soul-core/src"],
-      "@pencil-agent/extension-sdk": ["./packages/extension-sdk/src/index.ts"]
+      "@pencil-agent/protocol": ["./packages/protocol/src/index.ts"]
     }
   },
   "include": [

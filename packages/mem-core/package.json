@@ -51,7 +51,7 @@
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3",
-    "@pencil-agent/extension-sdk": "file:../extension-sdk"
+    "@pencil-agent/protocol": "file:../protocol"
   },
   "repository": {
     "type": "git",
@@ -61,6 +61,6 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@pencil-agent/extension-sdk": "^0.1.0"
+    "@pencil-agent/protocol": "^0.1.0"
   }
 }

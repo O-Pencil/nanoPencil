@@ -2,7 +2,7 @@
  * [WHO]: Provides ToolRuntime, ToolPermissions, ToolRuntimeDescriptor (S1 seam) + ToolResult, ToolContract
  * [FROM]: Depends on @sinclair/typebox (schema) and ./lifecycle (ExtensionContext, type-only)
  * [TO]: Consumed by the host ToolDefinition (adopts the S1 fields) and by extensions registering tools
- * [HERE]: packages/extension-sdk/src/tools.ts - tool runtime seam (S1) + the stable tool contract
+ * [HERE]: packages/protocol/src/tools.ts - tool runtime seam (S1) + the stable tool contract
  *
  * S1 seam (refactor-plan §接缝预留): a tool may optionally declare its execution runtime and
  * permission needs. Omitting both keeps today's behavior (local, host-policy). The host

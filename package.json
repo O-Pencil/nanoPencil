@@ -87,7 +87,7 @@
     "core/lib/tui",
     "packages/mem-core",
     "packages/soul-core",
-    "packages/extension-sdk"
+    "packages/protocol"
   ],
   "engines": {
     "node": ">=20"
@@ -100,7 +100,7 @@
     "@mariozechner/clipboard": "^0.3.2",
     "@mariozechner/jiti": "^2.6.2",
     "@mistralai/mistralai": "1.10.0",
-    "@pencil-agent/extension-sdk": "^0.1.0",
+    "@pencil-agent/protocol": "^0.1.0",
     "@pencil-agent/mem-core": "^1.1.2",
     "@pencil-agent/soul-core": "^0.1.0",
     "@silvia-odwyer/photon-node": "^0.3.4",

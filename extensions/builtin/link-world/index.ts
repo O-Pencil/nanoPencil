@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DOC_PATH = join(__dirname, "linkworld.md");
 const SKILL_PATH = join(__dirname, "internet-search", "internet-search.md");
 const AGENT_SKILL_PATH = join(__dirname, "link-world-agent.md");
-const NETWORK_ROUTING_SKILL_PATH = join(__dirname, "network-routing.md");
+const NETWORK_ROUTING_SKILL_PATH = join(__dirname, "network-routing", "network-routing.md");
 const WORKSPACE_TEMPLATE_PATH = join(__dirname, "agent-workspace");
 
 const LINK_WORLD_CUSTOM_TYPE = "link-world-install";
@@ -669,7 +669,8 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 				NETWORK_ROUTING_SKILL_PATH,
 				AGENT_SKILL_PATH,
 				SKILL_PATH,
-				DOC_PATH,
+				// DOC_PATH (linkworld.md) is an install guide, not a skill: it has no
+				// frontmatter and would fail skill validation if registered here.
 				...collectMarkdownFiles(join(workspace, "domain-skills")),
 			].filter((path) => existsSync(path))),
 		];

@@ -4423,7 +4423,10 @@ export class InteractiveMode {
       return;
     }
 
-    // Fork from the latest user message in current branch
+    // Fork from the latest user message so the existing conversation keeps its
+    // persona on the old branch. A session with no user message yet has nothing
+    // to preserve — switch in place without forking (resume reads the LAST
+    // persona entry in the branch, so re-tagging is safe).
     const branch = this.session.sessionManager.getBranch();
     let forkFromEntryId: string | undefined;
     for (let i = branch.length - 1; i >= 0; i--) {
@@ -4434,15 +4437,12 @@ export class InteractiveMode {
       }
     }
 
-    if (!forkFromEntryId) {
-      this.showError("No user message found in the current session branch.");
-      return;
+    if (forkFromEntryId) {
+      const result = await this.session.fork(forkFromEntryId);
+      if (result.cancelled) return;
     }
 
-    const result = await this.session.fork(forkFromEntryId);
-    if (result.cancelled) return;
-
-    // Tag this new branch with personaId for later resume.
+    // Tag this branch with personaId for later resume.
     this.session.sessionManager.appendCustomEntry("persona", { personaId });
 
     // Apply persona-specific env before reload so extensions/system prompt use it.

@@ -12,6 +12,16 @@ import { fileURLToPath } from "node:url";
 import { createJiti } from "@mariozechner/jiti";
 import * as _bundledPiAgentCore from "@pencil-agent/agent-core";
 import * as _bundledPiAi from "@pencil-agent/ai";
+import * as _bundledPiAiEnv from "@pencil-agent/ai/env";
+import * as _bundledPiAiEvents from "@pencil-agent/ai/events";
+import * as _bundledPiAiJson from "@pencil-agent/ai/json";
+import * as _bundledPiAiModels from "@pencil-agent/ai/models";
+import * as _bundledPiAiOauth from "@pencil-agent/ai/oauth";
+import * as _bundledPiAiOverflow from "@pencil-agent/ai/overflow";
+import * as _bundledPiAiRegistry from "@pencil-agent/ai/registry";
+import * as _bundledPiAiSchema from "@pencil-agent/ai/schema";
+import * as _bundledPiAiStream from "@pencil-agent/ai/stream";
+import * as _bundledPiAiTypes from "@pencil-agent/ai/types";
 import type { KeyId } from "@pencil-agent/tui";
 import * as _bundledPiTui from "@pencil-agent/tui";
 // Static imports of packages that extensions may use.
@@ -34,6 +44,39 @@ import type {
 	ToolDefinition,
 } from "./types.js";
 
+/**
+ * Subpath exports of @pencil-agent/ai used across core and extensions.
+ * jiti aliases are plain prefix replacements, so the bare "@pencil-agent/ai"
+ * alias alone would rewrite "@pencil-agent/ai/overflow" into the bogus path
+ * "<dist>/index.js/overflow". Each subpath needs its own explicit mapping
+ * (both for jiti aliases and Bun virtualModules).
+ */
+const AI_SUBPATHS = [
+	"types",
+	"schema",
+	"events",
+	"models",
+	"registry",
+	"stream",
+	"env",
+	"overflow",
+	"json",
+	"oauth",
+] as const;
+
+const BUNDLED_AI_SUBPATH_MODULES: Record<string, unknown> = {
+	"@pencil-agent/ai/types": _bundledPiAiTypes,
+	"@pencil-agent/ai/schema": _bundledPiAiSchema,
+	"@pencil-agent/ai/events": _bundledPiAiEvents,
+	"@pencil-agent/ai/models": _bundledPiAiModels,
+	"@pencil-agent/ai/registry": _bundledPiAiRegistry,
+	"@pencil-agent/ai/stream": _bundledPiAiStream,
+	"@pencil-agent/ai/env": _bundledPiAiEnv,
+	"@pencil-agent/ai/overflow": _bundledPiAiOverflow,
+	"@pencil-agent/ai/json": _bundledPiAiJson,
+	"@pencil-agent/ai/oauth": _bundledPiAiOauth,
+};
+
 /** Modules available to extensions via virtualModules (for compiled Bun binary). */
 async function getVirtualModules(): Promise<Record<string, unknown>> {
 	return {
@@ -41,6 +84,7 @@ async function getVirtualModules(): Promise<Record<string, unknown>> {
 		"@pencil-agent/agent-core": _bundledPiAgentCore,
 		"@pencil-agent/tui": _bundledPiTui,
 		"@pencil-agent/ai": _bundledPiAi,
+		...BUNDLED_AI_SUBPATH_MODULES,
 		// Dynamic to keep the extension loader off the root SDK barrel during normal app startup.
 		"@pencil-agent/nano-pencil": await import("../../index.js"),
 	};
@@ -62,10 +106,20 @@ function getAliases(): Record<string, string> {
 	const typeboxEntry = require.resolve("@sinclair/typebox");
 	const typeboxRoot = typeboxEntry.replace(/[\\/]build[\\/]cjs[\\/]index\.js$/, "");
 
+	// jiti sorts alias keys by path-segment count, so these subpath entries
+	// take precedence over the bare "@pencil-agent/ai" prefix alias below.
+	const aiSubpathAliases = Object.fromEntries(
+		AI_SUBPATHS.map((subpath) => [
+			`@pencil-agent/ai/${subpath}`,
+			require.resolve(`@pencil-agent/ai/${subpath}`),
+		]),
+	);
+
 	_aliases = {
 		"@pencil-agent/nano-pencil": packageIndex,
 		"@pencil-agent/agent-core": require.resolve("@pencil-agent/agent-core"),
 		"@pencil-agent/tui": require.resolve("@pencil-agent/tui"),
+		...aiSubpathAliases,
 		"@pencil-agent/ai": require.resolve("@pencil-agent/ai"),
 		"@sinclair/typebox": typeboxRoot,
 	};

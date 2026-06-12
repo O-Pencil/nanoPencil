@@ -474,10 +474,11 @@ export default async function planExtension(api: ExtensionAPI) {
 	});
 
 	// =========================================================================
-	// Ctrl+G shortcut: open plan file in external editor
+	// Alt+G shortcut: open plan file in external editor
+	// (ctrl+g is the built-in externalEditor binding and may not be shadowed)
 	// =========================================================================
 
-	api.registerShortcut("ctrl+g" as any, {
+	api.registerShortcut("alt+g" as any, {
 		description: "Open plan file in external editor",
 		handler: async (ctx: ExtensionContext) => {
 			const sessionState = getSessionState(api, ctx);

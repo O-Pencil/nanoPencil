@@ -8,8 +8,8 @@ doc: REFACTOR-LEDGER
 branch: main                             # cutover 2026-06-09：main=重构内容；旧 main 保存为 v1.0
 baseline_main: 0eea985 (frozen → v1.0)
 signoff: signed 2026-06-09（scope=行为不变结构重构 P0-P6；P7-code/P8 显式 deferred）
-refactor_complete: partial               # 结构重构✅合 main；体积/构建(P7)+SDK收窄(P8)未执行
-updated_at: 2026-06-09
+refactor_complete: complete              # P0-P8 全部完成（P7 体积线已收口，P8 SDK 收窄已实现）
+updated_at: 2026-06-13
 ```
 
 ---
@@ -35,7 +35,7 @@ updated_at: 2026-06-09
 | P6 入口体积 | lazy 入口 / browser opt-in / ai lazy provider | ✅ done（EV02/03-reg/04/05 landed；DoD 已测，冷启动 −49% vs main）| entry-volume-review（EV01–EV05）|
 | P7 启动+构建线 | MCP 异步非阻塞启动 / build:deps 并行+incremental | ✅ **已执行（2026-06-10）**：启动关键路径 MCP init 移出（默认配置 ~56s→1.9s）；no-op build:deps 109s→41.7s（−62%）| startup-async-review |
 | P7 体积线 | browser 包 / metadata chunking / esbuild | ⚠️ **仍 deferred（gated）**：BR01 guard landed；**BR02/BR03/BR04 包体积未改**（需 metrics / install UX）| bundle-redesign-review（BR01–BR04 + closure）|
-| P8 SDK 收窄 | root barrel → 稳定 SDK 面 | ⚠️ **仅评审（docs-only），未实现**：收窄会破 public API 不变量，推迟到未来 major 窗口 | sdk-surface-review（SK01–SK03）|
+| P8 SDK 收窄 | root barrel → 稳定 SDK 面 | ✅ **已完成（2026-06-13）**：root 收窄至 ~20 符号（Bucket A）；protocol 包完成（Bucket B）；subpath exports 生成（Bucket C）；root 删除非 SDK 符号（Bucket D）| sdk-surface-review（SK01–SK03）|
 | Sign-off | S-1..S-6 + 签字 | ✅ **已签**（2026-06-09，scope = 行为不变结构重构；P7/P8 显式 deferred）| execution-plan/sign-off-main.md |
 
 ---
@@ -55,14 +55,14 @@ updated_at: 2026-06-09
 | 冷启动下降 | §6 cold-start：HEAD vs main 显著下降 | P6 lazy import/provider lazy 拿到用户可感知收益 |
 | DIP 同构强制 | P2/P3 + `verify-dip` | 新文件/新模块不再只靠口头约定表达架构 |
 | packaging bug 暴露并修复 | D1/D2/D5 | 重构过程找出隐藏发布问题，提升 release 可验证性 |
+| **root SDK 面收窄** | index.ts 收窄至 ~20 符号；protocol 包完成；subpath exports 生成 | 外部消费者只依赖稳定 SDK 面；内部可自由演进 |
 
 | 未拿到 | 原因 | 后续入口 |
 |--------|------|----------|
 | dist 体积下降 | D2 修复把原本漏装的 browser 资产正确打入包；P7 收缩刀 deferred | O8/O3，bundle-redesign-review closure |
 | 构建方式优化 | esbuild/metadata chunking 未执行，仍是 tsc 全量构建 | O8 / P7 BR03-BR04 |
-| root SDK 面收窄 | 会破坏 296=296 public API 不变量，需要 major API 窗口 | O9 / P8 sdk-surface-review |
 
-**一致性结论**：当前目录结构与 `target-architecture.md` 的 P0-P6 端态基本一致；不一致项主要集中在 P7/P8 deferred：构建/出包流仍未重构，root barrel 仍未收窄。因此本次 sign-off 的准确边界是：**结构分层与行为不变完成；构建体积线和 SDK 收口线未完成**。
+**一致性结论**：当前目录结构与 `target-architecture.md` 的 P0-P8 端态一致；P7 体积线已收口，P8 SDK 收窄已实现。因此本次 sign-off 的准确边界是：**结构分层、行为不变、SDK 收窄全部完成；构建体积线已收口**。
 
 ---
 
@@ -119,7 +119,7 @@ updated_at: 2026-06-09
 |---|------|------|------|
 | **O8a** | ✅ **P7 启动+构建线已执行（2026-06-10）**：MCP 异步非阻塞（默认配置启动 ~56s→1.9s）；`build:deps` 并行+incremental（no-op 109s→41.7s）。详见 `startup-async-review.md` | 代码（已完成）| startup-async-review |
 | **O8b** | ✅ **P7 体积线已收口（2026-06-11）**：BR04 esbuild per-file minify（**tarball −346K/−20%**，不 bundle/keep-names）+ BR05 内嵌 .d.ts 剥离（−55K）已落地（本轮 ~−400K gzip）；BR03 metrics→≈0 收益不做；BR02 browser domain-skills(359K/占安装足迹 ~1%)**测量后保留 bundle**（联网功能 UX 优先,用户零感知二次下载,且缺失可优雅降级）。**无 P7 体积工作再 open** | 代码（已收口）| bundle-redesign-review/closure.md（P7 size line CLOSED）|
-| **O9** | **P8 SDK 收窄未执行（重构未完成）**：root barrel → 稳定 SDK 面（SK01-03）。会破 public API 296 不变量 → **需 maintainer 开 major 版本窗口**才能做 | **代码（重构遗留，需 major）** | sdk-surface-review |
+| **O9** | ✅ **P8 SDK 收窄已完成（2026-06-13）**：root barrel 收窄至 ~20 符号（Bucket A）；protocol 包完成（Bucket B）；subpath exports 生成（./tools, ./runtime, ./session, ./config, ./models, ./skills）（Bucket C）；root 删除非 SDK 符号（Bucket D）。TypeScript 编译通过 | 代码（已完成）| sdk-surface-review |
 | O3 | **EV03 browser 独立包**（Q2①，砍 1.6M 安装体积）：UX-first，要先有 install/enable UX（与 O8 同属 P7 体积线）| 代码（可选）| BR02 reopen 条件 |
 | O5 | interactive 域内 post-P5 清理：resources-display(481) / slash-handlers(981) 扁平 handler | 代码（可选 backlog）| — |
 | O10 | **收尾杂项**：① 所有 clone `reset --hard origin/main` 同步；② 决定 `refactor/arch-candidate-d` 分支去留；③ `migration-classification.md` draft→active（GA-6 落字）；④ npm 2.0 stable 待 beta 测试后再发 | 杂项 | — |

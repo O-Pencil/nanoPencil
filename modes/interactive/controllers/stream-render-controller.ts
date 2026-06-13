@@ -123,9 +123,17 @@ export interface StreamRenderContext {
 /** Task tool names that should trigger a task panel refresh. */
 const TASK_TOOL_NAMES = new Set(["TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TaskStop", "TaskDelete"]);
 
+const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
 const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
 function dbg(msg: string): void {
-	fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [render] ${msg}\n`);
+	// Off by default; never write or crash in a release (ENOENT on fresh install).
+	if (!_dbgEnabled) return;
+	try {
+		fs.mkdirSync(path.dirname(debugLogPath), { recursive: true });
+		fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [render] ${msg}\n`);
+	} catch {
+		// debug logging is best-effort
+	}
 }
 
 /** Delay before auto-hiding the task panel after all tasks complete. */

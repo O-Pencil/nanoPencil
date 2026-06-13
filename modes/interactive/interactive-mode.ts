@@ -191,9 +191,19 @@ export interface InteractiveModeOptions {
   verbose?: boolean;
 }
 
+const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
 const _dbgLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
 function _dbg(msg: string): void {
-	fs.appendFileSync(_dbgLogPath, `[${new Date().toISOString()}] [imode] ${msg}\n`);
+	// Off by default — leftover dev instrumentation must never write (or crash) in
+	// a release. When enabled, ensure the dir exists and never let a log failure
+	// take down the app (ENOENT on a fresh install previously killed the process).
+	if (!_dbgEnabled) return;
+	try {
+		fs.mkdirSync(path.dirname(_dbgLogPath), { recursive: true });
+		fs.appendFileSync(_dbgLogPath, `[${new Date().toISOString()}] [imode] ${msg}\n`);
+	} catch {
+		// debug logging is best-effort; swallow all errors
+	}
 }
 
 export class InteractiveMode {

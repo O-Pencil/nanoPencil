@@ -17,9 +17,17 @@ import type { Attachment } from "./image-pipeline-controller.js";
 
 type AnyModel = Model<any>;
 
+const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
 const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
 function dbg(msg: string): void {
-	fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [submit] ${msg}\n`);
+	// Off by default; never write or crash in a release (ENOENT on fresh install).
+	if (!_dbgEnabled) return;
+	try {
+		fs.mkdirSync(path.dirname(debugLogPath), { recursive: true });
+		fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [submit] ${msg}\n`);
+	} catch {
+		// debug logging is best-effort
+	}
 }
 
 export interface InputSubmitEditorPort {

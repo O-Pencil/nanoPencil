@@ -68,7 +68,7 @@ Dependencies stay queryable in the graph while this page gives the human overvie
 | `@mariozechner/jiti` | 1 |
 | `@catui/agent` | 1 |
 | `@catui/soul` | 1 |
-| `@catui/soul-core` | 1 |
+| `catui-soul` | 1 |
 | `@silvia-odwyer/photon-node` | 1 |
 | `@sinclair/typebox/compiler` | 1 |
 | `ajv-formats` | 1 |

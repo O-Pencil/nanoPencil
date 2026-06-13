@@ -278,7 +278,7 @@ async function initMemEngine(state: PresenceState): Promise<void> {
 		const memModule = await importRuntimeModule<{
 			NanoMemEngine: new (config: unknown) => NonNullable<PresenceState["memEngine"]>;
 			getConfig: (options: { memoryDir: string; locale: "en" | "zh" }) => unknown;
-		}>(["@catui/mem-core"], "mem-core");
+		}>(["catui-mem"], "mem-core");
 		if (!memModule?.NanoMemEngine || !memModule.getConfig) {
 			state.memEngine = undefined;
 			return;

@@ -98,7 +98,7 @@ function findPackageRoot(startDir: string): string | null {
 			if (existsSync(pkgPath)) {
 				const raw = readFileSync(pkgPath, "utf-8");
 				const pkg = JSON.parse(raw) as { name?: string };
-				if (pkg.name === "@catui/agent" || pkg.name === "catui") return dir;
+				if (pkg.name === "@catui/agent" || pkg.name === "catui-agent") return dir;
 			}
 		} catch {
 			// ignore
@@ -172,13 +172,13 @@ export function getBuiltinExtensionPaths(): string[] {
 		} else {
 			// 3) require.resolve: mem-core in node_modules during development/local install
 			try {
-				const extPath = require.resolve("@catui/mem-core/extension.js");
+				const extPath = require.resolve("catui-mem/extension.js");
 				if (existsSync(extPath)) paths.push(extPath);
 			} catch {
-				// 4) Look for package root + node_modules/@catui/mem-core/dist/extension.js
+				// 4) Look for package root + node_modules/catui-mem/dist/extension.js
 				const packageRoot = findPackageRoot(__dirname);
 				if (packageRoot) {
-					const candidate = join(packageRoot, "node_modules", "@catui", "mem-core", "dist", "extension.js");
+					const candidate = join(packageRoot, "node_modules", "catui-mem", "dist", "extension.js");
 					if (existsSync(candidate)) paths.push(candidate);
 				}
 			}

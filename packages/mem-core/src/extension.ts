@@ -1,6 +1,6 @@
 /**
  * [WHO]: default export (Extension), nanomem extension for Catui integration
- * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, @catui/protocol
+ * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, catui-protocol
  * [TO]: Consumed by packages/mem-core/src/index.ts
  * [HERE]: packages/mem-core/src/extension.ts - thin adapter bridging Catui events to host-agnostic NanoMemEngine
  */
@@ -9,7 +9,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { Type } from "@sinclair/typebox";
-import type { ExtensionAPI, ExtensionContext } from "@catui/protocol";
+import type { ExtensionAPI, ExtensionContext } from "catui-protocol";
 import { NanoMemEngine } from "./engine.js";
 import { reportDiagnostic } from "./diagnostics.js";
 import { readDreamLockMtimeMs, rollbackDreamLock, tryAcquireDreamLock } from "./dream-lock.js";

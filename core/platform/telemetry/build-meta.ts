@@ -15,7 +15,7 @@ export interface BuildMeta {
 }
 
 const FALLBACK: BuildMeta = { version: "dev" };
-const PKG_NAME = "@catui/agent";
+const PKG_NAME = "catui-agent";
 const MAX_WALK_DEPTH = 12;
 
 /**

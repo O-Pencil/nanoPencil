@@ -131,7 +131,7 @@ All user-facing strings and LLM prompts support English and Chinese:
 
 ## Extension Integration (`extension.ts`)
 
-The only module depending on `@catui/agent`. Bridges Catui events to the engine:
+The only module depending on the Catui host package. Bridges Catui events to the engine:
 
 **Lifecycle hooks:**
 - `session_start` - Triggers consolidation

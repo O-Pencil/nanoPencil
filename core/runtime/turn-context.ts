@@ -6,7 +6,7 @@
  *
  * Design note:
  *   This is the canonical home of the bus. Packages that cannot reverse-import
- *   from the main app (e.g. @catui/mem-core) define a structurally
+ *   from the main app (e.g. catui-mem) define a structurally
  *   identical mirror that targets the same globalThis key. The contract is the
  *   key string + TurnContext schema, not the implementation file.
  */

@@ -45,7 +45,7 @@ import type {
 	ExtensionFlagValue,
 	HookEventName as ProtocolHookEventName,
 	ToolRuntimeDescriptor,
-} from "@catui/protocol";
+} from "catui-protocol";
 import type { Theme } from "../theme-contract.js";
 import type { BashResult } from "../platform/exec/bash-executor.js";
 import type { CompactionPreparation, CompactionResult } from "../session/compaction/index.js";
@@ -1306,9 +1306,9 @@ export interface RegisteredTool {
 }
 
 // ExtensionFlag is a portable extension-declaration contract — owned by
-// @catui/protocol (single source of truth). Re-exported here so existing
+// catui-protocol (single source of truth). Re-exported here so existing
 // `import { ExtensionFlag } from "./types"` consumers keep working (non-breaking).
-export type { ExtensionFlag, ExtensionFlagOptions, ExtensionFlagValue } from "@catui/protocol";
+export type { ExtensionFlag, ExtensionFlagOptions, ExtensionFlagValue } from "catui-protocol";
 
 export interface ExtensionShortcut {
 	shortcut: KeyId;

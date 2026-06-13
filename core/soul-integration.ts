@@ -109,10 +109,10 @@ export async function createSoulManager(ctx: AgentDirContext = defaultAgentDirCo
     }
   }
 
-  // Fall back to node_modules - try @catui/soul-core first, then @catui/soul (legacy), then nanosoul
+  // Fall back to node_modules - try catui-soul first, then @catui/soul (legacy), then nanosoul
   try {
     // @ts-ignore - runtime dynamic import
-    const { SoulManager: SM } = await import("@catui/soul-core");
+    const { SoulManager: SM } = await import("catui-soul");
     return new SM({
       config: getSoulConfig(ctx),
     });
@@ -145,9 +145,9 @@ export function isSoulAvailable(): boolean {
   // Check bundled version first
   if (resolveBundledSoulEntry()) return true;
 
-  // Fall back to checking node_modules - try soul-core first, then soul (legacy), then nanosoul
+  // Fall back to checking node_modules - try catui-soul first, then soul (legacy), then nanosoul
   try {
-    require.resolve("@catui/soul-core");
+    require.resolve("catui-soul");
     return true;
   } catch {
     try {

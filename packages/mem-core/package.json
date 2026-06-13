@@ -1,5 +1,5 @@
 {
-  "name": "@catui/mem-core",
+  "name": "catui-mem",
   "version": "1.1.2",
   "description": "Persistent memory engine for AI coding agents with consolidation, scoring, and insights",
   "type": "module",
@@ -47,11 +47,11 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@catui/agent": "file:../..",
+    "catui-agent": "file:../..",
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3",
-    "@catui/protocol": "file:../protocol"
+    "catui-protocol": "file:../protocol"
   },
   "repository": {
     "type": "git",
@@ -61,6 +61,6 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@catui/protocol": "^0.1.0"
+    "catui-protocol": "^0.1.1"
   }
 }

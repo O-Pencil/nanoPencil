@@ -1,5 +1,5 @@
 {
-  "name": "@catui/protocol",
+  "name": "catui-protocol",
   "version": "0.1.1",
   "description": "Stable protocol contracts for Catui extensions (tools, themes, hooks, commands, permissions, lifecycle)",
   "type": "module",

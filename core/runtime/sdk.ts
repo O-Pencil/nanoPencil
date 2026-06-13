@@ -41,7 +41,7 @@ import {
 } from "../soul-integration.js";
 import type { SoulOptionsContract } from "../soul-options-contract.js";
 // @ts-ignore - soul-core package is bundled at runtime
-import type { SoulManager } from "@catui/soul-core";
+import type { SoulManager } from "catui-soul";
 import {
   allTools,
   bashTool,

@@ -1,4 +1,4 @@
-# @catui/mem-core
+# catui-mem
 
 > Persistent memory engine for AI coding agents with consolidation, scoring, and insights.
 
@@ -18,13 +18,13 @@
 ## Installation
 
 ```bash
-npm install @catui/mem-core
+npm install catui-mem
 ```
 
 ## Quick Start
 
 ```typescript
-import { NanoMemEngine, getConfig } from '@catui/mem-core';
+import { NanoMemEngine, getConfig } from 'catui-mem';
 
 // Create engine with defaults
 const engine = new NanoMemEngine();
@@ -67,7 +67,7 @@ console.log(injection);
 ## Configuration
 
 ```typescript
-import { NanoMemEngine, getConfig } from '@catui/mem-core';
+import { NanoMemEngine, getConfig } from 'catui-mem';
 
 const config = getConfig({
   memoryDir: './my-memory',
@@ -115,7 +115,7 @@ constructor(overrides?: Partial<NanomemConfig>, llmFn?: LlmFn)
 For Catui integration:
 
 ```typescript
-import nanomemExtension from '@catui/mem-core/extension';
+import nanomemExtension from 'catui-mem/extension';
 
 // In Catui
 api.registerExtension(() => nanomemExtension);

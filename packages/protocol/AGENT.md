@@ -8,7 +8,7 @@ Host-only rich runtime, UI, and session-control types remain in `core/`.
 
 ## Member List
 
-`src/index.ts`: Public barrel for `@catui/protocol`; re-exports protocol
+`src/index.ts`: Public barrel for `catui-protocol`; re-exports protocol
 domains.
 
 `src/tools.ts`: Tool runtime, permission, result, update callback, and

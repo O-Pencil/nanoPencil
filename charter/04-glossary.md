@@ -34,8 +34,8 @@
 | **EngineAdapter** | Gateway 内对引擎的抽象接口，目前实现是 `CatuiEngineAdapter` |
 | **RemoteToolTransport** | catui-agent SDK 内的回调接口，让"调用方拥有工具运行时"模式得以工作 |
 | **ToolCorrelation** | Gateway 内进程级表，关联 SSE `catui.tool_request` 与 HTTP POST `tool_response` |
-| **Soul** | 引擎内的人格描述模块（`@catui/soul-core`）；包含 system prompt、风格 tag、行为默认值 |
-| **NanoMem** | 持久记忆引擎（`@catui/mem-core`）；跨会话记忆沉淀与检索 |
+| **Soul** | 引擎内的人格描述模块（`catui-soul`）；包含 system prompt、风格 tag、行为默认值 |
+| **NanoMem** | 持久记忆引擎（`catui-mem`）；跨会话记忆沉淀与检索 |
 | **CATUIS_HOME** | 文件系统约定根：`~/.catui/`（环境变量 `CATUIS_HOME` 可覆盖）。每个 CatuiAgent 一个 `agents/<id>/` 槽位 |
 | **PAAS** | Catui as a Service — 以"数字生命"为核心的 Agent 基础设施服务化模式 |
 

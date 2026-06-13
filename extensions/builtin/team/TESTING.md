@@ -41,7 +41,7 @@ rm -rf ~/.catui/agent/teams
 npx tsc --noEmit
 ```
 
-The team extension must report **zero** errors. Pre-existing `presence/index.ts` errors related to `@catui/mem-core` are unrelated and may remain until that extension is rebundled.
+The team extension must report **zero** errors. Pre-existing `presence/index.ts` errors related to `catui-mem` are unrelated and may remain until that extension is rebundled.
 
 ---
 

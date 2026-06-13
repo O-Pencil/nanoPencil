@@ -18,7 +18,7 @@ to `core/lib/{ai,agent-core,tui}` and remain private workspace libraries.
 
 ### protocol/
 
-Stable public protocol package for extensions and first-party published
+Stable public protocol package (`catui-protocol`) for extensions and first-party published
 integrations.
 
 Key files:
@@ -39,7 +39,7 @@ session-manager contracts.
 
 ### mem-core/
 
-Persistent memory package used by the built-in memory extension and runtime
+Persistent memory package (`catui-mem`) used by the built-in memory extension and runtime
 integration.
 
 Key files:
@@ -53,7 +53,7 @@ type surfaces.
 
 ### soul-core/
 
-AI personality package used by `core/soul-integration.ts` and the built-in Soul
+AI personality package (`catui-soul`) used by `core/soul-integration.ts` and the built-in Soul
 extension.
 
 Key files:

@@ -1,5 +1,5 @@
 {
-  "name": "@catui/soul-core",
+  "name": "catui-soul",
   "version": "0.1.0",
   "description": "AI personality evolution engine - persistent memory and adaptive behavior for AI coding agents",
   "type": "module",

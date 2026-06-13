@@ -1,4 +1,4 @@
-declare module "@catui/protocol" {
+declare module "catui-protocol" {
 	import type { Static, TSchema } from "@sinclair/typebox";
 
 	export interface SessionManagerContract {

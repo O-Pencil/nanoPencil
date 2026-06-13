@@ -1,14 +1,14 @@
 <div align="center">
 
 <pre>
-                .-~~~~~~~~~-._       _.-~~~~~~~~~-.
-            __.'              ~.   .~              `.__
-          .'//                  \./                  \\`.
-        .'//                     |                     \\`.
-      .'// .-~""""""""""""""-._     |     _,-""""""""""""""~-. \\`.
-    .'//.-"                 `-.  |  .-'                 "-.\\`.
-  .'//______.============-..   \ | /   ..-============.______\\`.
-.'______________________________\|/______________________________`.
+      /|/|                 /|/|
+     ( @ @)               ( o o)
+      ) ^                  ) ^
+     / |||                / |||
+    / )|||_              / )|||_
+   (_______)            (_______)
+
+              CATUI
 </pre>
 
 <h1>✎ Catui</h1>
@@ -16,14 +16,14 @@
 <p><strong>The AI Coding Agent That Remembers & Evolves</strong></p>
 
 <p>
-  <a href="https://www.npmjs.com/package/@catui/agent">
-    <img src="https://img.shields.io/npm/v/@catui/agent.svg?style=flat-square&color=cb3837" alt="npm version">
+  <a href="https://www.npmjs.com/package/catui-agent">
+    <img src="https://img.shields.io/npm/v/catui-agent.svg?style=flat-square&color=cb3837" alt="npm version">
   </a>
   <a href="https://nodejs.org">
-    <img src="https://img.shields.io/node/v/@catui/agent.svg?style=flat-square&color=339933" alt="Node.js">
+    <img src="https://img.shields.io/node/v/catui-agent.svg?style=flat-square&color=339933" alt="Node.js">
   </a>
-  <a href="https://www.npmjs.com/package/@catui/agent">
-    <img src="https://img.shields.io/npm/dm/@catui/agent.svg?style=flat-square&color=cb3837" alt="Downloads">
+  <a href="https://www.npmjs.com/package/catui-agent">
+    <img src="https://img.shields.io/npm/dm/catui-agent.svg?style=flat-square&color=cb3837" alt="Downloads">
   </a>
   <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&color=3178C6" alt="TypeScript">
   <img src="https://img.shields.io/badge/License-GPL--3.0-green?style=flat-square&color=brightgreen" alt="License">
@@ -117,7 +117,7 @@ Use the best model for each task.
 ### Installation
 
 ```bash
-npm install -g @catui/agent
+npm install -g catui-agent
 ```
 
 ### First Run

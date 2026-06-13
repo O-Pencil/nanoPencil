@@ -185,11 +185,11 @@ test("presence-runtime: resolves bundled packages from dist/packages", { concurr
 		const memModule = await __testUtils.importRuntimeModule<{
 			NanoMemEngine: new (config: unknown) => { config: unknown };
 			getConfig: (overrides?: Record<string, unknown>) => Record<string, unknown>;
-		}>(["@catui/mem-core"], "mem-core");
+		}>(["catui-mem"], "mem-core");
 		const soulModule = await __testUtils.importRuntimeModule<{
 			SoulManager: new (options?: unknown) => { options?: unknown; initialize(): Promise<void> };
 			getSoulConfig: () => Record<string, unknown>;
-		}>(["@catui/soul-core"], "soul-core");
+		}>(["catui-soul"], "soul-core");
 
 		assert.ok(memModule?.NanoMemEngine);
 		assert.ok(soulModule?.SoulManager);

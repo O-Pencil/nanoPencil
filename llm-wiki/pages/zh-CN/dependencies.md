@@ -68,7 +68,7 @@ generatedAt: 2026-05-26T16:35:12.352Z
 | `@mariozechner/jiti` | 1 |
 | `@catui/agent` | 1 |
 | `@catui/soul` | 1 |
-| `@catui/soul-core` | 1 |
+| `catui-soul` | 1 |
 | `@silvia-odwyer/photon-node` | 1 |
 | `@sinclair/typebox/compiler` | 1 |
 | `ajv-formats` | 1 |

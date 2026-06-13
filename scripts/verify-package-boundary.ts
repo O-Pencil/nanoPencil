@@ -43,9 +43,9 @@ interface InternalLibSpec {
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST_MAIN = join(REPO, "dist", "main.js");
 const PUBLIC_PACKAGES: PublicPackageSpec[] = [
-	{ name: "@catui/protocol", path: "packages/protocol", hostRange: "^0.1.0" },
-	{ name: "@catui/mem-core", path: "packages/mem-core", hostRange: "^1.1.2", requiredExports: [".", "./extension"] },
-	{ name: "@catui/soul-core", path: "packages/soul-core", hostRange: "^0.1.0" },
+	{ name: "catui-protocol", path: "packages/protocol", hostRange: "^0.1.1" },
+	{ name: "catui-mem", path: "packages/mem-core", hostRange: "^1.1.2", requiredExports: [".", "./extension"] },
+	{ name: "catui-soul", path: "packages/soul-core", hostRange: "^0.1.0" },
 ];
 const INTERNAL_LIBS: InternalLibSpec[] = [
 	{ name: "@catui/ai", path: "core/lib/ai", entry: "dist/index.js" },
@@ -137,8 +137,8 @@ function checkSourcePackageManifests(violations: Violation[]): void {
 		for (const section of PROD_DEP_SECTIONS) {
 			const deps = dependencyMap(pkg, section);
 			for (const depName of Object.keys(deps)) {
-				if (depName === "@catui/agent") {
-					add(violations, scope, `${section} must not depend on the host package; use @catui/protocol.`);
+				if (depName === "catui-agent") {
+					add(violations, scope, `${section} must not depend on the host package; use catui-protocol.`);
 				}
 				if (internalNames.has(depName)) {
 					add(violations, scope, `${section} must not expose private embedded lib ${depName}.`);

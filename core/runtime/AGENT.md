@@ -22,6 +22,7 @@ default-tools.ts: createDefaultRuntimeTools(), default read/bash/edit/write/time
 extension-core-bindings.ts: bindExtensionCore(), adapts AgentSession host capabilities into ExtensionRunner action/context APIs
 slash-command-catalog.ts: buildSessionSlashCommands(), buildExtensionSlashCommands(), shared slash command catalog assembly for runtime and extension views
 export-bridge.ts: exportSessionHtml(), getLastAssistantText(), owns HTML export wiring and last assistant text extraction; Theme remains injected through AgentSessionConfig
+plan-mode-permissions.ts: createPlanModeCanUseTool(), composePlanModeCanUseTool(), SDK-level plan mode tool permission enforcement; read-only tools allowed, Write/Edit restricted to .md files, Bash read-only whitelist; consumed by sdk.ts when permissionMode === 'plan'
 thinking-levels.ts: pure thinking-level logic extracted from AgentSession (P4.2) — THINKING_LEVELS(_WITH_XHIGH), modelSupportsThinking/Xhigh, availableThinkingLevels, clampThinkingLevel, nextThinkingLevel; no session state, reusable by rpc/print
 model-cycle.ts: pure model-cycle decisions extracted from AgentSession (P4.2) — pickThinkingLevelOnModelChange, nextCyclicIndex; side effects are owned by model-controller.ts
 

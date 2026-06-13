@@ -7,7 +7,7 @@
 
 import type { CreateAgentSessionOptions } from "../runtime/sdk.js";
 import type { AgentSession } from "../runtime/agent-session.js";
-import type { AgentMessage } from "@pencil-agent/agent-core";
+import type { AgentMessage } from "@catui/agent-core";
 import type { AgentSessionEvent } from "../runtime/agent-session.js";
 import type { SubAgentBackend, SubAgentEvent, SubAgentHandle, SubAgentSpec, SubAgentResult } from "./sub-agent-types.js";
 import { readFile } from "node:fs/promises";

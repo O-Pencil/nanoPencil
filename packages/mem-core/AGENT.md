@@ -1,6 +1,6 @@
 # AGENT.md
 
-This file provides guidance for **@o-pencil-agent** tooling and contributors when working in this repository.
+This file provides guidance for **@o-catui-agent** tooling and contributors when working in this repository.
 
 ## Project Overview
 
@@ -131,7 +131,7 @@ All user-facing strings and LLM prompts support English and Chinese:
 
 ## Extension Integration (`extension.ts`)
 
-The only module depending on `@pencil-agent/nano-pencil`. Bridges NanoPencil events to the engine:
+The only module depending on `@catui/agent`. Bridges Catui events to the engine:
 
 **Lifecycle hooks:**
 - `session_start` - Triggers consolidation
@@ -266,6 +266,6 @@ nanomem insights [--output <path>]  # Generate HTML report
 - `i18n.ts` - Internationalization (en/zh)
 - `eviction.ts` - Memory eviction algorithms
 - `update.ts` - Memory update operations
-- `extension.ts` - NanoPencil extension adapter
+- `extension.ts` - Catui extension adapter
 - `insights-html.ts` - HTML report generation
 - `cli.ts` - Standalone CLI tool

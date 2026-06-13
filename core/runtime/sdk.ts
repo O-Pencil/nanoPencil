@@ -11,8 +11,8 @@ import {
   type AgentLoopPolicyOptions,
   type AgentMessage,
   type ThinkingLevel,
-} from "@pencil-agent/agent-core";
-import type { Message, Model } from "@pencil-agent/ai/types";
+} from "@catui/agent-core";
+import type { Message, Model } from "@catui/ai/types";
 import { getAgentDir, getDocsPath } from "../../config.js";
 import { AgentSession } from "./agent-session.js";
 import type { Theme as ThemeContract } from "../theme-contract.js";
@@ -41,7 +41,7 @@ import {
 } from "../soul-integration.js";
 import type { SoulOptionsContract } from "../soul-options-contract.js";
 // @ts-ignore - soul-core package is bundled at runtime
-import type { SoulManager } from "@pencil-agent/soul-core";
+import type { SoulManager } from "@catui/soul-core";
 import {
   allTools,
   bashTool,
@@ -101,7 +101,7 @@ export const defaultLogger: SDKLogger = {
 export interface CreateAgentSessionOptions extends SoulOptionsContract {
   /** Working directory for project-local discovery. Default: process.cwd() */
   cwd?: string;
-  /** Global config directory. Default: ~/.pencils/agents/default */
+  /** Global config directory. Default: ~/.catui/agents/default */
   agentDir?: string;
   /** Multi-agent context. */
   agentCtx?: AgentDirContext;
@@ -295,7 +295,7 @@ function getDefaultAgentDir(): string {
  * const { session } = await createAgentSession();
  *
  * // With explicit model
- * import { getModel } from '@pencil-agent/ai/models';
+ * import { getModel } from '@catui/ai/models';
  * const { session } = await createAgentSession({
  *   model: getModel('anthropic', 'claude-opus-4-5'),
  *   thinkingLevel: 'high',

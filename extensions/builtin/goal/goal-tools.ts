@@ -1,17 +1,17 @@
 /**
  * [WHO]: Factory functions that return the three goal LLM tools (get_goal, create_goal, update_goal) as ToolDefinition objects, plus a getter for the controller singleton map
- * [FROM]: Depends on @sinclair/typebox, @pencil-agent/agent-core, core/extensions-host/types, ./goal-controller, ./goal-types, ./goal-format, ./goal-prompts
+ * [FROM]: Depends on @sinclair/typebox, @catui/agent-core, core/extensions-host/types, ./goal-controller, ./goal-types, ./goal-format, ./goal-prompts
  * [TO]: Consumed by ./index (registerTool); the controller map is shared with ./index via ./goal-runtime
  * [HERE]: extensions/builtin/goal/goal-tools.ts - LLM-facing tool boundary; no I/O beyond the controller
  */
 
 import { Type } from "@sinclair/typebox";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import type {
 	ExtensionContext,
 	ToolDefinition,
 } from "../../../core/extensions-host/types.js";
-import { Container, Text, type Component } from "@pencil-agent/tui";
+import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../core/theme-contract.js";
 import type { GoalController } from "./goal-controller.js";
 import type { ThreadGoal } from "./goal-types.js";

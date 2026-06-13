@@ -1,12 +1,12 @@
 /**
  * [WHO]: createSendMessageTool — the "SendMessage" tool for addressing named running agents
- * [FROM]: Depends on @pencil-agent/agent-core, @sinclair/typebox, ./agent-registry, ./agent-definition
+ * [FROM]: Depends on @catui/agent-core, @sinclair/typebox, ./agent-registry, ./agent-definition
  * [TO]: Consumed by core/runtime/agent-session.ts (tool registration alongside Agent/Task tools)
  * [HERE]: core/sub-agent/send-message-tool.ts - SendMessage tool per CC §XI (inter-agent messaging)
  * [COVENANT]: Change message protocol → update agent-input-output.ts
  */
 
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import type { AgentDefinitionRegistry } from "./agent-registry.js";
 import { agentDefinitionRegistry } from "./agent-registry.js";

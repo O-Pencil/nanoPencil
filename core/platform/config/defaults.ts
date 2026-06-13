@@ -4,6 +4,6 @@
  * [TO]: Consumed by main.ts, core/runtime/sdk.ts, core/runtime/agent-session.ts, core/model-resolver.ts
  * [HERE]: core/platform/config/defaults.ts - default configuration values
  */
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import type { ThinkingLevel } from "@catui/agent-core";
 
 export const DEFAULT_THINKING_LEVEL: ThinkingLevel = "medium";

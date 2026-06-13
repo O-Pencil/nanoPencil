@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const DIST_NODE_MODULES = join(ROOT, "dist", "node_modules", "@pencil-agent");
+const DIST_NODE_MODULES = join(ROOT, "dist", "node_modules", "@catui");
 
 const INTERNAL_LIBS = [
 	{ name: "ai", source: join(ROOT, "core", "lib", "ai") },
@@ -14,17 +14,17 @@ function ensureBuilt(lib) {
 	const distDir = join(lib.source, "dist");
 	const packageJsonPath = join(lib.source, "package.json");
 	if (!existsSync(distDir)) {
-		throw new Error(`Internal lib @pencil-agent/${lib.name} has no dist directory. Run build:deps first.`);
+		throw new Error(`Internal lib @catui/${lib.name} has no dist directory. Run build:deps first.`);
 	}
 	if (!existsSync(packageJsonPath)) {
-		throw new Error(`Internal lib @pencil-agent/${lib.name} has no package.json.`);
+		throw new Error(`Internal lib @catui/${lib.name} has no package.json.`);
 	}
 }
 
 // These internal libs are embedded purely for runtime resolution (require.resolve
 // → .js). The host's own type-check resolves them via the root node_modules
 // workspace symlink to core/lib/* (the source libs, which keep their .d.ts), and
-// consumers of @pencil-agent/nano-pencil resolve types from dist/index.d.ts — TS
+// consumers of @catui/agent resolve types from dist/index.d.ts — TS
 // never looks inside this nested dist/node_modules. So declaration files and
 // source maps add ~590K of dead weight to the published tarball. Strip them.
 const RUNTIME_DROP_SUFFIXES = [".d.ts", ".d.ts.map", ".d.mts", ".d.cts", ".js.map", ".mjs.map", ".cjs.map", ".map"];

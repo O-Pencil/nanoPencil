@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/tools/index.ts
  * [HERE]: core/tools/write.ts - filesystem creation/overwrite; consumed by orchestrator
  */
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { existsSync } from "fs";
 import { mkdir as fsMkdir, stat as fsStat, writeFile as fsWriteFile } from "fs/promises";

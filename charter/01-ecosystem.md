@@ -3,8 +3,8 @@
 > 10+ 项目的完整拓扑、架构层次、数据流
 
 <!--
-[WHO]  Pencil 生态全部项目的全景视图
-[FROM] PROJECT_OVERVIEW.md + pencil-platform-charter.md §2
+[WHO]  Catui 生态全部项目的全景视图
+[FROM] PROJECT_OVERVIEW.md + catui-platform-charter.md §2
 [TO]   02-boundaries, 03-relations, 各项目 README
 [HERE] charter/01-ecosystem.md — 全景总览
 -->
@@ -14,41 +14,41 @@
 ## 1.1 项目空间结构
 
 ```
-D:\Projects\Pencil\
-├── nanoPencil/                        # 本体心智核芯
-├── Pencil-Agent-Gateway/              # PAAS 网关服务
+D:\Projects\Catui\
+├── Catui/                        # 本体心智核芯
+├── Catui-Agent-Gateway/              # PAAS 网关服务
 ├── O-Mesh/                            # 多 Agent 编排引擎
-├── Pencil-Evaluate/                   # Agent 评估框架
+├── Catui-Evaluate/                   # Agent 评估框架
 ├── Asgard-platform/                   # 基础设施/平台层
 │   ├── packages/api (Asgard-api)      # FastAPI 后端
 │   └── packages/web (Asgard-web)      # React 前端
-├── nanopencil-editor/                 # 创作表现层（编辑器）
-├── Pencil-Eidolon/                    # 浏览器分身（Chrome/Edge MV3 插件）
-├── Pencil-Game/                       # 社会博弈表现层
-├── Pencil-Lesson/                     # 知识习得表现层
-├── Pencil-Terminal/                   # 具身环境/终端
-├── Pencil-Playground/                 # (规划中) 在线实验场
-└── Pencil-Eidolon/                    # 浏览器渗透层
+├── catui-editor/                 # 创作表现层（编辑器）
+├── Catui-Eidolon/                    # 浏览器分身（Chrome/Edge MV3 插件）
+├── Catui-Game/                       # 社会博弈表现层
+├── Catui-Lesson/                     # 知识习得表现层
+├── Catui-Terminal/                   # 具身环境/终端
+├── Catui-Playground/                 # (规划中) 在线实验场
+└── Catui-Eidolon/                    # 浏览器渗透层
 ```
 
 ## 1.2 Git 仓库远端
 
 | 仓库 | GitHub 远端 | 默认分支 | 备注 |
 |------|------------|---------|------|
-| **nanoPencil** | `O-Pencil/nanoPencil` | `main` | remote 名为 `github` |
-| **Pencil-Agent-Gateway** | `O-Pencil/Pencil-Agent-Gateway` | `main` | — |
-| **O-Mesh** | `O-Pencil/O-Mesh` | `main` | — |
-| **Pencil-Evaluate** | `O-Pencil/Pencil-Evaluate` | `main` | — |
-| **nanopencil-editor** | `O-Pencil/nanopencil-editor` | `dev` | 默认分支为 `dev` |
-| **Asgard-platform** | `O-Pencil/Asgard-platform` | `main` | 含子模块 |
-| **Asgard-api** | `O-Pencil/Asgard-api` | `main` | Asgard 子模块 |
-| **Asgard-web** | `O-Pencil/Asgard-web` | `main` | Asgard 子模块 |
-| **Pencil-Eidolon** | `O-Pencil/Pencil-Eidolon` | `main` | Chrome/Edge MV3 |
-| **Pencil-Game** | `O-Pencil/Pencil-Game` | `main` | — |
-| **Pencil-Lesson** | `O-Pencil/Pencil-Lesson` | `main` | — |
-| **Pencil-Terminal** | `O-Pencil/Pencil-Terminal` | `main` | 有 dependabot PR |
+| **Catui** | `O-Catui/Catui` | `main` | remote 名为 `github` |
+| **Catui-Agent-Gateway** | `O-Catui/Catui-Agent-Gateway` | `main` | — |
+| **O-Mesh** | `O-Catui/O-Mesh` | `main` | — |
+| **Catui-Evaluate** | `O-Catui/Catui-Evaluate` | `main` | — |
+| **catui-editor** | `O-Catui/catui-editor` | `dev` | 默认分支为 `dev` |
+| **Asgard-platform** | `O-Catui/Asgard-platform` | `main` | 含子模块 |
+| **Asgard-api** | `O-Catui/Asgard-api` | `main` | Asgard 子模块 |
+| **Asgard-web** | `O-Catui/Asgard-web` | `main` | Asgard 子模块 |
+| **Catui-Eidolon** | `O-Catui/Catui-Eidolon` | `main` | Chrome/Edge MV3 |
+| **Catui-Game** | `O-Catui/Catui-Game` | `main` | — |
+| **Catui-Lesson** | `O-Catui/Catui-Lesson` | `main` | — |
+| **Catui-Terminal** | `O-Catui/Catui-Terminal` | `main` | 有 dependabot PR |
 
-所有仓库统一归属于 GitHub 组织 **[O-Pencil](https://github.com/O-Pencil)**。
+所有仓库统一归属于 GitHub 组织 **[O-Catui](https://github.com/O-Catui)**。
 
 ## 1.3 架构层次模型
 
@@ -58,27 +58,27 @@ D:\Projects\Pencil\
 │              Asgard-platform (用户入口/Agent市场)                │
 ├─────────────────────────────────────────────────────────────────┤
 │                      渗透层 (Infiltration)                      │
-│              Pencil-Eidolon (浏览器分身插件)                     │
+│              Catui-Eidolon (浏览器分身插件)                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                      表现层 (Expression)                        │
-│   nanopencil-editor    Pencil-Game    Pencil-Lesson            │
+│   catui-editor    Catui-Game    Catui-Lesson            │
 │   (创作表现)            (博弈表现)      (知识习得)               │
 ├─────────────────────────────────────────────────────────────────┤
 │                      网关层 (Gateway)                           │
-│              Pencil-Agent-Gateway (HTTP + SSE)                  │
+│              Catui-Agent-Gateway (HTTP + SSE)                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                      编排层 (Orchestration)                     │
 │                     O-Mesh (多 Agent 编排)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                      本体层 (Ontology)                          │
-│                     nanoPencil (心智核芯)                       │
+│                     Catui (心智核芯)                       │
 │         NanoSoul (个性) + NanoMem (记忆) + AI Core              │
 ├─────────────────────────────────────────────────────────────────┤
 │                      具身层 (Embodiment)                        │
-│              Pencil-Terminal (物理世界操作能力)                  │
+│              Catui-Terminal (物理世界操作能力)                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                      评估层 (Evaluation)                        │
-│              Pencil-Evaluate (全链路自省与反馈)                  │
+│              Catui-Evaluate (全链路自省与反馈)                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -86,37 +86,37 @@ D:\Projects\Pencil\
 
 ```
                                               ┌─────────────────────────────────┐
-   nanoPencil CLI (本地)  ─── ACP ───────────►│    nano-pencil 引擎 (in-proc)    │
+   Catui CLI (本地)  ─── ACP ───────────►│    catui-agent 引擎 (in-proc)    │
                                               └─────────────────────────────────┘
 
-   nanopencil-editor (本地 ACP 模式)  ── ACP ──►  nano-pencil CLI 子进程
+   catui-editor (本地 ACP 模式)  ── ACP ──►  catui-agent CLI 子进程
 
-   nanopencil-editor (Remote HTTP 模式)  ┐
+   catui-editor (Remote HTTP 模式)  ┐
                                           │
-   nanoPencil CLI (远程模式)              ├── HTTP+SSE + API Key ──► Pencil-Agent-Gateway
+   Catui CLI (远程模式)              ├── HTTP+SSE + API Key ──► Catui-Agent-Gateway
                                           │                          │
    第三方 OpenAI 客户端                    ┘                          ▼
                                                               ┌─────────────────────┐
-                                                              │ PencilAgent 实例    │
-                                                              │  = nano-pencil      │
+                                                              │ CatuiAgent 实例    │
+                                                              │  = catui-agent      │
                                                               │  + Soul + Memory    │
                                                               │  + Model + Personal.│
                                                               └─────────────────────┘
                                                               (Gateway 进程内多实例)
 
-   Asgard 用户  ──── HTTP ──►  Asgard Platform  ── HTTP 代理 ──►  Pencil-Agent-Gateway
+   Asgard 用户  ──── HTTP ──►  Asgard Platform  ── HTTP 代理 ──►  Catui-Agent-Gateway
                                   │
-                                  └── 创建 PencilAgent / 用量回写 / 计费
+                                  └── 创建 CatuiAgent / 用量回写 / 计费
 
-   钉钉 / 微信 / 飞书事件  ──► Pencil-Agent-Gateway 内 Channel 子模块  ──► PencilAgent
+   钉钉 / 微信 / 飞书事件  ──► Catui-Agent-Gateway 内 Channel 子模块  ──► CatuiAgent
 
-   用户浏览器任意页面  ────►  Pencil-Eidolon Side Panel
-                               ├── 本地模式: Native Messaging → nanoPencil
+   用户浏览器任意页面  ────►  Catui-Eidolon Side Panel
+                               ├── 本地模式: Native Messaging → Catui
                                └── 云端模式: OpenAI 兼容 API → Gateway
 
-   O-Mesh Orchestrator  ────►  调度多个 nanoPencil 实例  ──►  Blackboard 横向通信
+   O-Mesh Orchestrator  ────►  调度多个 Catui 实例  ──►  Blackboard 横向通信
 
-   Pencil-Evaluate  ────►  运行评估测试集  ──►  生成能力报告  ──►  反馈优化 nanoPencil
+   Catui-Evaluate  ────►  运行评估测试集  ──►  生成能力报告  ──►  反馈优化 Catui
 ```
 
 ## 1.5 核心数据流
@@ -130,7 +130,7 @@ D:\Projects\Pencil\
 └─────────────────────────────────────────────────────┘
     ↓
 ┌──────────────────────────────────────┐
-│          Pencil-Eidolon              │
+│          Catui-Eidolon              │
 │     (浏览器渗透：任意网页中)          │
 └──────────────────────────────────────┘
     ↓
@@ -146,7 +146,7 @@ D:\Projects\Pencil\
     ↓
 ┌─────────────┐    ┌─────────────┐
 │  本体层      │ ←→ │  具身层      │
-│ (nanoPencil)│    │ (Terminal)  │
+│ (Catui)│    │ (Terminal)  │
 │ NanoSoul    │    │ 文件/Git/Shell│
 │ NanoMem     │    └─────────────┘
 └─────────────┘

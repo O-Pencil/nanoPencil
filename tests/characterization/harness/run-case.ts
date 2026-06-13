@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides runCase() — builds an AgentSession with a cassette-backed model and captures print-mode stdout
- * [FROM]: Depends on core/runtime/sdk (createAgentSession), modes/print-mode (runPrintMode), @pencil-agent/ai (getModel, Model/Api types), fetch-cassette, normalize
+ * [FROM]: Depends on core/runtime/sdk (createAgentSession), modes/print-mode (runPrintMode), @catui/ai (getModel, Model/Api types), fetch-cassette, normalize
  * [TO]: Consumed by tests/characterization/characterization.test.ts
  * [HERE]: tests/characterization/harness/run-case.ts — single-case characterization runner
  *
@@ -15,8 +15,8 @@
 import { cpSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getModel } from "@pencil-agent/ai/models";
-import type { Api, Model } from "@pencil-agent/ai/types";
+import { getModel } from "@catui/ai/models";
+import type { Api, Model } from "@catui/ai/types";
 import { createAgentSession, createCodingTools } from "../../../core/runtime/sdk.js";
 import { SessionManager } from "../../../core/session/session-manager.js";
 import { runPrintMode } from "../../../modes/print-mode.js";
@@ -113,11 +113,11 @@ function captureStdio(): { stop: () => string } {
 export async function runCase(caseDir: string, spec: CharacterizationCase, record: boolean): Promise<string> {
   const agentDir = mkdtempSync(join(tmpdir(), "char-agentdir-"));
   const cwd = mkdtempSync(join(tmpdir(), "char-cwd-"));
-  const prevAgentDir = process.env.NANOPENCIL_CODING_AGENT_DIR;
+  const prevAgentDir = process.env.CATUI_CODING_AGENT_DIR;
   const envKey = ENV_KEY_BY_PROVIDER[spec.provider] ?? "OPENAI_API_KEY";
   const prevApiKey = process.env[envKey];
 
-  process.env.NANOPENCIL_CODING_AGENT_DIR = agentDir;
+  process.env.CATUI_CODING_AGENT_DIR = agentDir;
   if (!record) process.env[envKey] = "characterization-test-key";
 
   if (spec.workspace && existsSync(join(caseDir, spec.workspace))) {
@@ -146,7 +146,7 @@ export async function runCase(caseDir: string, spec: CharacterizationCase, recor
   } finally {
     const raw = capture.stop();
     cassette.restore();
-    process.env.NANOPENCIL_CODING_AGENT_DIR = prevAgentDir;
+    process.env.CATUI_CODING_AGENT_DIR = prevAgentDir;
     if (prevApiKey === undefined) delete process.env[envKey];
     else process.env[envKey] = prevApiKey;
     rmSync(agentDir, { recursive: true, force: true });

@@ -1,12 +1,12 @@
 /**
  * [WHO]: AssistantMessageComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/assistant-message.ts - assistant message display
  */
 
-import type { AssistantMessage } from "@pencil-agent/ai/types";
-import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
+import type { AssistantMessage } from "@catui/ai/types";
+import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@catui/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 
 /**

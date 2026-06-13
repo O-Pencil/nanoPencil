@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PencilAgent } from "../core/runtime/pencil-agent.js";
+import { CatuiAgent } from "../core/runtime/catui-agent.js";
 import { AuthStorage } from "../core/platform/config/auth-storage.js";
 import { ModelRegistry } from "../core/model-registry.js";
 
@@ -10,7 +10,7 @@ function makeRegistry(): ModelRegistry {
 }
 
 test("resolveRequestedModel returns undefined when neither provider nor model provided", () => {
-	const agent = new PencilAgent({});
+	const agent = new CatuiAgent({});
 	const registry = makeRegistry();
 	const resolved = (agent as any).resolveRequestedModel(registry);
 	assert.equal(resolved, undefined);
@@ -33,7 +33,7 @@ test("resolveRequestedModel returns existing entry from registry without re-regi
 		}],
 	});
 
-	const agent = new PencilAgent({
+	const agent = new CatuiAgent({
 		provider: "dashscope-coding",
 		model: "qwen3.5-plus",
 		// Intentionally NO baseUrl — to confirm the registry lookup short-circuits
@@ -47,7 +47,7 @@ test("resolveRequestedModel returns existing entry from registry without re-regi
 
 test("resolveRequestedModel dynamically registers when baseUrl provided and model unknown", () => {
 	const registry = makeRegistry();
-	const agent = new PencilAgent({
+	const agent = new CatuiAgent({
 		provider: "custom-vendor",
 		model: "vendor-flagship",
 		apiKey: "sk-runtime",
@@ -68,7 +68,7 @@ test("resolveRequestedModel dynamically registers when baseUrl provided and mode
 test("resolveRequestedModel returns undefined and warns when model unknown and no baseUrl", () => {
 	const registry = makeRegistry();
 	const warnings: string[] = [];
-	const agent = new PencilAgent({
+	const agent = new CatuiAgent({
 		provider: "missing-provider",
 		model: "missing-model",
 		logger: {

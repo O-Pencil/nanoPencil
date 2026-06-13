@@ -23,8 +23,8 @@ const AUTO_EXPLORATION_TAG = "auto-exploration";
 
 function getMemoryDir(): string {
 	if (process.env.NANOMEM_MEMORY_DIR) return process.env.NANOMEM_MEMORY_DIR;
-	const nanopencilMemory = join(homedir(), ".nanopencil", "agent", "memory");
-	if (existsSync(nanopencilMemory)) return nanopencilMemory;
+	const catuiMemory = join(homedir(), ".catui", "agent", "memory");
+	if (existsSync(catuiMemory)) return catuiMemory;
 	return join(homedir(), ".nanomem", "memory");
 }
 

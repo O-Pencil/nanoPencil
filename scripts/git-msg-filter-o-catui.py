@@ -8,7 +8,7 @@ data = sys.stdin.read()
 # Co-authored trailer from legacy tooling
 data = re.sub(
 	r"Co-Authored-By: Claude Opus [\d.]+ <noreply@anthropic\.com>",
-	"Co-Authored-By: o-pencil-agent <noreply@o-pencil.org>",
+	"Co-Authored-By: o-catui-agent <noreply@o-catui.org>",
 	data,
 )
 

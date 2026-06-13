@@ -4,22 +4,22 @@
 
 <!--
 [WHO]  各项目文档的导航索引
-[FROM] pencil-platform-charter.md §9 + 各项目 docs/ 目录扫描
+[FROM] catui-platform-charter.md §9 + 各项目 docs/ 目录扫描
 [TO]   各项目 README
 [HERE] charter/08-pointers.md — 文档指针
 -->
 
 ---
 
-## 8.1 nanoPencil
+## 8.1 Catui
 
-**GitHub**：[O-Pencil/nanoPencil](https://github.com/O-Pencil/nanoPencil)
+**GitHub**：[O-Catui/Catui](https://github.com/O-Catui/Catui)
 
 | 主题 | 文档 |
 |------|------|
 | 项目导航 | `AGENTS.md` |
-| 产品人格宪章 | `.PENCIL.md` |
-| 多 Pencil 文件系统设计 | `docs/multi-agent-fs-design.md` |
+| 产品人格宪章 | `.CATUI.md` |
+| 多 Catui 文件系统设计 | `docs/multi-agent-fs-design.md` |
 | 远程工具回传 SDK 接口 | `docs/remote-tool-register-design.md` |
 | SDK 使用指南 | `docs/SDK.md` |
 | SDK 测试 | `docs/SDK-TESTING.md` |
@@ -31,9 +31,9 @@
 | 启动性能优化 | `docs/startup-performance-optimization.md` |
 | 本生态宪章 | `charter/` |
 
-## 8.2 Pencil-Agent-Gateway
+## 8.2 Catui-Agent-Gateway
 
-**GitHub**：[O-Pencil/Pencil-Agent-Gateway](https://github.com/O-Pencil/Pencil-Agent-Gateway)
+**GitHub**：[O-Catui/Catui-Agent-Gateway](https://github.com/O-Catui/Catui-Agent-Gateway)
 
 | 主题 | 文档 |
 |------|------|
@@ -44,14 +44,14 @@
 | Asgard / Editor 集成 | `docs/04-asgard-editor-integration.md` + `docs/10-editor-integration-guide.md` |
 | Caller 运行时 | `docs/05-caller-runtime.md` |
 | 术语表（Gateway 内部） | `docs/06-glossary.md` |
-| nano-pencil 集成 | `docs/07-m7-nano-pencil-integration.md` |
-| Channel 集成 | `docs/13-channel-integration.md` + `docs/14-multi-pencil-architecture.md` |
-| Multi-Pencil 行动手册 | `docs/16-pencils-storage-layout.md` |
+| catui-agent 集成 | `docs/07-m7-catui-agent-integration.md` |
+| Channel 集成 | `docs/13-channel-integration.md` + `docs/14-multi-catui-architecture.md` |
+| Multi-Catui 行动手册 | `docs/16-catui-storage-layout.md` |
 | **工具回传协议 v0.2** | `docs/18-tool-callback-protocol-v0.2.md` |
 
 ## 8.3 Asgard-platform
 
-**GitHub**：[O-Pencil/Asgard-platform](https://github.com/O-Pencil/Asgard-platform)
+**GitHub**：[O-Catui/Asgard-platform](https://github.com/O-Catui/Asgard-platform)
 
 | 主题 | 文档 |
 |------|------|
@@ -64,25 +64,25 @@
 
 | 子模块 | GitHub | 说明 |
 |--------|--------|------|
-| Asgard-api | [O-Pencil/Asgard-api](https://github.com/O-Pencil/Asgard-api) | FastAPI 后端 |
-| Asgard-web | [O-Pencil/Asgard-web](https://github.com/O-Pencil/Asgard-web) | React 前端 |
+| Asgard-api | [O-Catui/Asgard-api](https://github.com/O-Catui/Asgard-api) | FastAPI 后端 |
+| Asgard-web | [O-Catui/Asgard-web](https://github.com/O-Catui/Asgard-web) | React 前端 |
 
-## 8.4 nanopencil-editor
+## 8.4 catui-editor
 
-**GitHub**：[O-Pencil/nanopencil-editor](https://github.com/O-Pencil/nanopencil-editor)
+**GitHub**：[O-Catui/catui-editor](https://github.com/O-Catui/catui-editor)
 
 | 主题 | 文档 |
 |------|------|
-| 应用层路线 | `docs/technical-proposals/pencil-platform-roadmap.md` |
+| 应用层路线 | `docs/technical-proposals/catui-platform-roadmap.md` |
 | Remote HTTP Provider 设计 | `docs/technical-proposals/remote-http-chat-provider-design.md` |
 | 写作 Agent 编排 | `docs/technical-proposals/writing-agent-orchestration-seams.md` |
 | 平台预算 API 需求 | `docs/technical-proposals/platform-budget-api.md` |
 | ACP 集成 | `docs/acp-integration-followups.md` |
-| PCP 内部协议（legacy） | `docs/technical-proposals/pencil-client-protocol.md` |
+| PCP 内部协议（legacy） | `docs/technical-proposals/catui-client-protocol.md` |
 
 ## 8.5 O-Mesh
 
-**GitHub**：[O-Pencil/O-Mesh](https://github.com/O-Pencil/O-Mesh)
+**GitHub**：[O-Catui/O-Mesh](https://github.com/O-Catui/O-Mesh)
 
 | 主题 | 文档 |
 |------|------|
@@ -93,9 +93,9 @@
 | 事件系统 | `DOCS/EVENTS.md` |
 | 建议系统 | `DOCS/SUGGEST.md` |
 
-## 8.6 Pencil-Evaluate
+## 8.6 Catui-Evaluate
 
-**GitHub**：[O-Pencil/Pencil-Evaluate](https://github.com/O-Pencil/Pencil-Evaluate)
+**GitHub**：[O-Catui/Catui-Evaluate](https://github.com/O-Catui/Catui-Evaluate)
 
 | 主题 | 文档 |
 |------|------|
@@ -103,20 +103,20 @@
 | 基准使用 | `BENCHMARK_USAGE.md` |
 | 评估指标文档 | `docs/guides/` + `docs/integrations/` |
 
-## 8.7 Pencil-Eidolon
+## 8.7 Catui-Eidolon
 
-**GitHub**：[O-Pencil/Pencil-Eidolon](https://github.com/O-Pencil/Pencil-Eidolon)
+**GitHub**：[O-Catui/Catui-Eidolon](https://github.com/O-Catui/Catui-Eidolon)
 
 | 主题 | 文档 |
 |------|------|
 | 安装指南 | `INSTALL.md` |
-| nanoPencil + Harness 架构 | `docs/eidolon-nanopencil-harness-architecture.md` |
-| SDK 集成报告 | `docs/pencil-sdk-integration-report.md` |
+| Catui + Harness 架构 | `docs/eidolon-catui-harness-architecture.md` |
+| SDK 集成报告 | `docs/catui-sdk-integration-report.md` |
 | 主题系统 | `docs/theme/` |
 
-## 8.8 Pencil-Game
+## 8.8 Catui-Game
 
-**GitHub**：[O-Pencil/Pencil-Game](https://github.com/O-Pencil/Pencil-Game)
+**GitHub**：[O-Catui/Catui-Game](https://github.com/O-Catui/Catui-Game)
 
 | 子项目 | 说明 |
 |--------|------|
@@ -124,15 +124,15 @@
 | `Philosophical-Studio/` | 哲学思辨工作台 |
 | `werewolf/` | 狼人杀博弈游戏 |
 
-## 8.9 Pencil-Lesson
+## 8.9 Catui-Lesson
 
-**GitHub**：[O-Pencil/Pencil-Lesson](https://github.com/O-Pencil/Pencil-Lesson)
+**GitHub**：[O-Catui/Catui-Lesson](https://github.com/O-Catui/Catui-Lesson)
 
 基于 Next.js 的知识学习平台，详情见仓库 README。
 
-## 8.10 Pencil-Terminal
+## 8.10 Catui-Terminal
 
-**GitHub**：[O-Pencil/Pencil-Terminal](https://github.com/O-Pencil/Pencil-Terminal)
+**GitHub**：[O-Catui/Catui-Terminal](https://github.com/O-Catui/Catui-Terminal)
 
 基于 Go + Electron 的终端应用，详情见仓库 README。
 
@@ -145,13 +145,13 @@
 ```bash
 # 创建本地链接（Windows）
 mkdir charter\links
-mklink /J charter\links\gateway   ..\..\Pencil-Agent-Gateway
+mklink /J charter\links\gateway   ..\..\Catui-Agent-Gateway
 mklink /J charter\links\asgard    ..\..\Asgard-platform
-mklink /J charter\links\editor    ..\..\nanopencil-editor
+mklink /J charter\links\editor    ..\..\catui-editor
 mklink /J charter\links\o-mesh    ..\..\O-Mesh
-mklink /J charter\links\evaluate  ..\..\Pencil-Evaluate
-mklink /J charter\links\eidolon   ..\..\Pencil-Eidolon
-mklink /J charter\links\game      ..\..\Pencil-Game
-mklink /J charter\links\lesson    ..\..\Pencil-Lesson
-mklink /J charter\links\terminal  ..\..\Pencil-Terminal
+mklink /J charter\links\evaluate  ..\..\Catui-Evaluate
+mklink /J charter\links\eidolon   ..\..\Catui-Eidolon
+mklink /J charter\links\game      ..\..\Catui-Game
+mklink /J charter\links\lesson    ..\..\Catui-Lesson
+mklink /J charter\links\terminal  ..\..\Catui-Terminal
 ```

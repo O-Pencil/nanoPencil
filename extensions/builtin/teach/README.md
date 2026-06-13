@@ -1,6 +1,6 @@
 # Teach Extension
 
-> P2 | Guided knowledge teaching extension for nanoPencil
+> P2 | Guided knowledge teaching extension for Catui
 
 ## Overview
 
@@ -13,7 +13,7 @@ The teach extension provides guided, source-verified learning for any topic. It 
 - **Learning Styles**: Quick Overview, Deep Dive, Focused Skill, Holistic
 - **Learner Level Detection**: Adapts to L0-L3 levels automatically
 - **Session Memory**: Tracks glossary, depth, coverage, and questions
-- **Learning Records**: Persists progress to `.nanopencil/teach/`
+- **Learning Records**: Persists progress to `.catui/teach/`
 
 ## Files
 
@@ -134,7 +134,7 @@ See `references/learning-paths.md` for details.
 
 Learning records are saved to:
 ```
-.nanopencil/teach/
+.catui/teach/
 ├── records/          # Learning records
 ├── missions/         # Mission documents
 └── glossary.json     # Term glossary

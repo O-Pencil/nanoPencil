@@ -3,12 +3,12 @@
 > P2 | Parent: ../AGENT.md
 
 Member List
-mcp-config.ts: MCPConfig interface, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers(), MCP server configuration management, key invariant: configs stored in ~/.nanopencil/agent/mcp.json
+mcp-config.ts: MCPConfig interface, loadMcpConfig(), saveMcpConfig(), listEnabledMCPServers(), MCP server configuration management, key invariant: configs stored in ~/.catui/agent/mcp.json
 figma-auth.ts: registerFigmaMcpOAuthProvider(), Figma OAuth integration for MCP servers, handles OAuth flow and credential storage
 mcp-types.ts: MCPServerConfig, MCPTool, MCPToolResult shared contracts for MCP client/config/adapter boundaries
 mcp-client.ts: MCPClient class, MCP client for JSON-RPC over stdio, key invariant: one client per MCP server process
 mcp-guidance.ts: APIKeyGuidance interface, getAPIKeyGuidance(), formatGuidanceMessage(), getMissingKeyServers(), requiresAPIKey(), API key guidance for MCP servers
-mcp-adapter.ts: createMCPTool(), loadMCPTools(), getMCPToolDisplayName(), adapts MCP tools to NanoPencil tool system, converts MCP tool schema to ToolDefinition
+mcp-adapter.ts: createMCPTool(), loadMCPTools(), getMCPToolDisplayName(), adapts MCP tools to Catui tool system, converts MCP tool schema to ToolDefinition
 index.ts: MCP module barrel exports, re-exports MCPClient, MCP contracts, createMCPTool, loadMCPTools, guidance utilities
 mcp-manager.ts: MCPManager class, MCP server lifecycle and tool integration, manages client connections and tool registration
 

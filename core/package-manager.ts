@@ -18,7 +18,7 @@ import type { PackageSource, SettingsManager } from "./platform/config/settings-
 const NETWORK_TIMEOUT_MS = 10000;
 
 function isOfflineModeEnabled(): boolean {
-	const value = process.env.NANOPENCIL_OFFLINE;
+	const value = process.env.CATUI_OFFLINE ?? process.env.NANOPENCIL_OFFLINE;
 	if (!value) return false;
 	return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
 }
@@ -91,7 +91,7 @@ type LocalSource = {
 
 type ParsedSource = NpmSource | GitSource | LocalSource;
 
-interface NanoPencilManifest {
+interface CatuiManifest {
 	extensions?: string[];
 	skills?: string[];
 	prompts?: string[];
@@ -409,11 +409,11 @@ function collectAutoThemeEntries(dir: string): string[] {
 	return entries;
 }
 
-function readPiManifestFile(packageJsonPath: string): NanoPencilManifest | null {
+function readPiManifestFile(packageJsonPath: string): CatuiManifest | null {
 	try {
 		const content = readFileSync(packageJsonPath, "utf-8");
-		const pkg = JSON.parse(content) as { nanopencil?: NanoPencilManifest };
-		return pkg.nanopencil ?? null;
+		const pkg = JSON.parse(content) as { catui?: CatuiManifest };
+		return pkg.catui ?? null;
 	} catch {
 		return null;
 	}
@@ -1277,7 +1277,7 @@ export class DefaultPackageManager implements PackageManager {
 		this.ensureGitIgnore(installRoot);
 		const packageJsonPath = join(installRoot, "package.json");
 		if (!existsSync(packageJsonPath)) {
-			const pkgJson = { name: "nanopencil-extensions", private: true };
+			const pkgJson = { name: "catui-extensions", private: true };
 			writeFileSync(packageJsonPath, JSON.stringify(pkgJson, null, 2), "utf-8");
 		}
 	}
@@ -1346,7 +1346,7 @@ export class DefaultPackageManager implements PackageManager {
 			.update(`${prefix}-${suffix ?? ""}`)
 			.digest("hex")
 			.slice(0, 8);
-		return join(tmpdir(), "nanopencil-extensions", prefix, hash, suffix ?? "");
+		return join(tmpdir(), "catui-extensions", prefix, hash, suffix ?? "");
 	}
 
 	private getBaseDirForScope(scope: SourceScope): string {
@@ -1397,7 +1397,7 @@ export class DefaultPackageManager implements PackageManager {
 		const manifest = this.readPiManifest(packageRoot);
 		if (manifest) {
 			for (const resourceType of RESOURCE_TYPES) {
-				const entries = manifest[resourceType as keyof NanoPencilManifest];
+				const entries = manifest[resourceType as keyof CatuiManifest];
 				this.addManifestEntries(
 					entries,
 					packageRoot,
@@ -1431,7 +1431,7 @@ export class DefaultPackageManager implements PackageManager {
 		metadata: PathMetadata,
 	): void {
 		const manifest = this.readPiManifest(packageRoot);
-		const entries = manifest?.[resourceType as keyof NanoPencilManifest];
+		const entries = manifest?.[resourceType as keyof CatuiManifest];
 		if (entries) {
 			this.addManifestEntries(entries, packageRoot, resourceType, target, metadata);
 			return;
@@ -1482,7 +1482,7 @@ export class DefaultPackageManager implements PackageManager {
 		resourceType: ResourceType,
 	): { allFiles: string[]; enabledByManifest: Set<string> } {
 		const manifest = this.readPiManifest(packageRoot);
-		const entries = manifest?.[resourceType as keyof NanoPencilManifest];
+		const entries = manifest?.[resourceType as keyof CatuiManifest];
 		if (entries && entries.length > 0) {
 			const allFiles = this.collectFilesFromManifestEntries(entries, packageRoot, resourceType);
 			const manifestPatterns = entries.filter(isPattern);
@@ -1499,7 +1499,7 @@ export class DefaultPackageManager implements PackageManager {
 		return { allFiles, enabledByManifest: new Set(allFiles) };
 	}
 
-	private readPiManifest(packageRoot: string): NanoPencilManifest | null {
+	private readPiManifest(packageRoot: string): CatuiManifest | null {
 		const packageJsonPath = join(packageRoot, "package.json");
 		if (!existsSync(packageJsonPath)) {
 			return null;
@@ -1507,8 +1507,8 @@ export class DefaultPackageManager implements PackageManager {
 
 		try {
 			const content = readFileSync(packageJsonPath, "utf-8");
-			const pkg = JSON.parse(content) as { nanopencil?: NanoPencilManifest };
-			return pkg.nanopencil ?? null;
+			const pkg = JSON.parse(content) as { catui?: CatuiManifest };
+			return pkg.catui ?? null;
 		} catch {
 			return null;
 		}

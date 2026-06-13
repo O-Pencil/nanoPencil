@@ -1,6 +1,6 @@
-# Contributing to NanoPencil
+# Contributing to Catui
 
-Thank you for your interest in contributing to NanoPencil!
+Thank you for your interest in contributing to Catui!
 
 ## Code of Conduct
 
@@ -11,7 +11,7 @@ By participating, you agree to uphold our community standards.
 
 ### Reporting Bugs
 
-- Search existing [issues](https://github.com/O-Pencil/nanoPencil/issues) before creating a new one
+- Search existing [issues](https://github.com/O-Catui/Catui/issues) before creating a new one
 - Use the **Bug Report** template when available
 - Include:
   - Node.js and npm versions
@@ -23,7 +23,7 @@ By participating, you agree to uphold our community standards.
 
 - Open a **Feature Request** issue with the `enhancement` label
 - Describe the use case and why it would benefit the project
-- Explain how it aligns with NanoPencil's vision (persistent memory, AI personality evolution)
+- Explain how it aligns with Catui's vision (persistent memory, AI personality evolution)
 
 ### Pull Requests
 
@@ -90,7 +90,7 @@ npx tsc --noEmit
 ## Project Structure
 
 ```
-nanoPencil/
+Catui/
 ├── packages/           # Core packages
 │   ├── agent-core/    # Agent framework
 │   ├── ai/            # LLM integration

@@ -1,8 +1,8 @@
 /**
  * [WHO]: Simplify extension - Claude Code style code simplification tool
- * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, fs, path, core/extensions-host/types, modes/interactive/components/dynamic-border, modes/interactive/theme/theme
+ * [FROM]: Depends on @catui/ai, @catui/tui, child_process, fs, path, core/extensions-host/types, modes/interactive/components/dynamic-border, modes/interactive/theme/theme
  * [TO]: Consumed by builtin-extensions.ts as optional extension
- * [HERE]: extensions/optional/simplify/index.ts - code simplification for NanoPencil
+ * [HERE]: extensions/optional/simplify/index.ts - code simplification for Catui
  *
  * Features:
  * 1. Perception layer: Scan Git Diff + read project rules + analyze code
@@ -12,9 +12,9 @@
  */
 
 
-import { complete } from "@pencil-agent/ai/stream";
-import { getModel } from "@pencil-agent/ai/models";
-import { Container, Markdown, matchesKey, Text } from "@pencil-agent/tui";
+import { complete } from "@catui/ai/stream";
+import { getModel } from "@catui/ai/models";
+import { Container, Markdown, matchesKey, Text } from "@catui/tui";
 import { execFileSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { isAbsolute, join, relative, resolve } from "path";

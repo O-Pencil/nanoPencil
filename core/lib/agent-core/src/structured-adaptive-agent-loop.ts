@@ -1,11 +1,11 @@
 /**
- * Structured-adaptive agent loop for nanoPencil.
+ * Structured-adaptive agent loop for Catui.
  * Keeps the public AgentMessage/EventStream contract while using a query-loop
  * state machine with ordered tool-result pairing and safe tool batching.
  */
 /**
  * [WHO]: structuredAdaptiveAgentLoop, structuredAdaptiveAgentLoopContinue
- * [FROM]: Depends on @pencil-agent/ai, ./types, ./errors, structured-adaptive tool executors, and shared loop helpers.
+ * [FROM]: Depends on @catui/ai, ./types, ./errors, structured-adaptive tool executors, and shared loop helpers.
  * [TO]: Consumed by core/lib/agent-core/src/agent.ts and index.ts
  * [HERE]: core/lib/agent-core/src/structured-adaptive-agent-loop.ts - selectable structured-adaptive query loop framework with recovered-error tombstoning
  */
@@ -15,10 +15,10 @@ import {
 	type Context,
 	type ToolResultMessage,
 	type Usage,
-} from "@pencil-agent/ai/types";
-import { EventStream } from "@pencil-agent/ai/events";
-import { isContextOverflow } from "@pencil-agent/ai/overflow";
-import { streamSimple } from "@pencil-agent/ai/stream";
+} from "@catui/ai/types";
+import { EventStream } from "@catui/ai/events";
+import { isContextOverflow } from "@catui/ai/overflow";
+import { streamSimple } from "@catui/ai/stream";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -63,15 +63,15 @@ const DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS = 1;
 const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
 const DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS = 1;
 
-// --- Timing instrumentation (gated by NANOPENCIL_DEBUG=1) ---
+// --- Timing instrumentation (gated by CATUI_DEBUG=1) ---
 function _tlog(msg: string): void {
-	if (process.env.NANOPENCIL_DEBUG !== "1") return;
+	if (process.env.CATUI_DEBUG !== "1") return;
 	try {
 		const { appendFileSync } = require("fs");
 		const { join } = require("path");
 		const { homedir } = require("os");
 		appendFileSync(
-			join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log"),
+			join(homedir(), ".catui", "agent", "catui-debug.log"),
 			`[${new Date().toISOString()}] [loop] ${msg}\n`,
 		);
 	} catch { /* best-effort */ }

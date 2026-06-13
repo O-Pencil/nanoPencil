@@ -28,7 +28,7 @@
 
 ### 1. Durable 持久化存储
 - ✅ 创建持久化任务（`--durable` / `-d` flag）
-- ✅ 任务保存到 `.nanopencil/loop-tasks.json`
+- ✅ 任务保存到 `.catui/loop-tasks.json`
 - ✅ 会话启动时自动恢复
 - ✅ 任务状态变更时自动保存
 - ✅ 最大 50 个 durable 任务限制
@@ -36,7 +36,7 @@
 
 ### 2. Scheduler Lock
 - ✅ 文件锁机制防止多实例重复触发
-- ✅ 锁文件：`.nanopencil/loop-scheduler.lock`
+- ✅ 锁文件：`.catui/loop-scheduler.lock`
 - ✅ 获取锁失败时优雅降级
 - ✅ 非 owner 模式下跳过 durable 任务
 
@@ -106,7 +106,7 @@
 当前实现已经可以投入生产使用！
 
 ### 未来优化（可选）
-- [ ] 手动集成测试 - 在真实 nanoPencil 环境中测试
+- [ ] 手动集成测试 - 在真实 Catui 环境中测试
 - [ ] 阶段二：独立调度器模块
 - [ ] 阶段二：jitter 机制
 - [ ] 阶段三：teammate 路由支持

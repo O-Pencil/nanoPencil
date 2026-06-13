@@ -50,7 +50,7 @@ export class InsforgeHttpClient {
 
 		if (this.allowSelfSigned) {
 			// Only log in explicit debug mode — not every dev session needs this warning
-			if (["1", "true", "yes", "on"].includes((process.env.NANOPENCIL_DEBUG ?? "").toLowerCase())) {
+			if (["1", "true", "yes", "on"].includes((process.env.CATUI_DEBUG ?? process.env.NANOPENCIL_DEBUG ?? "").toLowerCase())) {
 				console.warn(`[${this.source}] TLS certificate verification disabled (allowSelfSigned=true)`);
 			}
 		}

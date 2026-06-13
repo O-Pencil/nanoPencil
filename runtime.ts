@@ -1,7 +1,7 @@
 /**
  * [WHO]: Public runtime subpath exports for advanced AgentSession embedding
  * [FROM]: Re-exports selected runtime/message modules
- * [TO]: Consumed by advanced SDK users importing @pencil-agent/nano-pencil/runtime
+ * [TO]: Consumed by advanced SDK users importing @catui/agent/runtime
  * [HERE]: runtime.ts - package subpath entry for runtime APIs
  */
 

@@ -1,5 +1,5 @@
 {
-	"name": "@pencil-agent/ai",
+	"name": "@catui/ai",
 	"private": true,
 	"version": "0.0.1",
 	"description": "Unified LLM API with automatic model discovery and provider configuration",
@@ -70,7 +70,7 @@
 		"./package.json": "./package.json"
 	},
 	"bin": {
-		"nanopencil-ai": "./dist/cli.js"
+		"catui-ai": "./dist/cli.js"
 	},
 	"files": [
 		"dist",
@@ -110,13 +110,13 @@
 		"bedrock",
 		"unified",
 		"api",
-		"pencil-agent"
+		"catui-agent"
 	],
-	"author": "nanoPencil Team",
+	"author": "Catui Team",
 	"license": "GPL-3.0",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/O-Pencil/nanoPencil.git"
+		"url": "git+https://github.com/O-Catui/Catui.git"
 	},
 	"engines": {
 		"node": ">=20.0.0"

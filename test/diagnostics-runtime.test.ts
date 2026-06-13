@@ -7,14 +7,14 @@ import { reportDiagnostic as reportSoulDiagnostic } from "../packages/soul-core/
 
 type EnvSnapshot = {
 	NODE_ENV?: string;
-	NANOPENCIL_DEBUG?: string;
+	CATUI_DEBUG?: string;
 	npm_lifecycle_event?: string;
 };
 
 function snapshotEnv(): EnvSnapshot {
 	return {
 		NODE_ENV: process.env.NODE_ENV,
-		NANOPENCIL_DEBUG: process.env.NANOPENCIL_DEBUG,
+		CATUI_DEBUG: process.env.CATUI_DEBUG,
 		npm_lifecycle_event: process.env.npm_lifecycle_event,
 	};
 }
@@ -30,7 +30,7 @@ function restoreEnv(snapshot: EnvSnapshot): void {
 function clearDevEnv(): EnvSnapshot {
 	const snapshot = snapshotEnv();
 	delete process.env.NODE_ENV;
-	delete process.env.NANOPENCIL_DEBUG;
+	delete process.env.CATUI_DEBUG;
 	delete process.env.npm_lifecycle_event;
 	return snapshot;
 }
@@ -68,9 +68,9 @@ test("diagnostics stay silent unless dev/debug mode is explicit", () => {
 	assert.deepEqual(lines, []);
 });
 
-test("diagnostics print when NANOPENCIL_DEBUG is enabled", () => {
+test("diagnostics print when CATUI_DEBUG is enabled", () => {
 	const env = clearDevEnv();
-	process.env.NANOPENCIL_DEBUG = "1";
+	process.env.CATUI_DEBUG = "1";
 	const originalWarn = console.warn;
 	const lines: string[] = [];
 	console.warn = (...args: unknown[]) => { lines.push(args.map(String).join(" ")); };

@@ -5,7 +5,7 @@
  * [HERE]: core/tools/grep.ts - content search via ripgrep; consumed by orchestrator
  */
 import { createInterface } from "node:readline";
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { spawn } from "child_process";
 import { readFileSync, statSync } from "fs";

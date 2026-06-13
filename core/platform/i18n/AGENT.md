@@ -6,7 +6,7 @@
 
 ## Overview
 
-Internationalization (i18n) module for NanoPencil. Provides multi-language support for UI strings, slash command descriptions, and user-facing messages.
+Internationalization (i18n) module for Catui. Provides multi-language support for UI strings, slash command descriptions, and user-facing messages.
 
 **Supported Languages:**
 - `en` — English (default)

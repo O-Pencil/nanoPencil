@@ -68,8 +68,8 @@ test("insforge sink falls back to legacy eval_runs row before dependent events",
 
 	const runCalls = calls.filter((c) => c.url.endsWith("/eval_runs"));
 	assert.equal(runCalls.length, 2);
-	assert.equal("pencil_version" in runCalls[0].body[0], true);
-	assert.equal("pencil_version" in runCalls[1].body[0], false);
+	assert.equal("catui_version" in runCalls[0].body[0], true);
+	assert.equal("catui_version" in runCalls[1].body[0], false);
 	assert.ok(calls.some((c) => c.url.includes("/eval_turns")));
 });
 

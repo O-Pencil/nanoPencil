@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides PersistentSurfaceRegistry, PersistentSurfaceContext — extension keyed persistent surfaces
- * [FROM]: Depends on @pencil-agent/tui (Container/Component/Text/Spacer/TUI), theme, theme-contract (Theme),
+ * [FROM]: Depends on @catui/tui (Container/Component/Text/Spacer/TUI), theme, theme-contract (Theme),
  *         extensions-host (ExtensionWidgetOptions), footer-data-provider (FooterDataProvider) — types
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.surfaces`; wired into ExtensionUIContext
  *       setWidget/setFooter/setHeader/setStatus; called by resetExtensionUI + syncBuddyPet)
@@ -13,7 +13,7 @@
  * identical to the former InteractiveMode methods (纯搬).
  */
 
-import { type Component, Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { type Component, Container, Spacer, Text, type TUI } from "@catui/tui";
 import type { ExtensionWidgetOptions } from "../../../../core/extensions-host/index.js";
 import type { Theme } from "../../../../core/theme-contract.js";
 import type { FooterDataProvider } from "../../footer-data-provider.js";

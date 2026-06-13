@@ -4,9 +4,9 @@ import {
 	type Message,
 	type Model,
 	type UserMessage,
-} from "@pencil-agent/ai/types";
-import { EventStream } from "@pencil-agent/ai/events";
-import { Type } from "@pencil-agent/ai/schema";
+} from "@catui/ai/types";
+import { EventStream } from "@catui/ai/events";
+import { Type } from "@catui/ai/schema";
 import { describe, expect, it } from "vitest";
 import { agentLoop, agentLoopContinue } from "../src/agent-loop.js";
 import { structuredAdaptiveAgentLoop } from "../src/structured-adaptive-agent-loop.js";
@@ -2827,9 +2827,9 @@ describe("structuredAdaptiveAgentLoop", () => {
 		expect(maxActive).toBe(2);
 	});
 
-	it("should use NANOPENCIL_MAX_TOOL_USE_CONCURRENCY when config does not override it", async () => {
-		const previous = process.env.NANOPENCIL_MAX_TOOL_USE_CONCURRENCY;
-		process.env.NANOPENCIL_MAX_TOOL_USE_CONCURRENCY = "1";
+	it("should use CATUI_MAX_TOOL_USE_CONCURRENCY when config does not override it", async () => {
+		const previous = process.env.CATUI_MAX_TOOL_USE_CONCURRENCY;
+		process.env.CATUI_MAX_TOOL_USE_CONCURRENCY = "1";
 		try {
 			const toolSchema = Type.Object({ value: Type.String() });
 			let active = 0;
@@ -2896,9 +2896,9 @@ describe("structuredAdaptiveAgentLoop", () => {
 			expect(maxActive).toBe(1);
 		} finally {
 			if (previous === undefined) {
-				delete process.env.NANOPENCIL_MAX_TOOL_USE_CONCURRENCY;
+				delete process.env.CATUI_MAX_TOOL_USE_CONCURRENCY;
 			} else {
-				process.env.NANOPENCIL_MAX_TOOL_USE_CONCURRENCY = previous;
+				process.env.CATUI_MAX_TOOL_USE_CONCURRENCY = previous;
 			}
 		}
 	});

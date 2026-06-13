@@ -86,7 +86,7 @@ export class TokenSaveTracker {
 	}
 
 	private async persist(record: TokenSaveRecord): Promise<void> {
-		const dir = join(this.projectPath, ".nanopencil", "token-save");
+		const dir = join(this.projectPath, ".catui", "token-save");
 		try {
 			await mkdir(dir, { recursive: true });
 			await appendFile(join(dir, "history.jsonl"), `${JSON.stringify(record)}\n`, "utf8");

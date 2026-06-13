@@ -1,12 +1,12 @@
 /**
  * [WHO]: Attachment, AttachmentsBarComponent
- * [FROM]: Depends on node:path, @pencil-agent/tui
+ * [FROM]: Depends on node:path, @catui/tui
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/attachments-bar.ts -
  */
 
 import * as path from "node:path";
-import { Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Container, Spacer, Text, type Component } from "@catui/tui";
 import type { Theme } from "../theme/theme.js";
 
 export interface Attachment {

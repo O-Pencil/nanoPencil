@@ -29,10 +29,10 @@ export {
 
 // SDK wrapper and logger
 export {
-  PencilAgent,
+  CatuiAgent,
   quickAgent,
-  type PencilAgentOptions,
-} from "./runtime/pencil-agent.js";
+  type CatuiAgentOptions,
+} from "./runtime/catui-agent.js";
 export {
   type SDKLogger,
   silentLogger,

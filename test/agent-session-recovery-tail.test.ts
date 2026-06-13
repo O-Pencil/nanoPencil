@@ -6,8 +6,8 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { AssistantMessage, ToolResultMessage } from "@pencil-agent/ai/types";
+import type { AgentMessage } from "@catui/agent-core";
+import type { AssistantMessage, ToolResultMessage } from "@catui/ai/types";
 import { pruneRecoverableErrorTail } from "../core/runtime/agent-session.js";
 
 function usage() {

@@ -9,7 +9,7 @@ import {
 	type AgentLoopFrameworkInput,
 	type AgentLoopPolicyOptions,
 	type ThinkingLevel,
-} from "@pencil-agent/agent-core";
+} from "@catui/agent-core";
 import chalk from "chalk";
 import { APP_NAME, CONFIG_DIR_NAME, ENV_AGENT_DIR } from "../config.js";
 import { allTools, type ToolName } from "../core/tools/index.js";
@@ -336,7 +336,7 @@ ${chalk.bold("Commands:")}
   ${APP_NAME} update [source]          Update installed extensions (skips pinned sources)
   ${APP_NAME} list                     List installed extensions from settings
   ${APP_NAME} config                   Open TUI to enable/disable package resources
-  ${APP_NAME} migrate                  Migrate data from legacy ~/.nanopencil to ~/.pencils
+  ${APP_NAME} migrate                  Migrate data from legacy ~/.catui/~/.catui to ~/.catui
   ${APP_NAME} <command> --help         Show help for commands
 
 ${chalk.bold("Options:")}
@@ -385,7 +385,7 @@ ${chalk.bold("Options:")}
   --list-models [search]         List available models (with optional fuzzy search)
   --refresh-models               Refresh remote model lists via discovery (use with --list-models)
   --verbose                      Force verbose startup (overrides quietStartup setting)
-  --offline                      Disable startup network operations (same as NANOPENCIL_OFFLINE=1)
+  --offline                      Disable startup network operations (same as CATUI_OFFLINE=1)
   --disable-soul                 Disable Soul (AI personality evolution)
   --no-mcp                       Disable MCP (Model Context Protocol) tools
   --acp                         Run as ACP Agent (for editor integration)
@@ -468,11 +468,11 @@ ${chalk.bold("Environment Variables:")}
   AWS_REGION                       - AWS region for Amazon Bedrock (e.g., us-east-1)
   ${`${APP_NAME.toUpperCase()}_CWD`.padEnd(32)} - Working directory override for project-local discovery
   ${ENV_AGENT_DIR.padEnd(32)} - Session storage directory (default: ~/${CONFIG_DIR_NAME}/agent)
-  NANOPENCIL_PACKAGE_DIR                   - Override package directory (for Nix/Guix store paths)
-  NANOPENCIL_OFFLINE                       - Disable startup network operations when set to 1/true/yes
-  NANOPENCIL_TOOLS_DOWNLOAD_TIMEOUT_MS     - Timeout in ms for downloading fd/ripgrep (default: 60000)
-  NANOPENCIL_SHARE_VIEWER_URL              - Base URL for /share command (default: https://nanopencil.dev/session/)
-  NANOPENCIL_AI_ANTIGRAVITY_VERSION        - Override Antigravity User-Agent version (e.g., 1.23.0)
+  CATUI_PACKAGE_DIR                   - Override package directory (for Nix/Guix store paths)
+  CATUI_OFFLINE                       - Disable startup network operations when set to 1/true/yes
+  CATUI_TOOLS_DOWNLOAD_TIMEOUT_MS     - Timeout in ms for downloading fd/ripgrep (default: 60000)
+  CATUI_SHARE_VIEWER_URL              - Base URL for /share command (default: https://catui.dev/session/)
+  CATUI_AI_ANTIGRAVITY_VERSION        - Override Antigravity User-Agent version (e.g., 1.23.0)
 
 ${chalk.bold("Available Tools (default: read, bash, edit, write):")}
   read   - Read file contents

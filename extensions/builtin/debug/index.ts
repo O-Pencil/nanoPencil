@@ -1,11 +1,11 @@
 /**
  * [WHO]: debugExtension - /debug command, before_agent_start hook injects diagnostic system prompt, agent_end cleanup, dispatched via sendUserMessage for streaming UX
- * [FROM]: Depends on core/extensions-host/types, @pencil-agent/tui, ./collectors
+ * [FROM]: Depends on core/extensions-host/types, @catui/tui, ./collectors
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/debug/index.ts - system diagnostics with three-layer analysis through full agent loop
  */
 
-import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text, type Component } from "@catui/tui";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions-host/types.js";
 import {
 	type DiagnosticData,
@@ -24,7 +24,7 @@ const DEBUG_MESSAGE_TYPE = "debug";
 const DEBUG_PROMPT_PREFIX = "[DEBUG:";
 const DEBUG_TAG = "[DEBUG]";
 
-const DEBUG_SYSTEM_PROMPT = `You are a diagnostic analyst for nanoPencil (a terminal-native AI coding agent).
+const DEBUG_SYSTEM_PROMPT = `You are a diagnostic analyst for Catui (a terminal-native AI coding agent).
 Analyze the provided system state and produce a structured three-layer diagnostic report.
 
 Output format (use these exact section headers):
@@ -259,7 +259,7 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 	});
 
 	api.registerCommand("debug", {
-		description: "Check NanoPencil health or investigate an issue. Usage: /debug [env|session|model|preferences|<issue>]",
+		description: "Check Catui health or investigate an issue. Usage: /debug [env|session|model|preferences|<issue>]",
 		getArgumentCompletions: (argumentPrefix, context) => {
 			if (context && context.tokenIndex > 0) return null;
 			const prefix = argumentPrefix.trim().toLowerCase();
@@ -289,7 +289,7 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 			const os = await import("node:os");
 			const fs = await import("node:fs");
 			const path = await import("node:path");
-			const memoryDir = process.env.NANOMEM_MEMORY_DIR || path.join(os.homedir(), ".nanopencil", "agent", "memory");
+			const memoryDir = process.env.NANOMEM_MEMORY_DIR || path.join(os.homedir(), ".catui", "agent", "memory");
 			const prefsPath = path.join(memoryDir, "preferences.json");
 
 			try {

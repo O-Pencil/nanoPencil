@@ -11,7 +11,7 @@ We release patches for security vulnerabilities for the following versions:
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within NanoPencil, please report it responsibly.
+If you discover a security vulnerability within Catui, please report it responsibly.
 
 ### How to Report
 
@@ -20,7 +20,7 @@ If you discover a security vulnerability within NanoPencil, please report it res
 Instead, please report them through one of the following methods:
 
 1. **GitHub Private Vulnerability Reporting** (Recommended)
-   - Go to the [Security tab](https://github.com/O-Pencil/nanoPencil/security/advisories/new) of the repository
+   - Go to the [Security tab](https://github.com/O-Catui/Catui/security/advisories/new) of the repository
    - Click "Report a vulnerability"
    - Fill out the vulnerability reporting form
 
@@ -67,12 +67,12 @@ We follow a **coordinated disclosure** process:
 
 ## Security Best Practices for Users
 
-When using NanoPencil:
+When using Catui:
 
 - Never commit API keys or credentials to version control
 - Use environment variables for sensitive configuration
 - Keep your installation updated
-- Review the permissions granted to NanoPencil
+- Review the permissions granted to Catui
 
 ## Security Updates
 
@@ -81,4 +81,4 @@ Security updates will be announced through:
 - GitHub Security Advisories
 - Release notes on GitHub Releases
 
-Thank you for helping keep NanoPencil and its users safe!
+Thank you for helping keep Catui and its users safe!

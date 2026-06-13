@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/tools/read.ts, cli/file-processor.ts, modes/interactive/interactive-mode.ts
  * [HERE]: modes/utils/image-resize.ts - image resizing for terminal display
  */
-import type { ImageContent } from "@pencil-agent/ai/types";
+import type { ImageContent } from "@catui/ai/types";
 import { loadPhoton } from "../../utils/photon.js";
 
 export interface ImageResizeOptions {

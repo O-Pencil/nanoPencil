@@ -1,19 +1,19 @@
-# @pencil-agent/protocol
+# @catui/protocol
 
-Stable protocol contracts for NanoPencil extensions — the single, versioned surface a
+Stable protocol contracts for Catui extensions — the single, versioned surface a
 third-party extension (or the bundled `mem-core` / `soul-core` packages) depends on,
-instead of reaching into the host package `@pencil-agent/nano-pencil`.
+instead of reaching into the host package `@catui/agent`.
 
 ## Installation
 
 ```bash
-npm install @pencil-agent/protocol
+npm install @catui/protocol
 ```
 
 ## Quick Start
 
 ```typescript
-import type { ExtensionAPI, ExtensionContext, ToolContract } from '@pencil-agent/protocol';
+import type { ExtensionAPI, ExtensionContext, ToolContract } from '@catui/protocol';
 
 // Define a tool using the stable protocol contract
 const myTool: ToolContract = {
@@ -41,11 +41,11 @@ export default function myExtension(api: ExtensionAPI) {
 
 | Module | Import | Contract | Status |
 |--------|--------|----------|--------|
-| `tools` | `@pencil-agent/protocol` | Tool runtime/permission seam + `ToolContract`, `ToolResult` | ✅ |
-| `lifecycle` | `@pencil-agent/protocol` | `ExtensionAPI`, `ExtensionContext`, `ExtensionFactory`, `SessionManagerContract` | ✅ |
-| `commands` | `@pencil-agent/protocol` | Slash-command registration + argument-completion | ✅ |
-| `hooks` | `@pencil-agent/protocol` | Lifecycle hook event-name vocabulary | ✅ |
-| `flags` | `@pencil-agent/protocol` | Extension-declared CLI/config flag contracts | ✅ |
+| `tools` | `@catui/protocol` | Tool runtime/permission seam + `ToolContract`, `ToolResult` | ✅ |
+| `lifecycle` | `@catui/protocol` | `ExtensionAPI`, `ExtensionContext`, `ExtensionFactory`, `SessionManagerContract` | ✅ |
+| `commands` | `@catui/protocol` | Slash-command registration + argument-completion | ✅ |
+| `hooks` | `@catui/protocol` | Lifecycle hook event-name vocabulary | ✅ |
+| `flags` | `@catui/protocol` | Extension-declared CLI/config flag contracts | ✅ |
 
 ## Key Types
 
@@ -115,10 +115,10 @@ type HookEventName =
 
 | What | Where |
 |------|-------|
-| Protocol contracts (this package) | `@pencil-agent/protocol` |
-| Host embedding SDK | `@pencil-agent/nano-pencil` |
-| Advanced internals | `@pencil-agent/nano-pencil/{tools,runtime,session,...}` |
-| Host-only rich types | `@pencil-agent/nano-pencil` (not public API) |
+| Protocol contracts (this package) | `@catui/protocol` |
+| Host embedding SDK | `@catui/agent` |
+| Advanced internals | `@catui/agent/{tools,runtime,session,...}` |
+| Host-only rich types | `@catui/agent` (not public API) |
 
 ## Explicitly NOT Here
 

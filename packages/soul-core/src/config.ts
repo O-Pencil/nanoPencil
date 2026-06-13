@@ -18,7 +18,7 @@ export type { SoulConfig } from "./types.js";
  */
 export function getDefaultConfig(): SoulConfig {
   const soulDir =
-    process.env.SOUL_DIR || join(homedir(), ".nanopencil", "soul");
+    process.env.SOUL_DIR || join(homedir(), ".catui", "soul");
 
   return {
     soulDir,

@@ -12,7 +12,7 @@ import {
 	type KeyId,
 	matchesKey,
 	setEditorKeybindings,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { getAgentDir } from "../../config.js";

@@ -17,9 +17,9 @@ import {
 	type TextContent,
 	type ThinkingBudgets,
 	type Transport,
-} from "@pencil-agent/ai/types";
-import { getModel } from "@pencil-agent/ai/models";
-import { streamSimple } from "@pencil-agent/ai/stream";
+} from "@catui/ai/types";
+import { getModel } from "@catui/ai/models";
+import { streamSimple } from "@catui/ai/stream";
 import { agentLoop, agentLoopContinue } from "./agent-loop.js";
 import { structuredAdaptiveAgentLoop, structuredAdaptiveAgentLoopContinue } from "./structured-adaptive-agent-loop.js";
 import { normalizeAgentLoopFramework } from "./types.js";

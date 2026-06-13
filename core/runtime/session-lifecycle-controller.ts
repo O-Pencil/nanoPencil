@@ -11,7 +11,7 @@
  * ModelController. Behavior is identical to the former AgentSession methods.
  */
 
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import type { ThinkingLevel } from "@catui/agent-core";
 import type {
   SessionBeforeForkResult,
   SessionBeforeSwitchResult,

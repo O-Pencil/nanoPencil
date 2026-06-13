@@ -11,7 +11,7 @@
  */
 
 
-import type { Component, TUI } from "@pencil-agent/tui";
+import type { Component, TUI } from "@catui/tui";
 import { theme } from "../theme/theme.js";
 
 // 32x32 RGB image of dax, hex encoded (3 bytes per pixel)

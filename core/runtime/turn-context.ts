@@ -6,7 +6,7 @@
  *
  * Design note:
  *   This is the canonical home of the bus. Packages that cannot reverse-import
- *   from the main app (e.g. @pencil-agent/mem-core) define a structurally
+ *   from the main app (e.g. @catui/mem-core) define a structurally
  *   identical mirror that targets the same globalThis key. The contract is the
  *   key string + TurnContext schema, not the implementation file.
  */
@@ -46,7 +46,7 @@ export interface TurnContext {
 }
 
 /** Reserved globalThis key. Mirrors must use exactly this string. */
-export const TURN_CONTEXT_GLOBAL_KEY = "__nanopencilTurnContext";
+export const TURN_CONTEXT_GLOBAL_KEY = "__catuiTurnContext";
 
 function store(): TurnContext {
 	const g = globalThis as unknown as Record<string, TurnContext | undefined>;

@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides PersonaSelectorComponent — persona picker UI with search and keyboard navigation
- * [FROM]: Depends on @pencil-agent/tui, theme, DynamicBorder, keybinding hints
+ * [FROM]: Depends on @catui/tui, theme, DynamicBorder, keybinding hints
  * [TO]: Consumed by modes/interactive/interactive-mode.ts; emits selected persona id
  * [HERE]: modes/interactive/components/persona-selector.ts — presentation component for persona selection
  */
@@ -14,7 +14,7 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 

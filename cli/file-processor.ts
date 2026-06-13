@@ -5,7 +5,7 @@
  * [HERE]: cli/file-processor.ts - process @file CLI arguments into content
  */
 import { access, readFile, stat } from "node:fs/promises";
-import type { ImageContent } from "@pencil-agent/ai/types";
+import type { ImageContent } from "@catui/ai/types";
 import chalk from "chalk";
 import { resolve } from "path";
 import { resolveReadPath } from "../core/tools/path-utils.js";

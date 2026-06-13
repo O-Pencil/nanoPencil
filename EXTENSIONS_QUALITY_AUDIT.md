@@ -1,4 +1,4 @@
-# nanoPencil Extensions Quality Audit
+# Catui Extensions Quality Audit
 
 Date: 2026-05-26
 
@@ -234,7 +234,7 @@ The repair pass closed the high-priority defects, the known large-file hotspots,
 
 ## Verification Log
 
-Commands run from `/Users/cunyu666/Dev/nanoPencil`:
+Commands run from `/Users/cunyu666/Dev/Catui`:
 
 ```bash
 npm run verify:dip

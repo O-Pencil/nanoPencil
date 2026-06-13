@@ -143,7 +143,7 @@ function hasAnyApiKey(): boolean {
 }
 
 function dumpFailurePayload(params: { label: string; error: string; payload?: unknown; messages: Message[] }): void {
-	const filename = `/tmp/nanopencil-handoff-${params.label}-${Date.now()}.json`;
+	const filename = `/tmp/catui-handoff-${params.label}-${Date.now()}.json`;
 	const body = {
 		label: params.label,
 		error: params.error,

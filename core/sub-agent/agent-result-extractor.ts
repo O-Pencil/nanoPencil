@@ -1,11 +1,11 @@
 /**
  * [WHO]: extractAgentResult, truncateResult — result extraction and truncation per CC §11.2 (VS8)
- * [FROM]: Depends on @pencil-agent/agent-core for AgentMessage, ./agent-definition for MAX_RESULT_SIZE_CHARS
+ * [FROM]: Depends on @catui/agent-core for AgentMessage, ./agent-definition for MAX_RESULT_SIZE_CHARS
  * [TO]: Consumed by ./agent-tool
  * [HERE]: core/sub-agent/agent-result-extractor.ts - Sub-agent result extraction
  */
 
-import type { AgentMessage } from "@pencil-agent/agent-core";
+import type { AgentMessage } from "@catui/agent-core";
 import type { AgentOutputCompleted, AgentSpawnMetadata, AgentUsage } from "./agent-input-output.js";
 import { MAX_RESULT_SIZE_CHARS } from "./agent-definition.js";
 

@@ -5,8 +5,8 @@
  * [HERE]: modes/acp/acp-mode.ts - ACP protocol integration
  */
 import * as acp from "@agentclientprotocol/sdk";
-import type { AgentMessage, AgentRunResult, AgentTool } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai/types";
+import type { AgentMessage, AgentRunResult, AgentTool } from "@catui/agent-core";
+import type { Model } from "@catui/ai/types";
 import type {
 	AuthenticateRequest,
 	AuthenticateResponse,
@@ -111,7 +111,7 @@ const ACP_COMMAND_INPUT_HINTS = new Map<string, string>([
 ]);
 
 /**
- * Map nanoPencil tool names to ACP tool kinds.
+ * Map Catui tool names to ACP tool kinds.
  */
 function mapToolKind(toolName: string): ToolKind {
 	switch (toolName) {
@@ -300,7 +300,7 @@ function isMutatingTool(tool: AgentTool<any>): boolean {
 
 function unsupportedAcpUi(feature: string): never {
 	throw new Error(
-		`${feature} is not available in ACP mode yet. In Zed or other ACP clients, use argument-driven commands when available, or run this command in the terminal nanoPencil UI.`,
+		`${feature} is not available in ACP mode yet. In Zed or other ACP clients, use argument-driven commands when available, or run this command in the terminal Catui UI.`,
 	);
 }
 
@@ -376,12 +376,12 @@ function createAcpExtensionUIContext(): ExtensionUIContext {
 }
 
 /**
- * NanoPencilAgent - implements ACP Agent interface
+ * CatuiAgent - implements ACP Agent interface
  *
- * Wraps nanoPencil's AgentSession as an ACP Agent,
+ * Wraps Catui's AgentSession as an ACP Agent,
  * communicating with ACP Clients via stdin/stdout.
  */
-class NanoPencilAgent implements acp.Agent {
+class CatuiAgent implements acp.Agent {
 	private connection: acp.AgentSideConnection;
 	private session: AgentSession;
 	private sessions = new Map<string, AcpSessionState>();
@@ -440,7 +440,7 @@ class NanoPencilAgent implements acp.Agent {
 		return {
 			protocolVersion: acp.PROTOCOL_VERSION,
 			agentInfo: {
-				name: "nanoPencil",
+				name: "Catui",
 				version: "acp",
 			},
 			agentCapabilities: {
@@ -863,7 +863,7 @@ class NanoPencilAgent implements acp.Agent {
 		) {
 			await this.sendAssistantText(
 				sessionId,
-				`/${commandName} is not supported in ACP clients like Zed yet. Use the terminal nanoPencil UI for this command.`,
+				`/${commandName} is not supported in ACP clients like Zed yet. Use the terminal Catui UI for this command.`,
 			);
 			return true;
 		}
@@ -1207,7 +1207,7 @@ class NanoPencilAgent implements acp.Agent {
 	}
 
 	/**
-	 * Map nanoPencil AgentSessionEvent to ACP session/update notifications.
+	 * Map Catui AgentSessionEvent to ACP session/update notifications.
 	 */
 	private mapEventToAcp(sessionId: string, event: AgentSessionEvent): void {
 		switch (event.type) {
@@ -1325,7 +1325,7 @@ export async function runAcpMode(session: AgentSession, options: AcpModeOptions 
 	const output = Readable.toWeb(process.stdin) as ReadableStream<Uint8Array>;
 	const stream = acp.ndJsonStream(input, output);
 
-	new acp.AgentSideConnection((conn) => new NanoPencilAgent(conn, session, options), stream);
+	new acp.AgentSideConnection((conn) => new CatuiAgent(conn, session, options), stream);
 
 	// Keep process alive
 	return new Promise(() => {});

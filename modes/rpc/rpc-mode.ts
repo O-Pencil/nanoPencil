@@ -7,7 +7,7 @@
 import * as crypto from "node:crypto";
 import * as readline from "readline";
 import type { AgentSession } from "../../core/runtime/agent-session.js";
-import type { AgentLoopPolicyOptions } from "@pencil-agent/agent-core";
+import type { AgentLoopPolicyOptions } from "@catui/agent-core";
 import { buildExtensionSlashCommands } from "../../core/runtime/slash-command-catalog.js";
 import { inferSlashCommandCategory, type SlashCommandInfo } from "../../core/slash-commands.js";
 import type {

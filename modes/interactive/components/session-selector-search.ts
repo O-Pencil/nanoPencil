@@ -1,11 +1,11 @@
 /**
  * [WHO]: ParsedSearchQuery, MatchResult, hasSessionName, parseSearchQuery, matchSession
- * [FROM]: Depends on @pencil-agent/tui
+ * [FROM]: Depends on @catui/tui
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/session-selector-search.ts -
  */
 
-import { fuzzyMatch } from "@pencil-agent/tui";
+import { fuzzyMatch } from "@catui/tui";
 import type { SessionInfo } from "../../../core/session/session-manager.js";
 
 export type SortMode = "threaded" | "recent" | "relevance";

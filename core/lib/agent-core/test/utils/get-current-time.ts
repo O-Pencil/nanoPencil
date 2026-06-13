@@ -1,11 +1,11 @@
 /**
  * [WHO]: getCurrentTime test utility - timezone-aware time for agent testing
- * [FROM]: Depends on @pencil-agent/ai/schema, ../../src/types
+ * [FROM]: Depends on @catui/ai/schema, ../../src/types
  * [TO]: Consumed by agent-core tests
  * [HERE]: core/lib/agent-core/test/utils/get-current-time.ts - test utility
  */
 
-import { type Static, Type } from "@pencil-agent/ai/schema";
+import { type Static, Type } from "@catui/ai/schema";
 import type { AgentTool, AgentToolResult } from "../../src/types.js";
 
 export interface GetCurrentTimeResult extends AgentToolResult<{ utcTimestamp: number }> {}

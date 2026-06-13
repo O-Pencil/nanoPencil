@@ -2,7 +2,7 @@
 
 ## 概述
 
-Security Audit Extension 为 NanoPencil 提供安全审计能力，包括：
+Security Audit Extension 为 Catui 提供安全审计能力，包括：
 - 审计日志记录所有操作
 - 危险命令模式检测
 - 敏感文件访问保护
@@ -188,12 +188,12 @@ const SENSITIVE_PATHS = [
 
 1. **备份配置**
    ```bash
-   cp ~/.nanopencil/agent/settings.json ~/.nanopencil/agent/settings.json.bak
+   cp ~/.catui/agent/settings.json ~/.catui/agent/settings.json.bak
    ```
 
 2. **更新扩展**
    ```bash
-   npm install -g @pencil-agent/nano-pencil@latest
+   npm install -g @catui/agent@latest
    ```
 
 3. **配置新级别**
@@ -258,17 +258,17 @@ interface SecurityEngine {
 
 审计日志存储在：
 ```
-~/.nanopencil/agent/security-audit.json
+~/.catui/agent/security-audit.json
 ```
 
 ### 查看日志
 
 ```bash
-# 使用 nanopencil 命令
+# 使用 catui 命令
 /security-logs 50
 
 # 或直接查看文件
-cat ~/.nanopencil/agent/security-audit.json
+cat ~/.catui/agent/security-audit.json
 ```
 
 ### 常见问题

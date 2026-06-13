@@ -8,8 +8,8 @@
  * text extraction. AgentSession remains the public facade and injects the optional Theme.
  */
 
-import type { AgentMessage, AgentState } from "@pencil-agent/agent-core";
-import type { AssistantMessage } from "@pencil-agent/ai/types";
+import type { AgentMessage, AgentState } from "@catui/agent-core";
+import type { AssistantMessage } from "@catui/ai/types";
 import { exportSessionToHtml } from "../export-html/index.js";
 import { createToolHtmlRenderer } from "../export-html/tool-renderer.js";
 import type { ExtensionRunner } from "../extensions-host/index.js";

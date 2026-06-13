@@ -32,9 +32,9 @@ async function waitForPresenceMessage(messages: Array<{ customType: string; cont
 
 test("presence-locale: Chinese greeting when memory has Chinese preference", { concurrency: false }, async (t) => {
 	const cwd = process.cwd();
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-locale-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-locale-"));
 	const originalMemoryDir = process.env.NANOMEM_MEMORY_DIR;
-	const originalDelay = process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+	const originalDelay = process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 
 	// Create memory directory with Chinese preference
 	const memoryDir = join(agentDir, "memory");
@@ -68,7 +68,7 @@ test("presence-locale: Chinese greeting when memory has Chinese preference", { c
 	writeFileSync(join(memoryDir, "episodes.json"), JSON.stringify([]));
 
 	process.env.NANOMEM_MEMORY_DIR = memoryDir;
-	process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS = "10";
+	process.env.CATUI_PRESENCE_OPENING_DELAY_MS = "10";
 
 	const settingsManager = SettingsManager.create(cwd, agentDir);
 	const resourceLoader = new DefaultResourceLoader({
@@ -101,9 +101,9 @@ test("presence-locale: Chinese greeting when memory has Chinese preference", { c
 			process.env.NANOMEM_MEMORY_DIR = originalMemoryDir;
 		}
 		if (originalDelay === undefined) {
-			delete process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+			delete process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 		} else {
-			process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS = originalDelay;
+			process.env.CATUI_PRESENCE_OPENING_DELAY_MS = originalDelay;
 		}
 		rmSync(agentDir, { recursive: true, force: true });
 	});
@@ -171,9 +171,9 @@ test("presence-locale: Chinese greeting when memory has Chinese preference", { c
 
 test("presence-locale: English greeting when no Chinese preference", { concurrency: false }, async (t) => {
 	const cwd = process.cwd();
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-locale-en-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-locale-en-"));
 	const originalMemoryDir = process.env.NANOMEM_MEMORY_DIR;
-	const originalDelay = process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+	const originalDelay = process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 
 	// Create memory directory with NO language preference
 	const memoryDir = join(agentDir, "memory");
@@ -185,7 +185,7 @@ test("presence-locale: English greeting when no Chinese preference", { concurren
 	writeFileSync(join(memoryDir, "episodes.json"), JSON.stringify([]));
 
 	process.env.NANOMEM_MEMORY_DIR = memoryDir;
-	process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS = "10";
+	process.env.CATUI_PRESENCE_OPENING_DELAY_MS = "10";
 
 	const settingsManager = SettingsManager.create(cwd, agentDir);
 	const resourceLoader = new DefaultResourceLoader({
@@ -218,9 +218,9 @@ test("presence-locale: English greeting when no Chinese preference", { concurren
 			process.env.NANOMEM_MEMORY_DIR = originalMemoryDir;
 		}
 		if (originalDelay === undefined) {
-			delete process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+			delete process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 		} else {
-			process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS = originalDelay;
+			process.env.CATUI_PRESENCE_OPENING_DELAY_MS = originalDelay;
 		}
 		rmSync(agentDir, { recursive: true, force: true });
 	});

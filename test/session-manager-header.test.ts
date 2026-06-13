@@ -10,7 +10,7 @@ function createTempDir(prefix: string): string {
 }
 
 test("session-manager drops files without a valid session header id", () => {
-	const root = createTempDir("nanopencil-session-header-");
+	const root = createTempDir("catui-session-header-");
 	try {
 		const file = join(root, "bad.jsonl");
 		writeFileSync(
@@ -26,7 +26,7 @@ test("session-manager drops files without a valid session header id", () => {
 });
 
 test("session-manager keeps files with a valid session header", () => {
-	const root = createTempDir("nanopencil-session-header-");
+	const root = createTempDir("catui-session-header-");
 	try {
 		const file = join(root, "good.jsonl");
 		const header = {

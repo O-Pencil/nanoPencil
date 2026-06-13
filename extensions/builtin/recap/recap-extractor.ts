@@ -1,6 +1,6 @@
 /**
  * [WHO]: extractFreeRecap(), formatFreeRecap(), FreeRecap — zero-LLM deterministic recap from session entries
- * [FROM]: Depends on core/session/session-manager (SessionEntry types), @pencil-agent/ai (UserMessage, AssistantMessage)
+ * [FROM]: Depends on core/session/session-manager (SessionEntry types), @catui/ai (UserMessage, AssistantMessage)
  * [TO]: Consumed by extensions/builtin/recap/index.ts (Free path), recap-synthesizer (shared walker for activity counts)
  * [HERE]: extensions/builtin/recap/recap-extractor.ts - heuristic Free recap: longest user message as goal, tool/file frequency as facts, question detection as next-step
  */

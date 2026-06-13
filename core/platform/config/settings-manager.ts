@@ -4,7 +4,7 @@
  * [TO]: Consumed by index.ts, main.ts, core/runtime/sdk.ts, cli/config-selector.ts, extensions/builtin/team/index.ts, modes/interactive/components/model-selector.ts, modes/interactive/components/config-selector.ts, and test files
  * [HERE]: core/platform/config/settings-manager.ts - user preferences aggregation
  */
-import type { Transport } from "@pencil-agent/ai/types";
+import type { Transport } from "@catui/ai/types";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";
@@ -972,7 +972,7 @@ export class SettingsManager {
 	getQuietStartup(): boolean {
 		const v = this.settings.quietStartup;
 		if (v !== undefined) return v;
-		return APP_NAME === "nanopencil";
+		return APP_NAME === "catui" || APP_NAME === "catui";
 	}
 
 	setQuietStartup(quiet: boolean): void {

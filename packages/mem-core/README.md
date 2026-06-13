@@ -1,4 +1,4 @@
-# @pencil-agent/nano-mem
+# @catui/mem-core
 
 > Persistent memory engine for AI coding agents with consolidation, scoring, and insights.
 
@@ -18,13 +18,13 @@
 ## Installation
 
 ```bash
-npm install @pencil-agent/nano-mem
+npm install @catui/mem-core
 ```
 
 ## Quick Start
 
 ```typescript
-import { NanoMemEngine, getConfig } from '@pencil-agent/nano-mem';
+import { NanoMemEngine, getConfig } from '@catui/mem-core';
 
 // Create engine with defaults
 const engine = new NanoMemEngine();
@@ -67,7 +67,7 @@ console.log(injection);
 ## Configuration
 
 ```typescript
-import { NanoMemEngine, getConfig } from '@pencil-agent/nano-mem';
+import { NanoMemEngine, getConfig } from '@catui/mem-core';
 
 const config = getConfig({
   memoryDir: './my-memory',
@@ -112,12 +112,12 @@ constructor(overrides?: Partial<NanomemConfig>, llmFn?: LlmFn)
 
 ### Extension Integration
 
-For NanoPencil integration:
+For Catui integration:
 
 ```typescript
-import nanomemExtension from '@pencil-agent/nano-mem/extension';
+import nanomemExtension from '@catui/mem-core/extension';
 
-// In NanoPencil
+// In Catui
 api.registerExtension(() => nanomemExtension);
 ```
 

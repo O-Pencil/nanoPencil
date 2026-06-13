@@ -4,8 +4,8 @@
  * [TO]: Consumed by core/runtime/agent-session.ts
  * [HERE]: core/runtime/retry-coordinator.ts - retry orchestration extracted from AgentSession
  */
-import type { AssistantMessage } from "@pencil-agent/ai/types";
-import { isContextOverflow } from "@pencil-agent/ai/overflow";
+import type { AssistantMessage } from "@catui/ai/types";
+import { isContextOverflow } from "@catui/ai/overflow";
 import { sleep } from "../platform/utils/sleep.js";
 
 /** Retry settings from SettingsManager */

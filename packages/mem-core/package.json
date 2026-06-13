@@ -1,5 +1,5 @@
 {
-  "name": "@pencil-agent/mem-core",
+  "name": "@catui/mem-core",
   "version": "1.1.2",
   "description": "Persistent memory engine for AI coding agents with consolidation, scoring, and insights",
   "type": "module",
@@ -41,26 +41,26 @@
     "a-mem",
     "mem0"
   ],
-  "author": "NanoPencil Team",
+  "author": "Catui Team",
   "license": "GPL-3.0",
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "@pencil-agent/nano-pencil": "file:../..",
+    "@catui/agent": "file:../..",
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3",
-    "@pencil-agent/protocol": "file:../protocol"
+    "@catui/protocol": "file:../protocol"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/O-Pencil/nanoPencil.git"
+    "url": "git+https://github.com/O-Catui/Catui.git"
   },
   "publishConfig": {
     "access": "public"
   },
   "peerDependencies": {
-    "@pencil-agent/protocol": "^0.1.0"
+    "@catui/protocol": "^0.1.0"
   }
 }

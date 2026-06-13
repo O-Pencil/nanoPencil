@@ -11,7 +11,7 @@ import type {
 	AgentToolUpdateCallback,
 	AgentLoopFramework,
 	ThinkingLevel,
-} from "@pencil-agent/agent-core";
+} from "@catui/agent-core";
 import type {
 	Api,
 	AssistantMessageEvent,
@@ -23,9 +23,9 @@ import type {
 	TextContent,
 	ToolResultMessage,
 	Usage,
-} from "@pencil-agent/ai/types";
-import type { AssistantMessageEventStream } from "@pencil-agent/ai/events";
-import type { OAuthCredentials, OAuthLoginCallbacks } from "@pencil-agent/ai/oauth";
+} from "@catui/ai/types";
+import type { AssistantMessageEventStream } from "@catui/ai/events";
+import type { OAuthCredentials, OAuthLoginCallbacks } from "@catui/ai/oauth";
 import type {
 	AutocompleteItem,
 	Component,
@@ -35,7 +35,7 @@ import type {
 	OverlayHandle,
 	OverlayOptions,
 	TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type {
 	ArgumentCompletionContext as ProtocolArgumentCompletionContext,
@@ -45,7 +45,7 @@ import type {
 	ExtensionFlagValue,
 	HookEventName as ProtocolHookEventName,
 	ToolRuntimeDescriptor,
-} from "@pencil-agent/protocol";
+} from "@catui/protocol";
 import type { Theme } from "../theme-contract.js";
 import type { BashResult } from "../platform/exec/bash-executor.js";
 import type { CompactionPreparation, CompactionResult } from "../session/compaction/index.js";
@@ -204,12 +204,12 @@ export interface ExtensionUIContext {
 	 * - `keybindings`: KeybindingsManager for app-level keybindings
 	 *
 	 * For full app keybinding support (escape, ctrl+d, model switching, etc.),
-	 * extend `CustomEditor` from `@pencil-agent/nano-pencil` and call
+	 * extend `CustomEditor` from `@catui/agent` and call
 	 * `super.handleInput(data)` for keys you don't handle.
 	 *
 	 * @example
 	 * ```ts
-	 * import { CustomEditor } from "@pencil-agent/nano-pencil";
+	 * import { CustomEditor } from "@catui/agent";
 	 *
 	 * class VimEditor extends CustomEditor {
 	 *   private mode: "normal" | "insert" = "insert";
@@ -291,7 +291,7 @@ export interface ExtensionContext {
 	hasUI: boolean;
 	/** Current working directory */
 	cwd: string;
-	/** Global agent config directory (e.g. ~/.pencils/agents/<id>) */
+	/** Global agent config directory (e.g. ~/.catui/agents/<id>) */
 	agentDir: string;
 	/** Session manager (read-only) */
 	sessionManager: ReadonlySessionManager;
@@ -327,7 +327,7 @@ export interface ExtensionContext {
 	clearFollowUpQueue(): void;
 	/** Whether there are queued messages waiting */
 	hasPendingMessages(): boolean;
-	/** Gracefully shutdown NanoPencil and exit. Available in all contexts. */
+	/** Gracefully shutdown Catui and exit. Available in all contexts. */
 	shutdown(): void;
 	/** Get current context usage for the active model. */
 	getContextUsage(): ContextUsage | undefined;
@@ -1020,7 +1020,7 @@ export interface ExtensionAPI {
 	/** Working directory resolved for this extension load */
 	cwd: string;
 
-	/** Global agent config directory (e.g. ~/.pencils/agents/<id>) */
+	/** Global agent config directory (e.g. ~/.catui/agents/<id>) */
 	agentDir: string;
 
 	// =========================================================================
@@ -1287,7 +1287,7 @@ export interface ProviderModelConfig {
 	maxTokens: number;
 	/** Custom headers for this model. */
 	headers?: Record<string, string>;
-	/** Agent loop framework for this model. Defaults to the built-in nanoPencil loop. */
+	/** Agent loop framework for this model. Defaults to the built-in Catui loop. */
 	agentLoopFramework?: AgentLoopFramework;
 	/** OpenAI compatibility settings. */
 	compat?: Model<Api>["compat"];
@@ -1306,9 +1306,9 @@ export interface RegisteredTool {
 }
 
 // ExtensionFlag is a portable extension-declaration contract — owned by
-// @pencil-agent/protocol (single source of truth). Re-exported here so existing
+// @catui/protocol (single source of truth). Re-exported here so existing
 // `import { ExtensionFlag } from "./types"` consumers keep working (non-breaking).
-export type { ExtensionFlag, ExtensionFlagOptions, ExtensionFlagValue } from "@pencil-agent/protocol";
+export type { ExtensionFlag, ExtensionFlagOptions, ExtensionFlagValue } from "@catui/protocol";
 
 export interface ExtensionShortcut {
 	shortcut: KeyId;

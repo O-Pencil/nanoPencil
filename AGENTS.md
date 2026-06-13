@@ -2,13 +2,13 @@
 
 > P1 | Root Project Charter & Navigation Map
 
-This file provides guidance for **@o-pencil-agent** tooling and contributors when working in this repository.
+This file provides guidance for **@o-catui-agent** tooling and contributors when working in this repository.
 
 ---
 
 ## Project Overview
 
-**nanoPencil** (formerly nano-pencil) is a terminal-native AI coding agent with persistent memory and evolving AI personality. Built with TypeScript, it provides an interactive TUI for conversational coding with multi-model support (Anthropic, OpenAI, Gemini, Alibaba DashScope/Token Plan, Ollama).
+**Catui** (formerly catui-agent) is a terminal-native AI coding agent with persistent memory and evolving AI personality. Built with TypeScript, it provides an interactive TUI for conversational coding with multi-model support (Anthropic, OpenAI, Gemini, Alibaba DashScope/Token Plan, Ollama).
 
 **Core Pillars:**
 - Terminal First - No Electron, no browser, pure terminal
@@ -16,13 +16,13 @@ This file provides guidance for **@o-pencil-agent** tooling and contributors whe
 - Extensible - Plugin system for tools, themes, and behaviors
 - Fast - Sub-second startup, instant response
 
-**Dependencies** (`@pencil-agent/*` packages):
-- `@pencil-agent/agent-core` - Core Agent logic
-- `@pencil-agent/ai` - Model APIs and types
-- `@pencil-agent/tui` - Terminal UI components
-- `@pencil-agent/protocol` - Public protocol contracts for extensions and published integrations
-- `@pencil-agent/mem-core` - Persistent memory package integration
-- `@pencil-agent/soul-core` - AI personality package integration
+**Dependencies** (`@catui/*` packages):
+- `@catui/agent-core` - Core Agent logic
+- `@catui/ai` - Model APIs and types
+- `@catui/tui` - Terminal UI components
+- `@catui/protocol` - Public protocol contracts for extensions and published integrations
+- `@catui/mem-core` - Persistent memory package integration
+- `@catui/soul-core` - AI personality package integration
 
 ---
 
@@ -34,7 +34,7 @@ This file provides guidance for **@o-pencil-agent** tooling and contributors whe
 
 - **MUST** 按 §2b 的层级归属决策树确定文件落点。**概念层 ≠ 目录层**：一个功能既有概念层（认知/工具/界面）又有目录家（packages/core/modes/extensions），二者正交、不 1:1 映射。**新的用户可感知功能默认进 `extensions/`；不得因为"它是认知能力"就塞进 `core/`。**
 - **MUST** 遵守 §2b 每层的 MUST / CAN / MUST-NOT 约束。
-- **MUST** 类型/协议落点按 [`dev-conventions.md` §3b](.dev-docs/architecture-review/evolution/dev-conventions.md) 放置阶梯:类型住**最窄作用域**;**仅当跨 publish 边界(mem/soul/外部要用)才进 `@pencil-agent/protocol`**;消费者本地 `extends` 基契约、**不写回**协议;用目录的 DIP `AGENT.md` member list 发现已有类型、**不重复定义**;**永不预先抽象**(涌现了再抽取)。
+- **MUST** 类型/协议落点按 [`dev-conventions.md` §3b](.dev-docs/architecture-review/evolution/dev-conventions.md) 放置阶梯:类型住**最窄作用域**;**仅当跨 publish 边界(mem/soul/外部要用)才进 `@catui/protocol`**;消费者本地 `extends` 基契约、**不写回**协议;用目录的 DIP `AGENT.md` member list 发现已有类型、**不重复定义**;**永不预先抽象**(涌现了再抽取)。
 - 命中 §3 触发条件（load-bearing 区 / >400 行 / ≥8 ports / 重写 / public-API·deps·默认扩展·CLI·TUI 变更 / 无明确 owner）**MUST** 先建 `<topic>-review/` 专项评审再写代码。
 - 完成后 **MUST** 跑 §5 五道验收门（`verify:dip` / `verify:quality` / `verify:package-boundary` / `build` / `tsc --noEmit`）+ §6 PR 自检并报告结果；改动经 PR 进 main，让 CI 再强制跑一遍。
 
@@ -173,9 +173,9 @@ Single responses must complete the "evidence -> conclusion -> actionable next st
 ## Directory Structure
 
 ```
-nanoPencil/
+Catui/
 ├── AGENTS.md              # THIS FILE - P1 navigation map
-├── .PENCIL.md             # Product personality charter
+├── .CATUI.md             # Product personality charter
 │
 ├── cli.ts                 # CLI entry point
 ├── main.ts                # Main CLI handler
@@ -256,7 +256,7 @@ npm start -- [args...]
 ### AgentSession (`core/runtime/agent-session.ts`)
 
 Central session lifecycle manager shared across all modes:
-- Wraps core `Agent` from `@pencil-agent/agent-core`
+- Wraps core `Agent` from `@catui/agent-core`
 - Manages session persistence via SessionManager
 - Handles model switching, thinking level changes
 - Manages tool execution and bash commands
@@ -265,7 +265,7 @@ Central session lifecycle manager shared across all modes:
 
 ### SDK (`core/runtime/sdk.ts`)
 
-Programmatic usage factory for embedding nanoPencil:
+Programmatic usage factory for embedding Catui:
 ```typescript
 const { session } = await createAgentSession(options);
 ```
@@ -336,7 +336,7 @@ Extensions can:
 
 ### Session Management (`core/session/`)
 
-- Persists conversation history to `.nanopencil/session/*.jsonl`
+- Persists conversation history to `.catui/session/*.jsonl`
 - Handles session forking, branching, switching
 - Session migration between versions
 
@@ -354,13 +354,13 @@ Extensions can:
 
 | Path | Purpose |
 |------|---------|
-| `~/.pencils/agents/` | Global config root |
-| `~/.pencils/agents/<id>/models.json` | Model definitions |
-| `~/.pencils/agents/<id>/auth.json` | API keys & OAuth |
-| `~/.pencils/agents/<id>/settings.json` | User preferences |
-| `~/.pencils/agents/<id>/sessions/` | Conversation history |
-| `~/.pencils/agents/<id>/extensions/` | User extensions |
-| `NANOPENCIL_CODING_AGENT_DIR` | Override config root |
+| `~/.catui/agents/` | Global config root |
+| `~/.catui/agents/<id>/models.json` | Model definitions |
+| `~/.catui/agents/<id>/auth.json` | API keys & OAuth |
+| `~/.catui/agents/<id>/settings.json` | User preferences |
+| `~/.catui/agents/<id>/sessions/` | Conversation history |
+| `~/.catui/agents/<id>/extensions/` | User extensions |
+| `CATUI_CODING_AGENT_DIR` | Override config root |
 
 ---
 
@@ -489,7 +489,7 @@ npm version major && npm publish   # 1.13.2 -> 2.0.0
 
 - [ ] All changes committed and pushed (clean working tree required by `npm version`)
 - [ ] `npm run release` successful
-- [ ] Verify published version: `npm view @pencil-agent/nano-pencil version`
+- [ ] Verify published version: `npm view @catui/agent version`
 
 ---
 
@@ -577,7 +577,7 @@ P3 headers serve as **context budget gatekeepers**:
 
 ### Related Documentation
 
-- [.PENCIL.md](./.PENCIL.md) - Product personality charter
+- [.CATUI.md](./.CATUI.md) - Product personality charter
 - [packages/mem-core/AGENT.md](./packages/mem-core/AGENT.md) - Memory system
 - [docs/](./docs/) - Documentation directory
 

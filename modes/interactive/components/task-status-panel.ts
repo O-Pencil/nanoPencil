@@ -1,11 +1,11 @@
 /**
  * [WHO]: TaskStatusPanelComponent - renders persistent task status with checkboxes
- * [FROM]: Depends on @pencil-agent/tui, extensions/builtin/task/task-store
+ * [FROM]: Depends on @catui/tui, extensions/builtin/task/task-store
  * [TO]: Consumed by StreamRenderController
  * [HERE]: modes/interactive/components/task-status-panel.ts - CC-style task status TUI panel
  */
 
-import { Container, Spacer, Text, truncateToWidth, type TUI } from "@pencil-agent/tui";
+import { Container, Spacer, Text, truncateToWidth, type TUI } from "@catui/tui";
 import type { Theme } from "../theme/theme.js";
 
 export interface TaskStatusEntry {

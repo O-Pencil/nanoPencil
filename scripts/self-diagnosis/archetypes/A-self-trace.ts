@@ -2,7 +2,7 @@
  * [WHO]: Provides buildArchetypeATask(), the longest-tool-sequence post-mortem prompt
  * [FROM]: Depends only on built-in fs for prompt template loading (no runtime imports)
  * [TO]: Consumed by ../run.ts when --archetype=A; produces the task.md content + the analysis schema
- * [HERE]: scripts/self-diagnosis/archetypes/A-self-trace.ts — Archetype A definition; mirrors the manual task once at .pencil-self-study/2026-05-17/task.md, then improved with harness lessons (terminate-on-sentinel hard-stop, no SAL eval coupling)
+ * [HERE]: scripts/self-diagnosis/archetypes/A-self-trace.ts — Archetype A definition; mirrors the manual task once at .catui-self-study/2026-05-17/task.md, then improved with harness lessons (terminate-on-sentinel hard-stop, no SAL eval coupling)
  */
 
 // SKELETON — implementation pending.
@@ -11,13 +11,13 @@ export const ARCHETYPE_A_ID = "A";
 export const ARCHETYPE_A_NAME = "self-trace post-mortem";
 
 /**
- * Build the prompt that asks pencil to read its own eval_tool_traces,
+ * Build the prompt that asks catui to read its own eval_tool_traces,
  * pick three longest tool_sequence turns, and write a structured post-mortem.
  *
  * Lessons baked in from the 2026-05-17 first run (see .dev-docs/self-awareness/charter.md §7):
- *   - Hard sentinel: the prompt MUST instruct pencil to stop after the sentinel and not continue.
+ *   - Hard sentinel: the prompt MUST instruct catui to stop after the sentinel and not continue.
  *   - No SAL eval interference: this archetype's run uses variant='self-diagnosis', not 'sal'.
- *   - Schema-cast guidance embedded: pencil_issue_events / eval_tool_traces still all-TEXT
+ *   - Schema-cast guidance embedded: catui_issue_events / eval_tool_traces still all-TEXT
  *     until the migration in step B lands.
  */
 export function buildArchetypeATask(): { task: string; expectedSchema: AnalysisSchema } {

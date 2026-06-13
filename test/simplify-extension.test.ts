@@ -18,7 +18,7 @@ function git(cwd: string, args: string[]): string {
 }
 
 test("simplify git diff handles shell metacharacters in filenames", () => {
-	const cwd = mkdtempSync(join(tmpdir(), "nanopencil-simplify-"));
+	const cwd = mkdtempSync(join(tmpdir(), "catui-simplify-"));
 	try {
 		git(cwd, ["init"]);
 		git(cwd, ["config", "user.email", "test@example.com"]);
@@ -40,7 +40,7 @@ test("simplify git diff handles shell metacharacters in filenames", () => {
 });
 
 test("simplify refuses paths outside the workspace", () => {
-	const cwd = mkdtempSync(join(tmpdir(), "nanopencil-simplify-path-"));
+	const cwd = mkdtempSync(join(tmpdir(), "catui-simplify-path-"));
 	try {
 		assert.equal(__testUtils.resolveWorkspaceFile(cwd, "../outside.ts"), undefined);
 		assert.equal(__testUtils.resolveWorkspaceFile(cwd, "/tmp/outside.ts"), undefined);
@@ -51,7 +51,7 @@ test("simplify refuses paths outside the workspace", () => {
 });
 
 test("simplify test command detection uses argument arrays", () => {
-	const cwd = mkdtempSync(join(tmpdir(), "nanopencil-simplify-tests-"));
+	const cwd = mkdtempSync(join(tmpdir(), "catui-simplify-tests-"));
 	try {
 		writeFileSync(join(cwd, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }), "utf-8");
 		assert.deepEqual(__testUtils.detectTestCommand(cwd), {

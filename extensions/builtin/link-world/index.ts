@@ -1,6 +1,6 @@
 /**
  * [WHO]: linkWorldExtension - registers link_world_admin/link_world_exec tools, /link-world command, runtime diagnostics, and internet-search skill resources
- * [FROM]: Depends on node:child_process, node:fs, node:path, node:url, @sinclair/typebox, @pencil-agent/tui, core/extensions-host/types
+ * [FROM]: Depends on node:child_process, node:fs, node:path, node:url, @sinclair/typebox, @catui/tui, core/extensions-host/types
  * [TO]: Loaded by core/extensions-host/loader.ts as extension entry point
  * [HERE]: extensions/builtin/link-world/index.ts - built-in internet access bootstrap, execution bridge, and workspace discovery
  */
@@ -10,7 +10,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } fr
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Type, type Static } from "@sinclair/typebox";
-import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text } from "@catui/tui";
 import type {
 	ExtensionAPI,
 	ExtensionCommandContext,
@@ -271,7 +271,7 @@ async function nativeWebSearch(query: string, limit: number, signal?: AbortSigna
 		const params = new URLSearchParams({ q: query });
 		const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
 			signal: fallbackSignal,
-			headers: { "User-Agent": "Mozilla/5.0 (compatible; NanoPencil/1.0)" },
+			headers: { "User-Agent": "Mozilla/5.0 (compatible; Catui/1.0)" },
 		});
 		if (res.ok) {
 			const html = await res.text();
@@ -446,7 +446,7 @@ function createLinkWorldExecTool(): ToolDefinition<typeof LinkWorldExecInputSche
 		name: "link_world_exec",
 		label: "link-world exec",
 		description:
-			"Execute the external `agent-reach` CLI through NanoPencil. Use this for actual internet tasks once link-world is installed, instead of going through the bash tool.",
+			"Execute the external `agent-reach` CLI through Catui. Use this for actual internet tasks once link-world is installed, instead of going through the bash tool.",
 		parameters: LinkWorldExecInputSchema,
 		guidance:
 			"Use `link_world_admin` first if you are unsure whether agent-reach is installed. Pass explicit CLI arguments, not a shell string. Prefer site or domain skills before inventing new agent-reach commands.",
@@ -590,7 +590,7 @@ export default function linkWorldExtension(api: ExtensionAPI) {
 				api.sendMessage({
 					customType: LINK_WORLD_CUSTOM_TYPE,
 					content: [
-						"Link-world is NanoPencil's built-in internet access integration point.",
+						"Link-world is Catui's built-in internet access integration point.",
 						"",
 						`Mode: ${mode}`,
 						"",

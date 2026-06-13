@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/dynamic-border.ts -
  */
 
-import type { Component } from "@pencil-agent/tui";
+import type { Component } from "@catui/tui";
 import { theme } from "../theme/theme.js";
 
 /**

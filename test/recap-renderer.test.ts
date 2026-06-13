@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Usage } from "@pencil-agent/ai/types";
+import type { Usage } from "@catui/ai/types";
 import type { MessageRenderer } from "../core/extensions-host/types.js";
 import { createRecapRenderer } from "../extensions/builtin/recap/recap-renderer.js";
 import type { RecapEntry } from "../extensions/builtin/recap/recap-types.js";

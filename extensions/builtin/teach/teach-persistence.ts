@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join } from "node:path";
 import type { LearningRecord, Mission } from "./teach-types.js";
 
-const TEACH_DIR = ".nanopencil/teach";
+const TEACH_DIR = ".catui/teach";
 const RECORDS_DIR = "records";
 const MISSIONS_DIR = "missions";
 const GLOSSARY_FILE = "glossary.json";

@@ -1,7 +1,7 @@
 /**
  * [WHO]: Config path getters (getAgentDir, getModelsPath, etc.), APP_NAME, VERSION
  * [FROM]: Depends on node:fs, node:os, node:path, node:url
- * [TO]: Consumed by main.ts, index.ts, migrations.ts, cli/args.ts, core/model-registry.ts, core/platform/keybindings.ts, core/skills.ts, core/package-manager.ts, core/soul-integration.ts, nanopencil-defaults.ts, utils/changelog.ts, and all extension entry points
+ * [TO]: Consumed by main.ts, index.ts, migrations.ts, cli/args.ts, core/model-registry.ts, core/platform/keybindings.ts, core/skills.ts, core/package-manager.ts, core/soul-integration.ts, catui-defaults.ts, utils/changelog.ts, and all extension entry points
  * [HERE]: config.ts - configuration path discovery and constants
  */
 import { existsSync, readFileSync } from "fs";
@@ -59,7 +59,7 @@ export function getUpdateInstruction(packageName: string): string {
 	const method = detectInstallMethod();
 	switch (method) {
 		case "bun-binary":
-			return `Download from: https://github.com/O-Pencil/nanoPencil/releases/latest`;
+			return `Download from: https://github.com/O-Catui/Catui/releases/latest`;
 		case "pnpm":
 			return `Run: pnpm install -g ${packageName}`;
 		case "yarn":
@@ -85,7 +85,7 @@ export function getUpdateInstruction(packageName: string): string {
  */
 export function getPackageDir(): string {
 	// Allow override via environment variable (useful for Nix/Guix where store paths tokenize poorly)
-	const envDir = process.env.NANOPENCIL_PACKAGE_DIR;
+	const envDir = process.env.CATUI_PACKAGE_DIR;
 	if (envDir) {
 		if (envDir === "~") return homedir();
 		if (envDir.startsWith("~/")) return homedir() + envDir.slice(1);
@@ -113,7 +113,7 @@ export function getPackageDir(): string {
  * - For Bun binary: theme/ next to executable
  * - For Node.js (dist/): dist/modes/interactive/theme/
  * - For tsx (src/): src/modes/interactive/theme/
- * - For flat structure (nano-pencil dev): modes/interactive/theme/
+ * - For flat structure (catui-agent dev): modes/interactive/theme/
  */
 export function getThemesDir(): string {
 	if (isBunBinary) {
@@ -134,7 +134,7 @@ export function getThemesDir(): string {
  * - For Bun binary: export-html/ next to executable
  * - For Node.js (dist/): dist/core/export-html/
  * - For tsx (src/): src/core/export-html/
- * - For flat structure (nano-pencil dev): core/export-html/
+ * - For flat structure (catui-agent dev): core/export-html/
  */
 export function getExportTemplateDir(): string {
 	if (isBunBinary) {
@@ -175,35 +175,36 @@ export function getChangelogPath(): string {
 }
 
 // =============================================================================
-// App Config (from package.json nanopencilConfig)
+// App Config (from package.json catuiConfig)
 // =============================================================================
 
 const pkg = JSON.parse(readFileSync(getPackageJsonPath(), "utf-8"));
 
-export const APP_NAME: string = pkg.nanopencilConfig?.name || "nanopencil";
-/** Config dir: ~/.nanopencil for nanopencil. Fallback by package name when nanopencilConfig missing. */
+export const APP_NAME: string = pkg.catuiConfig?.name || "catui";
+/** Config dir: ~/.catui for Catui. Fallback remains legacy-compatible when package metadata is absent. */
 export const CONFIG_DIR_NAME: string =
-	pkg.nanopencilConfig?.configDir ?? (pkg.name === "@pencil-agent/nano-pencil" ? ".nanopencil" : ".nanopencil");
+	pkg.catuiConfig?.configDir ?? (pkg.name === "@catui/agent" ? ".catui" : ".catui");
 export const VERSION: string = pkg.version;
-/** npm package name, used for version checking and update prompts (e.g., @pencil-agent/nano-pencil) */
-export const PACKAGE_NAME: string = pkg.name || "@pencil-agent/nano-pencil";
+/** npm package name, used for version checking and update prompts (e.g., @catui/agent) */
+export const PACKAGE_NAME: string = pkg.name || "@catui/agent";
 
-// e.g., NANOPENCIL_CODING_AGENT_DIR
+// e.g., CATUI_CODING_AGENT_DIR
 export const ENV_AGENT_DIR = `${APP_NAME.toUpperCase()}_CODING_AGENT_DIR`;
+const LEGACY_ENV_AGENT_DIR = "NANOPENCIL_CODING_AGENT_DIR";
 
-const DEFAULT_SHARE_VIEWER_URL = "https://nanopencil.dev/session/";
+const DEFAULT_SHARE_VIEWER_URL = "https://catui.dev/session/";
 
 /** Get the share viewer URL for a gist ID */
 export function getShareViewerUrl(gistId: string): string {
-	const baseUrl = process.env.NANOPENCIL_SHARE_VIEWER_URL || DEFAULT_SHARE_VIEWER_URL;
+	const baseUrl = process.env.CATUI_SHARE_VIEWER_URL || DEFAULT_SHARE_VIEWER_URL;
 	return `${baseUrl}#${gistId}`;
 }
 
 // =============================================================================
-// User Config Paths (~/.pencils/agents/default/*)
+// User Config Paths (~/.catui/agents/default/*)
 // =============================================================================
 
-/** Get the agent config directory (e.g., ~/.pencils/agents/default/) */
+/** Get the agent config directory (e.g., ~/.catui/agents/default/) */
 export function getAgentDir(): string {
 	return resolveAgentDirContext().path;
 }
@@ -257,25 +258,30 @@ export function getDebugLogPath(): string {
 // Global Workspace Directories (browser-workspace, link-world-workspace)
 // =============================================================================
 
-/** Get the root nanopencil config directory (e.g., ~/.nanopencil/) */
+function expandHomePath(path: string): string {
+	if (path === "~") return homedir();
+	if (path.startsWith("~/")) return homedir() + path.slice(1);
+	return path;
+}
+
+/** Get the root Catui config directory (e.g., ~/.catui/) */
 export function getConfigRoot(): string {
-	const envDir = process.env[ENV_AGENT_DIR];
+	const envDir = process.env[ENV_AGENT_DIR] ?? process.env[LEGACY_ENV_AGENT_DIR];
 	if (envDir) {
-		// ENV_AGENT_DIR points to the agent subdir (e.g., ~/.nanopencil/agent)
+		// ENV_AGENT_DIR points to the agent subdir (e.g., ~/.catui/agents/default)
 		// We need the parent for workspace dirs
-		if (envDir === "~") return homedir();
-		if (envDir.startsWith("~/")) return homedir() + envDir.slice(1);
+		const resolvedEnv = expandHomePath(envDir);
 		// Strip /agent suffix if present
-		if (envDir.endsWith("/agent") || envDir.endsWith("\\agent")) {
-			return dirname(envDir);
+		if (resolvedEnv.endsWith("/agent") || resolvedEnv.endsWith("\\agent")) {
+			return dirname(resolvedEnv);
 		}
-		return dirname(envDir);
+		return dirname(resolvedEnv);
 	}
 	return join(homedir(), CONFIG_DIR_NAME);
 }
 
 // =============================================================================
-// Multi-Agent: PENCILS_HOME & AgentDirContext support (N2)
+// Multi-Agent: CATUI_HOME & AgentDirContext support (N2)
 // =============================================================================
 
 /**
@@ -298,39 +304,47 @@ function validateAgentId(id: string): string {
 }
 
 /**
- * Resolve the Pencils ecosystem root directory.
- * Priority: PENCILS_HOME > NANOPENCIL_HOME > ~/.pencils
+ * Resolve the Catui ecosystem root directory.
+ * Priority: CATUI_HOME > CATUIS_HOME > NANOPENCIL_HOME > ~/.catui
  *
- * Design doc §3: only PENCILS_HOME is the canonical name;
- * NANOPENCIL_HOME is a compat alias for existing users.
+ * CATUI_HOME is canonical. CATUIS_HOME and NANOPENCIL_HOME are compatibility aliases.
  */
-export function getPencilsHome(): string {
-	const envPencils = process.env.PENCILS_HOME;
-	if (envPencils) {
-		if (envPencils === "~") return homedir();
-		if (envPencils.startsWith("~/")) return homedir() + envPencils.slice(1);
-		return envPencils;
+export function getCatuiHome(): string {
+	const envCatuiHome = process.env.CATUI_HOME;
+	if (envCatuiHome) {
+		return expandHomePath(envCatuiHome);
 	}
-	// Compat alias
-	const envNano = process.env.NANOPENCIL_HOME;
-	if (envNano) {
-		if (envNano === "~") return homedir();
-		if (envNano.startsWith("~/")) return homedir() + envNano.slice(1);
-		return envNano;
+
+	// Compat aliases
+	const envCatsHome = process.env.CATUIS_HOME;
+	if (envCatsHome) {
+		return expandHomePath(envCatsHome);
 	}
-	// Default: ~/.pencils (future target; for now fallback to legacy behavior)
-	return join(homedir(), ".pencils");
+
+	const envNanoPencilHome = process.env.NANOPENCIL_HOME;
+	if (envNanoPencilHome) {
+		return expandHomePath(envNanoPencilHome);
+	}
+
+	return join(homedir(), ".catui");
 }
 
-/** New Pencils agents root (e.g., ~/.pencils/agents/) */
-export function getPencilsAgentsDir(): string {
-	const envAgents = process.env.PENCILS_AGENTS_DIR;
-	if (envAgents) {
-		if (envAgents === "~") return homedir();
-		if (envAgents.startsWith("~/")) return homedir() + envAgents.slice(1);
-		return envAgents;
+/** Catui agents root (e.g., ~/.catui/agents/) */
+export function getCatuiAgentsDir(): string {
+	const envCatuiAgents = process.env.CATUI_AGENTS_DIR;
+	if (envCatuiAgents) {
+		return expandHomePath(envCatuiAgents);
 	}
-	return join(getPencilsHome(), "agents");
+
+	const envAgents = process.env.CATUIS_AGENTS_DIR;
+	if (envAgents) {
+		return expandHomePath(envAgents);
+	}
+	const envPencilsAgents = process.env.PENCILS_AGENTS_DIR;
+	if (envPencilsAgents) {
+		return expandHomePath(envPencilsAgents);
+	}
+	return join(getCatuiHome(), "agents");
 }
 
 /**
@@ -338,39 +352,42 @@ export function getPencilsAgentsDir(): string {
  * If no id is provided, returns the legacy single-agent context.
  *
  * Resolution order for per-agent path:
- * 1. NANOPENCIL_CODING_AGENT_DIR env (legacy single-agent override)
- * 2. PENCILS_AGENTS_DIR/<id> (new multi-agent path)
- * 3. ~/.pencils/agents/<id> (default)
+ * 1. CATUI_CODING_AGENT_DIR env (single-agent override)
+ * 2. NANOPENCIL_CODING_AGENT_DIR env (legacy single-agent override)
+ * 3. CATUI_AGENTS_DIR/<id> env (per-agent root override)
+ * 4. CATUIS_AGENTS_DIR/<id> env (legacy per-agent root override)
+ * 5. PENCILS_AGENTS_DIR/<id> env (legacy per-agent root override)
+ * 6. ~/.catui/agents/<id> (default)
  */
 export function resolveAgentDirContext(agentId?: string) {
 	const id = agentId || "default";
 
 	validateAgentId(id);
 
-	// 1. Check legacy env override first (single-agent mode)
-	const envDir = process.env[ENV_AGENT_DIR];
+	// 1. Check single-agent env override first
+	const envDir = process.env[ENV_AGENT_DIR] ?? process.env[LEGACY_ENV_AGENT_DIR];
 	if (envDir && id === "default") {
-		const resolvedEnv = envDir.startsWith("~/") ? homedir() + envDir.slice(1) : envDir;
+		const resolvedEnv = expandHomePath(envDir);
 		return { id, path: resolvedEnv };
 	}
 
 	// 2. Check explicit per-agent env override
-	const envAgentsDir = process.env.PENCILS_AGENTS_DIR;
+	const envAgentsDir = process.env.CATUI_AGENTS_DIR ?? process.env.CATUIS_AGENTS_DIR ?? process.env.PENCILS_AGENTS_DIR;
 	if (envAgentsDir) {
-		const base = envAgentsDir.startsWith("~/") ? homedir() + envAgentsDir.slice(1) : envAgentsDir;
+		const base = expandHomePath(envAgentsDir);
 		return { id, path: join(base, id) };
 	}
 
-	// 3. Default multi-agent path under PENCILS_HOME
-	return { id, path: join(getPencilsHome(), "agents", id) };
+	// 3. Default multi-agent path under CATUI_HOME
+	return { id, path: join(getCatuiHome(), "agents", id) };
 }
 
-/** Get path to global browser-workspace directory (e.g., ~/.pencils/workspaces/browser-workspace) */
+/** Get path to global browser-workspace directory (e.g., ~/.catui/workspaces/browser-workspace) */
 export function getBrowserWorkspaceDir(): string {
 	return join(getConfigRoot(), "workspaces", "browser-workspace");
 }
 
-/** Get path to global link-world-workspace directory (e.g., ~/.pencils/workspaces/link-world-workspace) */
+/** Get path to global link-world-workspace directory (e.g., ~/.catui/workspaces/link-world-workspace) */
 export function getLinkWorldWorkspaceDir(): string {
 	return join(getConfigRoot(), "workspaces", "link-world-workspace");
 }

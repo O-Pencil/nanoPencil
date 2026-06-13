@@ -14,13 +14,13 @@ import type { ExtensionAPI, ExtensionContext } from "../core/extensions-host/typ
 import salExtension from "../extensions/builtin/sal/index.js";
 
 test("sal removes emergency process listeners on session shutdown", async () => {
-	const cwd = mkdtempSync(join(tmpdir(), "nanopencil-sal-lifecycle-"));
+	const cwd = mkdtempSync(join(tmpdir(), "catui-sal-lifecycle-"));
 	const handlers = new Map<string, Array<(event: unknown, ctx: ExtensionContext) => unknown>>();
 	const beforeExitBefore = process.listenerCount("beforeExit");
 	const sighupBefore = process.listenerCount("SIGHUP");
 	const sigtermBefore = process.listenerCount("SIGTERM");
-	const originalEvalEnabled = process.env.NANOPENCIL_EVAL_ENABLED;
-	process.env.NANOPENCIL_EVAL_ENABLED = "0";
+	const originalEvalEnabled = process.env.CATUI_EVAL_ENABLED;
+	process.env.CATUI_EVAL_ENABLED = "0";
 
 	const api = {
 		cwd,
@@ -51,9 +51,9 @@ test("sal removes emergency process listeners on session shutdown", async () => 
 		assert.equal(process.listenerCount("SIGTERM"), sigtermBefore);
 	} finally {
 		if (originalEvalEnabled === undefined) {
-			delete process.env.NANOPENCIL_EVAL_ENABLED;
+			delete process.env.CATUI_EVAL_ENABLED;
 		} else {
-			process.env.NANOPENCIL_EVAL_ENABLED = originalEvalEnabled;
+			process.env.CATUI_EVAL_ENABLED = originalEvalEnabled;
 		}
 		rmSync(cwd, { recursive: true, force: true });
 	}

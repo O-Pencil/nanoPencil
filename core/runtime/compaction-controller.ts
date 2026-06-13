@@ -11,7 +11,7 @@
  * narrow CompactionControllerContext; behavior is identical to the former AgentSession.compact().
  */
 
-import type { AgentMessage } from "@pencil-agent/agent-core";
+import type { AgentMessage } from "@catui/agent-core";
 import { type CompactionResult, compact, prepareCompaction } from "../session/compaction/index.js";
 import type { SessionBeforeCompactResult } from "../extensions-host/index.js";
 import type { CompactionEntry } from "../session/session-manager.js";

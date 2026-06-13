@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/tools/index.ts
  * [HERE]: core/tools/edit.ts - filesystem mutation via diff application; consumed by orchestrator
  */
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile, stat as fsStat, writeFile as fsWriteFile } from "fs/promises";

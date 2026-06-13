@@ -1,11 +1,11 @@
 /**
  * [WHO]: diagnosticsExtension - diagnostic:event listener, /report-issue command, silent auto-upload on agent_end
- * [FROM]: Depends on core/extensions-host/types, @pencil-agent/tui, ./diagnostic-buffer, ./reporter, ./types
+ * [FROM]: Depends on core/extensions-host/types, @catui/tui, ./diagnostic-buffer, ./reporter, ./types
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension before diagnostic producers
  * [HERE]: extensions/builtin/diagnostics/index.ts - extension-owned diagnostic buffer; background failures auto-upload silently at agent_end plus delayed sweep, /report-issue stays for explicit user-initiated bundles
  */
 
-import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text, type Component } from "@catui/tui";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "../../../core/extensions-host/types.js";
 import { subscribeDiagnostics } from "../../../utils/diagnostics.js";
 import { coerceDiagnosticEvent, DiagnosticBuffer } from "./diagnostic-buffer.js";
@@ -79,7 +79,7 @@ async function flushUploadableDiagnostics(buffer: DiagnosticBuffer, ctx: Extensi
 	const unreported = buffer.findUnreported();
 	if (unreported.length === 0) return;
 
-	// pencil_issue_events is for actionable issues. info/debug telemetry
+	// catui_issue_events is for actionable issues. info/debug telemetry
 	// (e.g. Soul evolution success notes) shows up in dev console via the
 	// bus but should not pollute the issue table. Mark them reported so
 	// they don't accumulate forever.

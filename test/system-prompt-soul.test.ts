@@ -108,7 +108,7 @@ test("system-prompt: places soul section once after base instructions", () => {
 	);
 	assert.ok(prompt.includes("## Stable Personality Layer"));
 	assert.ok(
-		prompt.indexOf("You are the writing assistant in nanopencil.") <
+		prompt.indexOf("You are the writing assistant in catui.") <
 			prompt.indexOf("## Stable Personality Layer"),
 	);
 });

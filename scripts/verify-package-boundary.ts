@@ -43,14 +43,14 @@ interface InternalLibSpec {
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST_MAIN = join(REPO, "dist", "main.js");
 const PUBLIC_PACKAGES: PublicPackageSpec[] = [
-	{ name: "@pencil-agent/protocol", path: "packages/protocol", hostRange: "^0.1.0" },
-	{ name: "@pencil-agent/mem-core", path: "packages/mem-core", hostRange: "^1.1.2", requiredExports: [".", "./extension"] },
-	{ name: "@pencil-agent/soul-core", path: "packages/soul-core", hostRange: "^0.1.0" },
+	{ name: "@catui/protocol", path: "packages/protocol", hostRange: "^0.1.0" },
+	{ name: "@catui/mem-core", path: "packages/mem-core", hostRange: "^1.1.2", requiredExports: [".", "./extension"] },
+	{ name: "@catui/soul-core", path: "packages/soul-core", hostRange: "^0.1.0" },
 ];
 const INTERNAL_LIBS: InternalLibSpec[] = [
-	{ name: "@pencil-agent/ai", path: "core/lib/ai", entry: "dist/index.js" },
-	{ name: "@pencil-agent/agent-core", path: "core/lib/agent-core", entry: "dist/index.js" },
-	{ name: "@pencil-agent/tui", path: "core/lib/tui", entry: "dist/index.js" },
+	{ name: "@catui/ai", path: "core/lib/ai", entry: "dist/index.js" },
+	{ name: "@catui/agent-core", path: "core/lib/agent-core", entry: "dist/index.js" },
+	{ name: "@catui/tui", path: "core/lib/tui", entry: "dist/index.js" },
 ];
 const ROOT_PACKAGE_FILES = ["dist/**/*.js", "dist/**/*.d.ts", "dist/**/*.json"];
 const PROD_DEP_SECTIONS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
@@ -137,8 +137,8 @@ function checkSourcePackageManifests(violations: Violation[]): void {
 		for (const section of PROD_DEP_SECTIONS) {
 			const deps = dependencyMap(pkg, section);
 			for (const depName of Object.keys(deps)) {
-				if (depName === "@pencil-agent/nano-pencil") {
-					add(violations, scope, `${section} must not depend on the host package; use @pencil-agent/protocol.`);
+				if (depName === "@catui/agent") {
+					add(violations, scope, `${section} must not depend on the host package; use @catui/protocol.`);
 				}
 				if (internalNames.has(depName)) {
 					add(violations, scope, `${section} must not expose private embedded lib ${depName}.`);

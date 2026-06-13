@@ -4,9 +4,9 @@
  * [TO]: Consumed by core/session/compaction/index.ts
  * [HERE]: core/session/compaction/compaction.ts - context window management via summarization
  */
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { AssistantMessage, Model, Usage } from "@pencil-agent/ai/types";
-import { completeSimple } from "@pencil-agent/ai/stream";
+import type { AgentMessage } from "@catui/agent-core";
+import type { AssistantMessage, Model, Usage } from "@catui/ai/types";
+import { completeSimple } from "@catui/ai/stream";
 import {
 	convertToLlm,
 	createBranchSummaryMessage,
@@ -44,7 +44,7 @@ function extractFileOperations(
 ): FileOperations {
 	const fileOps = createFileOps();
 
-	// Collect from previous compaction's details (if nanopencil-generated)
+	// Collect from previous compaction's details (if catui-generated)
 	if (prevCompactionIndex >= 0) {
 		const prevCompaction = entries[prevCompactionIndex] as CompactionEntry;
 		if (!prevCompaction.fromHook && prevCompaction.details) {

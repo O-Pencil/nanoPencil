@@ -17,17 +17,17 @@
 #   compare    — 查询 InsForge 对比两次结果
 #   bisect     — 在指定 commit 上跑任务（需传 BISECT_REF）
 #   isolate    — 在当前版本上，逐项禁用功能，对比 HTTP 调用次数
-#   trace      — 开启 NANOPENCIL_TRACE_API 跑一次，输出每次调用的调用栈
+#   trace      — 开启 CATUI_TRACE_API 跑一次，输出每次调用的调用栈
 #
 # 前置条件:
-#   1. 本地已登录 minimax-coding（nanopencil 已配置 API key）
+#   1. 本地已登录 minimax-coding（catui 已配置 API key）
 #   2. InsForge eval 凭据已就绪（脚本内置）
-#   3. 当前在 nanoPencil 项目根目录
+#   3. 当前在 Catui 项目根目录
 #
 # 环境变量:
 #   BISECT_REF          — bisect 阶段使用的 git ref（可选）
-#   NANOPENCIL_MODEL    — 指定模型 ID（默认 MiniMax-M2.5）
-#   NANOPENCIL_PROVIDER — 指定 provider（默认 minimax-coding）
+#   CATUI_MODEL    — 指定模型 ID（默认 MiniMax-M2.5）
+#   CATUI_PROVIDER — 指定 provider（默认 minimax-coding）
 #   DRY_RUN             — 设为 1 则只打印命令不执行
 #
 # 注意: 本地已登录 minimax-coding 的 API key，无需额外指定
@@ -49,8 +49,8 @@ ANCHOR2_REF="286bbc7"  # 1.13.14
 BENCHMARK_PROMPT="读 README.md 然后告诉我这个项目是做什么的"
 
 # 默认模型: minimax-coding / MiniMax-M2.5
-MODEL="${NANOPENCIL_MODEL:-MiniMax-M2.5}"
-PROVIDER="${NANOPENCIL_PROVIDER:-minimax-coding}"
+MODEL="${CATUI_MODEL:-MiniMax-M2.5}"
+PROVIDER="${CATUI_PROVIDER:-minimax-coding}"
 
 # 项目根目录
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -68,7 +68,7 @@ check_prerequisites() {
     fi
 
     if ! [ -f "$PROJECT_ROOT/package.json" ]; then
-        err "请在 nanoPencil 项目根目录运行此脚本"
+        err "请在 Catui 项目根目录运行此脚本"
     fi
 }
 
@@ -99,7 +99,7 @@ checkout_and_build() {
 # 创建临时 agent 目录（干净的 models.json + auth.json，避免跨版本 schema 兼容问题）
 setup_temp_agent_dir() {
     local dir="$1"
-    local original_agent_dir="${HOME}/.nanopencil/agent"
+    local original_agent_dir="${HOME}/.catui/agent"
 
     # 写入最小化 models.json（只有 minimax-coding，无额外字段）
     cat > "$dir/models.json" <<'MODELS_EOF'
@@ -158,27 +158,27 @@ run_benchmark() {
 
     if [ "${DRY_RUN:-}" = "1" ]; then
         log "[DRY_RUN] 将执行:"
-        log "  NANOPENCIL_CODING_AGENT_DIR=$tmp_agent_dir \\"
-        log "  NANOPENCIL_EVAL_ENABLED=1 \\"
-        log "  NANOPENCIL_EVAL_ENDPOINT=$INSFORGE_ENDPOINT \\"
-        log "  NANOPENCIL_EVAL_API_KEY=$INSFORGE_API_KEY \\"
-        log "  NANOPENCIL_EVAL_RUN_ID=$run_id \\"
-        log "  NANOPENCIL_EVAL_COMMIT=$commit_hash \\"
-        log "  NANOPENCIL_EVAL_BRANCH=token-investigation \\"
+        log "  CATUI_CODING_AGENT_DIR=$tmp_agent_dir \\"
+        log "  CATUI_EVAL_ENABLED=1 \\"
+        log "  CATUI_EVAL_ENDPOINT=$INSFORGE_ENDPOINT \\"
+        log "  CATUI_EVAL_API_KEY=$INSFORGE_API_KEY \\"
+        log "  CATUI_EVAL_RUN_ID=$run_id \\"
+        log "  CATUI_EVAL_COMMIT=$commit_hash \\"
+        log "  CATUI_EVAL_BRANCH=token-investigation \\"
         log "  node dist/cli.js --print --provider $PROVIDER --model $MODEL --no-session \"$BENCHMARK_PROMPT\""
         rm -rf "$tmp_agent_dir"
         return 0
     fi
 
     # 使用 print mode 非交互执行，SAL eval 自动上报到 InsForge
-    # NANOPENCIL_CODING_AGENT_DIR 指向临时目录，绕过 models.json schema 兼容性问题
-    NANOPENCIL_CODING_AGENT_DIR="$tmp_agent_dir" \
-    NANOPENCIL_EVAL_ENABLED=1 \
-    NANOPENCIL_EVAL_ENDPOINT="$INSFORGE_ENDPOINT" \
-    NANOPENCIL_EVAL_API_KEY="$INSFORGE_API_KEY" \
-    NANOPENCIL_EVAL_RUN_ID="$run_id" \
-    NANOPENCIL_EVAL_COMMIT="$commit_hash" \
-    NANOPENCIL_EVAL_BRANCH="token-investigation" \
+    # CATUI_CODING_AGENT_DIR 指向临时目录，绕过 models.json schema 兼容性问题
+    CATUI_CODING_AGENT_DIR="$tmp_agent_dir" \
+    CATUI_EVAL_ENABLED=1 \
+    CATUI_EVAL_ENDPOINT="$INSFORGE_ENDPOINT" \
+    CATUI_EVAL_API_KEY="$INSFORGE_API_KEY" \
+    CATUI_EVAL_RUN_ID="$run_id" \
+    CATUI_EVAL_COMMIT="$commit_hash" \
+    CATUI_EVAL_BRANCH="token-investigation" \
     node dist/cli.js --print --provider "$PROVIDER" --model "$MODEL" --no-session "$BENCHMARK_PROMPT" \
         2>"$PROJECT_ROOT/scripts/.token-inv-${run_id}.stderr" || {
         warn "任务执行可能有错误，查看: scripts/.token-inv-${run_id}.stderr"
@@ -384,16 +384,16 @@ ISOLATE_CONFIGS=(
 
 # 按扩展类型细分的配置（当确认是扩展导致后使用）
 # 用法: ./scripts/token-investigation.sh isolate-ext
-# 使用 NANOPENCIL_SKIP_EXT_<NAME>=1 环境变量跳过单个扩展
+# 使用 CATUI_SKIP_EXT_<NAME>=1 环境变量跳过单个扩展
 ISOLATE_EXT_CONFIGS=(
     # 名称|环境变量
-    "skip-nanomem|NANOPENCIL_SKIP_EXT_NANOMEM=1"
-    "skip-presence|NANOPENCIL_SKIP_EXT_PRESENCE=1"
-    "skip-interview|NANOPENCIL_SKIP_EXT_INTERVIEW=1"
-    "skip-soul|NANOPENCIL_SKIP_EXT_SOUL=1"
-    "skip-sal|NANOPENCIL_SKIP_EXT_SAL=1"
-    "skip-mem+presence|NANOPENCIL_SKIP_EXT_NANOMEM=1 NANOPENCIL_SKIP_EXT_PRESENCE=1"
-    "skip-mem+pres+interview|NANOPENCIL_SKIP_EXT_NANOMEM=1 NANOPENCIL_SKIP_EXT_PRESENCE=1 NANOPENCIL_SKIP_EXT_INTERVIEW=1"
+    "skip-nanomem|CATUI_SKIP_EXT_NANOMEM=1"
+    "skip-presence|CATUI_SKIP_EXT_PRESENCE=1"
+    "skip-interview|CATUI_SKIP_EXT_INTERVIEW=1"
+    "skip-soul|CATUI_SKIP_EXT_SOUL=1"
+    "skip-sal|CATUI_SKIP_EXT_SAL=1"
+    "skip-mem+presence|CATUI_SKIP_EXT_NANOMEM=1 CATUI_SKIP_EXT_PRESENCE=1"
+    "skip-mem+pres+interview|CATUI_SKIP_EXT_NANOMEM=1 CATUI_SKIP_EXT_PRESENCE=1 CATUI_SKIP_EXT_INTERVIEW=1"
 )
 
 run_isolate_single() {
@@ -427,7 +427,7 @@ run_isolate_single() {
     start_epoch=$(date +%s)
 
     # 构建执行命令
-    local cmd="NANOPENCIL_CODING_AGENT_DIR=$tmp_agent_dir NANOPENCIL_TRACE_API=1"
+    local cmd="CATUI_CODING_AGENT_DIR=$tmp_agent_dir CATUI_TRACE_API=1"
     [ -n "$env_vars" ] && cmd="$cmd $env_vars"
     cmd="$cmd npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL $cli_flags \"$BENCHMARK_PROMPT\""
 
@@ -579,7 +579,7 @@ phase_trace() {
     local extra_flags="${1:-}"
     log "═══ Phase: Trace (带调用栈的单次运行) ═══"
     log ""
-    log "设置 NANOPENCIL_TRACE_API=1 运行，输出每次 HTTP 调用的:"
+    log "设置 CATUI_TRACE_API=1 运行，输出每次 HTTP 调用的:"
     log "  - 调用序号"
     log "  - 调用类型 (stream / streamSimple)"
     log "  - 消息数量、工具数量、系统提示长度"
@@ -600,13 +600,13 @@ phase_trace() {
     log ""
 
     if [ "${DRY_RUN:-}" = "1" ]; then
-        log "[DRY_RUN] NANOPENCIL_CODING_AGENT_DIR=$tmp_agent_dir NANOPENCIL_TRACE_API=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL $extra_flags \"$BENCHMARK_PROMPT\""
+        log "[DRY_RUN] CATUI_CODING_AGENT_DIR=$tmp_agent_dir CATUI_TRACE_API=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL $extra_flags \"$BENCHMARK_PROMPT\""
         rm -rf "$tmp_agent_dir"
         return 0
     fi
 
-    NANOPENCIL_CODING_AGENT_DIR="$tmp_agent_dir" \
-    NANOPENCIL_TRACE_API=1 \
+    CATUI_CODING_AGENT_DIR="$tmp_agent_dir" \
+    CATUI_TRACE_API=1 \
     npx tsx cli.ts --print --no-session --provider "$PROVIDER" --model "$MODEL" $extra_flags "$BENCHMARK_PROMPT" \
         2>"$trace_file" || {
         warn "执行可能有错误，但 trace 已写入"
@@ -691,8 +691,8 @@ case "$phase" in
         echo ""
         echo "环境变量:"
         echo "  BISECT_REF           bisect 阶段的 git ref"
-        echo "  NANOPENCIL_MODEL     指定模型 ID（默认 MiniMax-M2.5）"
-        echo "  NANOPENCIL_PROVIDER  指定 provider（默认 minimax-coding）"
+        echo "  CATUI_MODEL     指定模型 ID（默认 MiniMax-M2.5）"
+        echo "  CATUI_PROVIDER  指定 provider（默认 minimax-coding）"
         echo "  DRY_RUN=1            只打印命令不执行"
         echo ""
         echo "推荐流程:"

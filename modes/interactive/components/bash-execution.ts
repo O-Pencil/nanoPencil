@@ -3,13 +3,13 @@
  */
 /**
  * [WHO]: BashExecutionComponent
- * [FROM]: Depends on @pencil-agent/tui, strip-ansi, ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [FROM]: Depends on @catui/tui, strip-ansi, ../theme/theme.js, ./dynamic-border.js, ./keybinding-hints.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/bash-execution.ts -
  */
 
 
-import { Container, Loader, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { Container, Loader, Spacer, Text, type TUI } from "@catui/tui";
 import stripAnsi from "strip-ansi";
 import {
 	DEFAULT_MAX_BYTES,

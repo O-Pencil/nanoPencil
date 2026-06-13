@@ -4,8 +4,8 @@
  * [TO]: Consumed by core/tools/index.ts
  * [HERE]: core/tools/read.ts - filesystem read boundary; consumed by orchestrator
  */
-import type { AgentTool } from "@pencil-agent/agent-core";
-import type { DocumentContent, ImageContent, TextContent } from "@pencil-agent/ai/types";
+import type { AgentTool } from "@catui/agent-core";
+import type { DocumentContent, ImageContent, TextContent } from "@catui/ai/types";
 import { type Static, Type } from "@sinclair/typebox";
 import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile, stat as fsStat } from "fs/promises";

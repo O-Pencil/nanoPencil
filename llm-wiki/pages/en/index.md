@@ -11,11 +11,11 @@ generatedAt: 2026-05-26T16:35:12.343Z
 
 # LLM Wiki
 
-This wiki is a human-first map of the nanoPencil codebase backed by a complete machine graph.
+This wiki is a human-first map of the Catui codebase backed by a complete machine graph.
 
 ## Current Shape
 
-- Project: `@pencil-agent/nano-pencil` `1.14.1`
+- Project: `@catui/agent` `1.14.1`
 - Graph hash: `67fdf30e687528e70baefc61cc604eb1b059c261dba1a5780da081c3af5a82bb`
 - Source files represented virtually: 406
 - P2 modules represented virtually: 31

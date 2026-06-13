@@ -1,6 +1,6 @@
 /**
  * [WHO]: ProviderSelectorComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./dynamic-border.js
  * [TO]: Consumed by modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/components/provider-selector.ts -
  *   Adds search to provider selection when /model has many providers
@@ -14,7 +14,7 @@ import {
 	Input,
 	Spacer,
 	Text,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import {
 	getCustomProtocolProviderDefinition,
 	isCustomProtocolProvider,

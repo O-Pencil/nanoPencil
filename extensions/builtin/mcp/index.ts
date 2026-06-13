@@ -91,7 +91,7 @@ async function probeFigmaDesktopEndpoint(): Promise<{ reachable: boolean; detail
 				params: {
 					protocolVersion: "2024-11-05",
 					capabilities: {},
-					clientInfo: { name: "nano-pencil", version: "1.11.12" },
+					clientInfo: { name: "catui-agent", version: "1.11.12" },
 				},
 			}),
 			signal: AbortSignal.timeout(4000),
@@ -133,7 +133,7 @@ async function probeFigmaRemoteEndpoint(
 				params: {
 					protocolVersion: "2024-11-05",
 					capabilities: {},
-					clientInfo: { name: "nano-pencil", version: "1.11.12" },
+					clientInfo: { name: "catui-agent", version: "1.11.12" },
 				},
 			}),
 			signal: AbortSignal.timeout(5000),
@@ -167,7 +167,7 @@ async function probeFigmaRemoteEndpoint(
 
 export default async function mcpExtension(api: ExtensionAPI) {
 	api.registerCommand("figma", {
-		description: "Connect NanoPencil to Figma for generative design",
+		description: "Connect Catui to Figma for generative design",
 		getArgumentCompletions: getFigmaArgumentCompletions,
 		handler: async (args: string, ctx: ExtensionCommandContext) => {
 			const [rawAction, ...rest] = args.trim().split(/\s+/).filter(Boolean);
@@ -177,7 +177,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 				api.sendMessage({
 					customType: "text",
 					content:
-						`Figma setup:\n1. Run \`/figma auth\`. NanoPencil will try a standalone browser OAuth flow first.${importable ? ` If Figma refuses first-time client registration, it can fall back to the existing ${importable.source} session on this machine.` : ""}\n2. Run \`/figma remote\` to enable the built-in remote MCP preset and reload the session.\n3. If you prefer the local desktop route, open the Figma desktop app, enable its MCP server in Dev Mode, and run \`/figma setup\`.\n4. Then ask me to generate or edit a design in Figma.\n\nAdvanced: you can also set \`NANOPENCIL_FIGMA_CLIENT_ID\` and \`NANOPENCIL_FIGMA_CLIENT_SECRET\` before running NanoPencil.\n\nUse \`/figma status\` to inspect the current connection.`,
+						`Figma setup:\n1. Run \`/figma auth\`. Catui will try a standalone browser OAuth flow first.${importable ? ` If Figma refuses first-time client registration, it can fall back to the existing ${importable.source} session on this machine.` : ""}\n2. Run \`/figma remote\` to enable the built-in remote MCP preset and reload the session.\n3. If you prefer the local desktop route, open the Figma desktop app, enable its MCP server in Dev Mode, and run \`/figma setup\`.\n4. Then ask me to generate or edit a design in Figma.\n\nAdvanced: you can also set \`CATUI_FIGMA_CLIENT_ID\` and \`CATUI_FIGMA_CLIENT_SECRET\` before running Catui.\n\nUse \`/figma status\` to inspect the current connection.`,
 					display: true,
 				});
 				return;
@@ -223,7 +223,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 						api.sendMessage({
 							customType: "text",
 							content:
-								`The remote Figma MCP endpoint is reachable (${remoteProbe.detail ?? "ok"}). Enabled the built-in \`figma-remote\` preset and reloading now so NanoPencil can pick up the Figma tools.`,
+								`The remote Figma MCP endpoint is reachable (${remoteProbe.detail ?? "ok"}). Enabled the built-in \`figma-remote\` preset and reloading now so Catui can pick up the Figma tools.`,
 							display: true,
 						});
 						await ctx.reload();
@@ -237,7 +237,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 					api.sendMessage({
 						customType: "text",
 						content:
-							`I could not reach the local Figma Desktop MCP endpoint at ${FIGMA_DESKTOP_URL}.\n\nNext steps:\n1. For the remote path, run \`/figma auth\`${importHint ? ` to try NanoPencil OAuth first and then fall back to the existing ${importHint.source} session if needed` : ""}.\n2. Then run \`/figma remote\`.\n3. Or open the Figma desktop app, turn on the Figma MCP server in Dev Mode, and run \`/figma setup\` again.\n\nProbe detail: ${probe.detail ?? "connection failed"}`,
+							`I could not reach the local Figma Desktop MCP endpoint at ${FIGMA_DESKTOP_URL}.\n\nNext steps:\n1. For the remote path, run \`/figma auth\`${importHint ? ` to try Catui OAuth first and then fall back to the existing ${importHint.source} session if needed` : ""}.\n2. Then run \`/figma remote\`.\n3. Or open the Figma desktop app, turn on the Figma MCP server in Dev Mode, and run \`/figma setup\` again.\n\nProbe detail: ${probe.detail ?? "connection failed"}`,
 						display: true,
 					});
 					return;
@@ -247,7 +247,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 				api.sendMessage({
 					customType: "text",
 					content:
-						`The local Figma MCP endpoint is reachable (${probe.detail ?? "ok"}). Enabled the built-in \`figma-desktop\` MCP preset and reloading now so NanoPencil can pick up the Figma tools.`,
+						`The local Figma MCP endpoint is reachable (${probe.detail ?? "ok"}). Enabled the built-in \`figma-desktop\` MCP preset and reloading now so Catui can pick up the Figma tools.`,
 					display: true,
 				});
 				await ctx.reload();
@@ -276,7 +276,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 					api.sendMessage({
 						customType: "text",
 						content:
-							"Saved Figma OAuth credentials in auth storage. Run `/figma remote` to enable the remote MCP preset and connect NanoPencil to Figma.",
+							"Saved Figma OAuth credentials in auth storage. Run `/figma remote` to enable the remote MCP preset and connect Catui to Figma.",
 						display: true,
 					});
 				} catch (error) {
@@ -305,7 +305,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 				api.sendMessage({
 					customType: "text",
 					content:
-						"Enabled the built-in `figma-desktop` MCP preset. Reloading now so NanoPencil can pick up the Figma tools.",
+						"Enabled the built-in `figma-desktop` MCP preset. Reloading now so Catui can pick up the Figma tools.",
 					display: true,
 				});
 				await ctx.reload();
@@ -346,7 +346,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 					api.sendMessage({
 						customType: "text",
 						content:
-							`I could reach the remote Figma MCP endpoint, but authentication is not working yet.\n\nDetail: ${probe.detail ?? "authentication failed"}\n\nRun \`/figma auth\` again and retry. If standalone registration is blocked by Figma, NanoPencil will fall back to any existing official local session it can import.`,
+							`I could reach the remote Figma MCP endpoint, but authentication is not working yet.\n\nDetail: ${probe.detail ?? "authentication failed"}\n\nRun \`/figma auth\` again and retry. If standalone registration is blocked by Figma, Catui will fall back to any existing official local session it can import.`,
 						display: true,
 					});
 					return;
@@ -356,7 +356,7 @@ export default async function mcpExtension(api: ExtensionAPI) {
 				api.sendMessage({
 					customType: "text",
 					content:
-						"Enabled the built-in `figma-remote` MCP preset. Reloading now so NanoPencil can pick up the authenticated remote Figma tools.",
+						"Enabled the built-in `figma-remote` MCP preset. Reloading now so Catui can pick up the authenticated remote Figma tools.",
 					display: true,
 				});
 				await ctx.reload();

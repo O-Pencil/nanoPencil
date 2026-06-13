@@ -1,5 +1,5 @@
 /**
- * [WHO]: TaskStop tool - marks a task as completed (nanoPencil has no background processes)
+ * [WHO]: TaskStop tool - marks a task as completed (Catui has no background processes)
  * [FROM]: Depends on @sinclair/typebox, ../task-store, ../task-types
  * [TO]: Consumed by task extension via registerTool()
  * [HERE]: extensions/builtin/task/task-tools/task-stop-tool.ts
@@ -7,9 +7,9 @@
 
 import { Type } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import type { ExtensionContext } from "../../../../core/extensions-host/types.js";
-import { Container, Text, type Component } from "@pencil-agent/tui";
+import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { getTask, updateTask } from "../task-store.js";
 import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
@@ -25,7 +25,7 @@ export function createTaskStopTool() {
 		name: "TaskStop",
 		label: "Stop Task",
 		description:
-			"Stop a running task by marking it as completed. In nanoPencil, tasks are state-managed (no background processes), so this is equivalent to setting status=completed.",
+			"Stop a running task by marking it as completed. In Catui, tasks are state-managed (no background processes), so this is equivalent to setting status=completed.",
 		parameters: taskStopSchema,
 
 		renderCall: (args: unknown, theme: Theme): Component => {

@@ -2,7 +2,7 @@
  * [WHO]: isSoulEnabled(), toSoulContext(), createSoulManager()
  * [FROM]: Depends on soul-options-contract, node:path, node:fs, node:url, node:os, node:module
  * [TO]: Consumed by core/runtime/agent-session.ts
- * [HERE]: core/soul-integration.ts - bridges Soul and NanoPencil
+ * [HERE]: core/soul-integration.ts - bridges Soul and Catui
  */
 import type { SoulOptionsContract } from "./soul-options-contract.js";
 import { join, resolve } from "node:path";
@@ -40,7 +40,7 @@ function resolveBundledSoulEntry(): string | undefined {
 }
 
 /**
- * Default Soul configuration for NanoPencil
+ * Default Soul configuration for Catui
  * @param ctx Agent directory context.
  */
 export function getSoulConfig(ctx: AgentDirContext = defaultAgentDirContext()) {
@@ -89,7 +89,7 @@ export function getSoulConfig(ctx: AgentDirContext = defaultAgentDirContext()) {
 }
 
 /**
- * Create a SoulManager instance for NanoPencil
+ * Create a SoulManager instance for Catui
  * Returns null if nanosoul is not installed
  * @param ctx Agent directory context.
  */
@@ -109,17 +109,17 @@ export async function createSoulManager(ctx: AgentDirContext = defaultAgentDirCo
     }
   }
 
-  // Fall back to node_modules - try @pencil-agent/soul-core first, then @pencil-agent/soul (legacy), then nanosoul
+  // Fall back to node_modules - try @catui/soul-core first, then @catui/soul (legacy), then nanosoul
   try {
     // @ts-ignore - runtime dynamic import
-    const { SoulManager: SM } = await import("@pencil-agent/soul-core");
+    const { SoulManager: SM } = await import("@catui/soul-core");
     return new SM({
       config: getSoulConfig(ctx),
     });
   } catch {
     try {
       // @ts-ignore - runtime dynamic import for backwards compatibility
-      const { SoulManager: SM } = await import("@pencil-agent/soul");
+      const { SoulManager: SM } = await import("@catui/soul");
       return new SM({
         config: getSoulConfig(ctx),
       });
@@ -147,11 +147,11 @@ export function isSoulAvailable(): boolean {
 
   // Fall back to checking node_modules - try soul-core first, then soul (legacy), then nanosoul
   try {
-    require.resolve("@pencil-agent/soul-core");
+    require.resolve("@catui/soul-core");
     return true;
   } catch {
     try {
-      require.resolve("@pencil-agent/soul");
+      require.resolve("@catui/soul");
       return true;
     } catch {
       try {
@@ -165,7 +165,7 @@ export function isSoulAvailable(): boolean {
 }
 
 /**
- * Convert NanoPencil context to Soul InteractionContext
+ * Convert Catui context to Soul InteractionContext
  */
 export function toSoulContext(
   project: string,
@@ -193,7 +193,7 @@ export function toSoulContext(
  * Check if Soul should be enabled based on options
  */
 export function isSoulEnabled(options: SoulOptionsContract): boolean {
-  // Soul is enabled by default in NanoPencil 1.3+
+  // Soul is enabled by default in Catui 1.3+
   // Can be disabled with --disable-soul flag
   return options.enableSoul !== false;
 }

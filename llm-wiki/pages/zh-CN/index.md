@@ -11,11 +11,11 @@ generatedAt: 2026-05-26T16:35:12.343Z
 
 # LLM Wiki
 
-本 Wiki 是 nanoPencil 代码库的人类优先地图，由完整的机器图提供支持。
+本 Wiki 是 Catui 代码库的人类优先地图，由完整的机器图提供支持。
 
 ## 当前状态
 
-- 项目：`@pencil-agent/nano-pencil` `1.14.1`
+- 项目：`@catui/agent` `1.14.1`
 - 图哈希：`67fdf30e687528e70baefc61cc604eb1b059c261dba1a5780da081c3af5a82bb`
 - 虚拟表示的源文件：406
 - 虚拟表示的 P2 模块：31

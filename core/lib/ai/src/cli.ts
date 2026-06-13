@@ -69,7 +69,7 @@ async function main(): Promise<void> {
 
 	if (!command || command === "help" || command === "--help" || command === "-h") {
 		const providerList = PROVIDERS.map((p) => `  ${p.id.padEnd(20)} ${p.name}`).join("\n");
-		console.log(`Usage: npx @pencil-agent/ai <command> [provider]
+		console.log(`Usage: npx @catui/ai <command> [provider]
 
 Commands:
   login [provider]  Login to an OAuth provider
@@ -79,9 +79,9 @@ Providers:
 ${providerList}
 
 Examples:
-  npx @pencil-agent/ai login              # interactive provider selection
-  npx @pencil-agent/ai login anthropic    # login to specific provider
-  npx @pencil-agent/ai list               # list providers
+  npx @catui/ai login              # interactive provider selection
+  npx @catui/ai login anthropic    # login to specific provider
+  npx @catui/ai list               # list providers
 `);
 		return;
 	}
@@ -118,7 +118,7 @@ Examples:
 
 		if (!PROVIDERS.some((p) => p.id === provider)) {
 			console.error(`Unknown provider: ${provider}`);
-			console.error(`Use 'npx @pencil-agent/ai list' to see available providers`);
+			console.error(`Use 'npx @catui/ai list' to see available providers`);
 			process.exit(1);
 		}
 
@@ -128,7 +128,7 @@ Examples:
 	}
 
 	console.error(`Unknown command: ${command}`);
-	console.error(`Use 'npx @pencil-agent/ai --help' for usage`);
+	console.error(`Use 'npx @catui/ai --help' for usage`);
 	process.exit(1);
 }
 

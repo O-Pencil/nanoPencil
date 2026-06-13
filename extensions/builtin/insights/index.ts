@@ -4,7 +4,7 @@
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/insights/index.ts - /insights command entry; usage-report pipeline
  *
- * /insights command — generate a usage report analyzing nanoPencil sessions.
+ * /insights command — generate a usage report analyzing Catui sessions.
  *
  * 1:1 port of Claude Code src/commands/insights.ts generateUsageReport() pipeline.
  *
@@ -280,7 +280,7 @@ function buildTerminalSummary(
 			: `${sessionCount} sessions`;
 
 	return [
-		`# nanoPencil Insights`,
+		`# Catui Insights`,
 		``,
 		`${sessionLabel} · ${messageCount.toLocaleString()} messages`,
 		`${dateRange.start} to ${dateRange.end}`,
@@ -297,7 +297,7 @@ function buildTerminalSummary(
 
 export default async function insightsExtension(api: ExtensionAPI): Promise<void> {
 	api.registerCommand("insights", {
-		description: "Generate a report analyzing your nanoPencil sessions",
+		description: "Generate a report analyzing your Catui sessions",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			try {
 				ctx.ui.notify("Analyzing your sessions...", "info");

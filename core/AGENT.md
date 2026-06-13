@@ -6,7 +6,7 @@
 
 ## Overview
 
-The `core/` module contains the central business logic for nanoPencil. It orchestrates agent runtime, session management, tool execution, extension loading, and configuration.
+The `core/` module contains the central business logic for Catui. It orchestrates agent runtime, session management, tool execution, extension loading, and configuration.
 
 **Key Characteristics:**
 - Platform-agnostic TypeScript (Node.js 20+)
@@ -72,7 +72,7 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 `mcp-config.ts`: MCP server configuration management
 
-`mcp-adapter.ts`: Adapts MCP tools to nanoPencil tool format, - [WHO]: McpToolAdapter
+`mcp-adapter.ts`: Adapts MCP tools to Catui tool format, - [WHO]: McpToolAdapter
 - [FROM]: mcp-client.ts
 - [TO]: (check imports)
 - [HERE]: protocol bridge
@@ -91,14 +91,14 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 `subprocess-backend.ts`: SubprocessSubAgentBackend — worker_threads-based crash-isolated backend (future)
 `subprocess-worker.ts`: Minimal worker entry for subprocess backend
 `agent-definition.ts`: AgentDefinition interface (25+ fields), built-in agent definitions per CC §IV, §V
-`agent-definition-loader.ts`: Custom agent definition loader from .nanopencil/agents/ markdown/JSON files per CC §XV
+`agent-definition-loader.ts`: Custom agent definition loader from .catui/agents/ markdown/JSON files per CC §XV
 `agent-input-output.ts`: AgentInput (TypeBox schema), AgentOutputCompleted/Async types per CC §III
 `agent-registry.ts`: AgentDefinitionRegistry — name registry, definition cache, lookup per CC §XIV
 `agent-tool.ts`: createAgentTool/createTaskToolAlias — full CC §VI spawn flow with auto-background, telemetry, worktree isolation
 `agent-tool-filter.ts`: filterToolsForAgent — tool filtering by definition and permission mode per CC §IX
 `agent-result-extractor.ts`: extractAgentResult, truncateResult — result extraction with 100k truncation per CC §11.2
 `agent-handoff-safety.ts`: checkHandoffSafety — handoff classifier, recursion limits per CC §XII
-`agent-output-persistence.ts`: File-based background task output persistence to .nanopencil/tasks/ per CC §XI.3
+`agent-output-persistence.ts`: File-based background task output persistence to .catui/tasks/ per CC §XI.3
 `agent-prompt-builder.ts`: System prompt Notes section injection per CC §X
 `agent-telemetry.ts`: Structured telemetry events per CC §XVI
 
@@ -165,11 +165,11 @@ The `core/` module contains the central business logic for nanoPencil. It orches
 
 ### Internal Libraries (`core/lib/`)
 
-`ai/`: Private workspace library for model APIs and providers (`@pencil-agent/ai`)
+`ai/`: Private workspace library for model APIs and providers (`@catui/ai`)
 
-`agent-core/`: Private workspace library for agent loop primitives (`@pencil-agent/agent-core`)
+`agent-core/`: Private workspace library for agent loop primitives (`@catui/agent-core`)
 
-`tui/`: Private workspace library for terminal UI components (`@pencil-agent/tui`)
+`tui/`: Private workspace library for terminal UI components (`@catui/tui`)
 
 ### Other Modules
 

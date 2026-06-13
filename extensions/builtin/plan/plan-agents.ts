@@ -10,7 +10,7 @@
 // ============================================================================
 
 export function getExploreAgentCount(): number {
-	const env = process.env.NANOPENCIL_PLAN_EXPLORE_AGENT_COUNT;
+	const env = process.env.CATUI_PLAN_EXPLORE_AGENT_COUNT ?? process.env.NANOPENCIL_PLAN_EXPLORE_AGENT_COUNT;
 	if (env) {
 		const n = parseInt(env, 10);
 		if (!isNaN(n) && n >= 1 && n <= 10) return n;
@@ -19,7 +19,7 @@ export function getExploreAgentCount(): number {
 }
 
 export function getPlanAgentCount(): number {
-	const env = process.env.NANOPENCIL_PLAN_AGENT_COUNT;
+	const env = process.env.CATUI_PLAN_AGENT_COUNT ?? process.env.NANOPENCIL_PLAN_AGENT_COUNT;
 	if (env) {
 		const n = parseInt(env, 10);
 		if (!isNaN(n) && n >= 1 && n <= 10) return n;

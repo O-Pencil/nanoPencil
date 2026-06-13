@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides EditorComponentAdapter, EditorComponentContext — extension editor replacement
- * [FROM]: Depends on @pencil-agent/tui (Component/Container/TUI/EditorComponent/EditorTheme/
+ * [FROM]: Depends on @catui/tui (Component/Container/TUI/EditorComponent/EditorTheme/
  *         CombinedAutocompleteProvider), keybindings (KeybindingsManager), components (CustomEditor), theme
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.editorAdapter`; wired into
  *       ExtensionUIContext.setEditorComponent; reset by resetExtensionUI)
@@ -20,7 +20,7 @@ import type {
   EditorComponent,
   EditorTheme,
   TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { KeybindingsManager } from "../../../../core/platform/keybindings.js";
 import type { CustomEditor } from "../../components/custom-editor.js";
 import { getEditorTheme } from "../../theme/theme.js";

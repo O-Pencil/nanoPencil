@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides runExploration(), ThinkResult — spawns read-only SubAgent for code archaeology
- * [FROM]: Depends on core/sub-agent (SubAgentRuntime, SubAgentSpec), core/tools (createReadOnlyTools, createBashTool, createSandboxHook), @pencil-agent/ai (Model)
+ * [FROM]: Depends on core/sub-agent (SubAgentRuntime, SubAgentSpec), core/tools (createReadOnlyTools, createBashTool, createSandboxHook), @catui/ai (Model)
  * [TO]: Consumed by ./index.ts (idle-think extension entry)
  * [HERE]: extensions/builtin/idle-think/thinker.ts - background code exploration via SubAgent
  */
@@ -14,7 +14,7 @@ import {
 	createSandboxHook,
 	type Tool,
 } from "../../../core/tools/index.js";
-import type { Model } from "@pencil-agent/ai/types";
+import type { Model } from "@catui/ai/types";
 import { execFile, execSync } from "node:child_process";
 import { promisify } from "node:util";
 import { existsSync } from "node:fs";

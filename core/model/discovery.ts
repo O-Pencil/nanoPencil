@@ -1,6 +1,6 @@
 /**
  * [WHO]: discoverModels(), discoverOpenAIModels(), getDiscoveryProtocol(), DiscoveredModel, DiscoveryResult
- * [FROM]: Depends on @pencil-agent/ai/types for Api type
+ * [FROM]: Depends on @catui/ai/types for Api type
  * [TO]: Consumed by core/model-registry.ts, core/model/discovery-cache.ts
  * [HERE]: core/model/discovery.ts - remote model discovery engine
  *

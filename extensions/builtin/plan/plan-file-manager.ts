@@ -60,7 +60,7 @@ const NOUNS = [
 // Constants
 // ============================================================================
 
-const DEFAULT_PLANS_DIR = join(homedir(), ".nanopencil", "plans");
+const DEFAULT_PLANS_DIR = join(homedir(), ".catui", "plans");
 const MAX_SLUG_RETRIES = 10;
 
 // ============================================================================

@@ -1,6 +1,6 @@
 /**
  * [WHO]: AgentDefinition interface, AgentDefinitionSource, AgentPermissionMode, built-in agent definitions
- * [FROM]: Depends on @pencil-agent/agent-core for AgentMessage, @pencil-agent/ai for Model
+ * [FROM]: Depends on @catui/agent-core for AgentMessage, @catui/ai for Model
  * [TO]: Consumed by ./agent-tool, ./agent-registry, ./index.ts, extensions/builtin/subagent/*
  * [HERE]: core/sub-agent/agent-definition.ts - Agent type definitions per CC Agent architecture (cc-agent-design §IV, §V)
  * [COVENANT]: Add/remove fields → update P2 AGENT.md member list
@@ -139,7 +139,7 @@ export interface AgentDefinition {
   initialPrompt?: string;
   /** Memory scope: determines which memory context to load. */
   memory?: AgentMemoryScope;
-  /** Whether to skip loading CLAUDE.md / AGENTS.md / .PENCIL.md context files. */
+  /** Whether to skip loading CLAUDE.md / AGENTS.md / .CATUI.md context files. */
   omitContextFiles?: boolean;
   /** Whether to append (rather than replace) the system prompt. */
   appendSystemPrompt?: boolean;
@@ -155,7 +155,7 @@ export interface AgentDefinition {
 
 /**
  * Context passed to AgentDefinition.getSystemPrompt().
- * Mirrors CC's toolUseContext shape (simplified for nanoPencil).
+ * Mirrors CC's toolUseContext shape (simplified for Catui).
  */
 export interface AgentSystemPromptContext {
   /** The cwd for this agent run (may differ from parent if worktree/cwd override is used). */
@@ -248,7 +248,7 @@ export const PLAN_AGENT: AgentDefinition = {
 export const STATUSLINE_SETUP_AGENT: AgentDefinition = {
   agentType: "statusline-setup",
   description: "Agent for configuring the TUI status line settings",
-  whenToUse: "Use this agent to configure the user's nanoPencil status line setting.",
+  whenToUse: "Use this agent to configure the user's Catui status line setting.",
   tools: ["Read", "Edit"],
   source: "built-in",
   baseDir: "built-in",
@@ -258,26 +258,26 @@ export const STATUSLINE_SETUP_AGENT: AgentDefinition = {
 };
 
 /**
- * nanoPencil-guide agent (CC §5.5)
+ * Catui-guide agent (CC §5.5)
  * - Conditional tools: Read, Grep, Glob, Agent (if web access), else Read, Grep, Glob
  * - model: "haiku"
  * - permissionMode: "dontAsk"
  */
-export const NANOPENCIL_GUIDE_AGENT: AgentDefinition = {
-  agentType: "nanopencil-guide",
-  description: "Agent for answering questions about nanoPencil features and usage",
+export const CATUI_GUIDE_AGENT: AgentDefinition = {
+  agentType: "catui-guide",
+  description: "Agent for answering questions about Catui features and usage",
   whenToUse:
-    'Use this agent when the user asks questions ("Can nanoPencil...", "Does nanoPencil...", "How do I...") about: ' +
-    "(1) nanoPencil (the terminal AI coding agent) - features, slash commands, MCP servers, settings, extensions, " +
+    'Use this agent when the user asks questions ("Can Catui...", "Does Catui...", "How do I...") about: ' +
+    "(1) Catui (the terminal AI coding agent) - features, slash commands, MCP servers, settings, extensions, " +
     "keybindings, configuration; (2) the Agent SDK - building custom agents; (3) supported model APIs - usage, tool use. " +
     "IMPORTANT: Before spawning a new agent, check if there is already a running or recently completed " +
-    "nanopencil-guide agent that you can continue via SendMessage.",
+    "catui-guide agent that you can continue via SendMessage.",
   tools: ["Read", "Grep", "Find"],
   source: "built-in",
   baseDir: "built-in",
   model: "haiku",
   permissionMode: "dontAsk",
-  getSystemPrompt: () => buildNanoPencilGuidePrompt(),
+  getSystemPrompt: () => buildCatuiGuidePrompt(),
 };
 
 /** All built-in agent definitions, keyed by agentType. */
@@ -286,7 +286,7 @@ export const BUILT_IN_AGENT_DEFINITIONS: ReadonlyMap<string, AgentDefinition> = 
   [EXPLORE_AGENT.agentType, EXPLORE_AGENT],
   [PLAN_AGENT.agentType, PLAN_AGENT],
   [STATUSLINE_SETUP_AGENT.agentType, STATUSLINE_SETUP_AGENT],
-  [NANOPENCIL_GUIDE_AGENT.agentType, NANOPENCIL_GUIDE_AGENT],
+  [CATUI_GUIDE_AGENT.agentType, CATUI_GUIDE_AGENT],
 ]);
 
 // ============================================================================
@@ -355,7 +355,7 @@ function buildExploreAgentPrompt(): string {
 
 function buildStatuslineSetupPrompt(): string {
   return [
-    "You are a status line setup agent for nanoPencil.",
+    "You are a status line setup agent for Catui.",
     "Your task is to help configure the user's terminal status line / TUI theme settings.",
     "",
     "You can read the current configuration and edit settings files.",
@@ -364,13 +364,13 @@ function buildStatuslineSetupPrompt(): string {
   ].join("\n");
 }
 
-function buildNanoPencilGuidePrompt(): string {
+function buildCatuiGuidePrompt(): string {
   return [
-    "You are a nanoPencil documentation guide agent.",
-    "Your task is to answer questions about nanoPencil features, configuration, and usage.",
+    "You are a Catui documentation guide agent.",
+    "Your task is to answer questions about Catui features, configuration, and usage.",
     "",
     "You have access to:",
-    "- Read: to read documentation files, AGENTS.md, .PENCIL.md, and source code",
+    "- Read: to read documentation files, AGENTS.md, .CATUI.md, and source code",
     "- Grep: to search for specific patterns in the codebase",
     "- Find: to locate files by name or pattern",
     "",

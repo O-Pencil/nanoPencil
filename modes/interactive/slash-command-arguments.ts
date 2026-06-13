@@ -1,12 +1,12 @@
 /**
  * [WHO]: getModelArgumentCompletions(), getAgentLoopArgumentCompletions(), getThinkingArgumentCompletions(), getMcpArgumentCompletions(), getLanguageArgumentCompletions(), getPersonaArgumentCompletions(), getLoginArgumentCompletions()
- * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/platform/i18n, core/mcp/mcp-client
+ * [FROM]: Depends on @catui/agent-core, @catui/tui, core/platform/i18n, core/mcp/mcp-client
  * [TO]: Consumed by modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/slash-command-arguments.ts - pure argument completion helpers for built-in TUI slash commands
  */
 
-import type { AgentLoopFramework, ThinkingLevel } from "@pencil-agent/agent-core";
-import type { ArgumentCompletionContext, AutocompleteItem } from "@pencil-agent/tui";
+import type { AgentLoopFramework, ThinkingLevel } from "@catui/agent-core";
+import type { ArgumentCompletionContext, AutocompleteItem } from "@catui/tui";
 import { AVAILABLE_LOCALES, LOCALE_NAMES, type Locale } from "../../core/platform/i18n/index.js";
 import type { MCPServerConfig } from "../../core/mcp/mcp-types.js";
 

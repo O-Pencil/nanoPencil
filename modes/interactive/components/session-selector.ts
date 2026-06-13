@@ -20,7 +20,7 @@ import {
 	Text,
 	truncateToWidth,
 	visibleWidth,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { KeybindingsManager } from "../../../core/platform/keybindings.js";
 import type { SessionInfo, SessionListProgress } from "../../../core/session/session-manager.js";
 import { theme } from "../theme/theme.js";
@@ -528,7 +528,7 @@ class SessionList implements Component, Focusable {
 				void this.onDeleteSession?.(pathToDelete);
 				return;
 			}
-			// Allow both Escape and Ctrl+C to cancel (consistent with nanoPencil UX)
+			// Allow both Escape and Ctrl+C to cancel (consistent with Catui UX)
 			if (kb.matches(keyData, "selectCancel") || matchesKey(keyData, "ctrl+c")) {
 				this.setConfirmingDeletePath(null);
 				return;

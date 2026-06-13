@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AssistantMessage } from "@pencil-agent/ai/types";
+import type { AssistantMessage } from "@catui/ai/types";
 import { RetryCoordinator, type RetrySessionEvent } from "../core/runtime/retry-coordinator.js";
 
 function createUsage() {

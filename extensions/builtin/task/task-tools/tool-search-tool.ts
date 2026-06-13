@@ -7,7 +7,7 @@
 
 import { Type } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import type { ExtensionContext } from "../../../../core/extensions-host/types.js";
 
 // ============================================================================

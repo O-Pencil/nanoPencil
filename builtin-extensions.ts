@@ -2,7 +2,7 @@
  * [WHO]: BuiltinExtension, getBuiltinExtensionPaths(), builtInExtensions
  * [FROM]: Depends on node:fs, node:path, config
  * [TO]: Consumed by main.ts, test files
- * [HERE]: builtin-extensions.ts - built-in extension registry for NanoPencil
+ * [HERE]: builtin-extensions.ts - built-in extension registry for Catui
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -89,7 +89,7 @@ export const builtInExtensions: readonly BuiltinExtension[] = [
 	{ id: "export-html", category: "optional", defaultEnabled: false, riskLevel: "write-capable", requiresUI: false, startsTimers: false, writesWorkspace: true, externalProcess: false, testContracts: ["write-guard"], testFiles: ["test/extension-smoke.test.ts", "test/export-html-branch-navigation.test.ts"] },
 ];
 
-/** Find package root from current module location (containing package.json with nano-pencil related name) */
+/** Find package root from current module location (containing package.json with catui-agent related name) */
 function findPackageRoot(startDir: string): string | null {
 	let dir = startDir;
 	for (let i = 0; i < 20; i++) {
@@ -98,7 +98,7 @@ function findPackageRoot(startDir: string): string | null {
 			if (existsSync(pkgPath)) {
 				const raw = readFileSync(pkgPath, "utf-8");
 				const pkg = JSON.parse(raw) as { name?: string };
-				if (pkg.name === "@pencil-agent/nano-pencil" || pkg.name === "nanopencil") return dir;
+				if (pkg.name === "@catui/agent" || pkg.name === "catui") return dir;
 			}
 		} catch {
 			// ignore
@@ -111,7 +111,7 @@ function findPackageRoot(startDir: string): string | null {
 }
 
 /**
- * Get the list of built-in extension paths that NanoPencil loads by default
+ * Get the list of built-in extension paths that Catui loads by default
  *
  * Returns all default-enabled extension paths (builtin/):
  * - NanoMem (persistent memory)
@@ -172,13 +172,13 @@ export function getBuiltinExtensionPaths(): string[] {
 		} else {
 			// 3) require.resolve: mem-core in node_modules during development/local install
 			try {
-				const extPath = require.resolve("@pencil-agent/mem-core/extension.js");
+				const extPath = require.resolve("@catui/mem-core/extension.js");
 				if (existsSync(extPath)) paths.push(extPath);
 			} catch {
-				// 4) Look for package root + node_modules/@pencil-agent/mem-core/dist/extension.js
+				// 4) Look for package root + node_modules/@catui/mem-core/dist/extension.js
 				const packageRoot = findPackageRoot(__dirname);
 				if (packageRoot) {
-					const candidate = join(packageRoot, "node_modules", "@pencil-agent", "mem-core", "dist", "extension.js");
+					const candidate = join(packageRoot, "node_modules", "@catui", "mem-core", "dist", "extension.js");
 					if (existsSync(candidate)) paths.push(candidate);
 				}
 			}
@@ -365,5 +365,12 @@ export function getBuiltinExtensionPaths(): string[] {
  * @deprecated Use getBuiltinExtensionPaths() instead
  */
 export function getNanopencilDefaultExtensionPaths(): string[] {
+	return getBuiltinExtensionPaths();
+}
+
+/**
+ * @deprecated Use getBuiltinExtensionPaths() instead
+ */
+export function getCatuiDefaultExtensionPaths(): string[] {
 	return getBuiltinExtensionPaths();
 }

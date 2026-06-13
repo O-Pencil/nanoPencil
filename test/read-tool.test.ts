@@ -16,7 +16,7 @@ function getText(result: Awaited<ReturnType<ReturnType<typeof createReadTool>["e
 }
 
 test("read tool applies positive integer offset and limit", async () => {
-	const cwd = createTempDir("nanopencil-read-");
+	const cwd = createTempDir("catui-read-");
 	try {
 		writeFileSync(join(cwd, "sample.txt"), "one\ntwo\nthree\nfour\n", "utf-8");
 		const readTool = createReadTool(cwd);
@@ -34,7 +34,7 @@ test("read tool applies positive integer offset and limit", async () => {
 });
 
 test("read tool rejects invalid offset and limit windows", async () => {
-	const cwd = createTempDir("nanopencil-read-");
+	const cwd = createTempDir("catui-read-");
 	try {
 		writeFileSync(join(cwd, "sample.txt"), "one\ntwo\n", "utf-8");
 		const readTool = createReadTool(cwd);

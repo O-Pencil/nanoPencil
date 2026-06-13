@@ -9,7 +9,7 @@
  *
  * You can run this test suite with:
  * ```bash
- * $ AWS_REGION=us-east-1 BEDROCK_EXTENSIVE_MODEL_TEST=1 AWS_PROFILE=nanopencil npm test -- ./test/bedrock-models.test.ts
+ * $ AWS_REGION=us-east-1 BEDROCK_EXTENSIVE_MODEL_TEST=1 AWS_PROFILE=catui npm test -- ./test/bedrock-models.test.ts
  * ```
  *
  * ## Known Issues by Category
@@ -21,8 +21,8 @@
  * 5. **Invalid Signature Format**: Model validates signature format (Anthropic newer models).
  */
 
-import type { AssistantMessage } from "@pencil-agent/ai/types";
-import { getModels } from "@pencil-agent/ai/models";
+import type { AssistantMessage } from "@catui/ai/types";
+import { getModels } from "@catui/ai/models";
 import { describe, expect, it } from "vitest";
 import { Agent } from "../src/index.js";
 import { hasBedrockCredentials } from "./bedrock-utils.js";

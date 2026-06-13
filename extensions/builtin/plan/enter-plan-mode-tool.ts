@@ -7,9 +7,9 @@
 
 import { Type, type Static } from "@sinclair/typebox";
 import type { ExtensionAPI, ToolDefinition } from "../../../core/extensions-host/types.js";
-import { Container, Text, type Component } from "@pencil-agent/tui";
+import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../core/theme-contract.js";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import { PLAN_CUSTOM_TYPE, type PlanSessionState } from "./types.js";
 import { handlePlanModeTransition } from "./plan-permissions.js";
 import { getEnterPlanModeToolResult } from "./plan-workflow-prompt.js";
@@ -80,7 +80,7 @@ export function createEnterPlanModeTool(
 			const sessionState = getSessionState();
 
 			// Block in agent contexts (agents shouldn't enter plan mode themselves)
-			// In nanoPencil, we check if we're in a subagent context via the event bus
+			// In Catui, we check if we're in a subagent context via the event bus
 			// For simplicity, we trust the caller - the extension won't expose this tool to subagents
 
 			// Block in channels (user may not be at TUI to approve exit)

@@ -14,7 +14,7 @@ import type { DiagnosticEvent } from "../utils/diagnostics.js";
 //   2. NOT print to console — the warning previously leaked to the TUI via
 //      `console.warn("Failed to load Soul memory:", error)`
 //   3. Route the failure through the unified diagnostic bus so it auto-uploads
-//      to pencil_issue_events and dev mode can see it
+//      to catui_issue_events and dev mode can see it
 //
 // This locks in the soul-core/src/store.ts fix: console.warn → reportDiagnostic
 // across loadProfile / loadMemory / loadEvolutions.

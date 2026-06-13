@@ -4,7 +4,7 @@
 
 <!--
 [WHO]  项目间关联关系定义
-[FROM] agent-projects-relations.md + PROJECT_OVERVIEW.md §七 + pencil-platform-charter.md
+[FROM] agent-projects-relations.md + PROJECT_OVERVIEW.md §七 + catui-platform-charter.md
 [TO]   各项目集成文档、架构设计
 [HERE] charter/03-relations.md — 关联关系
 -->
@@ -14,41 +14,41 @@
 ## 3.1 核心依赖链
 
 ```
-O-Mesh (编排) → nanoPencil (执行) → Pencil-Evaluate (评估) → 反馈优化
-Pencil-Eidolon (浏览器宿主) ← nanoPencil (本地 Kernel) / Gateway (云端 API)
+O-Mesh (编排) → Catui (执行) → Catui-Evaluate (评估) → 反馈优化
+Catui-Eidolon (浏览器宿主) ← Catui (本地 Kernel) / Gateway (云端 API)
 ```
 
 ## 3.2 关联矩阵
 
 | 源项目 | 目标项目 | 关系类型 | 说明 |
 |--------|----------|----------|------|
-| Asgard-platform | Pencil-Agent-Gateway | 服务消费 | 通过 OpenAI Compatible API 调用 |
-| Asgard-platform | nanoPencil | 实例管理 | 配置和管理多个 PencilAgent 实例 |
-| nanoPencil | Pencil-Agent-Gateway | SDK 嵌入 | `@pencil-agent/nano-pencil` 被 Gateway import |
-| nanoPencil | O-Mesh | 被编排节点 | 作为 Agent 节点被 O-Mesh 调度 |
-| nanoPencil | Pencil-Evaluate | 被评估对象 | Agent 能力量化评估 |
-| nanoPencil | Pencil-Terminal | 具身协同 | Terminal 提供物理世界操作能力 |
-| O-Mesh | Pencil-Agent-Gateway | 任务分发 | 复杂任务分解后通过网关分发 |
-| Pencil-Evaluate | nanoPencil | 反馈优化 | 评估结果驱动本体进化 |
-| Pencil-Eidolon | nanoPencil | 本地 Kernel 消费 | Native Messaging / ACP 调用 |
-| Pencil-Eidolon | Pencil-Agent-Gateway | 云端 API 消费 | OpenAI 兼容接口调用 |
-| Pencil-Eidolon | Pencil-Terminal | 能力互补 | 浏览器 DOM + 本地 Shell 构成完整具身 |
-| Pencil-Eidolon | Pencil-Evaluate | 行为采样 | 浏览器场景中的 Agent 表现评估 |
-| nanopencil-editor | nanoPencil | ACP 调用 | 本地模式通过 ACP 直连 CLI |
-| nanopencil-editor | Pencil-Agent-Gateway | HTTP 调用 | 远程模式通过 OpenAI API |
-| Pencil-Game | nanoPencil / Gateway | Agent 接入 | 游戏中的 AI 角色通过 Gateway 调用 |
-| Pencil-Lesson | nanoPencil / Gateway | Agent 接入 | 学习场景中的 AI 辅导 |
+| Asgard-platform | Catui-Agent-Gateway | 服务消费 | 通过 OpenAI Compatible API 调用 |
+| Asgard-platform | Catui | 实例管理 | 配置和管理多个 CatuiAgent 实例 |
+| Catui | Catui-Agent-Gateway | SDK 嵌入 | `@catui/agent` 被 Gateway import |
+| Catui | O-Mesh | 被编排节点 | 作为 Agent 节点被 O-Mesh 调度 |
+| Catui | Catui-Evaluate | 被评估对象 | Agent 能力量化评估 |
+| Catui | Catui-Terminal | 具身协同 | Terminal 提供物理世界操作能力 |
+| O-Mesh | Catui-Agent-Gateway | 任务分发 | 复杂任务分解后通过网关分发 |
+| Catui-Evaluate | Catui | 反馈优化 | 评估结果驱动本体进化 |
+| Catui-Eidolon | Catui | 本地 Kernel 消费 | Native Messaging / ACP 调用 |
+| Catui-Eidolon | Catui-Agent-Gateway | 云端 API 消费 | OpenAI 兼容接口调用 |
+| Catui-Eidolon | Catui-Terminal | 能力互补 | 浏览器 DOM + 本地 Shell 构成完整具身 |
+| Catui-Eidolon | Catui-Evaluate | 行为采样 | 浏览器场景中的 Agent 表现评估 |
+| catui-editor | Catui | ACP 调用 | 本地模式通过 ACP 直连 CLI |
+| catui-editor | Catui-Agent-Gateway | HTTP 调用 | 远程模式通过 OpenAI API |
+| Catui-Game | Catui / Gateway | Agent 接入 | 游戏中的 AI 角色通过 Gateway 调用 |
+| Catui-Lesson | Catui / Gateway | Agent 接入 | 学习场景中的 AI 辅导 |
 
 ## 3.3 关联关系图
 
 ```mermaid
 graph TB
     subgraph 本体层
-        NANO[nanoPencil<br/>Agent Kernel<br/>记忆+个性+工具编排]
+        NANO[Catui<br/>Agent Kernel<br/>记忆+个性+工具编排]
     end
 
     subgraph 网关层
-        GW[Pencil-Agent-Gateway<br/>HTTP 中间件<br/>多 PencilAgent 托管]
+        GW[Catui-Agent-Gateway<br/>HTTP 中间件<br/>多 CatuiAgent 托管]
     end
 
     subgraph 编排层
@@ -60,21 +60,21 @@ graph TB
     end
 
     subgraph 表现层
-        ED[nanopencil-editor<br/>AI 写作编辑器]
-        GAME[Pencil-Game<br/>社会博弈]
-        LESSON[Pencil-Lesson<br/>知识习得]
+        ED[catui-editor<br/>AI 写作编辑器]
+        GAME[Catui-Game<br/>社会博弈]
+        LESSON[Catui-Lesson<br/>知识习得]
     end
 
     subgraph 渗透层
-        EID[Pencil-Eidolon<br/>浏览器分身<br/>页面感知+DOM 操作]
+        EID[Catui-Eidolon<br/>浏览器分身<br/>页面感知+DOM 操作]
     end
 
     subgraph 具身层
-        TERM[Pencil-Terminal<br/>文件/Git/Shell]
+        TERM[Catui-Terminal<br/>文件/Git/Shell]
     end
 
     subgraph 评估层
-        EVAL[Pencil-Evaluate<br/>Agent 评估框架]
+        EVAL[Catui-Evaluate<br/>Agent 评估框架]
     end
 
     %% 核心关系
@@ -93,7 +93,7 @@ graph TB
     EVAL -.->|反馈优化| NANO
     EVAL -.->|行为采样| EID
 
-    ASG -->|PencilAgent 管理| GW
+    ASG -->|CatuiAgent 管理| GW
 
     style NANO fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     style GW fill:#fff3e0,stroke:#f57c00,stroke-width:2px
@@ -107,21 +107,21 @@ graph TB
 ### 模式 A：单 Agent 深度任务
 
 ```
-用户 → nanoPencil CLI → 编码实现 → Pencil-Evaluate 评估 → 反馈优化
+用户 → Catui CLI → 编码实现 → Catui-Evaluate 评估 → 反馈优化
 ```
 
 ### 模式 B：多 Agent 协作开发
 
 ```
 用户 → O-Mesh Orchestrator
-    ├──→ Node1 (nanoPencil): 设计数据库 Schema
-    ├──→ Node2 (nanoPencil): 实现 API 接口（依赖 Node1）
-    ├──→ Node3 (nanoPencil): 编写单元测试
-    └──→ Node4 (nanopencil-editor): 撰写 API 文档
+    ├──→ Node1 (Catui): 设计数据库 Schema
+    ├──→ Node2 (Catui): 实现 API 接口（依赖 Node1）
+    ├──→ Node3 (Catui): 编写单元测试
+    └──→ Node4 (catui-editor): 撰写 API 文档
     ↓
 Blackboard 共享 Schema 定义
     ↓
-Pencil-Evaluate 评估各节点输出
+Catui-Evaluate 评估各节点输出
 ```
 
 ### 模式 C：浏览器渗透交互
@@ -131,8 +131,8 @@ Pencil-Evaluate 评估各节点输出
     ↓
 Eidolon 读取当前页面 DOM 上下文
     ↓
-本地模式: Native Messaging → nanoPencil（记忆 + 推理）
-云端模式: OpenAI 兼容 API → Gateway → PencilAgent
+本地模式: Native Messaging → Catui（记忆 + 推理）
+云端模式: OpenAI 兼容 API → Gateway → CatuiAgent
     ↓
 返回推理结果或页面动作意图
     ↓
@@ -142,11 +142,11 @@ Eidolon 按 origin 权限执行 DOM 动作，Side Panel 反馈结果
 ### 模式 D：平台服务化
 
 ```
-用户 → Asgard Marketplace → 选择/创建 PencilAgent
+用户 → Asgard Marketplace → 选择/创建 CatuiAgent
     ↓
-Asgard → Gateway 创建实例（nano-pencil SDK + Soul + Memory）
+Asgard → Gateway 创建实例（catui-agent SDK + Soul + Memory）
     ↓
-用户通过 Chat / Console 与 PencilAgent 对话
+用户通过 Chat / Console 与 CatuiAgent 对话
     ↓
 Asgard 记录用量 / 计费
 ```
@@ -155,11 +155,11 @@ Asgard 记录用量 / 计费
 
 | 对接项目 | 接口/协议 | 说明 |
 |---------|----------|------|
-| nanoPencil ↔ Gateway | SDK import | Gateway import `@pencil-agent/nano-pencil` |
-| nanoPencil ↔ O-Mesh | CLI / Stream JSON | O-Mesh Runner 调用 nanoPencil CLI |
-| nanoPencil ↔ Pencil-Evaluate | Python SDK | Evaluate 调用 nanoPencil 进行测试 |
-| nanoPencil ↔ Eidolon | Native Messaging / ACP | 浏览器插件调用 nanoPencil 作为本地 Brain |
-| nanoPencil ↔ Browser Harness | CDP / Python CLI | 通用浏览器工具层（非 Eidolon 场景） |
+| Catui ↔ Gateway | SDK import | Gateway import `@catui/agent` |
+| Catui ↔ O-Mesh | CLI / Stream JSON | O-Mesh Runner 调用 Catui CLI |
+| Catui ↔ Catui-Evaluate | Python SDK | Evaluate 调用 Catui 进行测试 |
+| Catui ↔ Eidolon | Native Messaging / ACP | 浏览器插件调用 Catui 作为本地 Brain |
+| Catui ↔ Browser Harness | CDP / Python CLI | 通用浏览器工具层（非 Eidolon 场景） |
 | Gateway ↔ Asgard | HTTP 代理 | Asgard 通过 HTTP 路由到 Gateway |
 | Gateway ↔ Editor | HTTP + SSE (OpenAI Compatible) | 远程模式标准 API |
 | Gateway ↔ Eidolon | HTTP + SSE (OpenAI Compatible) | 云端模式标准 API |

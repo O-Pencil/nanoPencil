@@ -6,7 +6,7 @@
 
 ## Overview
 
-The `extensions/` module contains built-in extensions that extend nanoPencil's capabilities. Extensions can register tools, slash commands, keybindings, and hook into agent lifecycle events.
+The `extensions/` module contains built-in extensions that extend Catui's capabilities. Extensions can register tools, slash commands, keybindings, and hook into agent lifecycle events.
 
 **Extension Categories:**
 - `builtin/`: first-party extension source; default-enabled entries are auto-loaded on startup
@@ -45,12 +45,12 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 
 **P3 Contract:**
 `index.ts`: - [WHO]: Extension with diagnostic:event listener and /report-issue command
-    - [FROM]: core/extensions-host/types, @pencil-agent/tui, diagnostics helpers
+    - [FROM]: core/extensions-host/types, @catui/tui, diagnostics helpers
     - [HERE]: diagnostics extension entry
 
 `diagnostic-buffer.ts`: Session-local diagnostic dedupe and prompt gating
 
-`reporter.ts`: User-approved InsForge pencil_issue_events upload adapter
+`reporter.ts`: User-approved InsForge catui_issue_events upload adapter
 
 `redaction.ts`: Secret/path redaction and message normalization
 
@@ -70,7 +70,7 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 
 `filters.ts`: Command classification and pure output filters for git, file reads, search, TS/test, JSON, and generic output
 
-`config.ts`: Trusted user/project filter loader; user filters load from `~/.pencils/token-save/filters.json`, project filters require `.nanopencil/token-save/trust.json`
+`config.ts`: Trusted user/project filter loader; user filters load from `~/.catui/token-save/filters.json`, project filters require `.catui/token-save/trust.json`
 
 `lexer.ts`: Quote-aware shell segment splitter for compound command and pipe planning
 
@@ -84,7 +84,7 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 
 `toml-dsl.ts`: Configuration-driven filter pipeline with strip/replace/match/keep/truncate/head/tail/max-lines stages
 
-`tracking.ts`: Session-local token savings aggregate and JSONL history persistence under `.nanopencil/token-save/`
+`tracking.ts`: Session-local token savings aggregate and JSONL history persistence under `.catui/token-save/`
 
 **Design Principle:**
 - Token savings must not change command execution semantics.
@@ -125,7 +125,7 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 
 `teach-i18n.ts`: Internationalization (en/zh) for teach extension
 
-`teach-persistence.ts`: Learning record and mission persistence to .nanopencil/teach/
+`teach-persistence.ts`: Learning record and mission persistence to .catui/teach/
 
 `references/`: Curated analogies, teaching templates, learning paths, source verification rules
 
@@ -139,15 +139,15 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 - `/teach` command: Start guided learning on any topic
 - `teach` tool: Agent-triggered teaching with start/respond/status actions
 - Teach renderer: Custom message display for teach content
-- Learning record persistence: Saves progress to .nanopencil/teach/records/
-- Mission persistence: Saves learning goals to .nanopencil/teach/missions/
+- Learning record persistence: Saves progress to .catui/teach/records/
+- Mission persistence: Saves learning goals to .catui/teach/missions/
 - Source verification: Integrated source citation with confidence levels
 
 #### grub/ — Autonomous Iterative Task Runner
 
 **P3 Contract:**
 `index.ts`: - [WHO]: Extension with /grub command, GRUB_MESSAGE_TYPE renderer, before_agent_start/context/input/agent_end hooks
-    - [FROM]: core/extensions-host/types, @pencil-agent/tui
+    - [FROM]: core/extensions-host/types, @catui/tui
     - [HERE]: grub extension entry
 
 `grub-controller.ts`: GrubController - state machine for autonomous iterations, durable GrubTaskState management, feature-list baseline validation
@@ -178,7 +178,7 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 
 **P3 Contract:**
 `index.ts`: - [WHO]: Extension with /loop command, LOOP_MESSAGE_TYPE renderer, session-scoped recurring scheduler with pause/resume/run-now/max-runs/quiet
-    - [FROM]: core/extensions-host/types, @pencil-agent/tui
+    - [FROM]: core/extensions-host/types, @catui/tui
     - [HERE]: loop extension entry
 
 `scheduler-controller.ts`: SchedulerController - in-memory recurring task store with pause/resume/run-now, MAX_SCHEDULED_TASKS=50

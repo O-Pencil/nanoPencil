@@ -6,8 +6,8 @@
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import * as readline from "node:readline";
-import type { AgentEvent, AgentLoopFramework, AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
-import type { ImageContent } from "@pencil-agent/ai/types";
+import type { AgentEvent, AgentLoopFramework, AgentMessage, ThinkingLevel } from "@catui/agent-core";
+import type { ImageContent } from "@catui/ai/types";
 import type { SessionStats } from "../../core/runtime/agent-session.js";
 import type { BashResult } from "../../core/platform/exec/bash-executor.js";
 import type { CompactionResult } from "../../core/session/compaction/index.js";

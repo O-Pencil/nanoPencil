@@ -29,11 +29,11 @@ async function waitForPresenceMessage(messages: Array<{ customType: string; cont
 
 test("presence-opening: emits an opening message after session_ready", async (t) => {
 	const cwd = process.cwd();
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-presence-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-presence-"));
 	const originalMemoryDir = process.env.NANOMEM_MEMORY_DIR;
-	const originalDelay = process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+	const originalDelay = process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 	process.env.NANOMEM_MEMORY_DIR = join(agentDir, "memory");
-	process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS = "10";
+	process.env.CATUI_PRESENCE_OPENING_DELAY_MS = "10";
 
 	const settingsManager = SettingsManager.create(cwd, agentDir);
 	const resourceLoader = new DefaultResourceLoader({
@@ -66,9 +66,9 @@ test("presence-opening: emits an opening message after session_ready", async (t)
 			process.env.NANOMEM_MEMORY_DIR = originalMemoryDir;
 		}
 		if (originalDelay === undefined) {
-			delete process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+			delete process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 		} else {
-			process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS = originalDelay;
+			process.env.CATUI_PRESENCE_OPENING_DELAY_MS = originalDelay;
 		}
 	});
 
@@ -145,7 +145,7 @@ test("presence-i18n: reads array translations for zh fallback lines", () => {
 
 test("presence-runtime: resolves bundled packages from dist/packages", { concurrency: false }, async () => {
 	const originalCwd = process.cwd();
-	const tempRoot = mkdtempSync(join(tmpdir(), "nanopencil-presence-bundled-"));
+	const tempRoot = mkdtempSync(join(tmpdir(), "catui-presence-bundled-"));
 
 	try {
 		const memDir = join(tempRoot, "dist", "packages", "mem-core");
@@ -185,11 +185,11 @@ test("presence-runtime: resolves bundled packages from dist/packages", { concurr
 		const memModule = await __testUtils.importRuntimeModule<{
 			NanoMemEngine: new (config: unknown) => { config: unknown };
 			getConfig: (overrides?: Record<string, unknown>) => Record<string, unknown>;
-		}>(["@pencil-agent/mem-core"], "mem-core");
+		}>(["@catui/mem-core"], "mem-core");
 		const soulModule = await __testUtils.importRuntimeModule<{
 			SoulManager: new (options?: unknown) => { options?: unknown; initialize(): Promise<void> };
 			getSoulConfig: () => Record<string, unknown>;
-		}>(["@pencil-agent/soul-core"], "soul-core");
+		}>(["@catui/soul-core"], "soul-core");
 
 		assert.ok(memModule?.NanoMemEngine);
 		assert.ok(soulModule?.SoulManager);

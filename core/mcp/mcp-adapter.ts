@@ -2,7 +2,7 @@
  * [WHO]: createMCPTool(), loadMCPTools(), getMCPToolDisplayName()
  * [FROM]: Depends on extensions, mcp-client, mcp-guidance
  * [TO]: Consumed by core/mcp/index.ts, core/mcp/mcp-manager.ts
- * [HERE]: core/mcp/mcp-adapter.ts - adapts MCP tools to NanoPencil tool system
+ * [HERE]: core/mcp/mcp-adapter.ts - adapts MCP tools to Catui tool system
  */
 import type { ToolDefinition } from "../extensions-host/index.js";
 import type { MCPClient } from "./mcp-client.js";
@@ -22,7 +22,7 @@ function toSafeToolName(fullName: string): string {
 }
 
 /**
- * Create a NanoPencil ToolDefinition from an MCP tool definition
+ * Create a Catui ToolDefinition from an MCP tool definition
  */
 export function createMCPTool(
   mcpClient: MCPClient,
@@ -78,7 +78,7 @@ export function createMCPTool(
           };
         }
 
-        // Format tool result for NanoPencil
+        // Format tool result for Catui
         const output = result.content
           .map((c) => {
             if (c.type === "text") {
@@ -123,7 +123,7 @@ export function createMCPTool(
 }
 
 /**
- * Load all MCP tools as NanoPencil ToolDefinitions
+ * Load all MCP tools as Catui ToolDefinitions
  */
 export async function loadMCPTools(
   mcpClient: MCPClient,

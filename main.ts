@@ -5,8 +5,8 @@
  * [HERE]: CLI layer; parses args → CreateAgentSessionOptions → mode selection
  */
 
-import type { ImageContent } from "@pencil-agent/ai/types";
-import { modelsAreEqual, supportsXhigh } from "@pencil-agent/ai/models";
+import type { ImageContent } from "@catui/ai/types";
+import { modelsAreEqual, supportsXhigh } from "@catui/ai/models";
 import chalk from "chalk";
 import { join, resolve } from "path";
 import { homedir } from "node:os";
@@ -16,7 +16,7 @@ import { selectConfig } from "./cli/config-selector.js";
 import { processFileArguments } from "./cli/file-processor.js";
 import { listModels } from "./cli/list-models.js";
 import { selectSession } from "./cli/session-picker.js";
-import { APP_NAME, resolveAgentDirContext, VERSION } from "./config.js";
+import { APP_NAME, PACKAGE_NAME, resolveAgentDirContext, VERSION } from "./config.js";
 import { ensureAgentMetadata } from "./core/agent-dir/agent-metadata.js";
 import { MigrationManager, type MigrationOptions } from "./core/agent-dir/migration-tool.js";
 import { AuthStorage } from "./core/platform/config/auth-storage.js";
@@ -48,22 +48,23 @@ import {
 	CUSTOM_OPENAI_PROVIDER,
 } from "./core/model/custom-providers.js";
 import {
-	ensureNanopencilCodingPlanAuth,
-	ensureNanopencilDefaultConfig,
-	NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
-	NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
-	NANOPENCIL_ARK_CODING_PROVIDER,
-	NANOPENCIL_DEFAULT_PROVIDER,
-	NANOPENCIL_MINIMAX_CODING_PROVIDER,
-	NANOPENCIL_QIANFAN_CODING_PROVIDER,
-	NANOPENCIL_ZHIPU_CODING_PROVIDER,
-	NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER,
-	NANOPENCIL_OLLAMA_PROVIDER,
-} from "./nanopencil-defaults.js";
+	ensureCatuiCodingPlanAuth,
+	ensureCatuiDefaultConfig,
+	CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
+	CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
+	CATUI_ARK_CODING_PROVIDER,
+	CATUI_DEFAULT_PROVIDER,
+	CATUI_MINIMAX_CODING_PROVIDER,
+	CATUI_QIANFAN_CODING_PROVIDER,
+	CATUI_ZHIPU_CODING_PROVIDER,
+	CATUI_ANTHROPIC_CUSTOM_PROVIDER,
+	CATUI_OLLAMA_PROVIDER,
+} from "./catui-defaults.js";
 import { getBuiltinExtensionPaths } from "./builtin-extensions.js";
 
 // Check if running in development mode (not production)
 const isDevelopment = process.env.NODE_ENV !== "production";
+const isCatuiProductApp = APP_NAME === "catui" || APP_NAME === "catui";
 
 // Belt-and-suspenders warning silencing for user mode. Two channels cover
 // every path Node uses to surface a warning:
@@ -235,7 +236,7 @@ function printPackageCommandHelp(command: PackageCommand): void {
 Install a package and add it to settings.
 
 Options:
-  -l, --local    Install project-locally (.nanopencil/settings.json)
+  -l, --local    Install project-locally (.catui/settings.json)
 
 Examples:
   ${APP_NAME} install npm:@foo/bar
@@ -254,7 +255,7 @@ Examples:
 Remove a package and its source from settings.
 
 Options:
-  -l, --local    Remove from project settings (.nanopencil/settings.json)
+  -l, --local    Remove from project settings (.catui/settings.json)
 
 Example:
   ${APP_NAME} remove npm:@foo/bar
@@ -702,14 +703,14 @@ async function handleMigrateCommand(args: string[]): Promise<boolean> {
 export async function main(args: string[]) {
 	profileCheckpoint("main_entry");
 
-	// Auto-migration check: ~/.nanopencil -> ~/.pencils
+	// Auto-migration check: ~/.catui/~/.catui -> ~/.catui
 	const migrationManager = new MigrationManager();
 	if (migrationManager.isMigrationNeeded()) {
-		console.log(chalk.blue(`\n🚀 Initializing Pencils ecosystem...`));
+		console.log(chalk.blue(`\n🚀 Initializing Catui ecosystem...`));
 		const migrated = migrationManager.runSilent();
 		if (migrated.length > 0) {
 			console.log(chalk.green(`✅ Successfully migrated legacy data: ${migrated.join(", ")}`));
-			console.log(chalk.dim(`New home: ${join(homedir(), ".pencils/")}\n`));
+			console.log(chalk.dim(`New home: ${join(homedir(), ".catui/")}\n`));
 		}
 	}
 
@@ -719,10 +720,10 @@ export async function main(args: string[]) {
 	const agentDir = agentDirCtx.path;
 	ensureAgentMetadata(agentDirCtx);
 
-	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.NANOPENCIL_OFFLINE);
+	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.CATUI_OFFLINE);
 	if (offlineMode) {
-		process.env.NANOPENCIL_OFFLINE = "1";
-		process.env.NANOPENCIL_SKIP_VERSION_CHECK = "1";
+		process.env.CATUI_OFFLINE = "1";
+		process.env.CATUI_SKIP_VERSION_CHECK = "1";
 	}
 
 	if (await handleMigrateCommand(args)) {
@@ -751,31 +752,31 @@ export async function main(args: string[]) {
 	reportSettingsErrors(settingsManager, "startup");
 
 	const authStorage = AuthStorage.create(agentDirCtx);
-	if (APP_NAME === "nanopencil") {
-		ensureNanopencilDefaultConfig(agentDir);
-		// Let nanomem use nanopencil's config directory to store memory
+	if (isCatuiProductApp) {
+		ensureCatuiDefaultConfig(agentDir);
+		// Let nanomem use catui's config directory to store memory
 		if (!process.env.NANOMEM_MEMORY_DIR) {
 			process.env.NANOMEM_MEMORY_DIR = join(agentDir, "memory");
 		}
 	}
-	profileCheckpoint("nanopencil_defaults_ensured", "auth_storage_created");
+	profileCheckpoint("catui_defaults_ensured", "auth_storage_created");
 
 	const modelRegistry = new ModelRegistry(
 		authStorage,
 		join(agentDir, "models.json"),
-		APP_NAME === "nanopencil"
+		isCatuiProductApp
 			? {
 					useOnlyCustomModels: true,
 					allowOptionalApiKeyForProvider: [
-						NANOPENCIL_DEFAULT_PROVIDER,
-						NANOPENCIL_QIANFAN_CODING_PROVIDER,
-						NANOPENCIL_ARK_CODING_PROVIDER,
-						NANOPENCIL_MINIMAX_CODING_PROVIDER,
-						NANOPENCIL_ZHIPU_CODING_PROVIDER,
-						NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
-						NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
-						NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER,
-						NANOPENCIL_OLLAMA_PROVIDER,
+						CATUI_DEFAULT_PROVIDER,
+						CATUI_QIANFAN_CODING_PROVIDER,
+						CATUI_ARK_CODING_PROVIDER,
+						CATUI_MINIMAX_CODING_PROVIDER,
+						CATUI_ZHIPU_CODING_PROVIDER,
+						CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
+						CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
+						CATUI_ANTHROPIC_CUSTOM_PROVIDER,
+						CATUI_OLLAMA_PROVIDER,
 						"openrouter",
 						CUSTOM_ANTHROPIC_PROVIDER,
 						CUSTOM_OPENAI_PROVIDER,
@@ -785,7 +786,7 @@ export async function main(args: string[]) {
 	);
 	profileCheckpoint("model_registry_created");
 
-	const defaultExtPaths = APP_NAME === "nanopencil" ? getBuiltinExtensionPaths() : [];
+	const defaultExtPaths = isCatuiProductApp ? getBuiltinExtensionPaths() : [];
 	profileCheckpoint("before_resource_loader_create");
 	const resourceLoader = new DefaultResourceLoader({
 		cwd,
@@ -811,14 +812,14 @@ export async function main(args: string[]) {
 	for (const { path, error } of extensionsResult.errors) {
 		console.error(chalk.red(`Failed to load extension "${path}": ${error}`));
 	}
-	if (APP_NAME === "nanopencil") {
+	if (isCatuiProductApp) {
 		const nanomemLoaded = extensionsResult.extensions.some((e) => e.path.includes("nano-mem"));
 		const nanomemFailed = extensionsResult.errors.some((e) => e.path.includes("nano-mem"));
 		// Only show NanoMem status in development mode (not production)
 		if (isDevelopment) {
 			if (!nanomemLoaded && (defaultExtPaths.length === 0 || nanomemFailed)) {
 				console.error(
-					chalk.dim("NanoMem (persistent memory) not loaded. Reinstall: npm install -g @pencil-agent/nano-pencil"),
+					chalk.dim(`NanoMem (persistent memory) not loaded. Reinstall: npm install -g ${PACKAGE_NAME}`),
 				);
 			} else if (nanomemLoaded) {
 				const nanomemExt = extensionsResult.extensions.find((e) => e.path.includes("nano-mem"));
@@ -834,8 +835,8 @@ export async function main(args: string[]) {
 	}
 	extensionsResult.runtime.pendingProviderRegistrations = [];
 
-	if (APP_NAME === "nanopencil") {
-		await ensureNanopencilCodingPlanAuth(authStorage, modelRegistry);
+	if (isCatuiProductApp) {
+		await ensureCatuiCodingPlanAuth(authStorage, modelRegistry);
 	}
 
 	// Fire-and-forget: discover remote models from /models endpoints.
@@ -912,11 +913,11 @@ export async function main(args: string[]) {
 	const { initialMessage, initialImages } = await prepareInitialMessage(parsed, settingsManager.getImageAutoResize());
 	const isInteractive = !parsed.print && parsed.mode === undefined;
 	const mode = parsed.mode || "text";
-	// NanoPencil default theme is warm; write to settings when unset for persistence
-	if (APP_NAME === "nanopencil" && settingsManager.getTheme() === undefined) {
+	// Catui default theme is warm; write to settings when unset for persistence
+	if (isCatuiProductApp && settingsManager.getTheme() === undefined) {
 		settingsManager.setTheme("warm");
 	}
-	initTheme(settingsManager.getTheme() ?? (APP_NAME === "nanopencil" ? "warm" : undefined), isInteractive);
+	initTheme(settingsManager.getTheme() ?? (isCatuiProductApp ? "warm" : undefined), isInteractive);
 
 	// Show deprecation warnings in interactive mode
 	if (isInteractive && deprecationWarnings.length > 0) {
@@ -957,9 +958,9 @@ export async function main(args: string[]) {
 		settingsManager,
 		agentDirCtx,
 	);
-	// NanoPencil enables MCP by default; disabled in offline mode or with --no-mcp flag
+	// Catui enables MCP by default; disabled in offline mode or with --no-mcp flag
 	sessionOptions.agentDir = agentDir;
-	sessionOptions.enableMCP = APP_NAME === "nanopencil" && !offlineMode && !parsed.noMcp;
+	sessionOptions.enableMCP = isCatuiProductApp && !offlineMode && !parsed.noMcp;
 	// Interactive mode warms MCP in the background after the UI is ready so the
 	// prompt is usable immediately instead of blocking on MCP server spawn (the
 	// npx-based default servers measure ~20s). One-shot modes (print/acp/rpc)

@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/extensions-host/index.ts
  * [HERE]: core/extensions-host/wrapper.ts - wraps RegisteredTool into AgentTool
  */
-import type { AgentTool, AgentToolUpdateCallback } from "@pencil-agent/agent-core";
+import type { AgentTool, AgentToolUpdateCallback } from "@catui/agent-core";
 import type { ExtensionRunner } from "./runner.js";
 import type { RegisteredTool, ToolCallEventResult } from "./types.js";
 

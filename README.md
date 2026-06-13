@@ -11,26 +11,26 @@
 .'______________________________\|/______________________________`.
 </pre>
 
-<h1>✎ NanoPencil</h1>
+<h1>✎ Catui</h1>
 
 <p><strong>The AI Coding Agent That Remembers & Evolves</strong></p>
 
 <p>
-  <a href="https://www.npmjs.com/package/@pencil-agent/nano-pencil">
-    <img src="https://img.shields.io/npm/v/@pencil-agent/nano-pencil.svg?style=flat-square&color=cb3837" alt="npm version">
+  <a href="https://www.npmjs.com/package/@catui/agent">
+    <img src="https://img.shields.io/npm/v/@catui/agent.svg?style=flat-square&color=cb3837" alt="npm version">
   </a>
   <a href="https://nodejs.org">
-    <img src="https://img.shields.io/node/v/@pencil-agent/nano-pencil.svg?style=flat-square&color=339933" alt="Node.js">
+    <img src="https://img.shields.io/node/v/@catui/agent.svg?style=flat-square&color=339933" alt="Node.js">
   </a>
-  <a href="https://www.npmjs.com/package/@pencil-agent/nano-pencil">
-    <img src="https://img.shields.io/npm/dm/@pencil-agent/nano-pencil.svg?style=flat-square&color=cb3837" alt="Downloads">
+  <a href="https://www.npmjs.com/package/@catui/agent">
+    <img src="https://img.shields.io/npm/dm/@catui/agent.svg?style=flat-square&color=cb3837" alt="Downloads">
   </a>
   <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&color=3178C6" alt="TypeScript">
   <img src="https://img.shields.io/badge/License-GPL--3.0-green?style=flat-square&color=brightgreen" alt="License">
 </p>
 
 <p>
-  <a href="#-why-nanopencil">Why NanoPencil?</a> •
+  <a href="#-why-catui">Why Catui?</a> •
   <a href="#-features">Features</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-documentation">Docs</a>
@@ -45,15 +45,15 @@
 
 ---
 
-## 🌟 Why NanoPencil?
+## 🌟 Why Catui?
 
 > **"The only AI coding assistant that truly learns from you"**
 
-NanoPencil isn't just another AI coding tool. It's a **terminal-native AI agent** with **persistent memory** and **evolving personality** — designed for developers who live in the terminal.
+Catui isn't just another AI coding tool. It's a **terminal-native AI agent** with **persistent memory** and **evolving personality** — designed for developers who live in the terminal.
 
 ### What Makes It Different?
 
-| | Other Tools | NanoPencil |
+| | Other Tools | Catui |
 |---|---|---|
 | **Memory** | ❌ Starts fresh every session | ✅ Remembers your projects, preferences, and coding style |
 | **Personality** | ❌ Generic responses | ✅ Evolves a unique personality based on your interactions |
@@ -81,13 +81,13 @@ Your AI assistant develops its own character.
 - **Domain Expertise** — Frontend, Backend, DevOps, AI/ML specializations
 - **Emotional States** — Confidence, curiosity, flow state
 
-> *After 50 sessions, your NanoPencil will code differently than anyone else's.*
+> *After 50 sessions, your Catui will code differently than anyone else's.*
 
 ### 🎨 Beautiful TUI
 A terminal interface that feels alive.
 
 - **Three Themes** — Dark, Light, and Warm (eye-friendly)
-- **Smooth Animations** — Breathing pencil loader
+- **Smooth Animations** — Breathing catui loader
 - **Intuitive Navigation** — Vim-like keybindings, fuzzy search
 - **Real-time Streaming** — Watch the AI think in real-time
 
@@ -117,17 +117,17 @@ Use the best model for each task.
 ### Installation
 
 ```bash
-npm install -g @pencil-agent/nano-pencil
+npm install -g @catui/agent
 ```
 
 ### First Run
 
 ```bash
-nanopencil
+catui
 ```
 
 1. **Select your model** — Choose from available providers
-2. **Enter API key** — Securely stored in `~/.pencils/agents/default/auth.json`
+2. **Enter API key** — Securely stored in `~/.catui/agents/default/auth.json`
 3. **Start coding** — Just type what you want to build
 
 ### Example Session
@@ -159,23 +159,23 @@ AI: [Analyzing project structure...]
 ### Interactive Mode
 
 ```bash
-nanopencil                    # Start new session
-nanopencil -c                 # Continue last session
-nanopencil -r                 # Resume from history
-nanopencil -m qwen-max        # Use specific model
+catui                    # Start new session
+catui -c                 # Continue last session
+catui -r                 # Resume from history
+catui -m qwen-max        # Use specific model
 ```
 
 ### Print Mode (Scripts)
 
 ```bash
 # Single query
-nanopencil -p "Refactor this to use async/await"
+catui -p "Refactor this to use async/await"
 
 # Pipe input
-cat bug-report.md | nanopencil -p "Analyze this bug"
+cat bug-report.md | catui -p "Analyze this bug"
 
 # Chain commands
-nanopencil -p "Generate API" | nanopencil -p "Write tests for it"
+catui -p "Generate API" | catui -p "Write tests for it"
 ```
 
 ### Slash Commands
@@ -195,7 +195,7 @@ nanopencil -p "Generate API" | nanopencil -p "Write tests for it"
 
 ## 📊 Comparison
 
-| Feature | NanoPencil | Cursor | Claude Code | Aider |
+| Feature | Catui | Cursor | Claude Code | Aider |
 |---------|:----------:|:------:|:-----------:|:-----:|
 | Terminal Native | ✅ | ❌ | ✅ | ✅ |
 | Persistent Memory | ✅ | ❌ | ❌ | ❌ |
@@ -210,7 +210,7 @@ nanopencil -p "Generate API" | nanopencil -p "Write tests for it"
 
 ## 🏗️ Architecture Philosophy
 
-NanoPencil is built on three pillars:
+Catui is built on three pillars:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -246,21 +246,21 @@ NanoPencil is built on three pillars:
 
 ## 🌍 Community
 
-- 💬 [Discussions](https://github.com/pencil-agent/nano-pencil/discussions)
-- 🐛 [Issues](https://github.com/pencil-agent/nano-pencil/issues)
+- 💬 [Discussions](https://github.com/catui-agent/catui-agent/discussions)
+- 🐛 [Issues](https://github.com/catui-agent/catui-agent/issues)
 - 📝 [Changelog](CHANGELOG.md)
 
 ---
 
 ## 📄 License
 
-MIT © [Pencil Agent](https://github.com/pencil-agent)
+MIT © [Catui Agent](https://github.com/catui-agent)
 
 ---
 
 <div align="center">
 
-**[⬆ Back to Top](#-nanopencil)**
+**[⬆ Back to Top](#-catui)**
 
 <sub>Built with ❤️ for terminal dwellers everywhere</sub>
 

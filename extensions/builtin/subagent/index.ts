@@ -1,11 +1,11 @@
 /**
  * [WHO]: SubAgent extension, registers /subagent commands and message renderer
- * [FROM]: Depends on @pencil-agent/tui, core/extensions-host/types, ./subagent-runner, ./subagent-parser, ./subagent-types
+ * [FROM]: Depends on @catui/tui, core/extensions-host/types, ./subagent-runner, ./subagent-parser, ./subagent-types
  * [TO]: Consumed by builtin-extensions.ts as default extension
  * [HERE]: extensions/builtin/subagent/index.ts - entry point for subagent extension
  */
 
-import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text } from "@catui/tui";
 import type { ExtensionAPI } from "../../../core/extensions-host/types.js";
 import { SubAgentRunner } from "./subagent-runner.js";
 import { buildSubAgentHelp, parseSubAgentCommand } from "./subagent-parser.js";

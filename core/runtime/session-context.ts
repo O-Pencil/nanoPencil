@@ -10,8 +10,8 @@
  * into a service locator while preserving one-directional imports.
  */
 
-import type { AgentLoopFrameworkInput, AgentLoopPolicyOptions, AgentMessage, ThinkingLevel } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai/types";
+import type { AgentLoopFrameworkInput, AgentLoopPolicyOptions, AgentMessage, ThinkingLevel } from "@catui/agent-core";
+import type { Model } from "@catui/ai/types";
 import type { CompactionResult } from "../session/compaction/index.js";
 import type { ExtensionRunner } from "../extensions-host/index.js";
 import type { AuthCredential } from "../platform/config/auth-storage.js";

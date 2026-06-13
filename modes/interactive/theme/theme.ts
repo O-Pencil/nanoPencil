@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
-import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@pencil-agent/tui";
+import type { EditorTheme, MarkdownTheme, SelectListTheme } from "@catui/tui";
 import type { ColorMode, Theme as ThemeContract, ThemeBg, ThemeColor } from "../../../core/theme-contract.js";
 import { type Static, Type } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
@@ -616,7 +616,7 @@ function getDefaultTheme(): string {
 // ============================================================================
 
 // Use globalThis to share theme across module loaders (tsx + jiti in dev mode)
-const THEME_KEY = Symbol.for("@pencil-agent/nano-pencil:theme");
+const THEME_KEY = Symbol.for("@catui/agent:theme");
 
 // Export theme as a getter that reads from globalThis
 // This ensures all module instances (tsx, jiti) see the same theme
@@ -1070,7 +1070,7 @@ export function getEditorTheme(): EditorTheme {
 	};
 }
 
-export function getSettingsListTheme(): import("@pencil-agent/tui").SettingsListTheme {
+export function getSettingsListTheme(): import("@catui/tui").SettingsListTheme {
 	return {
 		label: (text: string, selected: boolean) => (selected ? theme.fg("accent", text) : text),
 		value: (text: string, selected: boolean) => (selected ? theme.fg("accent", text) : theme.fg("muted", text)),

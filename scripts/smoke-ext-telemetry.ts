@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 /**
  * [WHO]: Provides smokeExtTelemetryCli() — maintainer-invoked smoke test for the P0-P3 extension telemetry pipeline; queries ext_command_events / ext_llm_calls / ext_hook_events and reports whether rows landed
- * [FROM]: Depends on core/platform/telemetry (loadInsforgeCredentials), node:https / node:http / node:url / node:os; no MCP, no pencil runtime
- * [TO]: Invoked manually by maintainers after exercising a pencil session, e.g. `npx tsx scripts/smoke-ext-telemetry.ts --since=5m`; documented in .dev-docs/self-awareness/extension-telemetry.md
- * [HERE]: scripts/smoke-ext-telemetry.ts - read-only verifier; does not write to the backend, does not spawn pencil, does not auto-load into user sessions
+ * [FROM]: Depends on core/platform/telemetry (loadInsforgeCredentials), node:https / node:http / node:url / node:os; no MCP, no catui runtime
+ * [TO]: Invoked manually by maintainers after exercising a catui session, e.g. `npx tsx scripts/smoke-ext-telemetry.ts --since=5m`; documented in .dev-docs/self-awareness/extension-telemetry.md
+ * [HERE]: scripts/smoke-ext-telemetry.ts - read-only verifier; does not write to the backend, does not spawn catui, does not auto-load into user sessions
  */
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -92,7 +92,7 @@ function printHelp(): void {
 			"  Reads ~/.memory-experiments/credentials.json (or workspace fallback).",
 			"  Queries ext_command_events / ext_llm_calls / ext_hook_events for rows in the window.",
 			"  Prints counts + top 5 samples + flags any is_user_initiated=false LLM calls.",
-			"  Read-only: does not insert, does not spawn pencil, does not write to user state.",
+			"  Read-only: does not insert, does not spawn catui, does not write to user state.",
 			"",
 		].join("\n"),
 	);
@@ -269,7 +269,7 @@ async function main(): Promise<number> {
 		const hookErrors = hooks.filter((r) => r.ok === false);
 		process.stdout.write(`── ext_hook_events ── ${hooks.length} sampled rows  (${hookErrors.length} errors)\n`);
 		if (hooks.length === 0) {
-			process.stdout.write("  (no hook events; this is the strongest signal that the sink is noop or pencil never ran)\n");
+			process.stdout.write("  (no hook events; this is the strongest signal that the sink is noop or catui never ran)\n");
 		} else {
 			const grouped = new Map<string, { count: number; errors: number; totalMs: number; sampleRate: number }>();
 			for (const r of hooks) {
@@ -297,7 +297,7 @@ async function main(): Promise<number> {
 		// Verdict
 		const hasAnyData = commands.length + llmCalls.length + hooks.length > 0;
 		if (!hasAnyData) {
-			process.stdout.write("verdict:    NO DATA in window. Pipeline may be noop, or you haven't exercised pencil yet.\n");
+			process.stdout.write("verdict:    NO DATA in window. Pipeline may be noop, or you haven't exercised catui yet.\n");
 			exitCode = 1;
 		} else if (autoFiredCalls.length > 0) {
 			process.stdout.write("verdict:    DATA PRESENT, but idle-thinking probe triggered — see auto-fired LLM calls above.\n");

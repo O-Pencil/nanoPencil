@@ -10,20 +10,20 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "@mariozechner/jiti";
-import * as _bundledPiAgentCore from "@pencil-agent/agent-core";
-import * as _bundledPiAi from "@pencil-agent/ai";
-import * as _bundledPiAiEnv from "@pencil-agent/ai/env";
-import * as _bundledPiAiEvents from "@pencil-agent/ai/events";
-import * as _bundledPiAiJson from "@pencil-agent/ai/json";
-import * as _bundledPiAiModels from "@pencil-agent/ai/models";
-import * as _bundledPiAiOauth from "@pencil-agent/ai/oauth";
-import * as _bundledPiAiOverflow from "@pencil-agent/ai/overflow";
-import * as _bundledPiAiRegistry from "@pencil-agent/ai/registry";
-import * as _bundledPiAiSchema from "@pencil-agent/ai/schema";
-import * as _bundledPiAiStream from "@pencil-agent/ai/stream";
-import * as _bundledPiAiTypes from "@pencil-agent/ai/types";
-import type { KeyId } from "@pencil-agent/tui";
-import * as _bundledPiTui from "@pencil-agent/tui";
+import * as _bundledPiAgentCore from "@catui/agent-core";
+import * as _bundledPiAi from "@catui/ai";
+import * as _bundledPiAiEnv from "@catui/ai/env";
+import * as _bundledPiAiEvents from "@catui/ai/events";
+import * as _bundledPiAiJson from "@catui/ai/json";
+import * as _bundledPiAiModels from "@catui/ai/models";
+import * as _bundledPiAiOauth from "@catui/ai/oauth";
+import * as _bundledPiAiOverflow from "@catui/ai/overflow";
+import * as _bundledPiAiRegistry from "@catui/ai/registry";
+import * as _bundledPiAiSchema from "@catui/ai/schema";
+import * as _bundledPiAiStream from "@catui/ai/stream";
+import * as _bundledPiAiTypes from "@catui/ai/types";
+import type { KeyId } from "@catui/tui";
+import * as _bundledPiTui from "@catui/tui";
 // Static imports of packages that extensions may use.
 // These MUST be static so Bun bundles them into the compiled binary.
 // The virtualModules option then makes them available to extensions.
@@ -47,9 +47,9 @@ import type {
 } from "./types.js";
 
 /**
- * Subpath exports of @pencil-agent/ai used across core and extensions.
- * jiti aliases are plain prefix replacements, so the bare "@pencil-agent/ai"
- * alias alone would rewrite "@pencil-agent/ai/overflow" into the bogus path
+ * Subpath exports of @catui/ai used across core and extensions.
+ * jiti aliases are plain prefix replacements, so the bare "@catui/ai"
+ * alias alone would rewrite "@catui/ai/overflow" into the bogus path
  * "<dist>/index.js/overflow". Each subpath needs its own explicit mapping
  * (both for jiti aliases and Bun virtualModules).
  */
@@ -67,27 +67,29 @@ const AI_SUBPATHS = [
 ] as const;
 
 const BUNDLED_AI_SUBPATH_MODULES: Record<string, unknown> = {
-	"@pencil-agent/ai/types": _bundledPiAiTypes,
-	"@pencil-agent/ai/schema": _bundledPiAiSchema,
-	"@pencil-agent/ai/events": _bundledPiAiEvents,
-	"@pencil-agent/ai/models": _bundledPiAiModels,
-	"@pencil-agent/ai/registry": _bundledPiAiRegistry,
-	"@pencil-agent/ai/stream": _bundledPiAiStream,
-	"@pencil-agent/ai/env": _bundledPiAiEnv,
-	"@pencil-agent/ai/overflow": _bundledPiAiOverflow,
-	"@pencil-agent/ai/json": _bundledPiAiJson,
-	"@pencil-agent/ai/oauth": _bundledPiAiOauth,
+	"@catui/ai/types": _bundledPiAiTypes,
+	"@catui/ai/schema": _bundledPiAiSchema,
+	"@catui/ai/events": _bundledPiAiEvents,
+	"@catui/ai/models": _bundledPiAiModels,
+	"@catui/ai/registry": _bundledPiAiRegistry,
+	"@catui/ai/stream": _bundledPiAiStream,
+	"@catui/ai/env": _bundledPiAiEnv,
+	"@catui/ai/overflow": _bundledPiAiOverflow,
+	"@catui/ai/json": _bundledPiAiJson,
+	"@catui/ai/oauth": _bundledPiAiOauth,
 };
 
 /** Modules available to extensions via virtualModules (for compiled Bun binary). */
 async function getVirtualModules(): Promise<Record<string, unknown>> {
 	return {
 		"@sinclair/typebox": _bundledTypebox,
-		"@pencil-agent/agent-core": _bundledPiAgentCore,
-		"@pencil-agent/tui": _bundledPiTui,
-		"@pencil-agent/ai": _bundledPiAi,
+		"@catui/agent-core": _bundledPiAgentCore,
+		"@catui/tui": _bundledPiTui,
+		"@catui/ai": _bundledPiAi,
 		...BUNDLED_AI_SUBPATH_MODULES,
 		// Dynamic to keep the extension loader off the root SDK barrel during normal app startup.
+		"@catui/agent": await import("../../index.js"),
+		// Legacy compatibility for extensions authored before the Catui rebrand.
 		"@pencil-agent/nano-pencil": await import("../../index.js"),
 	};
 }
@@ -109,24 +111,33 @@ function getAliases(): Record<string, string> {
 	const typeboxRoot = typeboxEntry.replace(/[\\/]build[\\/]cjs[\\/]index\.js$/, "");
 
 	// jiti sorts alias keys by path-segment count, so these subpath entries
-	// take precedence over the bare "@pencil-agent/ai" prefix alias below.
+	// take precedence over the bare "@catui/ai" prefix alias below.
 	const aiSubpathAliases = Object.fromEntries(
 		AI_SUBPATHS.map((subpath) => [
-			`@pencil-agent/ai/${subpath}`,
-			require.resolve(`@pencil-agent/ai/${subpath}`),
+			`@catui/ai/${subpath}`,
+			require.resolve(`@catui/ai/${subpath}`),
 		]),
 	);
 
 	_aliases = {
+		"@catui/agent": packageIndex,
 		"@pencil-agent/nano-pencil": packageIndex,
-		"@pencil-agent/agent-core": require.resolve("@pencil-agent/agent-core"),
-		"@pencil-agent/tui": require.resolve("@pencil-agent/tui"),
+		"@catui/agent-core": require.resolve("@catui/agent-core"),
+		"@catui/tui": require.resolve("@catui/tui"),
 		...aiSubpathAliases,
-		"@pencil-agent/ai": require.resolve("@pencil-agent/ai"),
+		"@catui/ai": require.resolve("@catui/ai"),
 		"@sinclair/typebox": typeboxRoot,
 	};
 
 	return _aliases;
+}
+
+export function __getExtensionAliasesForTest(): Record<string, string> {
+	return getAliases();
+}
+
+export async function __getExtensionVirtualModulesForTest(): Promise<Record<string, unknown>> {
+	return getVirtualModules();
 }
 
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
@@ -440,19 +451,23 @@ export async function loadExtensions(paths: string[], cwd: string, agentDir: str
 	};
 }
 
-interface NanoPencilManifest {
+interface CatuiManifest {
 	extensions?: string[];
 	themes?: string[];
 	skills?: string[];
 	prompts?: string[];
 }
 
-function readPiManifest(packageJsonPath: string): NanoPencilManifest | null {
+function readCatuiManifest(packageJsonPath: string): CatuiManifest | null {
 	try {
 		const content = fs.readFileSync(packageJsonPath, "utf-8");
 		const pkg = JSON.parse(content);
+		if (pkg.catui && typeof pkg.catui === "object") {
+			return pkg.catui as CatuiManifest;
+		}
+		// Legacy compatibility for packages published before the Catui rebrand.
 		if (pkg.nanopencil && typeof pkg.nanopencil === "object") {
-			return pkg.nanopencil as NanoPencilManifest;
+			return pkg.nanopencil as CatuiManifest;
 		}
 		return null;
 	} catch {
@@ -468,16 +483,16 @@ function isExtensionFile(name: string): boolean {
  * Resolve extension entry points from a directory.
  *
  * Checks for:
- * 1. package.json with "nanopencil.extensions" field -> returns declared paths
+ * 1. package.json with "catui.extensions" field -> returns declared paths
  * 2. index.ts or index.js -> returns the index file
  *
  * Returns resolved paths or null if no entry points found.
  */
 function resolveExtensionEntries(dir: string): string[] | null {
-	// Check for package.json with "nanopencil" field first
+	// Check for package.json with "catui" field first
 	const packageJsonPath = path.join(dir, "package.json");
 	if (fs.existsSync(packageJsonPath)) {
-		const manifest = readPiManifest(packageJsonPath);
+		const manifest = readCatuiManifest(packageJsonPath);
 		if (manifest?.extensions?.length) {
 			const entries: string[] = [];
 			for (const extPath of manifest.extensions) {
@@ -511,7 +526,7 @@ function resolveExtensionEntries(dir: string): string[] | null {
  * Discovery rules:
  * 1. Direct files: `extensions/*.ts` or `*.js` → load
  * 2. Subdirectory with index: `extensions/* /index.ts` or `index.js` → load
- * 3. Subdirectory with package.json: `extensions/* /package.json` with "nanopencil" field → load what it declares
+ * 3. Subdirectory with package.json: `extensions/* /package.json` with "catui" field → load what it declares
  *
  * No recursion beyond one level. Complex packages must use package.json manifest.
  */
@@ -551,12 +566,12 @@ function discoverExtensionsInDir(dir: string): string[] {
 
 /**
  * Tier 4 (npm): discover extensions from installed node_modules packages that opt in by
- * declaring a `nanopencil.extensions` manifest. First-party `@pencil-agent/*` packages are
+ * declaring a `catui.extensions` manifest. First-party `@catui/*` packages are
  * EXCLUDED here — they are loaded as built-ins (builtin-extensions.ts) and would otherwise
  * double-load (their node_modules path differs from the bundled dist path, defeating dedup).
  *
  * Opt-in by design: a package is only picked up if its package.json explicitly declares
- * `nanopencil.extensions` (same trust model as the user-dir tier, which auto-loads too).
+ * `catui.extensions` (same trust model as the user-dir tier, which auto-loads too).
  */
 function discoverNpmExtensions(roots: string[]): string[] {
 	const discovered: string[] = [];
@@ -564,7 +579,7 @@ function discoverNpmExtensions(roots: string[]): string[] {
 	const scanPackage = (pkgDir: string) => {
 		const packageJsonPath = path.join(pkgDir, "package.json");
 		if (!fs.existsSync(packageJsonPath)) return;
-		const manifest = readPiManifest(packageJsonPath);
+	const manifest = readCatuiManifest(packageJsonPath);
 		if (!manifest?.extensions?.length) return;
 		for (const extPath of manifest.extensions) {
 			const resolved = path.resolve(pkgDir, extPath);
@@ -584,7 +599,7 @@ function discoverNpmExtensions(roots: string[]): string[] {
 			if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 			if (entry.name === ".bin" || entry.name === ".cache") continue;
 			// First-party packages are loaded as built-ins; skip to avoid double-load.
-			if (entry.name === "@pencil-agent") continue;
+			if (entry.name === "@catui" || entry.name === "@pencil-agent") continue;
 			if (entry.name.startsWith("@")) {
 				// Scoped packages: descend one level.
 				const scopeDir = path.join(nodeModulesDir, entry.name);
@@ -643,7 +658,7 @@ export async function discoverAndLoadExtensions(
 	for (const p of configuredPaths) {
 		const resolved = resolvePath(p, cwd);
 		if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
-			// Check for package.json with nanopencil manifest or index.ts
+			// Check for package.json with catui manifest or index.ts
 			const entries = resolveExtensionEntries(resolved);
 			if (entries) {
 				addPaths(entries);
@@ -658,9 +673,9 @@ export async function discoverAndLoadExtensions(
 	}
 
 	// 4. npm tier: third-party packages installed in node_modules that opt in via a
-	//    `nanopencil.extensions` manifest. Lowest precedence (added last); the `seen`
+	//    `catui.extensions` manifest. Lowest precedence (added last); the `seen`
 	//    dedup keeps any already-listed path from loading twice. First-party
-	//    @pencil-agent/* packages are excluded inside discoverNpmExtensions (built-ins).
+	//    @catui/* packages are excluded inside discoverNpmExtensions (built-ins).
 	addPaths(discoverNpmExtensions([cwd, agentDir]));
 
 	return loadExtensions(allPaths, cwd, agentDir, eventBus);

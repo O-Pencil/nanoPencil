@@ -1,11 +1,11 @@
 /**
  * [WHO]: UserMessageSelectorComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./dynamic-border.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/user-message-selector.ts - user message list selector
  */
 
-import { type Component, Container, getEditorKeybindings, Spacer, Text, truncateToWidth } from "@pencil-agent/tui";
+import { type Component, Container, getEditorKeybindings, Spacer, Text, truncateToWidth } from "@catui/tui";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 

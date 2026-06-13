@@ -1,6 +1,6 @@
 /**
  * [WHO]: goalExtension default export - wires the GoalController per thread; registers /goal command + completions; registers get_goal/create_goal/update_goal tools; subscribes to lifecycle hooks for accounting (turn_end), pull-model continuation + run-error blocking (agent_end, mirrors Codex continue_if_idle), and budget-limit steering; renders GOAL_MESSAGE_TYPE custom messages
- * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions-host/types, ./goal-controller, ./goal-tools, ./goal-command, ./goal-parser, ./goal-types, ./goal-format
+ * [FROM]: Depends on @catui/agent-core, @catui/tui, core/extensions-host/types, ./goal-controller, ./goal-tools, ./goal-command, ./goal-parser, ./goal-types, ./goal-format
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/goal/index.ts - extension entry; owns the per-thread controller and the controller host singleton
  */
@@ -8,8 +8,8 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
+import type { AgentMessage } from "@catui/agent-core";
+import { Box, Container, Spacer, Text } from "@catui/tui";
 import type {
 	AgentAbortEvent,
 	AgentResultEvent,
@@ -39,8 +39,8 @@ import { isActiveStatus, type GoalRunKind, type ThreadGoal } from "./goal-types.
 const GOAL_MESSAGE_TYPE = "goal";
 const PLAN_LOOP_FRAMEWORK = "weak-model-compatible" as const;
 
-const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
-const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+const _dbgEnabled = process.env.CATUI_DEBUG === "1";
+const debugLogPath = path.join(os.homedir(), ".catui", "agent", "catui-debug.log");
 function dbg(msg: string): void {
 	// Off by default; never write or crash in a release (ENOENT on fresh install).
 	if (!_dbgEnabled) return;

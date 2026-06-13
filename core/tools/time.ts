@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/tools/index.ts
  * [HERE]: core/tools/time.ts - current time tool
  */
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 
 const timeSchema = Type.Object({

@@ -2,9 +2,9 @@
  * [WHO]: ConfigSelectorOptions, ConfigSelector, runConfigSelector()
  * [FROM]: Depends on tui, core/platform/config, modes/interactive/components
  * [TO]: Consumed by main.ts
- * [HERE]: cli/config-selector.ts - TUI config selector for `nanopencil config` command
+ * [HERE]: cli/config-selector.ts - TUI config selector for `catui config` command
  */
-import { ProcessTerminal, TUI } from "@pencil-agent/tui";
+import { ProcessTerminal, TUI } from "@catui/tui";
 import type { ResolvedPaths } from "../core/package-manager.js";
 import type { SettingsManager } from "../core/platform/config/settings-manager.js";
 import { ConfigSelectorComponent } from "../modes/interactive/components/config-selector.js";

@@ -3,7 +3,7 @@
  * parallelism.
  *
  * Replaces the serial `&& ` chain. The only build-time dependency among the
- * libs is agent-core → ai (agent-core imports `@pencil-agent/ai/*` declarations),
+ * libs is agent-core → ai (agent-core imports `@catui/ai/*` declarations),
  * so:
  *   Phase 1 (parallel): protocol, ai, tui   — mutually independent
  *   Phase 2:            agent-core               — needs ai's .d.ts

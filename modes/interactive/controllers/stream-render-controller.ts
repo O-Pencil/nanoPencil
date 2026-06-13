@@ -2,7 +2,7 @@
  * [WHO]: Provides StreamRenderController + StreamRenderContext (state/layout/loaders/toolTrace/runtime/
  *        escape/surface ports) — the interactive streaming render layer (handleEvent)
  * [FROM]: Depends on interactive-state (shared render fields), tui (Container/Text/Spacer/TUI/MarkdownTheme),
- *         components (Assistant/Tool/PencilLoader), theme, agent-session (AgentSessionEvent), ai (Message),
+ *         components (Assistant/Tool/CatuiLoader), theme, agent-session (AgentSessionEvent), ai (Message),
  *         agent-core (AgentMessage), extensions-host (ToolDefinition), buddy pet-sprites (BuddyState)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.streamRender`; subscribeToAgent's
  *       handleEvent forwards here)
@@ -22,8 +22,8 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { Message } from "@pencil-agent/ai/types";
+import type { AgentMessage } from "@catui/agent-core";
+import type { Message } from "@catui/ai/types";
 import {
   type CachedContainer,
   type Component,
@@ -32,12 +32,12 @@ import {
   Spacer,
   Text,
   type TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { ToolDefinition } from "../../../core/extensions-host/types.js";
 import type { AgentSessionEvent } from "../../../core/runtime/agent-session.js";
 import { AssistantMessageComponent } from "../components/assistant-message.js";
 import type { BuddyState } from "../components/buddy/pet-sprites.js";
-import { PencilLoader } from "../components/pencil-loader.js";
+import { CatuiLoader } from "../components/catui-loader.js";
 import { ToolExecutionComponent } from "../components/tool-execution.js";
 import { SubAgentPanelComponent } from "../components/sub-agent-panel.js";
 import { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";
@@ -123,8 +123,8 @@ export interface StreamRenderContext {
 /** Task tool names that should trigger a task panel refresh. */
 const TASK_TOOL_NAMES = new Set(["TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "TaskStop", "TaskDelete"]);
 
-const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
-const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+const _dbgEnabled = process.env.CATUI_DEBUG === "1";
+const debugLogPath = path.join(os.homedir(), ".catui", "agent", "catui-debug.log");
 function dbg(msg: string): void {
 	// Off by default; never write or crash in a release (ENOENT on fresh install).
 	if (!_dbgEnabled) return;
@@ -172,14 +172,14 @@ export class StreamRenderController {
           this.retryEscapeHandler = undefined;
         }
         if (this.retryLoader) {
-          (this.retryLoader as PencilLoader).stop();
+          (this.retryLoader as CatuiLoader).stop();
           this.retryLoader = undefined;
         }
         if (state.loadingAnimation) {
-          (state.loadingAnimation as PencilLoader).stop();
+          (state.loadingAnimation as CatuiLoader).stop();
         }
         statusContainer.clear();
-        state.loadingAnimation = new PencilLoader(
+        state.loadingAnimation = new CatuiLoader(
           ui,
           theme,
           this.ctx.loaders.getDefaultWorkingMessage(),
@@ -246,7 +246,7 @@ export class StreamRenderController {
         if (state.streamingComponent && event.message.role === "assistant") {
           // Reset stall timer on new output - spinner should not show as stuck
           if (state.loadingAnimation) {
-            (state.loadingAnimation as PencilLoader).resetStallTimer();
+            (state.loadingAnimation as CatuiLoader).resetStallTimer();
           }
           state.streamingMessage = event.message;
           state.streamingComponent.updateContent(state.streamingMessage);
@@ -391,7 +391,7 @@ export class StreamRenderController {
         state.agentRunStartMs = undefined;
         state.workingMessageOverride = undefined;
         if (state.loadingAnimation) {
-          (state.loadingAnimation as PencilLoader).stop();
+          (state.loadingAnimation as CatuiLoader).stop();
           state.loadingAnimation = undefined;
           statusContainer.clear();
         }
@@ -514,7 +514,7 @@ export class StreamRenderController {
         statusContainer.clear();
         const reasonText =
           event.reason === "overflow" ? "Context overflow detected, " : "";
-        this.autoCompactionLoader = new PencilLoader(
+        this.autoCompactionLoader = new CatuiLoader(
           ui,
           theme,
           `${reasonText}Auto-compacting... (${this.ctx.loaders.getInterruptKeyHint()} to cancel)`,
@@ -532,7 +532,7 @@ export class StreamRenderController {
         }
         // Stop loader
         if (this.autoCompactionLoader) {
-          (this.autoCompactionLoader as PencilLoader).stop();
+          (this.autoCompactionLoader as CatuiLoader).stop();
           this.autoCompactionLoader = undefined;
           statusContainer.clear();
         }
@@ -572,7 +572,7 @@ export class StreamRenderController {
         // Show retry indicator
         statusContainer.clear();
         const delaySeconds = Math.round(event.delayMs / 1000);
-        this.retryLoader = new PencilLoader(
+        this.retryLoader = new CatuiLoader(
           ui,
           theme,
           `Retrying (${event.attempt}/${event.maxAttempts}) in ${delaySeconds}s... (${this.ctx.loaders.getInterruptKeyHint()} to cancel)`,
@@ -590,7 +590,7 @@ export class StreamRenderController {
         }
         // Stop loader
         if (this.retryLoader) {
-          (this.retryLoader as PencilLoader).stop();
+          (this.retryLoader as CatuiLoader).stop();
           this.retryLoader = undefined;
           statusContainer.clear();
         }

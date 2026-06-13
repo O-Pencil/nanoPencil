@@ -5,13 +5,13 @@
  * [HERE]: extensions/builtin/task/task-tools/task-output-tool.ts
  *
  * NOTE: CC's TaskOutputTool handles background shell/agent output with blocking.
- * In nanoPencil there are no background processes, so this is a simplified version
+ * In Catui there are no background processes, so this is a simplified version
  * that returns the task's current state and description.
  */
 
 import { Type } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import type { ExtensionContext } from "../../../../core/extensions-host/types.js";
 import { getTask } from "../task-store.js";
 import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
@@ -20,13 +20,13 @@ const taskOutputSchema = Type.Object({
 	task_id: Type.String({ description: "The task ID to get output from" }),
 	block: Type.Optional(
 		Type.Boolean({
-			description: "Whether to wait for completion (default: true). In nanoPencil, this is a no-op since tasks are state-managed.",
+			description: "Whether to wait for completion (default: true). In Catui, this is a no-op since tasks are state-managed.",
 			default: true,
 		}),
 	),
 	timeout: Type.Optional(
 		Type.Number({
-			description: "Max wait time in ms (default: 30000). In nanoPencil, this is a no-op.",
+			description: "Max wait time in ms (default: 30000). In Catui, this is a no-op.",
 			default: 30000,
 			minimum: 0,
 			maximum: 600000,
@@ -41,7 +41,7 @@ export function createTaskOutputTool() {
 		name: "TaskOutput",
 		label: "Task Output",
 		description:
-			"Retrieve the current state and details of a task. In nanoPencil, tasks are state-managed (no background processes), so this returns the task's current status and description.",
+			"Retrieve the current state and details of a task. In Catui, tasks are state-managed (no background processes), so this returns the task's current status and description.",
 		parameters: taskOutputSchema,
 
 		guidance: `DEPRECATED: Prefer using the Read tool on the task's output file path instead. Background tasks return their output file path in the tool result, and you receive a <task-notification> with the same path when the task completes -- Read that file directly.

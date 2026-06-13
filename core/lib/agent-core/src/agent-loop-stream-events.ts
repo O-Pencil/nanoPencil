@@ -1,12 +1,12 @@
 /**
  * [WHO]: Provides waitForAbortableOperation(), waitForAssistantStream(), waitForAssistantStreamEvent()
- * [FROM]: Depends on @pencil-agent/ai AssistantMessageEvent/AssistantMessageEventStream contracts.
+ * [FROM]: Depends on @catui/ai AssistantMessageEvent/AssistantMessageEventStream contracts.
  * [TO]: Consumed by standard and structured-adaptive agent loops.
  * [HERE]: core/lib/agent-core/src/agent-loop-stream-events.ts within agent-core; shared abortable operation and assistant-stream iterator utilities.
  */
 
-import type { AssistantMessageEvent } from "@pencil-agent/ai/types";
-import type { AssistantMessageEventStream } from "@pencil-agent/ai/events";
+import type { AssistantMessageEvent } from "@catui/ai/types";
+import type { AssistantMessageEventStream } from "@catui/ai/events";
 
 export type AssistantStreamNext = IteratorResult<AssistantMessageEvent> | "aborted";
 export type AssistantStreamStart = AssistantMessageEventStream | "aborted";

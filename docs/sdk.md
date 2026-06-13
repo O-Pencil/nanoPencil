@@ -1,6 +1,6 @@
 ---
 name: sdk
-description: Use when the user asks how to embed NanoPencil programmatically (createAgentSession).
+description: Use when the user asks how to embed Catui programmatically (createAgentSession).
 surface: TODO  # user entry points: /command, --flag, config key, file location
 owner: core/runtime/sdk.ts  # DIP P2 anchor — read its AGENT.md member list to find code
 status: draft

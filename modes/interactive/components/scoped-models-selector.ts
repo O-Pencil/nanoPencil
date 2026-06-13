@@ -5,7 +5,7 @@
  * [HERE]: modes/interactive/components/scoped-models-selector.ts -
  */
 
-import type { Model } from "@pencil-agent/ai/types";
+import type { Model } from "@catui/ai/types";
 import {
 	Container,
 	type Focusable,
@@ -16,7 +16,7 @@ import {
 	matchesKey,
 	Spacer,
 	Text,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 

@@ -6,7 +6,7 @@
  *
  * Generates the docs/ usage manuals that system-prompt.ts points the agent at.
  * Each doc is a "feature skill": a structured, AI-readable manual that teaches
- * pencil how one of its own features works. Code paths are NOT duplicated here —
+ * catui how one of its own features works. Code paths are NOT duplicated here —
  * the `Code map` section only points at the owning module's DIP doc (P2 AGENT.md
  * member list) and P3 file headers, so docs never go stale against code.
  *
@@ -36,16 +36,16 @@ interface FeatureDoc {
 // messages). Owners are DIP P2 anchors; edit freely — pointer style keeps the
 // doc decoupled from exact file paths.
 const FEATURE_DOCS: FeatureDoc[] = [
-	{ name: "extensions", title: "Extensions", description: "Use when the user asks how to write, load, or configure a NanoPencil extension.", owner: "core/extensions-host/", related: ["sdk", "packages", "skills"] },
-	{ name: "themes", title: "Themes", description: "Use when the user asks how to change, create, or configure a NanoPencil theme.", owner: "modes/interactive/theme/", related: ["tui", "keybindings"] },
+	{ name: "extensions", title: "Extensions", description: "Use when the user asks how to write, load, or configure a Catui extension.", owner: "core/extensions-host/", related: ["sdk", "packages", "skills"] },
+	{ name: "themes", title: "Themes", description: "Use when the user asks how to change, create, or configure a Catui theme.", owner: "modes/interactive/theme/", related: ["tui", "keybindings"] },
 	{ name: "skills", title: "Skills", description: "Use when the user asks how skills work or how to add a skill.", owner: "core/skills.ts", related: ["extensions", "prompt-templates"] },
 	{ name: "prompt-templates", title: "Prompt Templates", description: "Use when the user asks how to customize system prompts or prompt templates.", owner: "core/prompt/", related: ["skills"] },
 	{ name: "tui", title: "TUI Components", description: "Use when the user asks about the terminal UI components or how rendering works.", owner: "core/lib/tui/", related: ["themes", "keybindings"] },
 	{ name: "keybindings", title: "Keybindings", description: "Use when the user asks how to view or remap keybindings.", owner: "core/platform/keybindings.ts", related: ["tui"] },
-	{ name: "sdk", title: "SDK Integration", description: "Use when the user asks how to embed NanoPencil programmatically (createAgentSession).", owner: "core/runtime/sdk.ts", related: ["extensions", "packages"] },
+	{ name: "sdk", title: "SDK Integration", description: "Use when the user asks how to embed Catui programmatically (createAgentSession).", owner: "core/runtime/sdk.ts", related: ["extensions", "packages"] },
 	{ name: "custom-provider", title: "Custom Providers", description: "Use when the user asks how to add or configure a custom model provider.", owner: "core/lib/ai/", related: ["models", "providers"] },
 	{ name: "models", title: "Models", description: "Use when the user asks how to add, select, or configure models.", owner: "core/model-registry.ts", related: ["custom-provider", "providers"] },
-	{ name: "packages", title: "Packages", description: "Use when the user asks about the published @pencil-agent/* packages.", owner: "packages/", related: ["sdk", "extensions"] },
+	{ name: "packages", title: "Packages", description: "Use when the user asks about the published @catui/* packages.", owner: "packages/", related: ["sdk", "extensions"] },
 	{ name: "providers", title: "Providers", description: "Use when the user hits 'no models available' or asks how to configure providers and API keys.", owner: "core/model-registry.ts", related: ["custom-provider", "models"] },
 ];
 

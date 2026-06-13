@@ -5,8 +5,8 @@
  * [HERE]: modes/interactive/components/settings-selector.ts -
  */
 
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
-import type { Transport } from "@pencil-agent/ai/types";
+import type { ThinkingLevel } from "@catui/agent-core";
+import type { Transport } from "@catui/ai/types";
 import {
 	Container,
 	getCapabilities,
@@ -16,7 +16,7 @@ import {
 	SettingsList,
 	Spacer,
 	Text,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { getSelectListTheme, getSettingsListTheme, theme } from "../theme/theme.js";
 import { ALL_SPRITES } from "./buddy/pet-sprites.js";
 import { DynamicBorder } from "./dynamic-border.js";

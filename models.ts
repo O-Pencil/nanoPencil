@@ -1,7 +1,7 @@
 /**
  * [WHO]: Public models subpath exports for model registry APIs
  * [FROM]: Re-exports core/model-registry.js
- * [TO]: Consumed by advanced SDK users importing @pencil-agent/nano-pencil/models
+ * [TO]: Consumed by advanced SDK users importing @catui/agent/models
  * [HERE]: models.ts - package subpath entry for model APIs
  */
 

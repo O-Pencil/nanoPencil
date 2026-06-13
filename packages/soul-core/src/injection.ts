@@ -45,7 +45,7 @@ export function generatePersonalityDirective(personality: SoulProfile["personali
 		traits.push("Take calculated risks when appropriate.");
 	}
 
-	// NanoPencil-specific traits
+	// Catui-specific traits
 	if (personality.codeVerbosity > 0.7) {
 		traits.push("Write detailed code with extensive comments and documentation.");
 	} else if (personality.codeVerbosity < 0.3) {

@@ -4,9 +4,9 @@
  * [TO]: Consumed by core/session/compaction/index.ts
  * [HERE]: core/session/compaction/branch-summarization.ts - branch summarization
  */
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai/types";
-import { completeSimple } from "@pencil-agent/ai/stream";
+import type { AgentMessage } from "@catui/agent-core";
+import type { Model } from "@catui/ai/types";
+import { completeSimple } from "@catui/ai/stream";
 import {
 	convertToLlm,
 	createBranchSummaryMessage,
@@ -185,7 +185,7 @@ export function prepareBranchEntries(entries: SessionEntry[], tokenBudget: numbe
 
 	// First pass: collect file ops from ALL entries (even if they don't fit in token budget)
 	// This ensures we capture cumulative file tracking from nested branch summaries
-	// Only extract from nanopencil-generated summaries (fromHook !== true), not extension-generated ones
+	// Only extract from catui-generated summaries (fromHook !== true), not extension-generated ones
 	for (const entry of entries) {
 		if (entry.type === "branch_summary" && !entry.fromHook && entry.details) {
 			const details = entry.details as BranchSummaryDetails;

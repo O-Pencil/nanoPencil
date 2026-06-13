@@ -1,11 +1,11 @@
 /**
  * [WHO]: RawText - renders pre-formatted ANSI text without padding
- * [FROM]: Depends on @pencil-agent/tui Component
+ * [FROM]: Depends on @catui/tui Component
  * [TO]: Consumed by modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/components/raw-text.ts - raw ANSI text component
  */
 
-import type { Component } from "@pencil-agent/tui";
+import type { Component } from "@catui/tui";
 
 /**
  * RawText - renders pre-formatted ANSI text lines without auto-padding.

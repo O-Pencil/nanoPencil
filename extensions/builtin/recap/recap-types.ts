@@ -1,10 +1,10 @@
 /**
  * [WHO]: RECAP_MESSAGE_TYPE, RecapEntry, RecapSettings, RecapTriggerReason types
- * [FROM]: Depends on @pencil-agent/ai for Usage
+ * [FROM]: Depends on @catui/ai for Usage
  * [TO]: Consumed by extensions/builtin/recap/index.ts, recap-renderer.ts, recap-synthesizer.ts, recap-budget.ts
  * [HERE]: extensions/builtin/recap/recap-types.ts - shared type surface for the recap extension
  */
-import type { Usage } from "@pencil-agent/ai/types";
+import type { Usage } from "@catui/ai/types";
 
 /** Custom message type registered by the recap extension. Must match the string in the exclusion set in core/messages.ts. */
 export const RECAP_MESSAGE_TYPE = "recap";

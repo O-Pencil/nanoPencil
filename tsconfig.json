@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "ES2022",
     "moduleResolution": "bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2024"],
     "outDir": "./dist",
     "rootDir": ".",
     "strict": true,
@@ -17,11 +17,16 @@
     "sourceMap": true,
     "types": ["node"],
     "paths": {
-      "nanosoul": ["./packages/nanosoul/src"],
-      "@pencil-agent/nano-mem": ["./packages/nano-mem/src"],
-      "@pencil-agent/mem-core": ["./packages/mem-core/src"],
-      "@pencil-agent/soul-core": ["./packages/soul-core/src"],
-      "@pencil-agent/protocol": ["./packages/protocol/src/index.ts"]
+      "@catui/ai": ["./core/lib/ai/src/index.ts"],
+      "@catui/ai/*": ["./core/lib/ai/src/*"],
+      "@catui/ai/oauth": ["./core/lib/ai/src/utils/oauth/index.ts"],
+      "@catui/agent-core": ["./core/lib/agent-core/src/index.ts"],
+      "@catui/agent-core/*": ["./core/lib/agent-core/src/*"],
+      "@catui/tui": ["./core/lib/tui/src/index.ts"],
+      "@catui/tui/*": ["./core/lib/tui/src/*"],
+      "@catui/mem-core": ["./packages/mem-core/src"],
+      "@catui/soul-core": ["./packages/soul-core/src"],
+      "@catui/protocol": ["./packages/protocol/src/index.ts"]
     }
   },
   "include": [

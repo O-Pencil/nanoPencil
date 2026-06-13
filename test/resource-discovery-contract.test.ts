@@ -44,10 +44,10 @@ async function discoverSkillPaths(extension: (api: ExtensionAPI) => Promise<void
 }
 
 test("resource-discovery extensions return existing skill paths", async () => {
-	const previousAgentDir = process.env.NANOPENCIL_CODING_AGENT_DIR;
-	const root = mkdtempSync(join(tmpdir(), "nanopencil-resource-contract-"));
+	const previousAgentDir = process.env.CATUI_CODING_AGENT_DIR;
+	const root = mkdtempSync(join(tmpdir(), "catui-resource-contract-"));
 	const agentDir = join(root, "agent");
-	process.env.NANOPENCIL_CODING_AGENT_DIR = agentDir;
+	process.env.CATUI_CODING_AGENT_DIR = agentDir;
 
 	try {
 		for (const [id, extension] of [
@@ -64,9 +64,9 @@ test("resource-discovery extensions return existing skill paths", async () => {
 		}
 	} finally {
 		if (previousAgentDir === undefined) {
-			delete process.env.NANOPENCIL_CODING_AGENT_DIR;
+			delete process.env.CATUI_CODING_AGENT_DIR;
 		} else {
-			process.env.NANOPENCIL_CODING_AGENT_DIR = previousAgentDir;
+			process.env.CATUI_CODING_AGENT_DIR = previousAgentDir;
 		}
 		rmSync(root, { recursive: true, force: true });
 	}

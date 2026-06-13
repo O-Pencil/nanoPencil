@@ -7,12 +7,12 @@
  */
 /**
  * [WHO]: NotificationQueue
- * [FROM]: Depends on @pencil-agent/tui
+ * [FROM]: Depends on @catui/tui
  * [TO]: Consumed by modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/components/notification-queue.ts -
  */
 
-import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { Container, Spacer, Text, type TUI } from "@catui/tui";
 import type { Theme } from "../theme/theme.js";
 
 export type NotificationPriority = "immediate" | "high" | "medium" | "low";

@@ -16,7 +16,7 @@ import {
 	Text,
 	TruncatedText,
 	truncateToWidth,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { SessionTreeNode } from "../../../core/session/session-manager.js";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";

@@ -93,7 +93,7 @@ export function ensureAgentMetadata(ctx: AgentDirContext): AgentMetadata {
 			type: "local",
 		},
 		tags: [],
-		engine: "nano-pencil",
+		engine: "catui-agent",
 		extensions: {},
 	};
 

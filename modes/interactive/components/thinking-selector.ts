@@ -1,12 +1,12 @@
 /**
  * [WHO]: ThinkingSelectorComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./dynamic-border.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/thinking-selector.ts - thinking level selector
  */
 
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
-import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
+import type { ThinkingLevel } from "@catui/agent-core";
+import { Container, type SelectItem, SelectList } from "@catui/tui";
 import { getSelectListTheme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 

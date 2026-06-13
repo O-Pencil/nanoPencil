@@ -1,6 +1,6 @@
 /**
  * [WHO]: EditorBuddyLayout
- * [FROM]: Depends on @pencil-agent/tui
+ * [FROM]: Depends on @catui/tui
  * [TO]: Consumed by interactive-mode.ts
  * [HERE]: Horizontal layout — editor on the left, optional buddy pet on the right (bottom-aligned).
  */
@@ -9,7 +9,7 @@ import {
   type Component,
   Container,
   truncateToWidth,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 
 /** Width reserved for the ASCII pet column (matches longest sprite line + label). */
 export const BUDDY_COLUMN_WIDTH = 30;

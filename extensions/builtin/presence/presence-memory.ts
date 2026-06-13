@@ -43,10 +43,10 @@ const IDENTITY_PREFERENCE_PATTERN =
 
 export function getMemoryDir(): string {
 	// Use the same memory directory as the main app.
-	// Priority: env var > nanopencil default > legacy nanomem path.
+	// Priority: env var > catui default > legacy nanomem path.
 	if (process.env.NANOMEM_MEMORY_DIR) return process.env.NANOMEM_MEMORY_DIR;
-	const nanopencilMemory = join(homedir(), ".nanopencil", "agent", "memory");
-	if (existsSync(nanopencilMemory)) return nanopencilMemory;
+	const catuiMemory = join(homedir(), ".catui", "agent", "memory");
+	if (existsSync(catuiMemory)) return catuiMemory;
 	return join(homedir(), ".nanomem", "memory");
 }
 

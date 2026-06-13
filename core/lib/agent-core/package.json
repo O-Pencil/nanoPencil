@@ -1,5 +1,5 @@
 {
-	"name": "@pencil-agent/agent-core",
+	"name": "@catui/agent-core",
 	"private": true,
 	"version": "0.0.1",
 	"description": "General-purpose agent with transport abstraction, state management, and attachment support",
@@ -18,7 +18,7 @@
 		"prepublishOnly": "npm run clean && npm run build"
 	},
 	"dependencies": {
-		"@pencil-agent/ai": "0.0.1"
+		"@catui/ai": "0.0.1"
 	},
 	"keywords": [
 		"ai",
@@ -26,13 +26,13 @@
 		"llm",
 		"transport",
 		"state-management",
-		"pencil-agent"
+		"catui-agent"
 	],
-	"author": "nanoPencil Team",
+	"author": "Catui Team",
 	"license": "GPL-3.0",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/O-Pencil/nanoPencil.git"
+		"url": "git+https://github.com/O-Catui/Catui.git"
 	},
 	"engines": {
 		"node": ">=20.0.0"

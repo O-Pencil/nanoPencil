@@ -1,6 +1,6 @@
-# @pencil-agent/tui
+# @catui/tui
 
-> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (GPL-3.0). Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
+> This package is derived from [Catui](https://github.com/O-Catui/Catui) (GPL-3.0). Minimal terminal UI framework with differential rendering and synchronized output for flicker-free interactive CLI applications.
 
 ## Features
 
@@ -16,7 +16,7 @@
 ## Quick Start
 
 ```typescript
-import { TUI, Text, Editor, ProcessTerminal } from "@pencil-agent/tui";
+import { TUI, Text, Editor, ProcessTerminal } from "@catui/tui";
 
 // Create terminal
 const terminal = new ProcessTerminal();
@@ -141,7 +141,7 @@ The TUI appends a full SGR reset and OSC 8 reset at the end of each rendered lin
 Components that display a text cursor and need IME (Input Method Editor) support should implement the `Focusable` interface:
 
 ```typescript
-import { CURSOR_MARKER, type Component, type Focusable } from "@pencil-agent/tui";
+import { CURSOR_MARKER, type Component, type Focusable } from "@catui/tui";
 
 class MyInput implements Component, Focusable {
   focused: boolean = false;  // Set by TUI when focus changes
@@ -165,7 +165,7 @@ This enables IME candidate windows to appear at the correct position for CJK inp
 **Container components with embedded inputs:** When a container component (dialog, selector, etc.) contains an `Input` or `Editor` child, the container must implement `Focusable` and propagate the focus state to the child:
 
 ```typescript
-import { Container, type Focusable, Input } from "@pencil-agent/tui";
+import { Container, type Focusable, Input } from "@catui/tui";
 
 class SearchDialog extends Container implements Focusable {
   private searchInput: Input;
@@ -512,7 +512,7 @@ Supported formats: PNG, JPEG, GIF, WebP. Dimensions are parsed from the image he
 Supports both slash commands and file paths.
 
 ```typescript
-import { CombinedAutocompleteProvider } from "@pencil-agent/tui";
+import { CombinedAutocompleteProvider } from "@catui/tui";
 
 const provider = new CombinedAutocompleteProvider(
   [
@@ -537,7 +537,7 @@ editor.setAutocompleteProvider(provider);
 Use `matchesKey()` with the `Key` helper for detecting keyboard input (supports Kitty keyboard protocol):
 
 ```typescript
-import { matchesKey, Key } from "@pencil-agent/tui";
+import { matchesKey, Key } from "@catui/tui";
 
 if (matchesKey(data, Key.ctrl("c"))) {
   process.exit(0);
@@ -595,7 +595,7 @@ interface Terminal {
 ## Utilities
 
 ```typescript
-import { visibleWidth, truncateToWidth, wrapTextWithAnsi } from "@pencil-agent/tui";
+import { visibleWidth, truncateToWidth, wrapTextWithAnsi } from "@catui/tui";
 
 // Get visible width of string (ignoring ANSI codes)
 const width = visibleWidth("\x1b[31mHello\x1b[0m"); // 5
@@ -620,8 +620,8 @@ When creating custom components, **each line returned by `render()` must not exc
 Use `matchesKey()` with the `Key` helper for keyboard input:
 
 ```typescript
-import { matchesKey, Key, truncateToWidth } from "@pencil-agent/tui";
-import type { Component } from "@pencil-agent/tui";
+import { matchesKey, Key, truncateToWidth } from "@catui/tui";
+import type { Component } from "@catui/tui";
 
 class MyInteractiveComponent implements Component {
   private selectedIndex = 0;
@@ -656,8 +656,8 @@ class MyInteractiveComponent implements Component {
 Use the provided utilities to ensure lines fit:
 
 ```typescript
-import { visibleWidth, truncateToWidth } from "@pencil-agent/tui";
-import type { Component } from "@pencil-agent/tui";
+import { visibleWidth, truncateToWidth } from "@catui/tui";
+import type { Component } from "@catui/tui";
 
 class MyComponent implements Component {
   private text: string;
@@ -754,8 +754,8 @@ npx tsx test/chat-simple.ts
 
 ### Debug logging
 
-Set `NANOPENCIL_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
+Set `CATUI_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
 
 ```bash
-NANOPENCIL_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
+CATUI_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
 ```

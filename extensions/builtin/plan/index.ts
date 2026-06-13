@@ -179,7 +179,7 @@ export default async function planExtension(api: ExtensionAPI) {
 	const enterPlanModeTool = createEnterPlanModeTool(
 		api,
 		() => getSessionState(api),
-		() => false, // channels not implemented in nanoPencil
+		() => false, // channels not implemented in Catui
 	);
 
 	const exitPlanModeTool = createExitPlanModeTool(
@@ -295,7 +295,7 @@ export default async function planExtension(api: ExtensionAPI) {
 		const os = await import("node:os");
 		const path = await import("node:path");
 
-		const mailDir = path.join(os.homedir(), ".nanopencil", "agent", "team-mail");
+		const mailDir = path.join(os.homedir(), ".catui", "agent", "team-mail");
 		const requestId = args.trim();
 
 		if (!requestId) {

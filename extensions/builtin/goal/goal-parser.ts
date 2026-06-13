@@ -5,7 +5,7 @@
  * [HERE]: extensions/builtin/goal/goal-parser.ts - argument parsing; no I/O, no UI
  */
 
-import type { AutocompleteItem } from "@pencil-agent/tui";
+import type { AutocompleteItem } from "@catui/tui";
 
 export type ParsedGoalCommand =
 	| { type: "help" }

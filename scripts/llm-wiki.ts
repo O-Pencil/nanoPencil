@@ -146,7 +146,7 @@ const P1_PATH = join(ROOT, "AGENTS.md");
 const SKIP_DIRS = new Set([
 	".git",
 	".grub",
-	".nanopencil",
+	".catui",
 	"node_modules",
 	"dist",
 	"coverage",
@@ -351,9 +351,9 @@ function scanProject(): WikiGraph {
 
 	const nodes: GraphNode[] = [
 		{
-			id: "project:nanoPencil",
+			id: "project:Catui",
 			type: "project",
-			title: packageJson.name ?? "nanoPencil",
+			title: packageJson.name ?? "Catui",
 			path: ".",
 			meta: { version: packageJson.version ?? "0.0.0" },
 		},
@@ -368,7 +368,7 @@ function scanProject(): WikiGraph {
 			path: "AGENTS.md",
 			meta: { contentHash: sha256(readFileSync(P1_PATH, "utf-8")) },
 		});
-		edges.push({ from: "doc:p1:AGENTS.md", to: "project:nanoPencil", type: "documents" });
+		edges.push({ from: "doc:p1:AGENTS.md", to: "project:Catui", type: "documents" });
 	}
 
 	for (const module of modules) {
@@ -386,7 +386,7 @@ function scanProject(): WikiGraph {
 			path: module.docPath,
 			meta: { contentHash: sha256(readFileSync(join(ROOT, module.docPath), "utf-8")) },
 		});
-		edges.push({ from: "project:nanoPencil", to: module.id, type: "contains" });
+		edges.push({ from: "project:Catui", to: module.id, type: "contains" });
 		edges.push({ from: `doc:p2:${module.docPath}`, to: module.id, type: "documents" });
 	}
 
@@ -425,7 +425,7 @@ function scanProject(): WikiGraph {
 		schemaVersion: 1 as const,
 		generatedAt: new Date().toISOString(),
 		project: {
-			name: packageJson.name ?? "nanoPencil",
+			name: packageJson.name ?? "Catui",
 			version: packageJson.version ?? "0.0.0",
 			root: basename(ROOT),
 		},

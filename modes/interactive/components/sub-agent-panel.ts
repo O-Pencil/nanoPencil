@@ -1,11 +1,11 @@
 /**
  * [WHO]: SubAgentPanelComponent - renders grouped sub-agent progress with tree layout
- * [FROM]: Depends on @pencil-agent/tui, ../state/interactive-state (SubAgentState)
+ * [FROM]: Depends on @catui/tui, ../state/interactive-state (SubAgentState)
  * [TO]: Consumed by StreamRenderController
  * [HERE]: modes/interactive/components/sub-agent-panel.ts - CC-style multi-agent TUI panel
  */
 
-import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { Container, Spacer, Text, type TUI } from "@catui/tui";
 import type { Theme } from "../theme/theme.js";
 import type { SubAgentState } from "../state/interactive-state.js";
 

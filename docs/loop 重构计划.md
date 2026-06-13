@@ -7,7 +7,7 @@
 
 ### 现有实现
 
-nanoPencil 当前已经有工作的 loop 实现：
+Catui 当前已经有工作的 loop 实现：
 
 - **核心文件**：
   - `extensions/defaults/loop/index.ts` (363行) - 主扩展逻辑
@@ -26,7 +26,7 @@ nanoPencil 当前已经有工作的 loop 实现：
 
 ### 架构对比
 
-| 特性 | Claude Code (文档) | nanoPencil 当前 | 差距 |
+| 特性 | Claude Code (文档) | Catui 当前 | 差距 |
 |------|-------------------|-----------------|------|
 | 任务存储 | session + durable 文件 | 仅 session | ❌ 缺少持久化 |
 | 多进程支持 | scheduler lock | 无 | ❌ 缺少锁机制 |
@@ -48,7 +48,7 @@ nanoPencil 当前已经有工作的 loop 实现：
 
 **实施方案**：
 1. 创建 `loop-tasks.ts` 文件存储模块
-2. 在项目目录创建 `.nanopencil/loop-tasks.json`
+2. 在项目目录创建 `.catui/loop-tasks.json`
 3. 支持 `--durable` 或 `-d` flag
 4. 任务启动时自动恢复durable任务
 
@@ -61,12 +61,12 @@ nanoPencil 当前已经有工作的 loop 实现：
 #### 目标1.2：添加 scheduler lock
 
 **当前问题**：
-- 多个nanoPencil实例共享项目目录时，可能重复触发任务
+- 多个Catui实例共享项目目录时，可能重复触发任务
 - durable任务需要确保只被一个实例执行
 
 **实施方案**：
 1. 使用 `proper-lockfile` 包（已存在依赖）
-2. 创建 `.nanopencil/loop-scheduler.lock`
+2. 创建 `.catui/loop-scheduler.lock`
 3. 调度器启动时获取锁
 4. 失败时降级为非owner模式（不触发durable任务）
 
@@ -133,7 +133,7 @@ import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 
-const LOOP_TASKS_FILE = ".nanopencil/loop-tasks.json";
+const LOOP_TASKS_FILE = ".catui/loop-tasks.json";
 
 export async function readLoopTasks(projectRoot: string): Promise<ScheduledLoopTask[]> {
   // 实现读取逻辑，处理文件不存在、JSON错误等
@@ -260,7 +260,7 @@ export function createLoopScheduler(options: LoopSchedulerOptions): LoopSchedule
    - 多个会话共享同一目录，只有一个会话触发任务
 
 2. **scheduler lock**
-   - 启动两个nanoPencil实例，观察任务执行情况
+   - 启动两个Catui实例，观察任务执行情况
    - 只有lock owner触发durable任务
 
 3. **向后兼容**
@@ -313,7 +313,7 @@ export function createLoopScheduler(options: LoopSchedulerOptions): LoopSchedule
 
 ## 结论
 
-当前nanoPencil的loop实现已经具备基本功能，主要缺失的是：
+当前Catui的loop实现已经具备基本功能，主要缺失的是：
 
 1. **持久化存储** - 用户最常要求的功能
 2. **多进程安全** - 生产环境必需

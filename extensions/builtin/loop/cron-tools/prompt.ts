@@ -9,7 +9,7 @@
  * 1:1 port of Claude Code src/tools/ScheduleCronTool/prompt.ts
  *
  * Simplified: feature gates (GrowthBook, bun:bundle) replaced with
- * constant true since nanoPencil doesn't have those systems.
+ * constant true since Catui doesn't have those systems.
  */
 
 export const DEFAULT_MAX_AGE_DAYS = 7;
@@ -17,7 +17,7 @@ export const DEFAULT_MAX_AGE_DAYS = 7;
 /**
  * Unified gate for the cron scheduling system.
  * In CC this combines build-time feature('AGENT_TRIGGERS') with runtime
- * GrowthBook tengu_kairos_cron. In nanoPencil, always enabled.
+ * GrowthBook tengu_kairos_cron. In Catui, always enabled.
  */
 export function isKairosCronEnabled(): boolean {
 	return true;
@@ -25,7 +25,7 @@ export function isKairosCronEnabled(): boolean {
 
 /**
  * Kill switch for disk-persistent (durable) cron tasks.
- * In CC this consults GrowthBook tengu_kairos_cron_durable. In nanoPencil,
+ * In CC this consults GrowthBook tengu_kairos_cron_durable. In Catui,
  * always enabled.
  */
 export function isDurableCronEnabled(): boolean {

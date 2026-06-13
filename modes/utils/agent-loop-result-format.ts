@@ -1,10 +1,10 @@
 /**
  * [WHO]: Provides formatLoopPolicySummary(), formatLoopTransitionSummary(), and formatLoopTransitionHistory()
- * [FROM]: Depends on @pencil-agent/agent-core AgentRunPolicy and AgentLoopTransition
+ * [FROM]: Depends on @catui/agent-core AgentRunPolicy and AgentLoopTransition
  * [TO]: Consumed by interactive and ACP status formatters
  * [HERE]: modes/agent-loop-result-format.ts - shared run-result display helpers
  */
-import type { AgentLoopTransition, AgentRunPolicy } from "@pencil-agent/agent-core";
+import type { AgentLoopTransition, AgentRunPolicy } from "@catui/agent-core";
 
 function plural(count: number, singular: string, pluralValue = `${singular}s`): string {
 	return `${count} ${count === 1 ? singular : pluralValue}`;

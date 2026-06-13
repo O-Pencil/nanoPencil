@@ -32,7 +32,7 @@ export interface TurnContext {
 	memoryRecallSnapshot?: MemoryRecallRecord[];
 }
 
-export const TURN_CONTEXT_GLOBAL_KEY = "__nanopencilTurnContext";
+export const TURN_CONTEXT_GLOBAL_KEY = "__catuiTurnContext";
 
 function store(): TurnContext {
 	const g = globalThis as unknown as Record<string, TurnContext | undefined>;

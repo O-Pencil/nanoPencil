@@ -149,7 +149,7 @@ test("token-save config DSL applies pipeline stages in order", () => {
 
 test("token-save loads project config filters only when trusted", async () => {
 	const project = await mkdtemp(join(tmpdir(), "tokensave-config-"));
-	const configDir = join(project, ".nanopencil", "token-save");
+	const configDir = join(project, ".catui", "token-save");
 	await mkdir(configDir, { recursive: true });
 	await writeFile(
 		join(configDir, "filters.json"),

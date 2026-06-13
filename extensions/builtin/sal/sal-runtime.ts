@@ -11,7 +11,7 @@ import type {
 	EvalSink,
 	EvalVariant,
 } from "./eval/index.js";
-import type { AgentRunResult } from "@pencil-agent/agent-core";
+import type { AgentRunResult } from "@catui/agent-core";
 import type { AnchorResolution } from "./anchors.js";
 import type { TerrainSnapshot } from "./terrain.js";
 import type { SalWeights } from "./weights.js";

@@ -1,10 +1,10 @@
 /**
  * [WHO]: createRecapRenderer() — MessageRenderer for RECAP_MESSAGE_TYPE custom messages
- * [FROM]: Depends on @pencil-agent/tui (Container, Spacer, Text), ./recap-types
+ * [FROM]: Depends on @catui/tui (Container, Spacer, Text), ./recap-types
  * [TO]: Consumed by extensions/builtin/recap/index.ts via api.registerMessageRenderer
  * [HERE]: extensions/builtin/recap/recap-renderer.ts - low-weight italic+dim ※ recap with inline token/cost accounting badge
  */
-import { Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Container, Spacer, Text, type Component } from "@catui/tui";
 import type { MessageRenderer } from "../../../core/extensions-host/types.js";
 import type { RecapEntry } from "./recap-types.js";
 

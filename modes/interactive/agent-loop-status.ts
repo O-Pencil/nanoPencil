@@ -1,10 +1,10 @@
 /**
  * [WHO]: formatAgentLoopStatusLines()
- * [FROM]: Depends on @pencil-agent/agent-core AgentRunResult and AgentLoopTransition
+ * [FROM]: Depends on @catui/agent-core AgentRunResult and AgentLoopTransition
  * [TO]: Consumed by modes/interactive/interactive-mode.ts and tests
  * [HERE]: modes/interactive/agent-loop-status.ts - /status loop outcome formatting
  */
-import type { AgentRunResult } from "@pencil-agent/agent-core";
+import type { AgentRunResult } from "@catui/agent-core";
 import {
 	formatLoopPolicySummary,
 	formatLoopTransitionHistory,

@@ -1,7 +1,7 @@
 /**
  * [WHO]: TUI barrel exports
  * [FROM]: Depends on all tui components
- * [TO]: Consumed by @pencil-agent/tui package consumers (modes, core/extensions-host, cli)
+ * [TO]: Consumed by @catui/tui package consumers (modes, core/extensions-host, cli)
  * [HERE]: core/lib/tui/src/index.ts - TUI package entry point
  */
 // Core TUI interfaces and classes

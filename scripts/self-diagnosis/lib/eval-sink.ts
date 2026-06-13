@@ -2,7 +2,7 @@
  * [WHO]: Provides writeSelfDiagnosisMetric() — one-shot POST to InsForge eval_metric_results; VARIANT constant for callers that need to assert the run originated from this script
  * [FROM]: Depends on node:fs / node:path / node:os / node:http / node:https / node:url via dynamic import (kept lazy to avoid pre-bundle cost for non-runtime callers)
  * [TO]: Consumed by ../run.ts after a reflexive task completes; never imported from extensions/ or core/
- * [HERE]: scripts/self-diagnosis/lib/eval-sink.ts — isolated write path. Variant tagging on eval_runs is done at run_start by the SAL extension via NANOPENCIL_EVAL_VARIANT env var (extensions/builtin/sal/index.ts:755 accepts "self-diagnosis" after the 2026-05-18 whitelist extension), so this module no longer needs a post-exit PATCH; it only writes the metric row.
+ * [HERE]: scripts/self-diagnosis/lib/eval-sink.ts — isolated write path. Variant tagging on eval_runs is done at run_start by the SAL extension via CATUI_EVAL_VARIANT env var, so this module no longer needs a post-exit PATCH; it only writes the metric row.
  */
 
 import type { IncomingMessage } from "node:http";
@@ -36,7 +36,7 @@ interface PostResult {
  * Write one eval_metric_results row to InsForge.
  *
  * `eval_metric_results` has no `variant` column — the variant tag lives on the
- * parent `eval_runs.run_id`, written by SAL at run_start (NANOPENCIL_EVAL_VARIANT).
+ * parent `eval_runs.run_id`, written by SAL at run_start (CATUI_EVAL_VARIANT).
  * If the POST fails, the row is dumped to `scripts/self-diagnosis/runs/<date>/metric-pending-<ts>.json`
  * so the analysis isn't lost.
  */
@@ -91,7 +91,7 @@ async function loadCredentials(): Promise<LoadedCredentials> {
 	const { existsSync, readFileSync } = await import("node:fs");
 
 	const candidates = [
-		process.env.NANOPENCIL_EVAL_CREDENTIALS_FILE,
+		process.env.CATUI_EVAL_CREDENTIALS_FILE ?? process.env.NANOPENCIL_EVAL_CREDENTIALS_FILE,
 		join(process.cwd(), ".memory-experiments", "credentials.json"),
 		join(homedir(), ".memory-experiments", "credentials.json"),
 	].filter(Boolean) as string[];
@@ -102,9 +102,9 @@ async function loadCredentials(): Promise<LoadedCredentials> {
 				const raw = readFileSync(path, "utf-8");
 				const parsed = JSON.parse(raw);
 				return {
-					endpoint: process.env.NANOPENCIL_EVAL_ENDPOINT ?? parsed.endpoint ?? parsed.insforge_url,
-					apiKey: process.env.NANOPENCIL_EVAL_API_KEY ?? parsed.api_key ?? parsed.apiKey,
-					anonKey: process.env.NANOPENCIL_EVAL_ANON_KEY ?? parsed.anon_key,
+					endpoint: process.env.CATUI_EVAL_ENDPOINT ?? process.env.NANOPENCIL_EVAL_ENDPOINT ?? parsed.endpoint ?? parsed.insforge_url,
+					apiKey: process.env.CATUI_EVAL_API_KEY ?? process.env.NANOPENCIL_EVAL_API_KEY ?? parsed.api_key ?? parsed.apiKey,
+					anonKey: process.env.CATUI_EVAL_ANON_KEY ?? process.env.NANOPENCIL_EVAL_ANON_KEY ?? parsed.anon_key,
 				};
 			} catch {
 				continue;
@@ -112,9 +112,9 @@ async function loadCredentials(): Promise<LoadedCredentials> {
 		}
 	}
 	return {
-		endpoint: process.env.NANOPENCIL_EVAL_ENDPOINT,
-		apiKey: process.env.NANOPENCIL_EVAL_API_KEY,
-		anonKey: process.env.NANOPENCIL_EVAL_ANON_KEY,
+		endpoint: process.env.CATUI_EVAL_ENDPOINT ?? process.env.NANOPENCIL_EVAL_ENDPOINT,
+		apiKey: process.env.CATUI_EVAL_API_KEY ?? process.env.NANOPENCIL_EVAL_API_KEY,
+		anonKey: process.env.CATUI_EVAL_ANON_KEY ?? process.env.NANOPENCIL_EVAL_ANON_KEY,
 	};
 }
 

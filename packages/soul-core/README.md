@@ -1,4 +1,4 @@
-# @pencil-agent/soul
+# @catui/soul
 
 > **AI Personality Evolution Engine** - Persistent memory and adaptive behavior for AI coding agents.
 
@@ -8,7 +8,7 @@ Soul enables AI assistants to develop their own personality, learn from experien
 
 ### 🧠 **Persistent Personality**
 - **Big Five** traits (openness, conscientiousness, etc.)
-- **NanoPencil-specific** traits (code verbosity, abstraction level, safety margin)
+- **Catui-specific** traits (code verbosity, abstraction level, safety margin)
 - **Cognitive style** preferences (reasoning, planning, learning strategies)
 - **Value system** weights (efficiency, correctness, simplicity, etc.)
 
@@ -43,13 +43,13 @@ Soul enables AI assistants to develop their own personality, learn from experien
 ## Installation
 
 ```bash
-npm install @pencil-agent/soul
+npm install @catui/soul
 ```
 
 ## Quick Start
 
 ```typescript
-import { SoulManager } from '@pencil-agent/soul';
+import { SoulManager } from '@catui/soul';
 
 // Initialize Soul
 const soul = new SoulManager();
@@ -115,7 +115,7 @@ await soul.recordInteraction(
 - **Agreeableness** (0-1): Accept feedback vs defend approach
 - **Neuroticism** (0-1): Risk aversion vs risk tolerance
 
-### NanoPencil-Specific Traits
+### Catui-Specific Traits
 - **Code Verbosity** (0-1): Minimal vs verbose code
 - **Abstraction Level** (0-1): Concrete vs abstract thinking
 - **Safety Margin** (0-1): Cautious vs bold approaches
@@ -201,7 +201,7 @@ Keep communication friendly and casual.
 ## Configuration
 
 ```typescript
-import { SoulManager } from '@pencil-agent/soul';
+import { SoulManager } from '@catui/soul';
 
 const soul = new SoulManager({
   config: {
@@ -255,7 +255,7 @@ Get Soul statistics for display/visualization.
 ## Data Persistence
 
 ```
-~/.nanopencil/soul/
+~/.catui/soul/
 ├── profile.json      # Current personality state
 ├── memory.json       # Successes, failures, patterns, decisions
 └── evolutions.json   # Evolution history
@@ -266,8 +266,8 @@ Get Soul statistics for display/visualization.
 Soul is designed to work alongside NanoMem:
 
 ```typescript
-import { NanoMemEngine } from '@nanopencil/nanomem';
-import { SoulManager } from '@pencil-agent/soul';
+import { NanoMemEngine } from '@catui/nanomem';
+import { SoulManager } from '@catui/soul';
 
 // NanoMem: Project memory ("This project uses React")
 const memory = new NanoMemEngine();
@@ -319,7 +319,7 @@ console.log(stats);
 
 ## Environment Variables
 
-- `SOUL_DIR` - Override Soul directory (default: `~/.nanopencil/soul`)
+- `SOUL_DIR` - Override Soul directory (default: `~/.catui/soul`)
 
 ## License
 

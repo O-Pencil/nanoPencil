@@ -4,7 +4,7 @@
 
 set -e
 
-echo "=== NanoPencil SDK Verification ==="
+echo "=== Catui SDK Verification ==="
 
 # 1. Build
 echo ""
@@ -21,7 +21,7 @@ const path = require('path');
 // Read index.d.ts to verify exports
 const indexDts = fs.readFileSync('dist/index.d.ts', 'utf8');
 const requiredExports = [
-  'PencilAgent',
+  'CatuiAgent',
   'quickAgent',
   'createAgentSession',
   'AgentSession',
@@ -47,7 +47,7 @@ console.log('✅ All required exports present:', requiredExports.join(', '));
 # 3. Check dist files
 echo ""
 echo "3. Checking dist files..."
-for file in dist/index.js dist/index.d.ts dist/core/runtime/sdk.js dist/core/runtime/pencil-agent.js; do
+for file in dist/index.js dist/index.d.ts dist/core/runtime/sdk.js dist/core/runtime/catui-agent.js; do
   if [ -f "$file" ]; then
     echo "✅ $file exists"
   else
@@ -66,17 +66,17 @@ grep -q "SDKLogger" dist/core/runtime/sdk.d.ts && echo "✅ SDKLogger type expor
 # 5. Pack dry-run
 echo ""
 echo "5. Pack verification (dry-run)..."
-npm pack --dry-run 2>&1 | grep -q "pencil-agent-nano-pencil" && echo "✅ Pack succeeds"
+npm pack --dry-run 2>&1 | grep -q "catui-agent-catui-agent" && echo "✅ Pack succeeds"
 
 echo ""
 echo "=== SDK Verification Complete ==="
 echo ""
 echo "Summary:"
 echo "  ✅ Build successful"
-echo "  ✅ Exports verified (PencilAgent, createAgentSession, SDKLogger)"
+echo "  ✅ Exports verified (CatuiAgent, createAgentSession, SDKLogger)"
 echo "  ✅ Dist files present"
 echo "  ✅ Logger interface implemented"
 echo "  ✅ Pack creates tarball"
 echo ""
 echo "Note: Full install test requires all bundled dependencies."
-echo "Run 'npm pack && npm install ./pencil-agent-*.tgz' in a test project."
+echo "Run 'npm pack && npm install ./catui-agent-*.tgz' in a test project."

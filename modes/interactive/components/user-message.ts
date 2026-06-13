@@ -1,11 +1,11 @@
 /**
  * [WHO]: UserMessageComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/user-message.ts - user message display component
  */
 
-import { Container, Markdown, type MarkdownTheme, Spacer } from "@pencil-agent/tui";
+import { Container, Markdown, type MarkdownTheme, Spacer } from "@catui/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 
 /**

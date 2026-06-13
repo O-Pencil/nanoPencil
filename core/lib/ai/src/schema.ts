@@ -1,7 +1,7 @@
 /**
  * [WHO]: TypeBox schema re-exports, StringEnum, validateToolCall, validateToolArguments
  * [FROM]: Depends on @sinclair/typebox and AI validation/typebox helper modules
- * [TO]: Consumed by @pencil-agent/ai/schema subpath consumers
+ * [TO]: Consumed by @catui/ai/schema subpath consumers
  * [HERE]: core/lib/ai/src/schema.ts - additive schema subpath entry for AI package
  */
 

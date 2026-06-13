@@ -20,7 +20,7 @@ import {
 	Spacer,
 	truncateToWidth,
 	visibleWidth,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { CONFIG_DIR_NAME } from "../../../config.js";
 import type { PathMetadata, ResolvedPaths, ResolvedResource } from "../../../core/package-manager.js";
 import type { PackageSource, SettingsManager } from "../../../core/platform/config/settings-manager.js";
@@ -68,7 +68,7 @@ function getGroupLabel(metadata: PathMetadata, agentDir?: string): string {
 	}
 	// Top-level resources
 	if (metadata.source === "auto") {
-		return metadata.scope === "user" ? `User (${agentDir ?? "~/.pencils/agents/"})` : `Project (.${CONFIG_DIR_NAME}/)`;
+		return metadata.scope === "user" ? `User (${agentDir ?? "~/.catui/agents/"})` : `Project (.${CONFIG_DIR_NAME}/)`;
 	}
 	return metadata.scope === "user" ? "User settings" : "Project settings";
 }

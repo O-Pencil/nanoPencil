@@ -1,13 +1,13 @@
 /**
  * [WHO]: SubAgent types - SubAgentSpec, SubAgentEvent, SubAgentHandle, SubAgentBackend, SubAgentResult
- * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/ai, core/tools
+ * [FROM]: Depends on @catui/agent-core, @catui/ai, core/tools
  * [TO]: Consumed by ./sub-agent-runtime, ./sub-agent-backend, ./index.ts, extensions/builtin/subagent/*, extensions/builtin/team/*
  * [HERE]: core/sub-agent/sub-agent-types.ts - SubAgent type definitions
  * [COVENANT]: Change these types → update P1 architecture diagram
  */
 
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { ImageContent, Model } from "@pencil-agent/ai/types";
+import type { AgentMessage } from "@catui/agent-core";
+import type { ImageContent, Model } from "@catui/ai/types";
 import type { AgentUsage } from "./agent-input-output.js";
 import type { Tool } from "../tools/index.js";
 

@@ -1,8 +1,8 @@
 /**
- * [WHO]: Provider constants, ensureNanopencilDefaultConfig(), ensureNanopencilCodingPlanAuth()
+ * [WHO]: Provider constants, ensureCatuiDefaultConfig(), ensureCatuiCodingPlanAuth()
  * [FROM]: Depends on node:fs, node:path, ai, config
  * [TO]: Consumed by main.ts
- * [HERE]: nanopencil-defaults.ts - default configuration for Chinese AI providers
+ * [HERE]: catui-defaults.ts - default configuration for Chinese AI providers
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -13,72 +13,72 @@ import { ensureCustomProtocolProvidersInModels } from "./core/model/custom-provi
 import type { AuthStorage } from "./core/platform/config/auth-storage.js";
 import type { ModelRegistry } from "./core/model-registry.js";
 
-export const NANOPENCIL_DEFAULT_PROVIDER = "dashscope-coding";
+export const CATUI_DEFAULT_PROVIDER = "dashscope-coding";
 const CODING_PLAN_BASE_URL = "https://coding.dashscope.aliyuncs.com/v1";
 
 /** Baidu Qianfan Coding Plan provider, OpenAI compatible interface: https://qianfan.baidubce.com/v2/coding/chat/completions */
-export const NANOPENCIL_QIANFAN_CODING_PROVIDER = "qianfan-coding";
+export const CATUI_QIANFAN_CODING_PROVIDER = "qianfan-coding";
 const QIANFAN_CODING_BASE_URL = "https://qianfan.baidubce.com/v2/coding";
 
 /** Volcano Ark Coding Plan provider, OpenAI compatible interface: https://ark.cn-beijing.volces.com/api/coding/v3 */
-export const NANOPENCIL_ARK_CODING_PROVIDER = "ark-coding";
+export const CATUI_ARK_CODING_PROVIDER = "ark-coding";
 const ARK_CODING_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3";
 
 /** MiniMax Coding Plan provider, OpenAI compatible interface: https://api.minimaxi.com/v1 */
-export const NANOPENCIL_MINIMAX_CODING_PROVIDER = "minimax-coding";
+export const CATUI_MINIMAX_CODING_PROVIDER = "minimax-coding";
 const MINIMAX_CODING_BASE_URL = "https://api.minimaxi.com/v1";
 
 /** Zhipu Coding Plan provider, OpenAI compatible interface: https://open.bigmodel.cn/api/paas/v4 */
-export const NANOPENCIL_ZHIPU_CODING_PROVIDER = "zhipu-coding";
+export const CATUI_ZHIPU_CODING_PROVIDER = "zhipu-coding";
 const ZHIPU_CODING_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
 
 /** Alibaba Cloud Token Plan Team Edition, OpenAI compatible protocol. */
-export const NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER = "ali-token-plan-openai";
+export const CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER = "ali-token-plan-openai";
 const ALI_TOKEN_PLAN_OPENAI_BASE_URL = "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
 
 /** Alibaba Cloud Token Plan Team Edition, Anthropic compatible protocol. */
-export const NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER = "ali-token-plan-anthropic";
+export const CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER = "ali-token-plan-anthropic";
 const ALI_TOKEN_PLAN_ANTHROPIC_BASE_URL = "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic";
 
 /** Custom Anthropic-compatible provider; users may set baseUrl and apiKey for third-party Anthropic-compatible services. */
-export const NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER = "anthropic-custom";
+export const CATUI_ANTHROPIC_CUSTOM_PROVIDER = "anthropic-custom";
 const ANTHROPIC_CUSTOM_DEFAULT_BASE_URL = "https://api.anthropic.com";
 
-/** Ollama local model provider, consistent with nanoPencil docs: baseUrl with /v1, apiKey can be any value. */
-export const NANOPENCIL_OLLAMA_PROVIDER = "ollama";
+/** Ollama local model provider, consistent with Catui docs: baseUrl with /v1, apiKey can be any value. */
+export const CATUI_OLLAMA_PROVIDER = "ollama";
 const OLLAMA_BASE_URL = "http://localhost:11434/v1";
 
 /**
  * What's new message displayed in TUI header at startup (about 50 words). Update on release.
  */
-export const NANOPENCIL_WHATS_NEW =
-	"Lightweight CLI writing agent: read, write, edit, bash. DashScope, Ali Token Plan, Qianfan, Ark Coding Plan, local Ollama. Optional nanomem. Type / for commands, ! for bash. Config in ~/.pencils/agents/.";
+export const CATUI_WHATS_NEW =
+	"Lightweight CLI writing agent: read, write, edit, bash. DashScope, Ali Token Plan, Qianfan, Ark Coding Plan, local Ollama. Optional nanomem. Type / for commands, ! for bash. Config in ~/.catui/agents/.";
 
 type DefaultModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_DEFAULT_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_DEFAULT_PROVIDER]["models"][number];
 
 type QianfanModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_QIANFAN_CODING_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_QIANFAN_CODING_PROVIDER]["models"][number];
 
 type ArkModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ARK_CODING_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_ARK_CODING_PROVIDER]["models"][number];
 
 type MinimaxModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_MINIMAX_CODING_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_MINIMAX_CODING_PROVIDER]["models"][number];
 
 type ZhipuModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ZHIPU_CODING_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_ZHIPU_CODING_PROVIDER]["models"][number];
 
 type AliTokenPlanOpenAIModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER]["models"][number];
 
 type AliTokenPlanAnthropicModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER]["models"][number];
 
 /** Default models.json content: dashscope-coding (Bailian), qianfan-coding (Qianfan), ark-coding (Ark), minimax-coding (MiniMax), zhipu-coding (Zhipu) + ollama (local). Each Coding Plan has no apiKey, user input stored in auth.json; ollama uses placeholder "ollama". */
-export const NANOPENCIL_DEFAULT_MODELS_JSON = {
+export const CATUI_DEFAULT_MODELS_JSON = {
 	providers: {
-		[NANOPENCIL_DEFAULT_PROVIDER]: {
+		[CATUI_DEFAULT_PROVIDER]: {
 			baseUrl: CODING_PLAN_BASE_URL,
 			api: "openai-completions",
 			models: [
@@ -147,7 +147,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER]: {
+		[CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER]: {
 			baseUrl: ALI_TOKEN_PLAN_OPENAI_BASE_URL,
 			api: "openai-completions",
 			models: [
@@ -361,7 +361,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER]: {
+		[CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER]: {
 			baseUrl: ALI_TOKEN_PLAN_ANTHROPIC_BASE_URL,
 			api: "anthropic-messages",
 			models: [
@@ -439,7 +439,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_MINIMAX_CODING_PROVIDER]: {
+		[CATUI_MINIMAX_CODING_PROVIDER]: {
 			baseUrl: MINIMAX_CODING_BASE_URL,
 			api: "openai-completions",
 			models: [
@@ -473,7 +473,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_ZHIPU_CODING_PROVIDER]: {
+		[CATUI_ZHIPU_CODING_PROVIDER]: {
 			baseUrl: ZHIPU_CODING_BASE_URL,
 			api: "openai-completions",
 			models: [
@@ -493,7 +493,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_QIANFAN_CODING_PROVIDER]: {
+		[CATUI_QIANFAN_CODING_PROVIDER]: {
 			baseUrl: QIANFAN_CODING_BASE_URL,
 			api: "openai-completions",
 			models: [
@@ -541,7 +541,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_ARK_CODING_PROVIDER]: {
+		[CATUI_ARK_CODING_PROVIDER]: {
 			baseUrl: ARK_CODING_BASE_URL,
 			api: "openai-completions",
 			models: [
@@ -603,7 +603,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER]: {
+		[CATUI_ANTHROPIC_CUSTOM_PROVIDER]: {
 			baseUrl: ANTHROPIC_CUSTOM_DEFAULT_BASE_URL,
 			api: "anthropic-messages",
 			models: [
@@ -637,7 +637,7 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 				},
 			],
 		},
-		[NANOPENCIL_OLLAMA_PROVIDER]: {
+		[CATUI_OLLAMA_PROVIDER]: {
 			baseUrl: OLLAMA_BASE_URL,
 			api: "openai-completions",
 			apiKey: "ollama",
@@ -656,49 +656,49 @@ export const NANOPENCIL_DEFAULT_MODELS_JSON = {
 } as const;
 
 const DEFAULT_MODELS: DefaultModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_DEFAULT_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_DEFAULT_PROVIDER].models,
 ];
 
 const DEFAULT_QIANFAN_MODELS: QianfanModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_QIANFAN_CODING_PROVIDER].models,
 ];
 
 const DEFAULT_ARK_MODELS: ArkModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ARK_CODING_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ARK_CODING_PROVIDER].models,
 ];
 
 const DEFAULT_MINIMAX_MODELS: MinimaxModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_MINIMAX_CODING_PROVIDER].models,
 ];
 
 const DEFAULT_ZHIPU_MODELS: ZhipuModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ZHIPU_CODING_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ZHIPU_CODING_PROVIDER].models,
 ];
 
 const DEFAULT_ALI_TOKEN_PLAN_OPENAI_MODELS: AliTokenPlanOpenAIModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER].models,
 ];
 
 const DEFAULT_ALI_TOKEN_PLAN_ANTHROPIC_MODELS: AliTokenPlanAnthropicModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER].models,
 ];
 
 type AnthropicCustomModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_ANTHROPIC_CUSTOM_PROVIDER]["models"][number];
 const DEFAULT_ANTHROPIC_CUSTOM_MODELS: AnthropicCustomModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ANTHROPIC_CUSTOM_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ANTHROPIC_CUSTOM_PROVIDER].models,
 ];
 
 type OllamaModelDef =
-	(typeof NANOPENCIL_DEFAULT_MODELS_JSON.providers)[typeof NANOPENCIL_OLLAMA_PROVIDER]["models"][number];
+	(typeof CATUI_DEFAULT_MODELS_JSON.providers)[typeof CATUI_OLLAMA_PROVIDER]["models"][number];
 const DEFAULT_OLLAMA_MODELS: OllamaModelDef[] = [
-	...NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_OLLAMA_PROVIDER].models,
+	...CATUI_DEFAULT_MODELS_JSON.providers[CATUI_OLLAMA_PROVIDER].models,
 ];
 
 /**
  * If models.json exists, merge default models: add missing models, and update contextWindow/maxTokens/input to official values.
  */
-function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
+function mergeCatuiModelsIfNeeded(modelsPath: string): void {
 	let raw: string;
 	try {
 		raw = readFileSync(modelsPath, "utf-8");
@@ -783,11 +783,11 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		}
 	};
 
-	const provider = data.providers[NANOPENCIL_DEFAULT_PROVIDER];
-	const providerConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_DEFAULT_PROVIDER];
+	const provider = data.providers[CATUI_DEFAULT_PROVIDER];
+	const providerConfig = CATUI_DEFAULT_MODELS_JSON.providers[CATUI_DEFAULT_PROVIDER];
 
 	if (!provider) {
-		data.providers[NANOPENCIL_DEFAULT_PROVIDER] = {
+		data.providers[CATUI_DEFAULT_PROVIDER] = {
 			baseUrl: providerConfig.baseUrl,
 			api: providerConfig.api,
 			models: DEFAULT_MODELS.map((m) => ({ ...m })),
@@ -832,26 +832,26 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 	}
 
 	if (changed) {
-		(data.providers[NANOPENCIL_DEFAULT_PROVIDER] as { models: unknown[] }).models = models;
+		(data.providers[CATUI_DEFAULT_PROVIDER] as { models: unknown[] }).models = models;
 		writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 	}
 
 	mergeProviderModels(
-		NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
-		NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER],
+		CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
+		CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER],
 		DEFAULT_ALI_TOKEN_PLAN_OPENAI_MODELS,
 	);
 	mergeProviderModels(
-		NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
-		NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER],
+		CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
+		CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER],
 		DEFAULT_ALI_TOKEN_PLAN_ANTHROPIC_MODELS,
 	);
 
 	// Merge qianfan-coding: add default config if not present, supplement default models if exists
-	const qianfanProvider = data.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER];
-	const qianfanConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER];
+	const qianfanProvider = data.providers[CATUI_QIANFAN_CODING_PROVIDER];
+	const qianfanConfig = CATUI_DEFAULT_MODELS_JSON.providers[CATUI_QIANFAN_CODING_PROVIDER];
 	if (!qianfanProvider) {
-		data.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER] = {
+		data.providers[CATUI_QIANFAN_CODING_PROVIDER] = {
 			baseUrl: qianfanConfig.baseUrl,
 			api: qianfanConfig.api,
 			models: DEFAULT_QIANFAN_MODELS.map((m) => ({ ...m })),
@@ -895,16 +895,16 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 			}
 		}
 		if (qianfanChanged) {
-			(data.providers[NANOPENCIL_QIANFAN_CODING_PROVIDER] as { models: unknown[] }).models = qianfanModels;
+			(data.providers[CATUI_QIANFAN_CODING_PROVIDER] as { models: unknown[] }).models = qianfanModels;
 			writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 		}
 	}
 
 	// Merge ark-coding: add default config if not present, supplement default models if exists
-	const arkProvider = data.providers[NANOPENCIL_ARK_CODING_PROVIDER];
-	const arkConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_ARK_CODING_PROVIDER];
+	const arkProvider = data.providers[CATUI_ARK_CODING_PROVIDER];
+	const arkConfig = CATUI_DEFAULT_MODELS_JSON.providers[CATUI_ARK_CODING_PROVIDER];
 	if (!arkProvider) {
-		data.providers[NANOPENCIL_ARK_CODING_PROVIDER] = {
+		data.providers[CATUI_ARK_CODING_PROVIDER] = {
 			baseUrl: arkConfig.baseUrl,
 			api: arkConfig.api,
 			models: DEFAULT_ARK_MODELS.map((m) => ({ ...m })),
@@ -948,16 +948,16 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 			}
 		}
 		if (arkChanged) {
-			(data.providers[NANOPENCIL_ARK_CODING_PROVIDER] as { models: unknown[] }).models = arkModels;
+			(data.providers[CATUI_ARK_CODING_PROVIDER] as { models: unknown[] }).models = arkModels;
 			writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 		}
 	}
 
 	// Merge minimax-coding: add default config if not present, supplement default models if exists
-	const minimaxProvider = data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER];
-	const minimaxConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER];
+	const minimaxProvider = data.providers[CATUI_MINIMAX_CODING_PROVIDER];
+	const minimaxConfig = CATUI_DEFAULT_MODELS_JSON.providers[CATUI_MINIMAX_CODING_PROVIDER];
 	if (!minimaxProvider) {
-		data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER] = {
+		data.providers[CATUI_MINIMAX_CODING_PROVIDER] = {
 			baseUrl: minimaxConfig.baseUrl,
 			api: minimaxConfig.api,
 			models: DEFAULT_MINIMAX_MODELS.map((m) => ({ ...m })),
@@ -1001,16 +1001,16 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 			}
 		}
 		if (minimaxChanged) {
-			(data.providers[NANOPENCIL_MINIMAX_CODING_PROVIDER] as { models: unknown[] }).models = minimaxModels;
+			(data.providers[CATUI_MINIMAX_CODING_PROVIDER] as { models: unknown[] }).models = minimaxModels;
 			writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 		}
 	}
 
 	// Merge ollama: add default config if not present, supplement default models if exists
-	const ollamaProvider = data.providers[NANOPENCIL_OLLAMA_PROVIDER];
-	const ollamaConfig = NANOPENCIL_DEFAULT_MODELS_JSON.providers[NANOPENCIL_OLLAMA_PROVIDER];
+	const ollamaProvider = data.providers[CATUI_OLLAMA_PROVIDER];
+	const ollamaConfig = CATUI_DEFAULT_MODELS_JSON.providers[CATUI_OLLAMA_PROVIDER];
 	if (!ollamaProvider) {
-		data.providers[NANOPENCIL_OLLAMA_PROVIDER] = {
+		data.providers[CATUI_OLLAMA_PROVIDER] = {
 			baseUrl: ollamaConfig.baseUrl,
 			api: ollamaConfig.api,
 			apiKey: ollamaConfig.apiKey,
@@ -1053,25 +1053,25 @@ function mergeNanopencilModelsIfNeeded(modelsPath: string): void {
 		}
 	}
 	if (ollamaChanged) {
-		(data.providers[NANOPENCIL_OLLAMA_PROVIDER] as { models: unknown[] }).models = ollamaModels;
+		(data.providers[CATUI_OLLAMA_PROVIDER] as { models: unknown[] }).models = ollamaModels;
 		writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 	}
 }
 
 /**
- * Ensure nano-pencil default config exists: create agent directory, write defaults if models.json not present (Coding Plan only);
+ * Ensure catui-agent default config exists: create agent directory, write defaults if models.json not present (Coding Plan only);
  * If exists, merge default models (add qwen3.5-plus etc and update contextWindow/maxTokens).
- * Write default global context if .PENCIL.md not present, users can bring nano-pencil description on install.
- * Only called when running as nanopencil.
+ * Write default global context if .CATUI.md not present, users can bring catui-agent description on install.
+ * Only called when running as catui.
  */
-export const DEFAULT_PENCIL_MD = `# nano-pencil Global Context · Versatile Human-like Assistant
+export const DEFAULT_CATUI_MD = `# catui-agent Global Context · Versatile Human-like Assistant
 
 You are a **versatile human-like AI assistant**, collaborating with users in the same workflow: programming, writing, reasoning, planning, explaining, refactoring, debugging - all within your capability, communicating naturally, concisely, and directly.
 
 ## Positioning
 - **Versatile**: Not limited to "only coding" or "only chatting"; automatically switch based on current task: modify code, write docs, run commands, explain concepts, break down steps, give suggestions, etc.
 - **Human-like**: Natural tone, high information density, minimal fluff; briefly confirm when needed, don't pile on pleasantries; friendly but restrained (e.g., "Thanks @user" not "Thanks so much!!"). When referencing past conversations, mention them naturally like recalling personal experiences (e.g., "I remember we...", "Last time you mentioned..."), without showing off technical mechanisms.
-- **Assistant**: Goal is to **help users get things done**, not show off capabilities. Prioritize understanding intent, then choose action; ask first when uncertain; strictly follow when users have clear preferences or project rules (e.g., AGENT.md, AGENTS.md, project \`.PENCIL.md\`).
+- **Assistant**: Goal is to **help users get things done**, not show off capabilities. Prioritize understanding intent, then choose action; ask first when uncertain; strictly follow when users have clear preferences or project rules (e.g., AGENT.md, AGENTS.md, project \`.CATUI.md\`).
 
 ## Collaboration Principles
 1. **Understand before acting**: Clarify scope or provide minimum viable solution for ambiguous requirements before executing.
@@ -1083,39 +1083,39 @@ You are a **versatile human-like AI assistant**, collaborating with users in the
 
 ## Relationship with This File
 - This file is **global** context, effective for all projects; you can add your general rules or preferences here.
-- \`.PENCIL.md\` in project root is only effective for current project.
+- \`.CATUI.md\` in project root is only effective for current project.
 - \`AGENT.md\` (and legacy \`CLAUDE.md\`) and \`AGENTS.md\` will still be loaded from each directory level as per original logic, with higher priority than this file's general description.
 `;
-export function ensureNanopencilDefaultConfig(agentDir: string = getAgentDir()): void {
+export function ensureCatuiDefaultConfig(agentDir: string = getAgentDir()): void {
 	if (!existsSync(agentDir)) {
 		mkdirSync(agentDir, { recursive: true, mode: 0o700 });
 	}
-	const pencilPath = join(agentDir, ".PENCIL.md");
-	if (!existsSync(pencilPath)) {
-		writeFileSync(pencilPath, DEFAULT_PENCIL_MD, "utf-8");
+	const catuiPath = join(agentDir, ".CATUI.md");
+	if (!existsSync(catuiPath)) {
+		writeFileSync(catuiPath, DEFAULT_CATUI_MD, "utf-8");
 	}
 	const modelsPath = join(agentDir, "models.json");
 	if (!existsSync(modelsPath)) {
-		writeFileSync(modelsPath, JSON.stringify(NANOPENCIL_DEFAULT_MODELS_JSON, null, 2), "utf-8");
+		writeFileSync(modelsPath, JSON.stringify(CATUI_DEFAULT_MODELS_JSON, null, 2), "utf-8");
 		ensureCustomProtocolProvidersInModels(modelsPath);
 		return;
 	}
-	mergeNanopencilModelsIfNeeded(modelsPath);
+	mergeCatuiModelsIfNeeded(modelsPath);
 }
 
 /**
- * Ensure nanoPencil has at least one usable model before startup continues.
+ * Ensure Catui has at least one usable model before startup continues.
  *
  * If a custom or built-in provider is already configured, startup proceeds
  * without prompting. Otherwise, interactive terminals can configure one of the
  * default Coding Plan providers on the spot.
  */
-export async function ensureNanopencilCodingPlanAuth(
+export async function ensureCatuiCodingPlanAuth(
 	authStorage: AuthStorage,
 	modelRegistry: ModelRegistry,
 ): Promise<void> {
 	// Skip if any non-local provider already has auth (ollama is local-only, doesn't count)
-	const LOCAL_ONLY_PROVIDERS = new Set([NANOPENCIL_OLLAMA_PROVIDER]);
+	const LOCAL_ONLY_PROVIDERS = new Set([CATUI_OLLAMA_PROVIDER]);
 	const availableRemote = modelRegistry.getAvailable().filter((m) => !LOCAL_ONLY_PROVIDERS.has(m.provider));
 	if (availableRemote.length > 0) return;
 
@@ -1129,12 +1129,12 @@ export async function ensureNanopencilCodingPlanAuth(
 		});
 		const provider =
 			choice === "2"
-				? NANOPENCIL_QIANFAN_CODING_PROVIDER
+				? CATUI_QIANFAN_CODING_PROVIDER
 				: choice === "3"
-					? NANOPENCIL_ARK_CODING_PROVIDER
+					? CATUI_ARK_CODING_PROVIDER
 					: choice === "4"
-						? NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER
-						: NANOPENCIL_DEFAULT_PROVIDER;
+						? CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER
+						: CATUI_DEFAULT_PROVIDER;
 		const hint =
 			choice === "2"
 				? "Qianfan API key (from https://console.bce.baidu.com/qianfan/resource/subscribe)"
@@ -1154,15 +1154,15 @@ export async function ensureNanopencilCodingPlanAuth(
 			process.exit(1);
 		}
 		authStorage.set(provider, { type: "api_key", key: answer });
-		if (provider === NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER) {
-			authStorage.set(NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER, { type: "api_key", key: answer });
+		if (provider === CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER) {
+			authStorage.set(CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER, { type: "api_key", key: answer });
 		}
 		modelRegistry.refresh();
 		return;
 	}
 
 	console.error(
-		"No configured models are available yet. Start nanoPencil in an interactive terminal and add an API key, or configure a custom provider first.",
+		"No configured models are available yet. Start Catui in an interactive terminal and add an API key, or configure a custom provider first.",
 	);
 	process.exit(1);
 }

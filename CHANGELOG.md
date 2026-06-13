@@ -77,8 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(protocol): add extension flag contract
 - refactor(protocol): add hook event vocabulary
 - refactor(protocol): add command contract slice
-- refactor(protocol): consolidate ExtensionFlag into @pencil-agent/protocol (Phase B sample)
-- refactor(protocol): rename @pencil-agent/extension-sdk → @pencil-agent/protocol (Phase B B0)
+- refactor(protocol): consolidate ExtensionFlag into @catui/protocol (Phase B sample)
+- refactor(protocol): rename @catui/extension-sdk → @catui/protocol (Phase B B0)
 - refactor(docs): split shipped user manuals from internal dev docs; scaffold feature-skill manuals
 - refactor(tools): improve edit/read/write tools + add file state cache
 - refactor(sub-agent): port CC agent architecture — definitions, registry, filtering, safety
@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - docs(protocol): update README with usage examples and API docs
 - docs(p8): record protocol candidate deferrals
-- docs(conventions): type/protocol placement rule + rename extension-sdk → @pencil-agent/protocol
+- docs(conventions): type/protocol placement rule + rename extension-sdk → @catui/protocol
 - docs(p8): add executable P8 scope — per-symbol export matrix + migration
 - docs(p7): close the size line — record BR02 measured/kept-bundled
 - docs: add design docs for goal, loop refactor, and plan mode
@@ -210,8 +210,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(protocol): add extension flag contract
 - refactor(protocol): add hook event vocabulary
 - refactor(protocol): add command contract slice
-- refactor(protocol): consolidate ExtensionFlag into @pencil-agent/protocol (Phase B sample)
-- refactor(protocol): rename @pencil-agent/extension-sdk → @pencil-agent/protocol (Phase B B0)
+- refactor(protocol): consolidate ExtensionFlag into @catui/protocol (Phase B sample)
+- refactor(protocol): rename @catui/extension-sdk → @catui/protocol (Phase B B0)
 - refactor(docs): split shipped user manuals from internal dev docs; scaffold feature-skill manuals
 - refactor(tools): improve edit/read/write tools + add file state cache
 - refactor(sub-agent): port CC agent architecture — definitions, registry, filtering, safety
@@ -224,7 +224,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - docs(protocol): update README with usage examples and API docs
 - docs(p8): record protocol candidate deferrals
-- docs(conventions): type/protocol placement rule + rename extension-sdk → @pencil-agent/protocol
+- docs(conventions): type/protocol placement rule + rename extension-sdk → @catui/protocol
 - docs(p8): add executable P8 scope — per-symbol export matrix + migration
 - docs(p7): close the size line — record BR02 measured/kept-bundled
 - docs: add design docs for goal, loop refactor, and plan mode
@@ -319,8 +319,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - refactor(protocol): add command contract slice
-- refactor(protocol): consolidate ExtensionFlag into @pencil-agent/protocol (Phase B sample)
-- refactor(protocol): rename @pencil-agent/extension-sdk → @pencil-agent/protocol (Phase B B0)
+- refactor(protocol): consolidate ExtensionFlag into @catui/protocol (Phase B sample)
+- refactor(protocol): rename @catui/extension-sdk → @catui/protocol (Phase B B0)
 - refactor(docs): split shipped user manuals from internal dev docs; scaffold feature-skill manuals
 - refactor(tools): improve edit/read/write tools + add file state cache
 - refactor(sub-agent): port CC agent architecture — definitions, registry, filtering, safety
@@ -331,7 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - perf(startup): load MCP off the critical path + parallel/incremental build:deps
 
 ### Documentation
-- docs(conventions): type/protocol placement rule + rename extension-sdk → @pencil-agent/protocol
+- docs(conventions): type/protocol placement rule + rename extension-sdk → @catui/protocol
 - docs(p8): add executable P8 scope — per-symbol export matrix + migration
 - docs(p7): close the size line — record BR02 measured/kept-bundled
 - docs: add design docs for goal, loop refactor, and plan mode
@@ -425,8 +425,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - refactor(protocol): add command contract slice
-- refactor(protocol): consolidate ExtensionFlag into @pencil-agent/protocol (Phase B sample)
-- refactor(protocol): rename @pencil-agent/extension-sdk → @pencil-agent/protocol (Phase B B0)
+- refactor(protocol): consolidate ExtensionFlag into @catui/protocol (Phase B sample)
+- refactor(protocol): rename @catui/extension-sdk → @catui/protocol (Phase B B0)
 - refactor(docs): split shipped user manuals from internal dev docs; scaffold feature-skill manuals
 - refactor(tools): improve edit/read/write tools + add file state cache
 - refactor(sub-agent): port CC agent architecture — definitions, registry, filtering, safety
@@ -437,7 +437,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - perf(startup): load MCP off the critical path + parallel/incremental build:deps
 
 ### Documentation
-- docs(conventions): type/protocol placement rule + rename extension-sdk → @pencil-agent/protocol
+- docs(conventions): type/protocol placement rule + rename extension-sdk → @catui/protocol
 - docs(p8): add executable P8 scope — per-symbol export matrix + migration
 - docs(p7): close the size line — record BR02 measured/kept-bundled
 - docs: add design docs for goal, loop refactor, and plan mode
@@ -662,14 +662,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - fix(packaging): `mem-core` publish builds could fail before publish when the local workspace link
-  for `@pencil-agent/extension-sdk` was absent. `mem-core` now carries a type-only build shim for the
+  for `@catui/extension-sdk` was absent. `mem-core` now carries a type-only build shim for the
   SDK contract while still declaring `extension-sdk` as its peer dependency; publish `mem-core@1.1.2`
   before this host beta.
 
 ## [2.0.0-beta.5] - 2026-06-05
 
 ### Fixed
-- fix(packaging): beta.4 still loaded the published `@pencil-agent/mem-core@1.1.0`, whose npm
+- fix(packaging): beta.4 still loaded the published `@catui/mem-core@1.1.0`, whose npm
   tarball is missing at least `dist/config.js` even though the repository build output contains it.
   `mem-core` must be republished as `1.1.1`, then the host beta depends on `^1.1.1` so extension
   loading resolves to the corrected public package.
@@ -679,34 +679,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - fix(packaging): beta.3 bundled the private internal runtime libraries, but extension loading still
   failed because the loader resolves aliases through `require.resolve()`. The bundled
-  `@pencil-agent/ai` package exports now include `default` conditions that point at the ESM entry
+  `@catui/ai` package exports now include `default` conditions that point at the ESM entry
   files, allowing both ESM imports and loader resolution to find the same internal package.
 
 ## [2.0.0-beta.3] - 2026-06-05
 
 ### Fixed
 - fix(packaging): beta.2 installed but failed at runtime because compiled host files still import
-  private internal libraries by package name (`@pencil-agent/ai`, `@pencil-agent/agent-core`,
-  `@pencil-agent/tui`). These are not public runtime dependencies in candidate D; they are now copied
-  into `dist/node_modules/@pencil-agent/*` during the host build so Node can resolve them from the
+  private internal libraries by package name (`@catui/ai`, `@catui/agent-core`,
+  `@catui/tui`). These are not public runtime dependencies in candidate D; they are now copied
+  into `dist/node_modules/@catui/*` during the host build so Node can resolve them from the
   published tarball. Public first-party packages (`extension-sdk`, `mem-core`, `soul-core`) continue
   to resolve from npm.
 
 ## [2.0.0-beta.2] - 2026-06-05
 
 ### Fixed
-- fix(packaging): `npm install` of beta.1 still 404'd on `@pencil-agent/soul-core` (and would warn on
-  `@pencil-agent/extension-sdk` via mem-core's peer). These are first-party packages that simply had
+- fix(packaging): `npm install` of beta.1 still 404'd on `@catui/soul-core` (and would warn on
+  `@catui/extension-sdk` via mem-core's peer). These are first-party packages that simply had
   not been published to npm yet. The complete fix publishes them as the standalone packages they are
-  (matching `@pencil-agent/mem-core`, already on npm) and restores all three as normal `dependencies`
+  (matching `@catui/mem-core`, already on npm) and restores all three as normal `dependencies`
   of the host — no reference rewrite. Install `beta.2`; `beta.0`/`beta.1` are unusable.
-  - Required publish: `@pencil-agent/soul-core@0.1.0`, `@pencil-agent/extension-sdk@0.1.0`.
+  - Required publish: `@catui/soul-core@0.1.0`, `@catui/extension-sdk@0.1.0`.
 
 ## [2.0.0-beta.1] - 2026-06-05
 
 ### Fixed
 - fix(packaging): `npm install` of the beta failed with a 404 for
-  `@pencil-agent/extension-sdk`. That package is an internal workspace package used only for
+  `@catui/extension-sdk`. That package is an internal workspace package used only for
   **types** in the host (`import type` only — erased at runtime) and is not published to npm. It was
   incorrectly listed in `dependencies`, so installs tried to fetch it from the registry. Moved to
   `devDependencies` (the host has no runtime dependency on it). `beta.0` is unusable; install `beta.1`.
@@ -739,7 +739,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   synchronous EventStream return and token accounting/model availability are unchanged.
 
 ### Added
-- feat(ai): explicit `@pencil-agent/ai/*` subpath exports (`/types`, `/schema`, `/events`,
+- feat(ai): explicit `@catui/ai/*` subpath exports (`/types`, `/schema`, `/events`,
   `/models`, `/registry`, `/stream`, `/oauth`) alongside the unchanged root export, for lighter
   type-only and capability-scoped imports.
 

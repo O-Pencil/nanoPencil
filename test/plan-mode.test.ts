@@ -22,7 +22,7 @@ import {
 } from "../extensions/builtin/plan/plan-workflow-prompt.js";
 
 function createTempProject() {
-	const cwd = mkdtempSync(join(tmpdir(), "nanopencil-plan-"));
+	const cwd = mkdtempSync(join(tmpdir(), "catui-plan-"));
 	resetPlansDirectoryCache();
 	getPlansDirectory(".plans", cwd);
 	return cwd;

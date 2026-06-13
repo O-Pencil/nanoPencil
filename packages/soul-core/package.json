@@ -1,5 +1,5 @@
 {
-  "name": "@pencil-agent/soul-core",
+  "name": "@catui/soul-core",
   "version": "0.1.0",
   "description": "AI personality evolution engine - persistent memory and adaptive behavior for AI coding agents",
   "type": "module",
@@ -31,7 +31,7 @@
     "memory",
     "adaptive",
     "agent",
-    "nanopencil"
+    "catui"
   ],
   "license": "GPL-3.0",
   "publishConfig": {
@@ -48,6 +48,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/O-Pencil/nanoPencil.git"
+    "url": "git+https://github.com/O-Catui/Catui.git"
   }
 }

@@ -11,8 +11,8 @@
 import type {
   AgentLoopFrameworkInput,
   ThinkingLevel,
-} from "@pencil-agent/agent-core";
-import type { Component } from "@pencil-agent/tui";
+} from "@catui/agent-core";
+import type { Component } from "@catui/tui";
 import type { AgentSession } from "../../../core/runtime/agent-session.js";
 import type { SettingsManager } from "../../../core/platform/config/settings-manager.js";
 import { getAvailableThemes, setTheme } from "../theme/theme.js";

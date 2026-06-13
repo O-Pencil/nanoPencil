@@ -22,10 +22,10 @@ Dependencies stay queryable in the graph while this page gives the human overvie
 | Package | Importing Files |
 | --- | ---: |
 | `node:path` | 72 |
-| `@pencil-agent/tui` | 60 |
-| `@pencil-agent/ai` | 50 |
+| `@catui/tui` | 60 |
+| `@catui/ai` | 50 |
 | `node:fs` | 50 |
-| `@pencil-agent/agent-core` | 43 |
+| `@catui/agent-core` | 43 |
 | `fs` | 30 |
 | `path` | 28 |
 | `node:os` | 26 |
@@ -66,9 +66,9 @@ Dependencies stay queryable in the graph while this page gives the human overvie
 | `@anthropic-ai/sdk/resources/messages.js` | 1 |
 | `@aws-sdk/client-bedrock-runtime` | 1 |
 | `@mariozechner/jiti` | 1 |
-| `@pencil-agent/nano-pencil` | 1 |
-| `@pencil-agent/soul` | 1 |
-| `@pencil-agent/soul-core` | 1 |
+| `@catui/agent` | 1 |
+| `@catui/soul` | 1 |
+| `@catui/soul-core` | 1 |
 | `@silvia-odwyer/photon-node` | 1 |
 | `@sinclair/typebox/compiler` | 1 |
 | `ajv-formats` | 1 |

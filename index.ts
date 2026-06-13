@@ -1,16 +1,16 @@
 /**
- * [WHO]: Stable root SDK exports for @pencil-agent/nano-pencil
- * [FROM]: Depends on config, core/runtime/sdk, core/runtime/pencil-agent
+ * [WHO]: Stable root SDK exports for @catui/agent
+ * [FROM]: Depends on config, core/runtime/sdk, core/runtime/catui-agent
  * [TO]: Consumed by external SDK embedders via the package root
  * [HERE]: index.ts - intentionally narrow root package entry; advanced APIs live in subpaths
  */
 
 export { getAgentDir, VERSION } from "./config.js";
 export {
-  PencilAgent,
+  CatuiAgent,
   quickAgent,
-  type PencilAgentOptions,
-} from "./core/runtime/pencil-agent.js";
+  type CatuiAgentOptions,
+} from "./core/runtime/catui-agent.js";
 export {
   type CreateAgentSessionOptions,
   type CreateAgentSessionResult,

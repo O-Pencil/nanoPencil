@@ -16,7 +16,7 @@ import type { PersistedTeammate } from "./team-types.js";
 /**
  * Resolve the agent dir using the canonical getAgentDir() from config.ts.
  * Previously used NANOPENCIL_AGENT_DIR env directly (wrong name — should be
- * NANOPENCIL_CODING_AGENT_DIR). Now reuses the single source of truth.
+ * CATUI_CODING_AGENT_DIR). Now reuses the single source of truth.
  */
 
 export class TeamStateStore {

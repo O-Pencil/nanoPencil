@@ -1,6 +1,6 @@
 /**
  * [WHO]: createCronDeleteTool, CronDeleteInput
- * [FROM]: Depends on @sinclair/typebox, @pencil-agent/agent-core, core/extensions-host/types, ../cron, ./prompt
+ * [FROM]: Depends on @sinclair/typebox, @catui/agent-core, core/extensions-host/types, ../cron, ./prompt
  * [TO]: Consumed by ./index
  * [HERE]: extensions/builtin/loop/cron-tools/cron-delete-tool.ts - CronDelete tool factory
  *
@@ -11,7 +11,7 @@
 
 import { Type } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import type { ExtensionContext } from "../../../../core/extensions-host/types.js";
 import { listAllCronTasks, removeCronTasks } from "../cron/index.js";
 import {

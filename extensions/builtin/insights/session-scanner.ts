@@ -4,7 +4,7 @@
  * [TO]: Consumed by ./insights-engine, ./index
  * [HERE]: extensions/builtin/insights/session-scanner.ts - session JSONL scanning, transcript formatting, meta/facets cache
  *
- * Session scanner — adapts nanoPencil session entries to CC's SessionMeta format.
+ * Session scanner — adapts Catui session entries to CC's SessionMeta format.
  *
  * Port of Claude Code src/commands/insights.ts data collection functions:
  * - extractToolStats → entriesToToolStats
@@ -427,7 +427,7 @@ export async function formatTranscriptWithSummarization(
 	}
 	if (current) chunks.push(current);
 
-	const SUMMARIZE_CHUNK_PROMPT = `Summarize this portion of a nanoPencil session transcript. Focus on:
+	const SUMMARIZE_CHUNK_PROMPT = `Summarize this portion of a Catui session transcript. Focus on:
 1. What the user asked for
 2. What the agent did (tools used, files modified)
 3. Any friction or issues

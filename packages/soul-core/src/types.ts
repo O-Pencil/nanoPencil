@@ -7,7 +7,7 @@
 
 
 /**
- * Personality dimensions based on Big Five + NanoPencil-specific traits
+ * Personality dimensions based on Big Five + Catui-specific traits
  */
 export interface PersonalityVector {
 	/** Openness to experience: 0-1, try new approaches vs stick to proven methods */
@@ -21,7 +21,7 @@ export interface PersonalityVector {
 	/** Neuroticism: 0-1, risk aversion vs risk tolerance */
 	neuroticism: number;
 
-	/** NanoPencil-specific traits */
+	/** Catui-specific traits */
 	/** Code verbosity: 0-1, minimal vs verbose code */
 	codeVerbosity: number;
 	/** Abstraction level: 0-1, concrete vs abstract thinking */

@@ -27,15 +27,15 @@ This module provides the core abstractions and utilities for managing multiple A
 
 ### Migration Tool
 
-`migration-tool.ts`: Implements the `pencils migrate` command logic with copy-first strategy and state tracking. - [WHO]: MigrationManager, MigrationOptions, MigrationTask
+`migration-tool.ts`: Implements the `catui migrate` command logic with copy-first strategy and state tracking. - [WHO]: MigrationManager, MigrationOptions, MigrationTask
 
 ---
 
 ## Path Resolution Logic
 
-1. **Explicit ID**: If `--agent <id>` is provided, path is `~/.pencils/agents/<id>/`.
+1. **Explicit ID**: If `--agent <id>` is provided, path is `~/.catui/agents/<id>/`.
 2. **Default ID**: If no ID provided, defaults to `default`.
-3. **Backward Compatibility**: If ID is `default` and new path doesn't exist, fall back to legacy `~/.nanopencil/agent/`.
+3. **Backward Compatibility**: `CATUI_*` env vars are canonical; `CATUIS_*` and `CATUI_*` env vars remain compatibility aliases.
 
 ---
 

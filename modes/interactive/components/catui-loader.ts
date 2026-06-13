@@ -1,16 +1,16 @@
 /**
- * PencilLoader - Custom loader with rotating diamond animation
+ * CatuiLoader - Custom loader with rotating diamond animation
  * Uses ◆◇◈ symbols for a smooth loading indicator
  * Supports stalled animation (color transition to red) and tips display
  */
 /**
- * [WHO]: PencilLoader
- * [FROM]: Depends on @pencil-agent/tui
+ * [WHO]: CatuiLoader
+ * [FROM]: Depends on @catui/tui
  * [TO]: Consumed by modes/interactive/components/index.ts
- * [HERE]: modes/interactive/components/pencil-loader.ts -
+ * [HERE]: modes/interactive/components/catui-loader.ts -
  */
 
-import { Container, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { Container, Spacer, Text, type TUI } from "@catui/tui";
 import type { Theme } from "../theme/theme.js";
 
 /** Tips shown below the spinner while waiting */
@@ -27,7 +27,7 @@ const TIPS = [
 	"Type /theme to change the color theme",
 ];
 
-export class PencilLoader extends Container {
+export class CatuiLoader extends Container {
 	private tui: TUI;
 	private theme: Theme;
 	private message: string;

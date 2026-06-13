@@ -1,7 +1,7 @@
 /**
  * [WHO]: agent-core barrel exports
  * [FROM]: Depends on agent.js, agent-loop.js, structured-adaptive-agent-loop.js, structured-adaptive-tool-orchestration.js, structured-adaptive-streaming-tool-executor.js, proxy.js, types.js
- * [TO]: Consumed by @pencil-agent/agent-core package consumers
+ * [TO]: Consumed by @catui/agent-core package consumers
  * [HERE]: core/lib/agent-core/src/index.ts - agent-core entry point
  */
 // Core Agent

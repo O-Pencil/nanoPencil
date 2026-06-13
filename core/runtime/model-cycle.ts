@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides pickThinkingLevelOnModelChange(), nextCyclicIndex() — pure model-cycle decisions
- * [FROM]: Depends on @pencil-agent/ai (Model), @pencil-agent/agent-core (ThinkingLevel)
+ * [FROM]: Depends on @catui/ai (Model), @catui/agent-core (ThinkingLevel)
  * [TO]: Consumed by core/runtime/model-controller.ts model switching/cycling
  * [HERE]: core/runtime/model-cycle.ts - stateless model-cycle logic, no session state
  *
@@ -8,8 +8,8 @@
  * apply sequence (agent.setModel, persistence, emit) stays in the session.
  */
 
-import type { Model } from "@pencil-agent/ai/types";
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import type { Model } from "@catui/ai/types";
+import type { ThinkingLevel } from "@catui/agent-core";
 
 /**
  * Thinking level to use after switching to `model`, given the current level:

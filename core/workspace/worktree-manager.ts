@@ -50,7 +50,7 @@ export class WorktreeManager {
    */
   async createTempWorkspace(
     seedFiles: string[] = [],
-    prefix = "nanopencil-subagent",
+    prefix = "catui-subagent",
     sourceCwd = process.cwd(),
   ): Promise<WorkspacePath> {
     const tmpDir = await import("node:os").then((m) => m.tmpdir());
@@ -86,7 +86,7 @@ export class WorktreeManager {
    * Create a temporary snapshot workspace by copying the current project tree.
    * Used as a fallback when git worktree is unavailable.
    */
-  async createSnapshotWorkspace(sourceCwd: string, prefix = "nanopencil-subagent-snapshot"): Promise<WorkspacePath> {
+  async createSnapshotWorkspace(sourceCwd: string, prefix = "catui-subagent-snapshot"): Promise<WorkspacePath> {
     const workspace = await this.createTempWorkspace([], prefix, sourceCwd);
     this.snapshots.set(workspace.path, sourceCwd);
     await cp(sourceCwd, workspace.path, {
@@ -117,7 +117,7 @@ export class WorktreeManager {
   async createGitWorktree(branch?: string, cwd?: string): Promise<WorkspacePath> {
     const sourceCwd = cwd ?? process.cwd();
     const tmpDir = await import("node:os").then((m) => m.tmpdir());
-    const workspacePath = join(tmpDir, `nanopencil-worktree-${crypto.randomUUID()}`);
+    const workspacePath = join(tmpDir, `catui-worktree-${crypto.randomUUID()}`);
 
     try {
       execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: sourceCwd, stdio: "ignore" });
@@ -415,8 +415,8 @@ export class WorktreeManager {
       !relativePath ||
       relativePath === ".git" ||
       relativePath.startsWith(".git/") ||
-      relativePath === ".nanopencil" ||
-      relativePath.startsWith(".nanopencil/") ||
+      relativePath === ".catui" ||
+      relativePath.startsWith(".catui/") ||
       relativePath === "node_modules" ||
       relativePath.startsWith("node_modules/") ||
       relativePath === "dist" ||

@@ -8,11 +8,11 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@pencil-agent/agent-core";
+import type { AgentMessage } from "@catui/agent-core";
 import type {
   ImageContent,
   Message,
-} from "@pencil-agent/ai/types";
+} from "@catui/ai/types";
 import type {
   AutocompleteItem,
   EditorAction,
@@ -20,7 +20,7 @@ import type {
   KeyId,
   MarkdownTheme,
   SlashCommand,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import {
   CombinedAutocompleteProvider,
   type Component,
@@ -35,7 +35,7 @@ import {
   TruncatedText,
   TUI,
   visibleWidth,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import { spawn, spawnSync } from "child_process";
 import {
   APP_NAME,
@@ -81,7 +81,7 @@ import {
   toAbsolutePath,
 } from "../../core/persona/persona-manager.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
-import { NANOPENCIL_WHATS_NEW } from "../../nanopencil-defaults.js";
+import { CATUI_WHATS_NEW } from "../../catui-defaults.js";
 import { getChangelogPath, parseChangelog } from "../../utils/changelog.js";
 import { copyToClipboard } from "../utils/clipboard.js";
 import {
@@ -112,7 +112,7 @@ import { BorderedLoader } from "./components/bordered-loader.js";
 import { BuddyPetComponent, type BuddyState } from "./components/buddy/pet-sprites.js";
 import { EditorBuddyLayout } from "./components/editor-buddy-layout.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
-import { PencilLoader } from "./components/pencil-loader.js";
+import { CatuiLoader } from "./components/catui-loader.js";
 import { NotificationQueue } from "./components/notification-queue.js";
 import { PersonaSelectorComponent } from "./components/persona-selector.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
@@ -191,8 +191,8 @@ export interface InteractiveModeOptions {
   verbose?: boolean;
 }
 
-const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
-const _dbgLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+const _dbgEnabled = process.env.CATUI_DEBUG === "1";
+const _dbgLogPath = path.join(os.homedir(), ".catui", "agent", "catui-debug.log");
 function _dbg(msg: string): void {
 	// Off by default — leftover dev instrumentation must never write (or crash) in
 	// a release. When enabled, ensure the dir exists and never let a log failure
@@ -515,7 +515,7 @@ export class InteractiveMode {
         clearChat: () => { this.clearStatusTimers(); this.chatContainer.clear(); },
         clearTransientSessionUi: () => {
           if (this.state.loadingAnimation) {
-            (this.state.loadingAnimation as PencilLoader).stop();
+            (this.state.loadingAnimation as CatuiLoader).stop();
             this.state.loadingAnimation = undefined;
           }
           this.statusContainer.clear();
@@ -1058,8 +1058,8 @@ export class InteractiveMode {
         theme.bold(theme.fg("accent", APP_NAME)) +
         theme.fg("dim", ` v${this.version}`);
       const whatsNewLine =
-        APP_NAME === "nanopencil"
-          ? `${theme.fg("dim", NANOPENCIL_WHATS_NEW)}\n`
+        APP_NAME === "catui" || APP_NAME === "catui"
+          ? `${theme.fg("dim", CATUI_WHATS_NEW)}\n`
           : "";
 
       // Build startup instructions using keybinding hint helpers
@@ -1767,7 +1767,7 @@ export class InteractiveMode {
         waitForIdle: () => this.session.agent.waitForIdle(),
         newSession: async (options) => {
           if (this.state.loadingAnimation) {
-            (this.state.loadingAnimation as PencilLoader).stop();
+            (this.state.loadingAnimation as CatuiLoader).stop();
             this.state.loadingAnimation = undefined;
           }
           this.statusContainer.clear();
@@ -1934,7 +1934,7 @@ export class InteractiveMode {
   private updateWorkingMessage(options?: { resetStallTimer?: boolean }): void {
     if (!this.state.loadingAnimation) return;
     const { base, suffix } = this.buildWorkingMessage();
-    (this.state.loadingAnimation as PencilLoader).setMessage(
+    (this.state.loadingAnimation as CatuiLoader).setMessage(
       base,
       { ...options, suffix },
     );
@@ -2553,7 +2553,7 @@ export class InteractiveMode {
     // Show welcome when session has no messages
     if (context.messages.length === 0) {
       this.chatContainer.addChild(new Spacer(1));
-      if (APP_NAME === "nanopencil") {
+      if (APP_NAME === "catui" || APP_NAME === "catui") {
         const cwd = this.session.cwd;
         const model = this.session.model;
         const modelLine =
@@ -2592,7 +2592,7 @@ export class InteractiveMode {
             )
             .join("\n");
         const titleLine = theme.bold(
-          theme.fg("accent", `nano-pencil v${this.version}`),
+          theme.fg("accent", `catui-agent v${this.version}`),
         );
         const subtitleLine = theme.fg("dim", modelLine);
         const cwdLine = theme.fg("dim", cwd);
@@ -2755,7 +2755,7 @@ export class InteractiveMode {
     // Print session resume hint before exit
     const sessionId = this.sessionManager.getSessionId();
     const cwd = this.session.cwd;
-    console.log(`\nResume this session with: nanopencil --session ${sessionId} --cwd "${cwd}"`);
+    console.log(`\nResume this session with: catui --session ${sessionId} --cwd "${cwd}"`);
 
     process.exit(0);
   }
@@ -2925,7 +2925,7 @@ export class InteractiveMode {
 
     const currentText =
       this.editor.getExpandedText?.() ?? this.editor.getText();
-    const tmpFile = path.join(os.tmpdir(), `nanopencil-editor-${Date.now()}.nanopencil.md`);
+    const tmpFile = path.join(os.tmpdir(), `catui-editor-${Date.now()}.catui.md`);
 
     try {
       // Write current content to temp file
@@ -3528,7 +3528,7 @@ export class InteractiveMode {
     const width = Math.min(this.ui.terminal.columns || 80, 73);
 
     // Top border with title
-    const titleLeft = `  >_ NanoPencil (v${this.version})  `;
+    const titleLeft = `  >_ Catui (v${this.version})  `;
     const titlePad = Math.max(0, width - titleLeft.length - 1);
     lines.push(theme.fg("border", `╭${"─".repeat(Math.max(1, width - 2))}╮`));
     lines.push(theme.fg("border", `│`) + theme.bold(titleLeft) + " ".repeat(titlePad) + theme.fg("border", `│`));
@@ -4015,7 +4015,7 @@ export class InteractiveMode {
   private async handleClearCommand(): Promise<void> {
     // Stop loading animation
     if (this.state.loadingAnimation) {
-      (this.state.loadingAnimation as PencilLoader).stop();
+      (this.state.loadingAnimation as CatuiLoader).stop();
       this.state.loadingAnimation = undefined;
     }
     this.statusContainer.clear();
@@ -4225,7 +4225,7 @@ export class InteractiveMode {
   ): Promise<CompactionResult | undefined> {
     // Stop loading animation
     if (this.state.loadingAnimation) {
-      (this.state.loadingAnimation as PencilLoader).stop();
+      (this.state.loadingAnimation as CatuiLoader).stop();
       this.state.loadingAnimation = undefined;
     }
     this.statusContainer.clear();
@@ -4242,7 +4242,7 @@ export class InteractiveMode {
     const label = isAuto
       ? `Auto-compacting context... ${cancelHint}`
       : `Compacting context... ${cancelHint}`;
-    const compactingLoader = new PencilLoader(this.ui, theme, label);
+    const compactingLoader = new CatuiLoader(this.ui, theme, label);
     this.statusContainer.addChild(compactingLoader);
     this.ui.requestRender();
 
@@ -4274,7 +4274,7 @@ export class InteractiveMode {
         this.showError(`Compaction failed: ${message}`);
       }
     } finally {
-      (compactingLoader as PencilLoader).stop();
+      (compactingLoader as CatuiLoader).stop();
       this.statusContainer.clear();
       this.defaultEditor.onEscape = originalOnEscape;
     }
@@ -4288,7 +4288,7 @@ export class InteractiveMode {
     this.buddyPet?.dispose();
     this.buddyPet = null;
     if (this.state.loadingAnimation) {
-      (this.state.loadingAnimation as PencilLoader).stop();
+      (this.state.loadingAnimation as CatuiLoader).stop();
       this.state.loadingAnimation = undefined;
     }
     this.clearExtensionTerminalInputListeners();
@@ -4305,7 +4305,7 @@ export class InteractiveMode {
 
   /**
    * If session is tagged with a persona, apply it to env + active persona file,
-   * then reload session runtime so Pencil/Soul/NanoMem/Skills/MCP can be re-wired.
+   * then reload session runtime so Catui/Soul/NanoMem/Skills/MCP can be re-wired.
    */
   private async applyPersonaFromSessionIfAny(): Promise<void> {
     const entries = this.session.sessionManager.getEntries();
@@ -4355,7 +4355,7 @@ export class InteractiveMode {
         new Text(
           theme.fg(
             "dim",
-            "Soul (AI personality system) is not enabled. Please use NanoPencil 1.3.0 or later.",
+            "Soul (AI personality system) is not enabled. Please use Catui 1.3.0 or later.",
           ),
           1,
           0,
@@ -4468,7 +4468,7 @@ export class InteractiveMode {
     process.env.NANO_PERSONA_DIR = toAbsolutePath(getPersonaDir(personaId));
 
     // Set flag to skip interview on first message after persona switch
-    process.env.NANOPENCIL_JUST_SWITCHED_PERSONA = "true";
+    process.env.CATUI_JUST_SWITCHED_PERSONA = "true";
 
     await this.handleReloadCommand();
     this.showStatus(`Persona switched to: ${personaId}`);
@@ -4502,7 +4502,7 @@ export class InteractiveMode {
       [
         "Browser automation is opt-in.",
         "",
-        "Enable it by starting NanoPencil with:",
+        "Enable it by starting Catui with:",
         "  --extension extensions/builtin/browser",
         "",
         "Or add that path to your extensions config, then run /browser status.",
@@ -4654,7 +4654,7 @@ export class InteractiveMode {
       ),
     );
     this.chatContainer.addChild(
-      new Text("Restart NanoPencil for full effect.", 1, 0),
+      new Text("Restart Catui for full effect.", 1, 0),
     );
     this.ui.requestRender();
   }

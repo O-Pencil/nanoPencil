@@ -364,7 +364,7 @@ export async function collectPreferencesInfo(ctx: ExtensionContext): Promise<Col
 		const path = await import("node:path");
 
 		// Check memory directory for language preferences
-		const memoryDir = process.env.NANOMEM_MEMORY_DIR || path.join(os.homedir(), ".nanopencil", "agent", "memory");
+		const memoryDir = process.env.NANOMEM_MEMORY_DIR || path.join(os.homedir(), ".catui", "agent", "memory");
 		let locale: string = "en";
 		let localeSource: "memory" | "settings" | "system" = "system";
 		const languagePreference: PreferencesInfo["languagePreference"] = [];
@@ -396,7 +396,7 @@ export async function collectPreferencesInfo(ctx: ExtensionContext): Promise<Col
 		}
 
 		// Check settings.json for locale
-		const settingsPath = path.join(os.homedir(), ".nanopencil", "agent", "settings.json");
+		const settingsPath = path.join(os.homedir(), ".catui", "agent", "settings.json");
 		if (localeSource === "system" && fs.existsSync(settingsPath)) {
 			try {
 				const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));

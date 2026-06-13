@@ -16,22 +16,22 @@ function createTempDir(prefix: string): string {
 }
 
 test("workspace write guard allows only paths inside the workspace root", () => {
-	const cwd = "/tmp/nanopencil-project";
+	const cwd = "/tmp/catui-project";
 
-	assert.equal(isPathWithinRoot("/tmp/nanopencil-project/file.ts", cwd), true);
-	assert.equal(isPathWithinRoot("/tmp/nanopencil-project/nested/file.ts", cwd), true);
-	assert.equal(isPathWithinRoot("/tmp/nanopencil-project-other/file.ts", cwd), false);
+	assert.equal(isPathWithinRoot("/tmp/catui-project/file.ts", cwd), true);
+	assert.equal(isPathWithinRoot("/tmp/catui-project/nested/file.ts", cwd), true);
+	assert.equal(isPathWithinRoot("/tmp/catui-project-other/file.ts", cwd), false);
 	assert.equal(isPathWithinRoot("/tmp/outside/file.ts", cwd), false);
 
 	const guard = createWorkspaceWriteGuard(cwd);
-	assert.doesNotThrow(() => guard("/tmp/nanopencil-project/file.ts"));
+	assert.doesNotThrow(() => guard("/tmp/catui-project/file.ts"));
 	assert.throws(() => guard("/tmp/outside/file.ts"), /may only write inside the current workspace/);
 });
 
 test("agent-session default edit and write tools reject paths outside cwd", async () => {
-	const cwd = createTempDir("nanopencil-workspace-");
-	const agentDir = createTempDir("nanopencil-agent-");
-	const outsideDir = createTempDir("nanopencil-outside-");
+	const cwd = createTempDir("catui-workspace-");
+	const agentDir = createTempDir("nanocatui-agent-");
+	const outsideDir = createTempDir("catui-outside-");
 
 	try {
 		const settingsManager = SettingsManager.create(cwd, agentDir);

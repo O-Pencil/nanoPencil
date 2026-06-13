@@ -80,7 +80,7 @@ Round 1:
 
 ```bash
 NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/control/run-001 \
-pencil <MODEL_ARGS> --nosal
+catui <MODEL_ARGS> --nosal
 ```
 
 Submit Round 1 prompt, complete the task, then save the result summary.
@@ -89,7 +89,7 @@ Round 2:
 
 ```bash
 NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/control/run-001 \
-pencil <MODEL_ARGS> --nosal
+catui <MODEL_ARGS> --nosal
 ```
 
 Submit Round 2 prompt in a fresh session.
@@ -100,14 +100,14 @@ Round 1:
 
 ```bash
 NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/sal/run-001 \
-pencil <MODEL_ARGS> --sal-ab
+catui <MODEL_ARGS> --sal-ab
 ```
 
 Round 2:
 
 ```bash
 NANOMEM_MEMORY_DIR=$PWD/.memory-experiments/sal/run-001 \
-pencil <MODEL_ARGS> --sal-ab
+catui <MODEL_ARGS> --sal-ab
 ```
 
 ## Required Artifacts

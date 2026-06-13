@@ -4,7 +4,7 @@
  */
 /**
  * [WHO]: Provides agentLoop(), agentLoopContinue(), standard loop event emission, continuation recovery, recovered-error tombstoning, and serial tool execution.
- * [FROM]: Depends on @pencil-agent/ai streams/messages, ./types contracts, ./errors, and shared loop helpers.
+ * [FROM]: Depends on @catui/ai streams/messages, ./types contracts, ./errors, and shared loop helpers.
  * [TO]: Consumed by agent.ts and package exports as the default agent execution loop.
  * [HERE]: core/lib/agent-core/src/agent-loop.ts within agent-core; standard counterpart to structured-adaptive-agent-loop.ts.
  */
@@ -16,11 +16,11 @@ import {
 	type TextContent,
 	type ToolResultMessage,
 	type Usage,
-} from "@pencil-agent/ai/types";
-import { EventStream } from "@pencil-agent/ai/events";
-import { isContextOverflow } from "@pencil-agent/ai/overflow";
-import { validateToolArguments } from "@pencil-agent/ai/schema";
-import { streamSimple } from "@pencil-agent/ai/stream";
+} from "@catui/ai/types";
+import { EventStream } from "@catui/ai/events";
+import { isContextOverflow } from "@catui/ai/overflow";
+import { validateToolArguments } from "@catui/ai/schema";
+import { streamSimple } from "@catui/ai/stream";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -62,15 +62,15 @@ const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
 const DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS = 1;
 const DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS = 1;
 
-// --- Timing instrumentation (gated by NANOPENCIL_DEBUG=1) ---
+// --- Timing instrumentation (gated by CATUI_DEBUG=1) ---
 function _tlog(msg: string): void {
-	if (process.env.NANOPENCIL_DEBUG !== "1") return;
+	if (process.env.CATUI_DEBUG !== "1") return;
 	try {
 		const { appendFileSync } = require("fs");
 		const { join } = require("path");
 		const { homedir } = require("os");
 		appendFileSync(
-			join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log"),
+			join(homedir(), ".catui", "agent", "catui-debug.log"),
 			`[${new Date().toISOString()}] [loop] ${msg}\n`,
 		);
 	} catch { /* best-effort */ }

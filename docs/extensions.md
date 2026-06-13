@@ -1,6 +1,6 @@
 ---
 name: extensions
-description: Use when the user asks how to write, load, or configure a NanoPencil extension.
+description: Use when the user asks how to write, load, or configure a Catui extension.
 surface: TODO  # user entry points: /command, --flag, config key, file location
 owner: core/extensions-host/  # DIP P2 anchor — read its AGENT.md member list to find code
 status: draft

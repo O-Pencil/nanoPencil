@@ -2,7 +2,7 @@
  * [WHO]: SecurityAudit extension - audit logging and dangerous pattern detection
  * [FROM]: Depends on core/extensions-host/types, ./engine/detector, ./engine/logger, ./interface
  * [TO]: Consumed by builtin-extensions.ts as default extension
- * [HERE]: extensions/builtin/security-audit/index.ts - security auditing for NanoPencil operations
+ * [HERE]: extensions/builtin/security-audit/index.ts - security auditing for Catui operations
  *
  * Features:
  * - Audit logging for all operations

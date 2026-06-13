@@ -29,7 +29,7 @@ This page is the human narrative view. Use `graph.json` for exact node/edge trav
 | `index.ts` | 1 |
 | `main.ts` | 1 |
 | `migrations.ts` | 1 |
-| `nanopencil-defaults.ts` | 1 |
+| `catui-defaults.ts` | 1 |
 
 ## Runtime Shape
 
@@ -44,10 +44,10 @@ This page is the human narrative view. Use `graph.json` for exact node/edge trav
 | Package | Importing Files |
 | --- | ---: |
 | `node:path` | 72 |
-| `@pencil-agent/tui` | 60 |
-| `@pencil-agent/ai` | 50 |
+| `@catui/tui` | 60 |
+| `@catui/ai` | 50 |
 | `node:fs` | 50 |
-| `@pencil-agent/agent-core` | 43 |
+| `@catui/agent-core` | 43 |
 | `fs` | 30 |
 | `path` | 28 |
 | `node:os` | 26 |

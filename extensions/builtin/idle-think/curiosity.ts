@@ -4,7 +4,7 @@
  * [TO]: Consumed by ./index.ts, ./thinker.ts
  * [HERE]: extensions/builtin/idle-think/curiosity.ts - self-directed exploration agenda
  *
- * The queue is a JSON file at ~/.nanopencil/agent/memory/idle-think-curiosity.json.
+ * The queue is a JSON file at ~/.catui/agent/memory/idle-think-curiosity.json.
  * Topics are added from exploration insights and picked for the next exploration.
  */
 
@@ -27,7 +27,7 @@ export type CuriosityQueue = {
 };
 
 function getQueuePath(): string {
-	return join(homedir(), ".nanopencil", "agent", "memory", QUEUE_FILENAME);
+	return join(homedir(), ".catui", "agent", "memory", QUEUE_FILENAME);
 }
 
 /**

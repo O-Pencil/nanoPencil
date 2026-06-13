@@ -11,7 +11,7 @@
  * generateResponseTimeHistogram, generateTimeOfDayChart, getHourCountsJson.
  *
  * Changes from CC:
- * - "Claude Code" → "nanoPencil"
+ * - "Claude Code" → "Catui"
  * - Removed: Multi-Clauding section (CC-specific)
  * - Removed: Team Feedback section (ant-only)
  * - Removed: S3 upload logic
@@ -314,7 +314,7 @@ export function generateHtmlReport(
 	const interactionStyle = insights.interaction_style;
 	const interactionHtml = interactionStyle?.narrative
 		? `
-    <h2 id="section-usage">How You Use nanoPencil</h2>
+    <h2 id="section-usage">How You Use Catui</h2>
     <div class="narrative">
       ${markdownToHtml(interactionStyle.narrative)}
       ${interactionStyle.key_pattern ? `<div class="key-insight"><strong>Key pattern:</strong> ${escapeHtml(interactionStyle.key_pattern)}</div>` : ""}
@@ -374,7 +374,7 @@ export function generateHtmlReport(
     ${
 			suggestions.claude_md_additions && suggestions.claude_md_additions.length > 0
 				? `
-    <h2 id="section-features">nanoPencil Features to Try</h2>
+    <h2 id="section-features">Catui Features to Try</h2>
     <div class="claude-md-section">
       <h3>Suggested CLAUDE.md Additions</h3>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Copy this into your project to add it to CLAUDE.md.</p>
@@ -435,8 +435,8 @@ export function generateHtmlReport(
     ${
 			suggestions.usage_patterns && suggestions.usage_patterns.length > 0
 				? `
-    <h2 id="section-patterns">New Ways to Use nanoPencil</h2>
-    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Paste these into nanoPencil and it'll walk you through it.</p>
+    <h2 id="section-patterns">New Ways to Use Catui</h2>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Paste these into Catui and it'll walk you through it.</p>
     <div class="patterns-section">
       ${suggestions.usage_patterns
 					.map(
@@ -449,7 +449,7 @@ export function generateHtmlReport(
 						pat.copyable_prompt
 							? `
           <div class="copyable-prompt-section">
-            <div class="prompt-label">Paste into nanoPencil:</div>
+            <div class="prompt-label">Paste into Catui:</div>
             <div class="copyable-prompt-row">
               <code class="copyable-prompt">${escapeHtml(pat.copyable_prompt)}</code>
               <button class="copy-btn" onclick="copyText(this)">Copy</button>
@@ -484,7 +484,7 @@ export function generateHtmlReport(
           <div class="horizon-title">${escapeHtml(opp.title || "")}</div>
           <div class="horizon-possible">${escapeHtml(opp.whats_possible || "")}</div>
           ${opp.how_to_try ? `<div class="horizon-tip"><strong>Getting started:</strong> ${escapeHtml(opp.how_to_try)}</div>` : ""}
-          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into nanoPencil:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ""}
+          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into Catui:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ""}
         </div>
       `,
 				)
@@ -711,13 +711,13 @@ export function generateHtmlReport(
 <html>
 <head>
   <meta charset="utf-8">
-  <title>nanoPencil Insights</title>
+  <title>Catui Insights</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>${css}</style>
 </head>
 <body>
   <div class="container">
-    <h1>nanoPencil Insights</h1>
+    <h1>Catui Insights</h1>
     <p class="subtitle">${data.total_messages.toLocaleString()} messages across ${data.total_sessions} sessions${data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions ? ` (${data.total_sessions_scanned.toLocaleString()} total)` : ""} | ${data.date_range.start} to ${data.date_range.end}</p>
 
     ${atAGlanceHtml}

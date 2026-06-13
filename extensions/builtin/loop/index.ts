@@ -1,6 +1,6 @@
 /**
  * [WHO]: loop extension default export
- * [FROM]: Depends on @pencil-agent/tui, core/extensions-host/types, ./cron/cron-scheduler, ./cron-tools, ./loop-skill
+ * [FROM]: Depends on @catui/tui, core/extensions-host/types, ./cron/cron-scheduler, ./cron-tools, ./loop-skill
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/loop/index.ts - extension entry; /loop command, CronCreate/Delete/List tools, scheduler wiring
  *
@@ -16,9 +16,9 @@
  * - Scheduler lock (src/utils/cronTasksLock.ts)
  */
 
-import { Box, Text } from "@pencil-agent/tui";
+import { Box, Text } from "@catui/tui";
 import type { ExtensionAPI } from "../../../core/extensions-host/types.js";
-import type { Component } from "@pencil-agent/tui";
+import type { Component } from "@catui/tui";
 import { createCronScheduler } from "./cron/cron-scheduler.js";
 import type { CronScheduler } from "./cron/cron-scheduler.js";
 import { createCronCreateTool, createCronDeleteTool, createCronListTool } from "./cron-tools/index.js";

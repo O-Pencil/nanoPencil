@@ -19,9 +19,9 @@ import {
 	type SimpleStreamOptions,
 	type StopReason,
 	type ToolCall,
-} from "@pencil-agent/ai/types";
-import { EventStream } from "@pencil-agent/ai/events";
-import { parseStreamingJson } from "@pencil-agent/ai/json";
+} from "@catui/ai/types";
+import { EventStream } from "@catui/ai/events";
+import { parseStreamingJson } from "@catui/ai/json";
 
 // Create stream class matching ProxyMessageEventStream
 class ProxyMessageEventStream extends EventStream<AssistantMessageEvent, AssistantMessage> {

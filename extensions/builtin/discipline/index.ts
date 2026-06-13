@@ -1,5 +1,5 @@
 /**
- * [WHO]: disciplineExtension - registers skill tool, nanoPencil engineering discipline skills, and lightweight bootstrap prompt
+ * [WHO]: disciplineExtension - registers skill tool, Catui engineering discipline skills, and lightweight bootstrap prompt
  * [FROM]: Depends on node:path, node:url, node:fs, core/extensions-host/types
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension; consumed by ResourceLoader via resources_discover
  * [HERE]: extensions/builtin/discipline/index.ts - default engineering workflow discipline package
@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Type, type Static } from "@sinclair/typebox";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import type { ExtensionAPI, ExtensionContext } from "../../../core/extensions-host/types.js";
 import { stripFrontmatter } from "../../../utils/frontmatter.js";
 
@@ -30,9 +30,9 @@ const DISCIPLINE_SKILLS = [
 ] as const;
 
 const BOOTSTRAP_PROMPT = [
-	"## nanoPencil Engineering Discipline",
+	"## Catui Engineering Discipline",
 	"",
-	"nanoPencil ships default discipline skills for coding work. Treat them as executable workflow guidance, not background reading.",
+	"Catui ships default discipline skills for coding work. Treat them as executable workflow guidance, not background reading.",
 	"",
 	"Before taking action, check whether one of these skills applies. If it does, call the `skill` tool or load the matching SKILL.md before other tool use or implementation:",
 	DISCIPLINE_SKILLS.map((name) => `- ${name}`).join("\n"),
@@ -60,7 +60,7 @@ function createSkillTool() {
 		name: "skill",
 		label: "Load Skill",
 		description:
-			"List or load currently available nanoPencil skills. Call this before acting when a skill description matches the task.",
+			"List or load currently available Catui skills. Call this before acting when a skill description matches the task.",
 		parameters: SkillToolInputSchema,
 		isConcurrencySafe: true,
 		guidance:

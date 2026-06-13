@@ -3,13 +3,13 @@
  */
 /**
  * [WHO]: editorKey, appKey, keyHint, appKeyHint, rawKeyHint
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/keybinding-hints.ts -
  */
 
 
-import { type EditorAction, getEditorKeybindings, type KeyId } from "@pencil-agent/tui";
+import { type EditorAction, getEditorKeybindings, type KeyId } from "@catui/tui";
 import type { AppAction, KeybindingsManager } from "../../../core/platform/keybindings.js";
 import { theme } from "../theme/theme.js";
 

@@ -18,7 +18,7 @@ import type {
   AgentState,
   AgentTool,
   ThinkingLevel,
-} from "@pencil-agent/agent-core";
+} from "@catui/agent-core";
 import type {
   AssistantMessage,
   DocumentContent,
@@ -26,9 +26,9 @@ import type {
   Message,
   Model,
   TextContent,
-} from "@pencil-agent/ai/types";
-import { isContextOverflow } from "@pencil-agent/ai/overflow";
-import { resetApiProviders } from "@pencil-agent/ai/registry";
+} from "@catui/ai/types";
+import { isContextOverflow } from "@catui/ai/overflow";
+import { resetApiProviders } from "@catui/ai/registry";
 import { getDocsPath } from "../../config.js";
 import type { Theme as ThemeContract } from "../theme-contract.js";
 import { stripFrontmatter } from "../../utils/frontmatter.js";
@@ -398,9 +398,9 @@ export class AgentSession {
   private _debugLevel: "off" | "basic" | "verbose" = "off";
 
   private _dbg(msg: string): void {
-    if (process.env.NANOPENCIL_DEBUG_SESSION !== "1") return;
+    if (process.env.CATUI_DEBUG_SESSION !== "1") return;
     try {
-      const logFile = join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+      const logFile = join(homedir(), ".catui", "agent", "catui-debug.log");
       appendFileSync(logFile, `[${new Date().toISOString()}] [session] ${msg}\n`);
     } catch { /* debug logging is best-effort */ }
   }

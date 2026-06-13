@@ -1,13 +1,13 @@
 ---
 name: browser
-description: Direct browser control via NanoPencil's built-in Browser Harness. Use when the user wants to automate, scrape, test, or interact with web pages.
+description: Direct browser control via Catui's built-in Browser Harness. Use when the user wants to automate, scrape, test, or interact with web pages.
 ---
 
 # Browser Harness
 
-NanoPencil includes a vendored Browser Harness CDP bridge. Use the `browser` tool for normal work and `browser_admin` or `/browser` for install, setup, and diagnostics.
+Catui includes a vendored Browser Harness CDP bridge. Use the `browser` tool for normal work and `browser_admin` or `/browser` for install, setup, and diagnostics.
 
-For current facts or general web research, prefer NanoPencil's `web_search` tool first. If the user already has a target URL and only needs the content, prefer `web_fetch`. Use `browser` when the task requires interacting with a page.
+For current facts or general web research, prefer Catui's `web_search` tool first. If the user already has a target URL and only needs the content, prefer `web_fetch`. Use `browser` when the task requires interacting with a page.
 
 ## Core Tool Shape
 
@@ -38,16 +38,16 @@ First navigation should be `new_tab(url)`, not `goto_url(url)`, so the user's cu
 2. For setup or connection problems, run `browser_admin` with `{ "action": "doctor" }` or `/browser status`.
 3. If the daemon is not attached, run `browser_admin` with `{ "action": "setup" }` or `/browser setup`.
 4. If the user only needs knowledge retrieval, use `web_search` instead of browser automation.
-5. For a page interaction task, search `.nanopencil/browser-workspace/domain-skills/` first for site-specific knowledge.
+5. For a page interaction task, search `.catui/browser-workspace/domain-skills/` first for site-specific knowledge.
 6. Use screenshots to understand and verify visible browser state.
 7. After every meaningful action, verify with `capture_screenshot()` or `page_info()`.
 
 ## Editable Workspace
 
-NanoPencil copies the bundled Browser Harness workspace to:
+Catui copies the bundled Browser Harness workspace to:
 
 ```text
-.nanopencil/browser-workspace/
+.catui/browser-workspace/
 ```
 
 Use this project-local workspace for reusable browser knowledge:

@@ -9,13 +9,13 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import type { Model } from "@pencil-agent/ai/types";
-import { getModel } from "@pencil-agent/ai/models";
+import type { Model } from "@catui/ai/types";
+import { getModel } from "@catui/ai/models";
 import { SettingsManager } from "../core/platform/config/settings-manager.js";
 import { createAgentSession } from "../core/runtime/sdk.js";
 
 test("createAgentSession passes aggregate tool result budget into Agent", async () => {
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-budget-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-sdk-budget-"));
 	const agentCtx = { id: "sdk-budget-test", path: agentDir };
 	const settingsManager = SettingsManager.inMemory({
 		agentLoop: { maxToolResultBatchSizeChars: 123_456 },
@@ -41,7 +41,7 @@ test("createAgentSession passes aggregate tool result budget into Agent", async 
 });
 
 test("createAgentSession accepts explicit loop framework and prompt limits", async () => {
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-loop-overrides-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-sdk-loop-overrides-"));
 	const agentCtx = { id: "sdk-loop-overrides-test", path: agentDir };
 
 	const { session } = await createAgentSession({
@@ -69,7 +69,7 @@ test("createAgentSession accepts explicit loop framework and prompt limits", asy
 });
 
 test("createAgentSession accepts output continuation loop policy", async () => {
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-output-budget-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-sdk-output-budget-"));
 	const agentCtx = { id: "sdk-output-budget-test", path: agentDir };
 
 	const { session } = await createAgentSession({
@@ -106,7 +106,7 @@ test("createAgentSession accepts output continuation loop policy", async () => {
 });
 
 test("createAgentSession accepts recovery loop policy", async () => {
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-recovery-policy-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-sdk-recovery-policy-"));
 	const agentCtx = { id: "sdk-recovery-policy-test", path: agentDir };
 
 	const { session } = await createAgentSession({
@@ -131,7 +131,7 @@ test("createAgentSession accepts recovery loop policy", async () => {
 });
 
 test("AgentSession forwards runtime loop policy updates into Agent", async () => {
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-sdk-loop-policy-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-sdk-loop-policy-"));
 	const agentCtx = { id: "sdk-loop-policy-test", path: agentDir };
 	const { session } = await createAgentSession({
 		cwd: process.cwd(),

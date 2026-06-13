@@ -4,13 +4,13 @@
  */
 /**
  * [WHO]: VisualTruncateResult, truncateToVisualLines
- * [FROM]: Depends on @pencil-agent/tui
+ * [FROM]: Depends on @catui/tui
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/visual-truncate.ts -
  */
 
 
-import { Text } from "@pencil-agent/tui";
+import { Text } from "@catui/tui";
 
 export interface VisualTruncateResult {
 	/** The visual lines to display */

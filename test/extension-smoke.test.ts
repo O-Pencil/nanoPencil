@@ -30,7 +30,7 @@ function createRegistrationHarness() {
 	const eventHandlers = new Map<string, CapturedHandler[]>();
 	const shortcuts: string[] = [];
 	const tools: string[] = [];
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-extension-smoke-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-extension-smoke-"));
 
 	const api = {
 		cwd: process.cwd(),
@@ -106,7 +106,7 @@ test("recap command emits a deterministic free recap without model access", asyn
 						type: "message",
 						message: {
 							role: "user",
-							content: "Please build a robust HTML exporter for nanoPencil sessions with real output coverage.",
+							content: "Please build a robust HTML exporter for Catui sessions with real output coverage.",
 						},
 					},
 					{
@@ -456,7 +456,7 @@ test("discipline discovers bundled skills and injects bootstrap prompt when asse
 		assert.equal(existsSync(resources?.skillPaths?.[0] ?? ""), true);
 
 		const prompt = beforeAgentStart() as { appendSystemPrompt?: string } | undefined;
-		assert.match(prompt?.appendSystemPrompt ?? "", /nanoPencil Engineering Discipline/);
+		assert.match(prompt?.appendSystemPrompt ?? "", /Catui Engineering Discipline/);
 		assert.match(prompt?.appendSystemPrompt ?? "", /systematic-debugging/);
 	} finally {
 		harness.cleanup();
@@ -464,7 +464,7 @@ test("discipline discovers bundled skills and injects bootstrap prompt when asse
 });
 
 test("export-html writes a standalone HTML file with encoded session data", async () => {
-	const tmp = mkdtempSync(join(tmpdir(), "nanopencil-export-html-"));
+	const tmp = mkdtempSync(join(tmpdir(), "catui-export-html-"));
 	try {
 		const sessionManager = SessionManager.create(tmp, join(tmp, "sessions"));
 		sessionManager.appendMessage({
@@ -494,7 +494,7 @@ test("export-html writes a standalone HTML file with encoded session data", asyn
 });
 
 test("export-html pre-renders custom tool call and result HTML", async () => {
-	const tmp = mkdtempSync(join(tmpdir(), "nanopencil-export-html-tools-"));
+	const tmp = mkdtempSync(join(tmpdir(), "catui-export-html-tools-"));
 	try {
 		const sessionManager = SessionManager.create(tmp, join(tmp, "sessions"));
 		sessionManager.appendMessage({

@@ -1,11 +1,11 @@
 /**
  * [WHO]: BuddyPetComponent, BuddySpecies, BuddyState, SpriteData
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts, interactive-mode.ts
  * [HERE]: modes/interactive/components/buddy/pet-sprites.ts
  */
 
-import { type Component, type TUI } from "@pencil-agent/tui";
+import { type Component, type TUI } from "@catui/tui";
 import { theme } from "../../theme/theme.js";
 
 // ============================================================================

@@ -3,13 +3,13 @@
  */
 /**
  * [WHO]: ExtensionInputOptions, ExtensionInputComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./countdown-timer.js, ./dynamic-border.js, ./keybinding-hints.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/extension-input.ts -
  */
 
 
-import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@catui/tui";
 import { theme } from "../theme/theme.js";
 import { CountdownTimer } from "./countdown-timer.js";
 import { DynamicBorder } from "./dynamic-border.js";

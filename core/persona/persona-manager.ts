@@ -14,7 +14,7 @@ type PersonaState = {
 
 // Backward-compatible renames: old id → new id
 const PERSONA_RENAMES: Record<string, string> = {
-	default: "pencil",
+	default: "catui",
 };
 
 function normalizePersonaId(personaId: string): string {
@@ -45,9 +45,9 @@ export class PersonaManager {
 		const defaultDir = join(this.personasDir, "vex");
 		if (!existsSync(defaultDir)) {
 			mkdirSync(defaultDir, { recursive: true });
-			const pencilPath = join(defaultDir, "PENCIL.md");
-			if (!existsSync(pencilPath)) {
-				writeFileSync(pencilPath, "# vex\n\nDefault persona for nanoPencil.\n", "utf-8");
+			const catuiPath = join(defaultDir, "CATUI.md");
+			if (!existsSync(catuiPath)) {
+				writeFileSync(catuiPath, "# vex\n\nDefault persona for Catui.\n", "utf-8");
 			}
 		}
 	}
@@ -120,8 +120,8 @@ export class PersonaManager {
 		return join(this.personasDir, normalized);
 	}
 
-	getPersonaPencilPath(personaId: string): string {
-		return join(this.getPersonaDir(personaId), "PENCIL.md");
+	getPersonaCatuiPath(personaId: string): string {
+		return join(this.getPersonaDir(personaId), "CATUI.md");
 	}
 
 	getPersonaSkillsDir(personaId: string): string {
@@ -142,9 +142,9 @@ export class PersonaManager {
 
 	getPersonaDescription(personaId: string): string {
 		try {
-			const pencilPath = this.getPersonaPencilPath(personaId);
-			if (!existsSync(pencilPath)) return "";
-			const raw = readFileSync(pencilPath, "utf-8");
+			const catuiPath = this.getPersonaCatuiPath(personaId);
+			if (!existsSync(catuiPath)) return "";
+			const raw = readFileSync(catuiPath, "utf-8");
 			for (const line of raw.split("\n")) {
 				const trimmed = line.trim();
 				if (!trimmed || trimmed.startsWith("#")) continue;
@@ -184,8 +184,8 @@ export function getPersonaDir(personaId: string): string {
 	return defaultManager.getPersonaDir(personaId);
 }
 
-export function getPersonaPencilPath(personaId: string): string {
-	return defaultManager.getPersonaPencilPath(personaId);
+export function getPersonaCatuiPath(personaId: string): string {
+	return defaultManager.getPersonaCatuiPath(personaId);
 }
 
 export function getPersonaSkillsDir(personaId: string): string {

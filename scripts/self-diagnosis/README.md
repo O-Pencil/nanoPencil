@@ -1,13 +1,13 @@
 # scripts/self-diagnosis/
 
-> ⚠ **Maintainer tooling — not for users.** These scripts read the developer-owned insforge backend and write to it with `variant='self-diagnosis'`. They are invoked manually. They are not auto-loaded into any pencil session and do not consume user tokens.
+> ⚠ **Maintainer tooling — not for users.** These scripts read the developer-owned insforge backend and write to it with `variant='self-diagnosis'`. They are invoked manually. They are not auto-loaded into any catui session and do not consume user tokens.
 
 ## Purpose
 
-Run reflexive self-study tasks against pencil's own historical `eval_*` data. Each run:
+Run reflexive self-study tasks against catui's own historical `eval_*` data. Each run:
 1. Loads a task archetype prompt
-2. Invokes pencil (`cli.ts --print`) with that prompt
-3. Captures both pencil's natural-language output and the new `eval_*` rows produced as a side effect
+2. Invokes catui (`cli.ts --print`) with that prompt
+3. Captures both catui's natural-language output and the new `eval_*` rows produced as a side effect
 4. Writes a structured metric row to `eval_metric_results` (the self-diagnosis sink — see `.dev-docs/data/field-purpose-matrix.md`)
 
 ## Status
@@ -33,7 +33,7 @@ runs/                    ← per-run artifacts (task + output + analysis), gitig
 # From repo root, single run of Archetype A:
 node --import tsx scripts/self-diagnosis/run.ts --archetype=A
 
-# Reads .memory-experiments/credentials.json (or NANOPENCIL_ISSUE_*) for insforge creds.
+# Reads .memory-experiments/credentials.json (or CATUI_ISSUE_*) for insforge creds.
 # Writes: scripts/self-diagnosis/runs/<date>/{task.md,output.md,analysis.json}
 # Writes: one eval_metric_results row, variant='self-diagnosis'
 ```

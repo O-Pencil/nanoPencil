@@ -264,7 +264,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	});
 
 	const workspaceRoot = api.cwd;
-	const experimentId = process.env.NANOPENCIL_EXPERIMENT_ID;
+	const experimentId = process.env.CATUI_EXPERIMENT_ID;
 	const sidecarDir = resolveSalSidecarDir(workspaceRoot, experimentId);
 	const weightsDirCandidates = [workspaceRoot, join(workspaceRoot, ".memory-experiments", "sal")];
 	const { weights, source: weightsSource } = loadSalWeights(weightsDirCandidates);
@@ -294,9 +294,9 @@ export default async function salExtension(api: ExtensionAPI) {
 			? (evalVariantEnv as EvalVariant)
 			: undefined;
 	const evalApiKey = process.env[EVAL_API_KEY_ENV] ?? credentials?.api_key;
-	const evalAnonKey = process.env["NANOPENCIL_EVAL_ANON_KEY"] ?? credentials?.anon_key;
+	const evalAnonKey = process.env["CATUI_EVAL_ANON_KEY"] ?? credentials?.anon_key;
 	const evalApiKeyHeader = process.env[EVAL_API_KEY_HEADER_ENV] ?? credentials?.api_key_header;
-	const evalAdapterEnv = process.env["NANOPENCIL_EVAL_ADAPTER"];
+	const evalAdapterEnv = process.env["CATUI_EVAL_ADAPTER"];
 	const evalAdapter: EvalAdapterId | undefined =
 		(evalAdapterEnv === "insforge" || evalAdapterEnv === "jsonl" || evalAdapterEnv === "noop")
 			? evalAdapterEnv
@@ -307,7 +307,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	};
 
 	// Activation: credentials with endpoint+api_key auto-enable (unless explicitly disabled).
-	// Env var NANOPENCIL_EVAL_ENABLED can override either direction.
+	// Env var CATUI_EVAL_ENABLED can override either direction.
 	const credHasConfig = !!(credentials?.endpoint ?? credentials?.insforge_url) && !!credentials?.api_key;
 	const evalEnabledByCreds = credHasConfig && credentials?.enabled !== false;
 	const evalCollectionEnabled =
@@ -329,7 +329,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	}
 
 	const evalAllowSelfSigned =
-		isTruthy(process.env["NANOPENCIL_EVAL_ALLOW_SELF_SIGNED"]) ||
+		isTruthy(process.env["CATUI_EVAL_ALLOW_SELF_SIGNED"]) ||
 		(credentials?.allow_self_signed ?? false);
 	const allowStaleCleanup = resolveStaleCleanupEnabled(
 		process.env[EVAL_STALE_CLEANUP_ENV],
@@ -572,12 +572,12 @@ export default async function salExtension(api: ExtensionAPI) {
 					// emitEval pushes to a batching queue; does NOT await HTTP.
 					void emitEval(runtime, "run_start", isEnabled(), {
 						task_description: (event.prompt ?? "").slice(0, 500),
-						task_file: process.env.NANOPENCIL_EXPERIMENT_TASK_FILE,
+						task_file: process.env.CATUI_EXPERIMENT_TASK_FILE,
 						model: runtime.evalMetadata.model ?? "unknown",
 						thinking: false,
-						pencil_version: runtime.buildMeta.version,
-						commit: process.env.NANOPENCIL_EVAL_COMMIT ?? runtime.buildMeta.commitHash ?? "unknown",
-						branch: process.env.NANOPENCIL_EVAL_BRANCH ?? runtime.buildMeta.branch ?? "unknown",
+						catui_version: runtime.buildMeta.version,
+						commit: process.env.CATUI_EVAL_COMMIT ?? runtime.buildMeta.commitHash ?? "unknown",
+						branch: process.env.CATUI_EVAL_BRANCH ?? runtime.buildMeta.branch ?? "unknown",
 						workspace_root: runtime.workspaceRoot,
 					});
 					// Strategy B: optional fire-and-forget stale run cleanup.
@@ -789,7 +789,7 @@ export default async function salExtension(api: ExtensionAPI) {
 	// ------------------------------------------------------------------
 	// Strategy B: Opt-in stale run cleanup on first turn.
 	// Disabled by default because workspace_root alone cannot distinguish
-	// a dead run from another live nanoPencil instance in the same repo.
+	// a dead run from another live Catui instance in the same repo.
 	// Operators may re-enable it explicitly in single-run environments.
 	//
 	// When enabled, on the first before_agent_start, fire-and-forget a PATCH

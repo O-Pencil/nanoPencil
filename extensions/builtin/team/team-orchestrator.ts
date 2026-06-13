@@ -5,7 +5,7 @@
  * [HERE]: extensions/builtin/team/team-orchestrator.ts - leader planning, mention parsing, and handoff execution
  */
 
-import type { Model } from "@pencil-agent/ai/types";
+import type { Model } from "@catui/ai/types";
 import { executePreset, selectAutoTeamPlan } from "./team-presets.js";
 import type { TeamRuntime, TeamRuntimeEvent } from "./team-runtime.js";
 import type {
@@ -46,7 +46,7 @@ interface PendingAssignment {
 }
 
 const LEADER_ID = "leader";
-const LEADER_LABEL = "pencil";
+const LEADER_LABEL = "catui";
 
 export function createTeamUtterance(input: {
 	speakerId: string;

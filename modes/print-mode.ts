@@ -4,8 +4,8 @@
  * [TO]: Consumed by modes/index.ts, main.ts, print mode tests
  * [HERE]: modes/print-mode.ts - non-interactive batch processing mode
  */
-import type { AgentRunResult } from "@pencil-agent/agent-core";
-import type { AssistantMessage, ImageContent, Message, UserMessage } from "@pencil-agent/ai/types";
+import type { AgentRunResult } from "@catui/agent-core";
+import type { AssistantMessage, ImageContent, Message, UserMessage } from "@catui/ai/types";
 import type { AgentSession } from "../core/runtime/agent-session.js";
 
 /**

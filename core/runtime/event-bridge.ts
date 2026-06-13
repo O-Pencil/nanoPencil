@@ -9,7 +9,7 @@
  * subscribe(), session persistence, retry/compaction ordering, and Soul lifecycle work.
  */
 
-import type { AgentEvent } from "@pencil-agent/agent-core";
+import type { AgentEvent } from "@catui/agent-core";
 import {
   type AgentResultEvent,
   type ExtensionRunner,

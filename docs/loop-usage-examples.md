@@ -22,7 +22,7 @@ Session-scoped loops are cleared when you close the session.
 
 ### Durable Loops (Persistent Across Sessions)
 
-Durable loops are saved to `.nanopencil/loop-tasks.json` and resume when you reopen the project.
+Durable loops are saved to `.catui/loop-tasks.json` and resume when you reopen the project.
 
 ```bash
 # Monitor build status every 5 minutes, persists across sessions
@@ -132,7 +132,7 @@ Suppresses per-tick UI messages (errors and terminal events still surface):
 | Persistence | Lost when session closes | Saved to disk |
 | Multi-process safety | N/A (per-process) | Protected by lock |
 | Use case | Temporary tasks | Long-running monitoring |
-| Storage | In-memory | `.nanopencil/loop-tasks.json` |
+| Storage | In-memory | `.catui/loop-tasks.json` |
 
 ## Real-World Examples
 
@@ -185,22 +185,22 @@ Suppresses per-tick UI messages (errors and terminal events still surface):
 
 ### Durable Loop Not Persisting
 
-1. Check if `.nanopencil/loop-tasks.json` exists
+1. Check if `.catui/loop-tasks.json` exists
 2. Verify you used `--durable` flag
 3. Check file permissions on project directory
 
 ### Multiple Instances Triggering Same Loop
 
 The scheduler lock prevents this. If you see multiple triggers:
-1. Check if lock file exists: `.nanopencil/loop-scheduler.lock`
+1. Check if lock file exists: `.catui/loop-scheduler.lock`
 2. Manually remove lock file if necessary
-3. Restart nanoPencil
+3. Restart Catui
 
 ## File Locations
 
 ```
-<nanopencil>
-├── .nanopencil/
+<catui>
+├── .catui/
 │   ├── loop-tasks.json          # Durable loop storage
 │   └── loop-scheduler.lock      # Scheduler lock file
 ```

@@ -10,17 +10,17 @@ import { loadBuildMeta as loadBuildMetaShared, loadInsforgeCredentials } from ".
 import type { EvalAdapterId } from "./eval/index.js";
 import type { BuildMeta, SalDiagnosticReporter } from "./sal-runtime.js";
 
-export const SAL_AB_ENV = "NANOPENCIL_SAL_AB";
-export const EVAL_ENABLED_ENV = "NANOPENCIL_EVAL_ENABLED";
-export const EVAL_ENDPOINT_ENV = "NANOPENCIL_EVAL_ENDPOINT";
-export const EVAL_RUN_ID_ENV = "NANOPENCIL_EVAL_RUN_ID";
-export const EVAL_VARIANT_ENV = "NANOPENCIL_EVAL_VARIANT";
-export const EVAL_LEGACY_FILE_ENV = "NANOPENCIL_EVAL_LEGACY_FILE";
-export const EVAL_API_KEY_ENV = "NANOPENCIL_EVAL_API_KEY";
-export const EVAL_API_KEY_HEADER_ENV = "NANOPENCIL_EVAL_API_KEY_HEADER";
-export const EVAL_HEADERS_JSON_ENV = "NANOPENCIL_EVAL_HEADERS_JSON";
-export const EVAL_CREDENTIALS_FILE_ENV = "NANOPENCIL_EVAL_CREDENTIALS_FILE";
-export const EVAL_STALE_CLEANUP_ENV = "NANOPENCIL_EVAL_CLEANUP_STALE_RUNS";
+export const SAL_AB_ENV = "CATUI_SAL_AB";
+export const EVAL_ENABLED_ENV = "CATUI_EVAL_ENABLED";
+export const EVAL_ENDPOINT_ENV = "CATUI_EVAL_ENDPOINT";
+export const EVAL_RUN_ID_ENV = "CATUI_EVAL_RUN_ID";
+export const EVAL_VARIANT_ENV = "CATUI_EVAL_VARIANT";
+export const EVAL_LEGACY_FILE_ENV = "CATUI_EVAL_LEGACY_FILE";
+export const EVAL_API_KEY_ENV = "CATUI_EVAL_API_KEY";
+export const EVAL_API_KEY_HEADER_ENV = "CATUI_EVAL_API_KEY_HEADER";
+export const EVAL_HEADERS_JSON_ENV = "CATUI_EVAL_HEADERS_JSON";
+export const EVAL_CREDENTIALS_FILE_ENV = "CATUI_EVAL_CREDENTIALS_FILE";
+export const EVAL_STALE_CLEANUP_ENV = "CATUI_EVAL_CLEANUP_STALE_RUNS";
 
 export interface EvalCredentials {
 	insforge_url?: string;
@@ -39,7 +39,7 @@ export interface EvalCredentials {
 /**
  * Delegate to the shared core/platform/telemetry/build-meta loader so SAL eval, the
  * ext-events sink, and any future telemetry consumer all stamp identical
- * pencil_version / commit_hash on emitted rows.
+ * catui_version / commit_hash on emitted rows.
  */
 export function loadBuildMeta(): BuildMeta {
 	return loadBuildMetaShared();

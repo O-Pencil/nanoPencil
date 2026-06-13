@@ -1,11 +1,11 @@
 /**
  * [WHO]: Provides output-token recovery and token-budget continuation helpers for agent loops.
- * [FROM]: Depends on @pencil-agent/ai message types and AgentLoopConfig budget settings.
+ * [FROM]: Depends on @catui/ai message types and AgentLoopConfig budget settings.
  * [TO]: Consumed by standard and structured-adaptive agent loops.
  * [HERE]: core/lib/agent-core/src/agent-loop-continuations.ts within agent-core; shared loop continuation policy.
  */
 
-import type { AssistantMessage, UserMessage } from "@pencil-agent/ai/types";
+import type { AssistantMessage, UserMessage } from "@catui/ai/types";
 import type { AgentLoopConfig } from "./types.js";
 
 export const DEFAULT_OUTPUT_TOKEN_BUDGET_THRESHOLD_PCT = 0.9;

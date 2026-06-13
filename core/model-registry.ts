@@ -1,7 +1,7 @@
 /**
  * [WHO]: ModelRegistry class, model definitions, API key resolution
  * [FROM]: Depends on ai, typebox, config modules
- * [TO]: Consumed by index.ts, main.ts, nanopencil-defaults.ts, core/runtime/sdk.ts, core/runtime/agent-session.ts, core/extensions-host/runner.ts, core/extensions-host/types.ts, cli/list-models.ts, modes/interactive/components/model-selector.ts, and test files
+ * [TO]: Consumed by index.ts, main.ts, catui-defaults.ts, core/runtime/sdk.ts, core/runtime/agent-session.ts, core/extensions-host/runner.ts, core/extensions-host/types.ts, cli/list-models.ts, modes/interactive/components/model-selector.ts, and test files
  * [HERE]: core/model-registry.ts - model catalog and credential management
  */
 import type {
@@ -12,11 +12,11 @@ import type {
 	OpenAICompletionsCompat,
 	OpenAIResponsesCompat,
 	SimpleStreamOptions,
-} from "@pencil-agent/ai/types";
-import type { AssistantMessageEventStream } from "@pencil-agent/ai/events";
-import { getModels, getProviders } from "@pencil-agent/ai/models";
-import { registerOAuthProvider, type OAuthProviderInterface } from "@pencil-agent/ai/oauth";
-import { registerApiProvider } from "@pencil-agent/ai/registry";
+} from "@catui/ai/types";
+import type { AssistantMessageEventStream } from "@catui/ai/events";
+import { getModels, getProviders } from "@catui/ai/models";
+import { registerOAuthProvider, type OAuthProviderInterface } from "@catui/ai/oauth";
+import { registerApiProvider } from "@catui/ai/registry";
 import { type Static, Type } from "@sinclair/typebox";
 import AjvModule from "ajv";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -246,23 +246,23 @@ function applyModelOverride(model: Model<Api>, override: ModelOverride): Model<A
 export const clearApiKeyCache = clearConfigValueCache;
 
 /**
- * NanoPencil (`useOnlyCustomModels`): only these OpenRouter entries ship from the built-in catalog.
+ * Catui (`useOnlyCustomModels`): only these OpenRouter entries ship from the built-in catalog.
  * OpenRouter exposes hundreds of models; listing all in `/model` is noisy. Users add arbitrary model ids
  * in models.json (same string as on openrouter.ai) — merged with these defaults by provider+id.
  */
-const NANOPENCIL_OPENROUTER_BUILTIN_MODEL_IDS: readonly string[] = ["openrouter/auto", "openrouter/free"];
+const CATUI_OPENROUTER_BUILTIN_MODEL_IDS: readonly string[] = ["openrouter/auto", "openrouter/free"];
 
 /**
  * Model registry - loads and manages models, resolves API keys via AuthStorage.
  */
 export interface ModelRegistryOptions {
 	/**
-	 * When true, only load models from models.json (no full built-in catalog). Used by NanoPencil.
+	 * When true, only load models from models.json (no full built-in catalog). Used by Catui.
 	 * Exception: a small OpenRouter built-in set (`openrouter/auto`, `openrouter/free`) so `/login` and
 	 * `/model` work without pasting ids; add any other OpenRouter model id in models.json.
 	 */
 	useOnlyCustomModels?: boolean;
-	/** Provider id(s) for which apiKey is optional in models.json (key stored in auth.json later). Used by NanoPencil. */
+	/** Provider id(s) for which apiKey is optional in models.json (key stored in auth.json later). Used by Catui. */
 	allowOptionalApiKeyForProvider?: string | string[];
 }
 
@@ -350,7 +350,7 @@ export class ModelRegistry {
 					modelOverrides,
 					new Set<string>(["openrouter", "zai"]),
 					{
-						openrouter: new Set(NANOPENCIL_OPENROUTER_BUILTIN_MODEL_IDS),
+						openrouter: new Set(CATUI_OPENROUTER_BUILTIN_MODEL_IDS),
 						// zai not specified = load all zai models
 					},
 				)

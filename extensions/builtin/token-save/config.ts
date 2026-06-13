@@ -25,9 +25,9 @@ interface TokenSaveTrustFile {
 }
 
 export async function loadTokenSaveConfigFilters(projectPath: string): Promise<ConfiguredTokenSaveFilter[]> {
-	const userPath = join(homedir(), ".pencils", "token-save", "filters.json");
-	const projectPathConfig = join(projectPath, ".nanopencil", "token-save", "filters.json");
-	const projectTrustPath = join(projectPath, ".nanopencil", "token-save", "trust.json");
+	const userPath = join(homedir(), ".catui", "token-save", "filters.json");
+	const projectPathConfig = join(projectPath, ".catui", "token-save", "filters.json");
+	const projectTrustPath = join(projectPath, ".catui", "token-save", "trust.json");
 
 	const filters: ConfiguredTokenSaveFilter[] = [];
 	filters.push(...(await readFilters(userPath, "user")));

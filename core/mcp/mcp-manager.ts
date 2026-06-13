@@ -91,7 +91,7 @@ export class MCPManager {
   }
 
   /**
-   * Get all MCP tools as NanoPencil ToolDefinitions
+   * Get all MCP tools as Catui ToolDefinitions
    */
   getTools(): ToolDefinition[] {
     return this.tools;

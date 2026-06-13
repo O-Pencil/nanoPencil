@@ -7,9 +7,9 @@
 
 import { Type, type Static } from "@sinclair/typebox";
 import type { ExtensionAPI, ToolDefinition } from "../../../core/extensions-host/types.js";
-import { Container, Text, type Component } from "@pencil-agent/tui";
+import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../core/theme-contract.js";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import { PLAN_CUSTOM_TYPE, type PlanSessionState } from "./types.js";
 import { handlePlanModeExit } from "./plan-permissions.js";
 import {

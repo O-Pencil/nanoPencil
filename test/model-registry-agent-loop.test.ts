@@ -13,7 +13,7 @@ import { ModelRegistry } from "../core/model-registry.js";
 
 describe("ModelRegistry agentLoopFramework config", () => {
 	it("loads per-model agent loop framework from models.json", () => {
-		const dir = mkdtempSync(join(tmpdir(), "nanopencil-model-loop-"));
+		const dir = mkdtempSync(join(tmpdir(), "catui-model-loop-"));
 		try {
 			const modelsPath = join(dir, "models.json");
 			writeFileSync(
@@ -53,7 +53,7 @@ describe("ModelRegistry agentLoopFramework config", () => {
 	});
 
 	it("loads agent loop framework from modelOverrides for built-in models", () => {
-		const dir = mkdtempSync(join(tmpdir(), "nanopencil-model-loop-override-"));
+		const dir = mkdtempSync(join(tmpdir(), "catui-model-loop-override-"));
 		try {
 			const modelsPath = join(dir, "models.json");
 			writeFileSync(
@@ -86,7 +86,7 @@ describe("ModelRegistry agentLoopFramework config", () => {
 	});
 
 	it("normalizes earlier experimental framework names while loading config", () => {
-		const dir = mkdtempSync(join(tmpdir(), "nanopencil-model-loop-compat-"));
+		const dir = mkdtempSync(join(tmpdir(), "catui-model-loop-compat-"));
 		try {
 			const modelsPath = join(dir, "models.json");
 			writeFileSync(
@@ -126,7 +126,7 @@ describe("ModelRegistry agentLoopFramework config", () => {
 	});
 
 	it("normalizes high-intelligence and low-intelligence aliases while loading config", () => {
-		const dir = mkdtempSync(join(tmpdir(), "nanopencil-model-loop-legacy-alias-"));
+		const dir = mkdtempSync(join(tmpdir(), "catui-model-loop-legacy-alias-"));
 		try {
 			const modelsPath = join(dir, "models.json");
 			writeFileSync(

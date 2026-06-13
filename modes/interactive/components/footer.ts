@@ -1,11 +1,11 @@
 /**
  * [WHO]: FooterComponent, renderContextProgressBar()
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts, modes/interactive/interactive-mode.ts
  * [HERE]: modes/interactive/components/footer.ts - status bar footer and shared context progress rendering
  */
 
-import { type Component, truncateToWidth, visibleWidth } from "@pencil-agent/tui";
+import { type Component, truncateToWidth, visibleWidth } from "@catui/tui";
 import type { AgentSession } from "../../../core/runtime/agent-session.js";
 import type { ReadonlyFooterDataProvider } from "../footer-data-provider.js";
 import { theme } from "../theme/theme.js";

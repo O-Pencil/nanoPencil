@@ -1,11 +1,11 @@
 ---
 name: link-world
-description: Built-in internet access bridge for NanoPencil. Use when a task needs agent-reach backed web search, browsing, or remote internet actions.
+description: Built-in internet access bridge for Catui. Use when a task needs agent-reach backed web search, browsing, or remote internet actions.
 ---
 
 # Link-world
 
-NanoPencil exposes link-world as first-class tools. Prefer these tools over calling `agent-reach` through `bash`.
+Catui exposes link-world as first-class tools. Prefer these tools over calling `agent-reach` through `bash`.
 
 ## Tool Selection
 
@@ -79,4 +79,4 @@ Lower-level execution:
 
 - Pass `args` as an array of tokens, not as one shell command string.
 - If `agent-reach` is not installed, the tools will return install guidance.
-- Keep NanoPencil as the integration boundary: diagnostics through `link_world_admin`, search through `web_search`, direct retrieval through `web_fetch`, lower-level execution through `link_world_exec`.
+- Keep Catui as the integration boundary: diagnostics through `link_world_admin`, search through `web_search`, direct retrieval through `web_fetch`, lower-level execution through `link_world_exec`.

@@ -1,5 +1,5 @@
-import type { AssistantMessage, Model, ToolResultMessage, UserMessage } from "@pencil-agent/ai/types";
-import { getModel } from "@pencil-agent/ai/models";
+import type { AssistantMessage, Model, ToolResultMessage, UserMessage } from "@catui/ai/types";
+import { getModel } from "@catui/ai/models";
 import { describe, expect, it } from "vitest";
 import { Agent } from "../src/index.js";
 import { hasBedrockCredentials } from "./bedrock-utils.js";

@@ -9,15 +9,15 @@
  * rename-session callback through SessionManager.open().
  */
 
-import type { Component, Container, TUI } from "@pencil-agent/tui";
-import { Spacer } from "@pencil-agent/tui";
+import type { Component, Container, TUI } from "@catui/tui";
+import { Spacer } from "@catui/tui";
 import type { AgentSession } from "../../../core/runtime/agent-session.js";
 import { SessionManager } from "../../../core/session/session-manager.js";
 import type { KeybindingsManager } from "../../../core/platform/keybindings.js";
 import { SessionSelectorComponent } from "../components/session-selector.js";
 import { TreeSelectorComponent } from "../components/tree-selector.js";
 import { UserMessageSelectorComponent } from "../components/user-message-selector.js";
-import { PencilLoader } from "../components/pencil-loader.js";
+import { CatuiLoader } from "../components/catui-loader.js";
 import { appKey } from "../components/keybinding-hints.js";
 import { theme } from "../theme/theme.js";
 
@@ -148,7 +148,7 @@ export class TreeOverlayController {
             break;
           }
 
-          let summaryLoader: PencilLoader | undefined;
+          let summaryLoader: CatuiLoader | undefined;
           const originalOnEscape = this.ctx.surface.getEscapeHandler();
 
           if (wantsSummary) {
@@ -156,7 +156,7 @@ export class TreeOverlayController {
               this.ctx.session.abortBranchSummary();
             });
             this.ctx.surface.getChatContainer().addChild(new Spacer(1));
-            summaryLoader = new PencilLoader(
+            summaryLoader = new CatuiLoader(
               this.ctx.surface.getUi(),
               theme,
               `Summarizing branch... (${appKey(this.ctx.keybindings, "interrupt")} to cancel)`,

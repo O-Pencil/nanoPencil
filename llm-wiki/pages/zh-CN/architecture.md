@@ -29,7 +29,7 @@ generatedAt: 2026-05-26T16:35:12.349Z
 | `index.ts` | 1 |
 | `main.ts` | 1 |
 | `migrations.ts` | 1 |
-| `nanopencil-defaults.ts` | 1 |
+| `catui-defaults.ts` | 1 |
 
 ## 运行时形态
 
@@ -44,10 +44,10 @@ generatedAt: 2026-05-26T16:35:12.349Z
 | 包 | 导入文件数 |
 | --- | ---: |
 | `node:path` | 72 |
-| `@pencil-agent/tui` | 60 |
-| `@pencil-agent/ai` | 50 |
+| `@catui/tui` | 60 |
+| `@catui/ai` | 50 |
 | `node:fs` | 50 |
-| `@pencil-agent/agent-core` | 43 |
+| `@catui/agent-core` | 43 |
 | `fs` | 30 |
 | `path` | 28 |
 | `node:os` | 26 |

@@ -6,7 +6,7 @@
  */
 
 import { Type, type Static } from "@sinclair/typebox";
-import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text, type Component } from "@catui/tui";
 import type {
 	ExtensionAPI,
 	ExtensionCommandContext,

@@ -1,11 +1,11 @@
 /**
  * [WHO]: Extension interface, AI-driven personalized greetings and idle cues
- * [FROM]: Depends on @pencil-agent/tui, core/extensions-host/types.js, core/platform/i18n, node:path, node:url, node:fs
+ * [FROM]: Depends on @catui/tui, core/extensions-host/types.js, core/platform/i18n, node:path, node:url, node:fs
  * [TO]: Loaded by core/extensions-host/loader.ts as extension entry point
  * [HERE]: extensions/builtin/presence/index.ts - AI-generated opening + idle presence lines from memory (episodes/preferences/lessons) + git snapshot (branch/last commit/changed files) + soul personality traits and identity/style preferences, injects last MAX_RECENT_PRESENCE lines into agent systemPrompt per turn, configurable via settings.presence.enabled, canSendOpening guards against agent-is-busy race
  */
 
-import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text } from "@catui/tui";
 import type { ExtensionAPI, ExtensionContext, SessionReadyEvent, SessionStartEvent } from "../../../core/extensions-host/types.js";
 import { getLocale, tValue } from "../../../core/platform/i18n/index.js";
 import { dirname, join } from "node:path";
@@ -34,17 +34,17 @@ const PRESENCE_DEBOUNCE_MS = 30_000;
 const GIT_TIMEOUT_MS = 200;
 
 /**
- * Read persona-specific presence lines from the active persona's PENCIL.md.
+ * Read persona-specific presence lines from the active persona's CATUI.md.
  * Parses `## Presence` section for `### Opening Lines` or `### Idle Lines` blocks.
  * Returns empty array if no persona or no matching section found.
  */
 function getPersonaPresenceLines(kind: "opening" | "idle"): string[] {
 	const personaDir = process.env.NANO_PERSONA_DIR;
 	if (!personaDir) return [];
-	const pencilPath = join(personaDir, "PENCIL.md");
-	if (!existsSync(pencilPath)) return [];
+	const catuiPath = join(personaDir, "CATUI.md");
+	if (!existsSync(catuiPath)) return [];
 	try {
-		const content = readFileSync(pencilPath, "utf-8");
+		const content = readFileSync(catuiPath, "utf-8");
 		const presenceMatch = content.match(/## Presence\s*\n([\s\S]*?)(?=\n## |\n# |$)/);
 		if (!presenceMatch) return [];
 		const presenceSection = presenceMatch[1]!;
@@ -164,7 +164,7 @@ function resolveBundledPackageEntry(packageName: "mem-core" | "soul-core"): stri
 }
 
 function getOpeningDelayMs(): number {
-	const raw = process.env.NANOPENCIL_PRESENCE_OPENING_DELAY_MS;
+	const raw = process.env.CATUI_PRESENCE_OPENING_DELAY_MS;
 	if (!raw) return OPENING_DELAY_MS;
 	const parsed = Number(raw);
 	return Number.isFinite(parsed) && parsed >= 0 ? parsed : OPENING_DELAY_MS;
@@ -278,7 +278,7 @@ async function initMemEngine(state: PresenceState): Promise<void> {
 		const memModule = await importRuntimeModule<{
 			NanoMemEngine: new (config: unknown) => NonNullable<PresenceState["memEngine"]>;
 			getConfig: (options: { memoryDir: string; locale: "en" | "zh" }) => unknown;
-		}>(["@pencil-agent/mem-core"], "mem-core");
+		}>(["@catui/mem-core"], "mem-core");
 		if (!memModule?.NanoMemEngine || !memModule.getConfig) {
 			state.memEngine = undefined;
 			return;

@@ -23,7 +23,7 @@ import { join, dirname } from "node:path";
  * - agentDefinitions has activeAgents (currently usable) and allAgents (including disabled)
  * - agentNameRegistry maps name → agentId for SendMessage routing
  * - Definitions are loaded at startup, config change, and plugin load
- * - Sources: built-in, plugin, user custom (.nanopencil/agents/*.md)
+ * - Sources: built-in, plugin, user custom (.catui/agents/*.md)
  */
 export class AgentDefinitionRegistry {
   /** Currently active (usable) agent definitions */
@@ -36,7 +36,7 @@ export class AgentDefinitionRegistry {
   private failedFiles: Array<{ path: string; error: string }> = [];
   /** Path for persisting agentNameRegistry to disk (CC §XIV, §18.6) */
   private persistencePath: string | undefined;
-  /** Project cwd for loading custom agent definitions from .nanopencil/agents/ */
+  /** Project cwd for loading custom agent definitions from .catui/agents/ */
   private cwd: string | undefined;
   /** Global agent config directory for user-scoped agent definitions */
   private agentDir: string | undefined;
@@ -44,7 +44,7 @@ export class AgentDefinitionRegistry {
   /**
    * @param persistencePath Optional path for agentNameRegistry JSON persistence.
    *   Per CC §14.1, the name registry is persisted so it survives process restarts.
-   *   Typical: join(cwd, ".nanopencil", "agent-registry.json")
+   *   Typical: join(cwd, ".catui", "agent-registry.json")
    */
   constructor(persistencePath?: string) {
     this.persistencePath = persistencePath;
@@ -68,7 +68,7 @@ export class AgentDefinitionRegistry {
       this.activeAgents.set(agentType, definition);
     }
 
-    // 2. Load custom agents from .nanopencil/agents/*.md and ~/.pencils/agents/<id>/agents/*.md (CC §XIV)
+    // 2. Load custom agents from .catui/agents/*.md and ~/.catui/agents/<id>/agents/*.md (CC §XIV)
     // Note: loadCustomAgentDefinitions is async; reload() is synchronous for built-in agents.
     // Custom agents are loaded via configureDirectories() or loadCustomAgents().
     // This keeps the constructor simple (no async required).
@@ -251,7 +251,7 @@ export class AgentDefinitionRegistry {
    * Register a custom agent definition (from plugin or user settings).
    * Per CC §XIV, definitions can come from:
    * - Plugin definitions (ao6)
-   * - User custom agents (.nanopencil/agents/*.md)
+   * - User custom agents (.catui/agents/*.md)
    * - Flag / settings overrides
    */
   registerCustomAgent(definition: AgentDefinition): void {

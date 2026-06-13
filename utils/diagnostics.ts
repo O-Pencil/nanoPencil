@@ -37,7 +37,7 @@ interface BusSlot {
 	queue: DiagnosticEvent[];
 }
 
-const SLOT_KEY = Symbol.for("nanopencil.diagnostic.bus.v1");
+const SLOT_KEY = Symbol.for("catui.diagnostic.bus.v1");
 const QUEUE_LIMIT = 100;
 const CHANNEL = "diagnostic:event";
 
@@ -55,7 +55,7 @@ function getSlot(): BusSlot {
  * Unified dev-mode predicate. True only for explicit developer intent:
  * - NODE_ENV=development, OR
  * - npm_lifecycle_event is "dev" or "test", OR
- * - NANOPENCIL_DEBUG is truthy.
+ * - CATUI_DEBUG is truthy (legacy NANOPENCIL_DEBUG is also accepted).
  *
  * Always false when NODE_ENV=production.
  */
@@ -64,7 +64,7 @@ export function isDevRuntime(): boolean {
 	if (process.env.NODE_ENV === "development") return true;
 	const lifecycle = process.env.npm_lifecycle_event;
 	if (lifecycle === "dev" || lifecycle === "test") return true;
-	if (["1", "true", "yes", "on"].includes((process.env.NANOPENCIL_DEBUG ?? "").toLowerCase())) return true;
+	if (["1", "true", "yes", "on"].includes((process.env.CATUI_DEBUG ?? process.env.NANOPENCIL_DEBUG ?? "").toLowerCase())) return true;
 	return false;
 }
 

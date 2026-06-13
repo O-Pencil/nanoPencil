@@ -1,6 +1,6 @@
 ---
 name: packages
-description: Use when the user asks about the published @pencil-agent/* packages.
+description: Use when the user asks about the published @catui/* packages.
 surface: TODO  # user entry points: /command, --flag, config key, file location
 owner: packages/  # DIP P2 anchor — read its AGENT.md member list to find code
 status: draft

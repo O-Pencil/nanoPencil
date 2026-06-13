@@ -7,7 +7,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Model } from "@pencil-agent/ai/types";
+import type { Model } from "@catui/ai/types";
 import { SubAgentRuntime, InProcessSubAgentBackend } from "../../../core/sub-agent/index.js";
 import { createAgentSession } from "../../../core/runtime/sdk.js";
 import type { WorkspacePath } from "../../../core/workspace/index.js";
@@ -123,7 +123,7 @@ export class SubAgentRunner {
         workspacePath: workspace?.path,
       };
       if (workspace && changedFiles.length > 0) {
-        const patchPath = join(baseCwd, ".nanopencil", "subagent-runs", `${runId}.patch`);
+        const patchPath = join(baseCwd, ".catui", "subagent-runs", `${runId}.patch`);
         if (await this.worktreeManager.writePatch(workspace, patchPath)) {
           report.patchPath = patchPath;
           report.patchPreview = await this.readPatchPreview(patchPath);
@@ -280,7 +280,7 @@ export class SubAgentRunner {
   }
 
   private async writeReport(baseCwd: string, report: SubAgentRunReport): Promise<string> {
-    const reportsDir = join(baseCwd, ".nanopencil", "subagent-runs");
+    const reportsDir = join(baseCwd, ".catui", "subagent-runs");
     await mkdir(reportsDir, { recursive: true });
     const reportPath = join(reportsDir, `${report.runId}.md`);
     const lines = [

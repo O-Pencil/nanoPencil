@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 export async function writeRawRecovery(projectPath: string, raw: string): Promise<string | undefined> {
 	try {
-		const dir = join(projectPath, ".nanopencil", "token-save", "raw");
+		const dir = join(projectPath, ".catui", "token-save", "raw");
 		await mkdir(dir, { recursive: true });
 		const path = join(dir, `${Date.now()}-${randomBytes(4).toString("hex")}.log`);
 		await writeFile(path, raw, "utf8");

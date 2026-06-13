@@ -1,6 +1,6 @@
 ---
 name: themes
-description: Use when the user asks how to change, create, or configure a NanoPencil theme.
+description: Use when the user asks how to change, create, or configure a Catui theme.
 surface: TODO  # user entry points: /command, --flag, config key, file location
 owner: modes/interactive/theme/  # DIP P2 anchor — read its AGENT.md member list to find code
 status: draft

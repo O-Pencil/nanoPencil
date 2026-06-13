@@ -1,11 +1,11 @@
 /**
  * [WHO]: BorderedLoader
- * [FROM]: Depends on @pencil-agent/tui, ./dynamic-border.js, ./keybinding-hints.js
+ * [FROM]: Depends on @catui/tui, ./dynamic-border.js, ./keybinding-hints.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/bordered-loader.ts - loader with borders
  */
 
-import { CancellableLoader, Container, Loader, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { CancellableLoader, Container, Loader, Spacer, Text, type TUI } from "@catui/tui";
 import type { Theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 import { keyHint } from "./keybinding-hints.js";

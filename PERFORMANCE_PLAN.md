@@ -1,4 +1,4 @@
-# nanoPencil 启动性能优化方案
+# Catui 启动性能优化方案
 
 > 文档版本: 2026-05-02
 > 状态: 基础设施已完成，待评审后继续 MCP 延迟初始化
@@ -32,8 +32,8 @@
 │   ├── SettingsManager.create() 文件 I/O + 锁                        │
 │   └── auth_storage_created                                          │
 │                                                                     │
-│   nanopencil_defaults_ensured (889ms)                               │
-│   └── ensureNanopencilDefaultConfig()                              │
+│   catui_defaults_ensured (889ms)                               │
+│   └── ensureCatuiDefaultConfig()                              │
 │                                                                     │
 │   model_registry_created (910ms)                                    │
 │   └── ModelRegistry 初始化 (38ms)                                   │

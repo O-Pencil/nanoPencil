@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ImagePipelineController, ImagePipelineContext, Attachment — clipboard/attachment/image handling
- * [FROM]: Depends on @pencil-agent/tui (Container/Component/matchesKey), @pencil-agent/ai (ImageContent),
+ * [FROM]: Depends on @catui/tui (Container/Component/matchesKey), @catui/ai (ImageContent),
  *         modes/utils (clipboard-image, image-resize), utils/mime, components/attachments-bar, theme
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (constructs one, delegates paste/attachment/image methods)
  * [HERE]: modes/interactive/controllers/image-pipeline-controller.ts — first P5 UI slice (UI02, 纯搬)
@@ -11,8 +11,8 @@
  * identical to the former InteractiveMode methods.
  */
 
-import type { ImageContent } from "@pencil-agent/ai/types";
-import { type Component, Container, matchesKey } from "@pencil-agent/tui";
+import type { ImageContent } from "@catui/ai/types";
+import { type Component, Container, matchesKey } from "@catui/tui";
 import { detectSupportedImageMimeTypeFromFile } from "../../../utils/mime.js";
 import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipboard-image.js";
 import { formatDimensionNote, resizeImage } from "../../utils/image-resize.js";
@@ -243,9 +243,9 @@ export class ImagePipelineController {
     const images: ImageContent[] = [];
     const tmpDir = os.tmpdir();
 
-    // Match clipboard-pasted image paths (nanopencil-clipboard-UUID.ext)
+    // Match clipboard-pasted image paths (catui-clipboard-UUID.ext)
     const clipboardImagePattern = new RegExp(
-      `${tmpDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[/\\\\]nanopencil-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)`,
+      `${tmpDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[/\\\\]catui-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)`,
       "gi",
     );
 

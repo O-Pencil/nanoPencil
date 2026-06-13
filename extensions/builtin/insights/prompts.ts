@@ -7,7 +7,7 @@
  * Prompt templates for the /insights command.
  *
  * 1:1 port of Claude Code src/commands/insights.ts prompt templates.
- * "Claude Code" → "nanoPencil", feature references updated for nP.
+ * "Claude Code" → "Catui", feature references updated for nP.
  */
 
 import type { InsightSection } from "./types.js";
@@ -16,7 +16,7 @@ import type { InsightSection } from "./types.js";
 // Facet extraction
 // ============================================================================
 
-export const FACET_EXTRACTION_PROMPT = `Analyze this nanoPencil session and extract structured facets.
+export const FACET_EXTRACTION_PROMPT = `Analyze this Catui session and extract structured facets.
 
 CRITICAL GUIDELINES:
 
@@ -62,7 +62,7 @@ export const FACET_EXTRACTION_SCHEMA = `RESPOND WITH ONLY A VALID JSON OBJECT ma
 // Transcript chunk summarization
 // ============================================================================
 
-export const SUMMARIZE_CHUNK_PROMPT = `Summarize this portion of a nanoPencil session transcript. Focus on:
+export const SUMMARIZE_CHUNK_PROMPT = `Summarize this portion of a Catui session transcript. Focus on:
 1. What the user asked for
 2. What the agent did (tools used, files modified)
 3. Any friction or issues
@@ -80,12 +80,12 @@ TRANSCRIPT CHUNK:
 export const INSIGHT_SECTIONS: InsightSection[] = [
 	{
 		name: "project_areas",
-		prompt: `Analyze this nanoPencil usage data and identify project areas.
+		prompt: `Analyze this Catui usage data and identify project areas.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
   "areas": [
-    {"name": "Area name", "session_count": N, "description": "2-3 sentences about what was worked on and how nanoPencil was used."}
+    {"name": "Area name", "session_count": N, "description": "2-3 sentences about what was worked on and how Catui was used."}
   ]
 }
 
@@ -94,18 +94,18 @@ Include 4-5 areas. Skip internal operations.`,
 	},
 	{
 		name: "interaction_style",
-		prompt: `Analyze this nanoPencil usage data and describe the user's interaction style.
+		prompt: `Analyze this Catui usage data and describe the user's interaction style.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
-  "narrative": "2-3 paragraphs analyzing HOW the user interacts with nanoPencil. Use second person 'you'. Describe patterns: iterate quickly vs detailed upfront specs? Interrupt often or let the agent run? Include specific examples. Use **bold** for key insights.",
+  "narrative": "2-3 paragraphs analyzing HOW the user interacts with Catui. Use second person 'you'. Describe patterns: iterate quickly vs detailed upfront specs? Interrupt often or let the agent run? Include specific examples. Use **bold** for key insights.",
   "key_pattern": "One sentence summary of most distinctive interaction style"
 }`,
 		maxTokens: 8192,
 	},
 	{
 		name: "what_works",
-		prompt: `Analyze this nanoPencil usage data and identify what's working well for this user. Use second person ("you").
+		prompt: `Analyze this Catui usage data and identify what's working well for this user. Use second person ("you").
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -120,7 +120,7 @@ Include 3 impressive workflows.`,
 	},
 	{
 		name: "friction_analysis",
-		prompt: `Analyze this nanoPencil usage data and identify friction points for this user. Use second person ("you").
+		prompt: `Analyze this Catui usage data and identify friction points for this user. Use second person ("you").
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -135,7 +135,7 @@ Include 3 friction categories with 2 examples each.`,
 	},
 	{
 		name: "suggestions",
-		prompt: `Analyze this nanoPencil usage data and suggest improvements.
+		prompt: `Analyze this Catui usage data and suggest improvements.
 
 ## NANOFEATURES REFERENCE (pick from these for features_to_try):
 1. **GRUB**: Autonomous long-running task engine. Runs iterative loops with disk-persistent state.
@@ -143,7 +143,7 @@ Include 3 friction categories with 2 examples each.`,
    - Good for: large multi-file refactors, feature implementation with test validation, iterative debugging
 
 2. **Custom Skills**: Reusable prompts you define as markdown files that run with a single /command.
-   - How to use: Create \`.nanopencil/skills/commit/SKILL.md\` with instructions. Then type \`/commit\` to run it.
+   - How to use: Create \`.catui/skills/commit/SKILL.md\` with instructions. Then type \`/commit\` to run it.
    - Good for: repetitive workflows - /commit, /review, /test, /deploy, /pr, or complex multi-step workflows
 
 3. **teach**: Guided knowledge teaching with analogy + source verification.
@@ -178,7 +178,7 @@ IMPORTANT for features_to_try: Pick 2-3 from the NANOFEATURES REFERENCE above. I
 	},
 	{
 		name: "on_the_horizon",
-		prompt: `Analyze this nanoPencil usage data and identify future opportunities.
+		prompt: `Analyze this Catui usage data and identify future opportunities.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -193,7 +193,7 @@ Include 3 opportunities. Think BIG - autonomous workflows, parallel agents, iter
 	},
 	{
 		name: "fun_ending",
-		prompt: `Analyze this nanoPencil usage data and find a memorable moment.
+		prompt: `Analyze this Catui usage data and find a memorable moment.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -219,15 +219,15 @@ export function buildAtAGlancePrompt(
 	patternsText: string,
 	horizonText: string,
 ): string {
-	return `You're writing an "At a Glance" summary for a nanoPencil usage insights report. The goal is to help the user understand their usage and improve how they can use nanoPencil better, especially as models improve.
+	return `You're writing an "At a Glance" summary for a Catui usage insights report. The goal is to help the user understand their usage and improve how they can use Catui better, especially as models improve.
 
 Use this 4-part structure:
 
-1. **What's working** - What is the user's unique style of interacting with nanoPencil and what are some impactful things they've done? You can include one or two details, but keep it high level since things might not be fresh in the user's memory. Don't be fluffy or overly complimentary. Also, don't focus on the tool calls they use.
+1. **What's working** - What is the user's unique style of interacting with Catui and what are some impactful things they've done? You can include one or two details, but keep it high level since things might not be fresh in the user's memory. Don't be fluffy or overly complimentary. Also, don't focus on the tool calls they use.
 
 2. **What's hindering you** - Split into (a) agent's fault (misunderstandings, wrong approaches, bugs) and (b) user-side friction (not providing enough context, environment issues -- ideally more general than just one project). Be honest but constructive.
 
-3. **Quick wins to try** - Specific nanoPencil features they could try from the examples below, or a workflow technique if you think it's really compelling. (Avoid stuff like "Ask the agent to confirm before taking actions" or "Type out more context up front" which are less compelling.)
+3. **Quick wins to try** - Specific Catui features they could try from the examples below, or a workflow technique if you think it's really compelling. (Avoid stuff like "Ask the agent to confirm before taking actions" or "Type out more context up front" which are less compelling.)
 
 4. **Ambitious workflows for better models** - As we move to much more capable models over the next 3-6 months, what should they prepare for? What workflows that seem impossible now will become possible? Draw from the appropriate section below.
 

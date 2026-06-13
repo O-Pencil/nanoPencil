@@ -26,19 +26,19 @@ test("sal experiment: exports anchors into a run-local directory when experiment
 });
 
 test("sal experiment: sidecar output is disabled unless flag or env enables A/B mode", () => {
-	const prev = process.env.NANOPENCIL_SAL_AB;
+	const prev = process.env.CATUI_SAL_AB;
 	try {
-		delete process.env.NANOPENCIL_SAL_AB;
+		delete process.env.CATUI_SAL_AB;
 		assert.equal(resolveSalAbEnabled(false), false);
 		assert.equal(resolveSalAbEnabled(true), true);
 
-		process.env.NANOPENCIL_SAL_AB = "1";
+		process.env.CATUI_SAL_AB = "1";
 		assert.equal(resolveSalAbEnabled(false), true);
 	} finally {
 		if (prev === undefined) {
-			delete process.env.NANOPENCIL_SAL_AB;
+			delete process.env.CATUI_SAL_AB;
 		} else {
-			process.env.NANOPENCIL_SAL_AB = prev;
+			process.env.CATUI_SAL_AB = prev;
 		}
 	}
 });

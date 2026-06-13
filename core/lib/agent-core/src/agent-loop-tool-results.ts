@@ -1,11 +1,11 @@
 /**
  * [WHO]: Provides enforceToolResultBatchSize(), createInterruptedToolResults(), and createSkippedToolCallLimitResults() for bounded and complete tool-result batches.
- * [FROM]: Depends on @pencil-agent/ai AssistantMessage/ToolResultMessage/TextContent shapes.
+ * [FROM]: Depends on @catui/ai AssistantMessage/ToolResultMessage/TextContent shapes.
  * [TO]: Consumed by standard and structured-adaptive agent loops before appending tool results.
  * [HERE]: core/lib/agent-core/src/agent-loop-tool-results.ts within agent-core; shared tool-result budget policy.
  */
 
-import type { AssistantMessage, TextContent, ToolResultMessage } from "@pencil-agent/ai/types";
+import type { AssistantMessage, TextContent, ToolResultMessage } from "@catui/ai/types";
 
 export function enforceToolResultBatchSize(
 	toolResults: ToolResultMessage[],

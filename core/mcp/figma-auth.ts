@@ -9,7 +9,7 @@ import {
 	type OAuthCredentials,
 	type OAuthLoginCallbacks,
 	type OAuthProviderInterface,
-} from "@pencil-agent/ai/oauth";
+} from "@catui/ai/oauth";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { homedir } from "node:os";
@@ -23,9 +23,9 @@ const FIGMA_AUTH_URL = "https://www.figma.com/oauth/mcp";
 const FIGMA_TOKEN_URL = "https://api.figma.com/v1/oauth/token";
 const FIGMA_REGISTER_URL = "https://api.figma.com/v1/oauth/mcp/register";
 const FIGMA_SCOPE = "mcp:connect";
-const FIGMA_CLIENT_NAME = "NanoPencil";
-const FIGMA_CLIENT_URI = "https://github.com/pencil-agent/nano-pencil";
-const FIGMA_CLIENT_METADATA_URL = "https://raw.githubusercontent.com/pencil-agent/nano-pencil/main/README.md";
+const FIGMA_CLIENT_NAME = "Catui";
+const FIGMA_CLIENT_URI = "https://github.com/catui-agent/catui-agent";
+const FIGMA_CLIENT_METADATA_URL = "https://raw.githubusercontent.com/catui-agent/catui-agent/main/README.md";
 const CLAUDE_CREDENTIALS_PATH = join(homedir(), ".claude", ".credentials.json");
 const CALLBACK_HOST = "127.0.0.1";
 const CALLBACK_PATH = "/auth/callback";
@@ -92,7 +92,7 @@ const SUCCESS_HTML = `<!doctype html>
   <title>Figma authentication successful</title>
 </head>
 <body>
-  <p>Figma authentication completed. Return to NanoPencil.</p>
+  <p>Figma authentication completed. Return to Catui.</p>
 </body>
 </html>`;
 
@@ -104,7 +104,7 @@ const FAILURE_HTML = `<!doctype html>
   <title>Figma authentication failed</title>
 </head>
 <body>
-  <p>Figma authentication failed. You can close this window and retry from NanoPencil.</p>
+  <p>Figma authentication failed. You can close this window and retry from Catui.</p>
 </body>
 </html>`;
 
@@ -193,12 +193,12 @@ export function findImportableFigmaOAuthSession(): FigmaImportableSession | unde
 }
 
 function loadConfiguredClientInformation(): FigmaClientInformation | undefined {
-	const clientId = process.env.NANOPENCIL_FIGMA_CLIENT_ID?.trim();
+	const clientId = process.env.CATUI_FIGMA_CLIENT_ID?.trim();
 	if (!clientId) {
 		return undefined;
 	}
 
-	const clientSecret = process.env.NANOPENCIL_FIGMA_CLIENT_SECRET?.trim() || undefined;
+	const clientSecret = process.env.CATUI_FIGMA_CLIENT_SECRET?.trim() || undefined;
 	const tokenEndpointAuthMethod = clientSecret ? "client_secret_basic" : "none";
 
 	return {
@@ -300,7 +300,7 @@ async function fetchAuthorizationServerMetadata(): Promise<FigmaAuthorizationSer
 	return (await response.json()) as FigmaAuthorizationServerMetadata;
 }
 
-async function registerNanoPencilClient(
+async function registerCatuiClient(
 	redirectUri: string,
 	metadata: FigmaAuthorizationServerMetadata,
 ): Promise<FigmaClientInformation | undefined> {
@@ -526,7 +526,7 @@ async function exchangeAuthorizationCode(
 		clientSecret: client.clientSecret,
 		tokenEndpointAuthMethod: method,
 		scope: FIGMA_SCOPE,
-		source: client.source || "nanopencil",
+		source: client.source || "catui",
 	};
 }
 
@@ -538,11 +538,11 @@ async function loginWithStandaloneOAuth(callbacks: OAuthLoginCallbacks): Promise
 	try {
 		const configuredClient = loadConfiguredClientInformation();
 		const registeredClient =
-			configuredClient || (await registerNanoPencilClient(callback.redirectUri, metadata));
+			configuredClient || (await registerCatuiClient(callback.redirectUri, metadata));
 
 		if (!registeredClient) {
 			throw new Error(
-				"NanoPencil could not complete Figma dynamic client registration. Set NANOPENCIL_FIGMA_CLIENT_ID and NANOPENCIL_FIGMA_CLIENT_SECRET, or keep using the import fallback for now.",
+				"Catui could not complete Figma dynamic client registration. Set CATUI_FIGMA_CLIENT_ID and CATUI_FIGMA_CLIENT_SECRET, or keep using the import fallback for now.",
 			);
 		}
 
@@ -553,7 +553,7 @@ async function loginWithStandaloneOAuth(callbacks: OAuthLoginCallbacks): Promise
 
 		callbacks.onAuth({
 			url: authorizationUrl,
-			instructions: "A browser window should open. Approve Figma access to finish linking NanoPencil.",
+			instructions: "A browser window should open. Approve Figma access to finish linking Catui.",
 		});
 		openBrowser(authorizationUrl);
 

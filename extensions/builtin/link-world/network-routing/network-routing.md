@@ -1,11 +1,11 @@
 ---
 name: network-routing
-description: Decide whether a task should use NanoPencil's web_search, link_world tools, or browser automation.
+description: Decide whether a task should use Catui's web_search, link_world tools, or browser automation.
 ---
 
 # Network Routing
 
-NanoPencil has two different network paths:
+Catui has two different network paths:
 
 - `web_search` and `web_fetch` when those high-level tools are actually available in the current session
 - `link_world_*` as the durable lower-level integration path
@@ -57,7 +57,7 @@ If setup is uncertain, call `browser_admin` with `status` or `setup` first.
 
 ## Working Rule
 
-Prefer NanoPencil's named tools over raw shell commands. The integration boundary should stay inside:
+Prefer Catui's named tools over raw shell commands. The integration boundary should stay inside:
 
 - `link_world_admin`
 - `web_search`

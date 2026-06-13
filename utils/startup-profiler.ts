@@ -41,10 +41,10 @@ export interface ProfileReport {
 }
 
 /** Whether profiling is enabled */
-const enabled = process.env.NANOPENCIL_PROFILE_STARTUP === "1";
+const enabled = (process.env.CATUI_PROFILE_STARTUP ?? process.env.NANOPENCIL_PROFILE_STARTUP) === "1";
 
 /** Profile output file path */
-const outputFile = process.env.NANOPENCIL_PROFILE_FILE;
+const outputFile = process.env.CATUI_PROFILE_FILE ?? process.env.NANOPENCIL_PROFILE_FILE;
 
 /** Stored checkpoints */
 const checkpoints: Checkpoint[] = [];
@@ -54,7 +54,7 @@ const MODULE_VERSION = "1.0.0";
 
 /**
  * Record a startup checkpoint.
- * Outputs timing info if NANOPENCIL_PROFILE_STARTUP=1
+ * Outputs timing info if CATUI_PROFILE_STARTUP=1
  *
  * @example profileCheckpoint("config_loaded")
  * @example profileCheckpoint("settings_manager_ready", "after_config")

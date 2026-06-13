@@ -3,11 +3,11 @@
 # http-call-audit.sh — HTTP 调用次数系统性审计脚本
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-# 目的：量化 nanoPencil 在不同场景下的 HTTP 调用次数，定位异常来源。
+# 目的：量化 Catui 在不同场景下的 HTTP 调用次数，定位异常来源。
 # 与 minimax-billing-calibration.sh 配合使用来交叉验证厂商面板数据。
 #
 # 工作原理：
-#   通过 NANOPENCIL_TRACE_API=1 环境变量启用 core/lib/ai/src/stream.ts 中的
+#   通过 CATUI_TRACE_API=1 环境变量启用 core/lib/ai/src/stream.ts 中的
 #   调用追踪器，统计每次 streamSimple() 被调用的次数和调用栈。
 #   ⚠️ 前提：core/lib/ai 需要已编译（追踪代码在 dist/ 中才生效）
 #
@@ -40,8 +40,8 @@ mkdir -p "$DATA_DIR"
 
 # ─── 配置 ───────────────────────────────────────────────────────────────────
 
-MODEL="${NANOPENCIL_MODEL:-MiniMax-M2.5}"
-PROVIDER="${NANOPENCIL_PROVIDER:-minimax-coding}"
+MODEL="${CATUI_MODEL:-MiniMax-M2.5}"
+PROVIDER="${CATUI_PROVIDER:-minimax-coding}"
 BENCHMARK_PROMPT="读 README.md 然后告诉我这个项目是做什么的"
 
 # ─── 工具函数 ────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ sep() { echo "──────────────────────
 # 获取 minimax API key 用于查询用量
 get_api_key() {
     node -e "
-const d = JSON.parse(require('fs').readFileSync(require('path').join(require('os').homedir(), '.nanopencil/agent/auth.json'), 'utf8'));
+const d = JSON.parse(require('fs').readFileSync(require('path').join(require('os').homedir(), '.catui/agent/auth.json'), 'utf8'));
 const p = d['minimax-coding'];
 console.log(p?.key || p?.apiKey || '');
 " | tr -d '\n'
@@ -112,8 +112,8 @@ run_single_test() {
         tmp_dir=$(mktemp -d)
         mkdir -p "$tmp_dir/memory/v2" "$tmp_dir/memory/episodes"
         echo '{}' > "$tmp_dir/settings.json"
-        cp ~/.nanopencil/agent/auth.json "$tmp_dir/auth.json" 2>/dev/null || true
-        agent_dir_env="NANOPENCIL_CODING_AGENT_DIR=$tmp_dir"
+        cp ~/.catui/agent/auth.json "$tmp_dir/auth.json" 2>/dev/null || true
+        agent_dir_env="CATUI_CODING_AGENT_DIR=$tmp_dir"
         log "  │  ⚠️ 使用临时空目录（无记忆）"
     fi
 
@@ -122,7 +122,7 @@ run_single_test() {
     start_epoch=$(date +%s)
 
     # 构建并执行命令
-    local cmd="$agent_dir_env NANOPENCIL_TRACE_API=1"
+    local cmd="$agent_dir_env CATUI_TRACE_API=1"
     [ -n "$env_extra" ] && cmd="$cmd $env_extra"
     cmd="$cmd npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL $cli_flags \"$BENCHMARK_PROMPT\""
 
@@ -278,27 +278,27 @@ phase_isolate_ext() {
 
     log "Test 2/6: 禁用 NanoMem"
     sep
-    run_single_test "ext-skip-nanomem" "--no-mcp" "NANOPENCIL_SKIP_EXT_NANOMEM=1" "0"
+    run_single_test "ext-skip-nanomem" "--no-mcp" "CATUI_SKIP_EXT_NANOMEM=1" "0"
     sleep 3
 
     log "Test 3/6: 禁用 Presence"
     sep
-    run_single_test "ext-skip-presence" "--no-mcp" "NANOPENCIL_SKIP_EXT_PRESENCE=1" "0"
+    run_single_test "ext-skip-presence" "--no-mcp" "CATUI_SKIP_EXT_PRESENCE=1" "0"
     sleep 3
 
     log "Test 4/6: 禁用 Soul"
     sep
-    run_single_test "ext-skip-soul" "--no-mcp" "NANOPENCIL_SKIP_EXT_SOUL=1" "0"
+    run_single_test "ext-skip-soul" "--no-mcp" "CATUI_SKIP_EXT_SOUL=1" "0"
     sleep 3
 
     log "Test 5/6: 禁用 Interview"
     sep
-    run_single_test "ext-skip-interview" "--no-mcp" "NANOPENCIL_SKIP_EXT_INTERVIEW=1" "0"
+    run_single_test "ext-skip-interview" "--no-mcp" "CATUI_SKIP_EXT_INTERVIEW=1" "0"
     sleep 3
 
     log "Test 6/6: 禁用 NanoMem + Presence + Soul + Interview（只留核心）"
     sep
-    run_single_test "ext-skip-all-llm" "--no-mcp" "NANOPENCIL_SKIP_EXT_NANOMEM=1 NANOPENCIL_SKIP_EXT_PRESENCE=1 NANOPENCIL_SKIP_EXT_SOUL=1 NANOPENCIL_SKIP_EXT_INTERVIEW=1" "0"
+    run_single_test "ext-skip-all-llm" "--no-mcp" "CATUI_SKIP_EXT_NANOMEM=1 CATUI_SKIP_EXT_PRESENCE=1 CATUI_SKIP_EXT_SOUL=1 CATUI_SKIP_EXT_INTERVIEW=1" "0"
 
     log ""
     sep
@@ -345,7 +345,7 @@ phase_idle() {
     local pid_file="$DATA_DIR/idle.pid"
 
     # 启动交互模式后台
-    NANOPENCIL_TRACE_API=1 \
+    CATUI_TRACE_API=1 \
     npx tsx "$PROJECT_ROOT/cli.ts" --provider "$PROVIDER" --model "$MODEL" --no-mcp \
         2>"$stderr_file" &
     local bg_pid=$!
@@ -648,8 +648,8 @@ case "$phase" in
         echo "  9. $0 report                    # 对比前后数据"
         echo ""
         echo "环境变量:"
-        echo "  NANOPENCIL_MODEL     模型 ID（默认 MiniMax-M2.5）"
-        echo "  NANOPENCIL_PROVIDER  Provider（默认 minimax-coding）"
+        echo "  CATUI_MODEL     模型 ID（默认 MiniMax-M2.5）"
+        echo "  CATUI_PROVIDER  Provider（默认 minimax-coding）"
         echo ""
         echo "数据目录: $DATA_DIR"
         exit 1

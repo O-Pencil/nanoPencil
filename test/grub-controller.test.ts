@@ -24,7 +24,7 @@ import { buildGrubHelp } from "../extensions/builtin/grub/grub-parser.js";
 import { resolveGrubTurn } from "../extensions/builtin/grub/grub-turn.js";
 
 function createTempWorkspace(): string {
-	return mkdtempSync(join(tmpdir(), "nanopencil-grub-"));
+	return mkdtempSync(join(tmpdir(), "catui-grub-"));
 }
 
 function cleanup(path: string): void {

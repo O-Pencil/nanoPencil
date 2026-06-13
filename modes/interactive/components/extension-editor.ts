@@ -23,7 +23,7 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { KeybindingsManager } from "../../../core/platform/keybindings.js";
 import { getEditorTheme, theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
@@ -125,7 +125,7 @@ export class ExtensionEditorComponent extends Container implements Focusable {
 		}
 
 		const currentText = this.editor.getText();
-		const tmpFile = path.join(os.tmpdir(), `nanopencil-extension-editor-${Date.now()}.md`);
+		const tmpFile = path.join(os.tmpdir(), `catui-extension-editor-${Date.now()}.md`);
 
 		try {
 			fs.writeFileSync(tmpFile, currentText, "utf-8");

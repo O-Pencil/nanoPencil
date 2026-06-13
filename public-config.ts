@@ -1,7 +1,7 @@
 /**
  * [WHO]: Public config subpath exports for auth, settings, resource, and package managers
  * [FROM]: Re-exports selected core/platform config and package-manager modules
- * [TO]: Consumed by advanced SDK users importing @pencil-agent/nano-pencil/config
+ * [TO]: Consumed by advanced SDK users importing @catui/agent/config
  * [HERE]: public-config.ts - package subpath entry for configuration APIs
  */
 

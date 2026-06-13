@@ -5,7 +5,7 @@
  */
 /**
  * [WHO]: runStructuredAdaptiveTools, partitionStructuredAdaptiveToolCalls, StructuredAdaptiveToolCall
- * [FROM]: Depends on @pencil-agent/ai, ./types, ./errors
+ * [FROM]: Depends on @catui/ai, ./types, ./errors
  * [TO]: Consumed by ./structured-adaptive-agent-loop.ts and agent-core tests
  * [HERE]: core/lib/agent-core/src/structured-adaptive-tool-orchestration.ts - tool batching/execution layer for structured-adaptive loop
  */
@@ -14,9 +14,9 @@ import {
 	type AssistantMessage,
 	type TextContent,
 	type ToolResultMessage,
-} from "@pencil-agent/ai/types";
-import { EventStream } from "@pencil-agent/ai/events";
-import { validateToolArguments } from "@pencil-agent/ai/schema";
+} from "@catui/ai/types";
+import { EventStream } from "@catui/ai/events";
+import { validateToolArguments } from "@catui/ai/schema";
 import { ToolNotFoundError } from "./errors.js";
 import type {
 	AgentEvent,
@@ -39,7 +39,8 @@ const DEFAULT_SAFE_TOOL_NAMES = new Set([
 	"CronList",
 ]);
 const DEFAULT_MAX_TOOL_CONCURRENCY = 10;
-const MAX_TOOL_CONCURRENCY_ENV = "NANOPENCIL_MAX_TOOL_USE_CONCURRENCY";
+const MAX_TOOL_CONCURRENCY_ENV = "CATUI_MAX_TOOL_USE_CONCURRENCY";
+const LEGACY_MAX_TOOL_CONCURRENCY_ENV = "NANOPENCIL_MAX_TOOL_USE_CONCURRENCY";
 
 export type StructuredAdaptiveToolCall = Extract<AssistantMessage["content"][number], { type: "toolCall" }>;
 
@@ -130,7 +131,10 @@ export function resolveMaxToolConcurrency(maxConcurrency: number | undefined): n
 	if (maxConcurrency !== undefined) {
 		return Math.max(1, Math.floor(maxConcurrency || DEFAULT_MAX_TOOL_CONCURRENCY));
 	}
-	const raw = typeof process !== "undefined" ? process.env[MAX_TOOL_CONCURRENCY_ENV] : undefined;
+	const raw =
+		typeof process !== "undefined"
+			? process.env[MAX_TOOL_CONCURRENCY_ENV] ?? process.env[LEGACY_MAX_TOOL_CONCURRENCY_ENV]
+			: undefined;
 	const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
 	if (Number.isFinite(parsed) && parsed > 0) {
 		return Math.floor(parsed);

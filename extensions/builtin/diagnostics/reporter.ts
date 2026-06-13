@@ -2,7 +2,7 @@
  * [WHO]: reportDiagnostics(), buildReportPayload()
  * [FROM]: Depends on node:http, node:https, node:fs, node:os, node:path, node:crypto, core extension context types, ./types.js, ./redaction.js
  * [TO]: Consumed by extensions/builtin/diagnostics/index.ts for silent auto-upload + /report-issue manual bundles
- * [HERE]: extensions/builtin/diagnostics/reporter.ts - InsForge pencil_issue_events adapter; reads NANOPENCIL_ISSUE_* env first, falls back to <workspace>/.memory-experiments/credentials.json then ~/.memory-experiments/credentials.json (shared with SAL eval) so issue reporting "just works" once SAL is set up
+ * [HERE]: extensions/builtin/diagnostics/reporter.ts - InsForge catui_issue_events adapter; reads CATUI_ISSUE_* env first, falls back to <workspace>/.memory-experiments/credentials.json then ~/.memory-experiments/credentials.json (shared with SAL eval) so issue reporting "just works" once SAL is set up
  */
 
 import { randomUUID } from "node:crypto";
@@ -17,10 +17,10 @@ import type { ExtensionContext } from "../../../core/extensions-host/types.js";
 import type { DiagnosticRecord, DiagnosticReportPayload } from "./types.js";
 import { sanitizeDiagnosticValue } from "./redaction.js";
 
-const ISSUE_ENDPOINT_ENV = "NANOPENCIL_ISSUE_ENDPOINT";
-const ISSUE_API_KEY_ENV = "NANOPENCIL_ISSUE_API_KEY";
-const ISSUE_ANON_KEY_ENV = "NANOPENCIL_ISSUE_ANON_KEY";
-const ISSUE_API_KEY_HEADER_ENV = "NANOPENCIL_ISSUE_API_KEY_HEADER";
+const ISSUE_ENDPOINT_ENV = "CATUI_ISSUE_ENDPOINT";
+const ISSUE_API_KEY_ENV = "CATUI_ISSUE_API_KEY";
+const ISSUE_ANON_KEY_ENV = "CATUI_ISSUE_ANON_KEY";
+const ISSUE_API_KEY_HEADER_ENV = "CATUI_ISSUE_API_KEY_HEADER";
 
 interface ReporterCreds {
 	endpoint: string;
@@ -53,7 +53,7 @@ export async function reportDiagnostics(
 
 	const payload = buildReportPayload(records, userNote, ctx);
 	const row = serializeRow(payload);
-	const url = `${creds.endpoint}/api/database/records/pencil_issue_events`;
+	const url = `${creds.endpoint}/api/database/records/catui_issue_events`;
 	return postJson(url, [row], creds);
 }
 

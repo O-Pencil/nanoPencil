@@ -1,6 +1,6 @@
 /**
  * [WHO]: Goal extension type surface — ThreadGoalStatus, ThreadGoal, GoalSetMode, GoalAccountingMode, helper predicates, and runtime handle contracts
- * [FROM]: Depends on @pencil-agent/agent-core (AgentMessage) and the local store contract in ./goal-store
+ * [FROM]: Depends on @catui/agent-core (AgentMessage) and the local store contract in ./goal-store
  * [TO]: Consumed by ./goal-store, ./goal-controller, ./goal-tools, ./goal-command, ./goal-format, ./goal-prompts, ./index
  * [HERE]: extensions/builtin/goal/goal-types.ts - single source of truth for the goal data model and per-thread runtime state shape
  */

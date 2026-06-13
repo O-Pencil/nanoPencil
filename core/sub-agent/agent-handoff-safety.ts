@@ -1,13 +1,13 @@
 /**
  * [WHO]: checkHandoffSafety — handoff classifier for auto mode sub-agent security review (CC §XII.1)
- * [FROM]: Depends on @pencil-agent/agent-core for AgentMessage, ./agent-definition for AgentPermissionMode
+ * [FROM]: Depends on @catui/agent-core for AgentMessage, ./agent-definition for AgentPermissionMode
  * [TO]: Consumed by ./agent-tool (sync execution path, step 15)
  * [HERE]: core/sub-agent/agent-handoff-safety.ts - Security review per CC §XII.1 (ES8)
  * [COVENANT]: Change classifier → update agent-tool handler
  */
 
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentMessage } from "@catui/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import type { AgentPermissionMode } from "./agent-definition.js";
 import { emitAgentAutoModeDecision } from "./agent-telemetry.js";
 
@@ -57,7 +57,7 @@ export async function checkHandoffSafety(
     );
 
     // Record decision (CC §XII.1: d("tengu_auto_mode_decision", ...))
-    // In nanoPencil, we log this via the logger rather than telemetry
+    // In Catui, we log this via the logger rather than telemetry
     logHandoffDecision({
       decision: result.shouldBlock ? "blocked" : "allowed",
       toolName: "Agent",
@@ -116,7 +116,7 @@ interface HandoffDecisionLog {
  * - Output: shouldBlock + reason
  * - If the classifier is unavailable (no API key, network error), sets unavailable flag
  *
- * ⚠️ For nanoPencil, the classifier currently uses a heuristic-based approach
+ * ⚠️ For Catui, the classifier currently uses a heuristic-based approach
  * since we don't have a separate model call infrastructure for this.
  * A full implementation would use a lightweight LLM call (haiku-tier).
  */

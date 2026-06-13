@@ -35,8 +35,8 @@ function createApiHarness(agentDir: string) {
 }
 
 test("loop clears owned scheduler timers on session shutdown", async () => {
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-loop-lifecycle-"));
-	mkdirSync(join(agentDir, ".nanopencil"), { recursive: true });
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-loop-lifecycle-"));
+	mkdirSync(join(agentDir, ".catui"), { recursive: true });
 
 	const originalSetInterval = globalThis.setInterval;
 	const originalClearInterval = globalThis.clearInterval;

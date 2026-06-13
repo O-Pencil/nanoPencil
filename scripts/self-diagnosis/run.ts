@@ -1,8 +1,8 @@
 /**
  * [WHO]: Provides selfDiagnosisCli() entrypoint for maintainer-invoked reflexive self-study runs
- * [FROM]: Depends on ./lib/eval-sink for the metric writer + VARIANT constant, node:child_process for pencil invocation, node:fs / node:path / node:util built-ins
+ * [FROM]: Depends on ./lib/eval-sink for the metric writer + VARIANT constant, node:child_process for catui invocation, node:fs / node:path / node:util built-ins
  * [TO]: Consumed by maintainers via `npx tsx scripts/self-diagnosis/run.ts --archetype=<id>`; not imported by any extension or runtime
- * [HERE]: scripts/self-diagnosis/run.ts — orchestration shell. Variant tagging on eval_runs happens at child run_start via the NANOPENCIL_EVAL_VARIANT env var (read by extensions/builtin/sal/index.ts:755); no post-exit PATCH is performed.
+ * [HERE]: scripts/self-diagnosis/run.ts — orchestration shell. Variant tagging on eval_runs happens at child run_start via the CATUI_EVAL_VARIANT env var (read by extensions/builtin/sal/index.ts:755); no post-exit PATCH is performed.
  */
 
 import { parseArgs } from "node:util";
@@ -21,7 +21,7 @@ const SENTINEL = "SELF-STUDY COMPLETE";
 const MAX_POST_SENTINEL_TURNS = 2; // Allow some slack after sentinel
 
 /**
- * Framework noise that pencil emits to stdout (where the model output also goes).
+ * Framework noise that catui emits to stdout (where the model output also goes).
  * Lines matching these prefixes are stripped from output.md so the markdown stays
  * a clean record of the model's answer. The original noise is still preserved in
  * run.log (stderr) AND visible in `run.log` via the same regex applied externally.
@@ -76,9 +76,9 @@ When done, write your report and finish with verbatim: ${SENTINEL}`;
 	const child = spawn("npx", ["tsx", "cli.ts", "--print"], {
 		env: {
 			...process.env,
-			NANOPENCIL_EVAL_RUN_ID: runId,
-			NANOPENCIL_EVAL_VARIANT: VARIANT,
-			NANOPENCIL_EVAL_ENABLED: "true",
+			CATUI_EVAL_RUN_ID: runId,
+			CATUI_EVAL_VARIANT: VARIANT,
+			CATUI_EVAL_ENABLED: "true",
 		},
 		stdio: ["pipe", "pipe", "pipe"],
 		// shell: true is required on Windows so spawn finds npx.cmd via PATH

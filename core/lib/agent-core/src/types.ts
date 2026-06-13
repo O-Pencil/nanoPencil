@@ -16,9 +16,9 @@ import type {
 	Tool,
 	ToolResultMessage,
 	Usage,
-} from "@pencil-agent/ai/types";
-import type { streamSimple } from "@pencil-agent/ai/stream";
-import type { Static, TSchema } from "@pencil-agent/ai/schema";
+} from "@catui/ai/types";
+import type { streamSimple } from "@catui/ai/stream";
+import type { Static, TSchema } from "@catui/ai/schema";
 
 /** Stream function - can return sync or Promise for async config lookup */
 export type StreamFn = (
@@ -332,7 +332,7 @@ export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhi
  *
  * @example
  * ```typescript
- * declare module "@pencil-agent/agent-core" {
+ * declare module "@catui/agent-core" {
  *   interface CustomAgentMessages {
  *     artifact: ArtifactMessage;
  *     notification: NotificationMessage;

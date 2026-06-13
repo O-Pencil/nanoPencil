@@ -4,9 +4,9 @@
  * [TO]: Consumed by core/model/index.ts
  * [HERE]: core/model/switcher.ts - model selection and cycling logic
  */
-import type { Model } from "@pencil-agent/ai/types";
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
-import { modelsAreEqual } from "@pencil-agent/ai/models";
+import type { Model } from "@catui/ai/types";
+import type { ThinkingLevel } from "@catui/agent-core";
+import { modelsAreEqual } from "@catui/ai/models";
 
 export interface ModelCycleResult {
 	model: Model<any>;

@@ -136,7 +136,7 @@ export function buildPageSpecs(graph: WikiGraph): PageSpec[] {
 function renderIndexPage(graph: WikiGraph): string {
 	return `# LLM Wiki
 
-This wiki is a human-first map of the nanoPencil codebase backed by a complete machine graph.
+This wiki is a human-first map of the Catui codebase backed by a complete machine graph.
 
 ## Current Shape
 

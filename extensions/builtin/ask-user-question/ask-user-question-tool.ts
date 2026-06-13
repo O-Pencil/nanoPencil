@@ -6,9 +6,9 @@
  */
 
 import type { ExtensionContext, ToolDefinition } from "../../../core/extensions-host/types.js";
-import { Container, Text, type Component } from "@pencil-agent/tui";
+import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../core/theme-contract.js";
-import type { AgentToolResult } from "@pencil-agent/agent-core";
+import type { AgentToolResult } from "@catui/agent-core";
 import {
 	ASK_USER_QUESTION_TOOL_CHIP_WIDTH,
 	ASK_USER_QUESTION_TOOL_PROMPT,

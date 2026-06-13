@@ -1,7 +1,7 @@
 /**
  * [WHO]: Public skills subpath exports for skill discovery and prompt formatting
  * [FROM]: Re-exports core/skills.js
- * [TO]: Consumed by advanced SDK users importing @pencil-agent/nano-pencil/skills
+ * [TO]: Consumed by advanced SDK users importing @catui/agent/skills
  * [HERE]: skills.ts - package subpath entry for skill APIs
  */
 

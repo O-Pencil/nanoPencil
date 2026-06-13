@@ -1,5 +1,5 @@
 {
-	"name": "@pencil-agent/tui",
+	"name": "@catui/tui",
 	"private": true,
 	"version": "0.0.1",
 	"description": "Terminal User Interface library with differential rendering for efficient text-based applications",
@@ -24,13 +24,13 @@
 		"differential-rendering",
 		"typescript",
 		"cli",
-		"pencil-agent"
+		"catui-agent"
 	],
-	"author": "nanoPencil Team",
+	"author": "Catui Team",
 	"license": "GPL-3.0",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/O-Pencil/nanoPencil.git"
+		"url": "git+https://github.com/O-Catui/Catui.git"
 	},
 	"engines": {
 		"node": ">=20.0.0"

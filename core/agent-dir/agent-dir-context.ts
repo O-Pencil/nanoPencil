@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir, getPencilsAgentsDir } from "../../config.js";
+import { getAgentDir, getCatuiAgentsDir } from "../../config.js";
 
 // ---------------------------------------------------------------------------
 // ID validation
@@ -66,7 +66,7 @@ export interface AgentDirContext {
 /**
  * Build the default context for the legacy single-agent path.
  * This is the fallback when no `--agent` flag is provided.
- * Resolves to whatever `getAgentDir()` returns today (~/.pencils/agents/default).
+ * Resolves to whatever `getAgentDir()` returns today (~/.catui/agents/default).
  */
 export function defaultAgentDirContext(): AgentDirContext {
 	return { id: "default", path: getAgentDir() };
@@ -85,7 +85,7 @@ export function agentDirContextOf(id: string, path: string, origin?: AgentOrigin
  * Load AgentDirContext from an agent directory (loads agent.json if it exists).
  */
 export function loadAgentDirContext(id: string): AgentDirContext {
-	const path = join(getPencilsAgentsDir(), id);
+	const path = join(getCatuiAgentsDir(), id);
 	const agentJsonPath = join(path, "agent.json");
 
 	if (existsSync(agentJsonPath)) {
@@ -102,7 +102,7 @@ export function loadAgentDirContext(id: string): AgentDirContext {
 		}
 	}
 
-	// Default for agents under PENCILS_AGENTS_DIR
+	// Default for agents under CATUI_AGENTS_DIR/CATUIS_AGENTS_DIR
 	if (id !== "default" || existsSync(path)) {
 		return { id, path };
 	}

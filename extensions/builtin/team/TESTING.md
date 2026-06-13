@@ -14,7 +14,7 @@ npm install
 npm run build         # or run via tsx for fast iteration
 ```
 
-Run nanoPencil in interactive mode for the manual scenarios:
+Run Catui in interactive mode for the manual scenarios:
 
 ```bash
 npx tsx cli.ts
@@ -22,15 +22,15 @@ npx tsx cli.ts
 
 All teammate state lives under:
 
-- `${NANOPENCIL_AGENT_DIR:-~/.nanopencil/agent}/teams/<id>.json`        — durable state
-- `${NANOPENCIL_AGENT_DIR:-~/.nanopencil/agent}/teams/tasks.json`       — shared task list
-- `${NANOPENCIL_AGENT_DIR:-~/.nanopencil/agent}/teams/mailbox.jsonl`    — replayable mailbox log
-- `${NANOPENCIL_AGENT_DIR:-~/.nanopencil/agent}/teams/transcripts/<id>.jsonl` — per-teammate transcripts
+- `${CATUI_AGENT_DIR:-~/.catui/agent}/teams/<id>.json`        — durable state
+- `${CATUI_AGENT_DIR:-~/.catui/agent}/teams/tasks.json`       — shared task list
+- `${CATUI_AGENT_DIR:-~/.catui/agent}/teams/mailbox.jsonl`    — replayable mailbox log
+- `${CATUI_AGENT_DIR:-~/.catui/agent}/teams/transcripts/<id>.jsonl` — per-teammate transcripts
 
 You can wipe state between runs with:
 
 ```bash
-rm -rf ~/.nanopencil/agent/teams
+rm -rf ~/.catui/agent/teams
 ```
 
 ---
@@ -41,7 +41,7 @@ rm -rf ~/.nanopencil/agent/teams
 npx tsc --noEmit
 ```
 
-The team extension must report **zero** errors. Pre-existing `presence/index.ts` errors related to `@pencil-agent/mem-core` are unrelated and may remain until that extension is rebundled.
+The team extension must report **zero** errors. Pre-existing `presence/index.ts` errors related to `@catui/mem-core` are unrelated and may remain until that extension is rebundled.
 
 ---
 
@@ -62,9 +62,9 @@ In an interactive session:
 
 Pass criteria:
 
-- `scout`'s state file appears under `~/.nanopencil/agent/teams/` after spawn.
+- `scout`'s state file appears under `~/.catui/agent/teams/` after spawn.
 - The state file is removed after `terminate`.
-- `~/.nanopencil/agent/teams/transcripts/<id>.jsonl` contains one `leader` line and one `teammate` line per send, then is removed on terminate.
+- `~/.catui/agent/teams/transcripts/<id>.jsonl` contains one `leader` line and one `teammate` line per send, then is removed on terminate.
 
 ---
 
@@ -75,7 +75,7 @@ Pass criteria:
 /team:send scout "Summarize README.md"
 ```
 
-Quit nanoPencil (`/exit` or Ctrl+C). Restart with `npx tsx cli.ts`. Then:
+Quit Catui (`/exit` or Ctrl+C). Restart with `npx tsx cli.ts`. Then:
 
 ```text
 /team
@@ -100,7 +100,7 @@ Pass criteria:
 Pass criteria:
 
 - `builder.cwd` and `worktreePath` point at a fresh git worktree under
-  `~/.nanopencil/agent/...` (or `WorktreeManager`'s default location).
+  `~/.catui/agent/...` (or `WorktreeManager`'s default location).
 - `git worktree list` from the project shows the new worktree.
 - Default mode is `plan` (read-only), **not** `execute`.
 
@@ -164,7 +164,7 @@ Pass criteria:
 
 - `tasks.json` contains `T-1` with `status: "claimed"` and `ownerName: "scout"`.
 - `mailbox.jsonl` contains `task_update`, `task_claim`, and `teammate_message`.
-- Restarting nanoPencil preserves `/team:task list` output and the teammate mailbox context shown to each teammate.
+- Restarting Catui preserves `/team:task list` output and the teammate mailbox context shown to each teammate.
 - The next `/team:send scout ...` prompt includes `Shared team tasks`, the claimed task, and recent mailbox lines targeting `scout`.
 
 ---
@@ -191,8 +191,8 @@ Pass criteria:
 After any `/team:send`:
 
 ```bash
-ls ~/.nanopencil/agent/teams/transcripts/
-cat ~/.nanopencil/agent/teams/transcripts/<id>.jsonl
+ls ~/.catui/agent/teams/transcripts/
+cat ~/.catui/agent/teams/transcripts/<id>.jsonl
 ```
 
 Pass criteria:
@@ -271,12 +271,12 @@ Pass criteria:
 Touch a malformed state file to confirm `loadAll()` skips it gracefully:
 
 ```bash
-echo "not-json" > ~/.nanopencil/agent/teams/garbage.json
+echo "not-json" > ~/.catui/agent/teams/garbage.json
 npx tsx cli.ts
 /team
 ```
 
-Pass criteria: nanoPencil starts normally, `/team` lists only valid teammates, no crash.
+Pass criteria: Catui starts normally, `/team` lists only valid teammates, no crash.
 
 ---
 

@@ -12,10 +12,10 @@ import { AuthStorage } from "../platform/config/auth-storage.js";
 import { getMCPConfigPath } from "./mcp-config.js";
 import type { MCPServerConfig, MCPTool, MCPToolResult } from "./mcp-types.js";
 
-// Log level control: MCP internal logs only shown with explicit NANOPENCIL_DEBUG.
+// Log level control: MCP internal logs only shown with explicit CATUI_DEBUG.
 // Normal dev mode (npm run dev) does NOT print MCP server stderr or JSON-RPC traces.
 const isExplicitDebug = ["1", "true", "yes", "on"].includes(
-  (process.env.NANOPENCIL_DEBUG ?? "").toLowerCase(),
+  (process.env.CATUI_DEBUG ?? "").toLowerCase(),
 );
 
 function mcpLog(...args: unknown[]): void {
@@ -52,7 +52,7 @@ function formatUnknownError(error: unknown): string {
 }
 
 /**
- * Per-server startup failure: always log a one-liner via mcpLog (visible only with NANOPENCIL_DEBUG).
+ * Per-server startup failure: always log a one-liner via mcpLog (visible only with CATUI_DEBUG).
  * sdk.ts prints the concise summary ("N failed") for all modes.
  */
 function logMcpStartupFailure(
@@ -307,7 +307,7 @@ export class MCPClient {
     runtime.process.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString("utf8").trim();
       if (text.length > 0) {
-        // Only show stderr in explicit debug mode (NANOPENCIL_DEBUG=1)
+        // Only show stderr in explicit debug mode (CATUI_DEBUG=1)
         if (isExplicitDebug) {
           mcpError(`[MCP:${serverId}] ${text}`);
         }
@@ -512,7 +512,7 @@ export class MCPClient {
     const initPayload = {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: "nano-pencil", version: "1.11.12" },
+      clientInfo: { name: "catui-agent", version: "1.11.12" },
     };
     await this.sendHttpRequest(server, "initialize", initPayload, server.initTimeout ?? 20_000);
     session.initialized = true;
@@ -666,12 +666,12 @@ export class MCPClient {
     const initPayload = {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: "nano-pencil", version: "1.7.0" },
+      clientInfo: { name: "catui-agent", version: "1.7.0" },
     };
     const fallbackPayload = {
       protocolVersion: "2024-10-07",
       capabilities: {},
-      clientInfo: { name: "nano-pencil", version: "1.7.0" },
+      clientInfo: { name: "catui-agent", version: "1.7.0" },
     };
 
     try {

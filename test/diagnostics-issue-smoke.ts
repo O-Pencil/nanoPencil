@@ -1,7 +1,7 @@
 /**
  * [WHO]: Issue-reporting end-to-end smoke (manual runner, not a unit test)
  * [FROM]: Reads .memory-experiments/credentials.json; uses extensions/builtin/diagnostics/reporter
- * [TO]: Run with `npx tsx test/diagnostics-issue-smoke.ts` to confirm pencil_issue_events ingest works
+ * [TO]: Run with `npx tsx test/diagnostics-issue-smoke.ts` to confirm catui_issue_events ingest works
  * [HERE]: test/diagnostics-issue-smoke.ts - sends a synthetic diagnostic report through reportDiagnostics() and reads it back via ik_
  *
  * Exit 0 = report landed; non-zero = something is broken.
@@ -58,7 +58,7 @@ async function main(): Promise<void> {
 		severity: "warning",
 		category: "fallback",
 		message: "synthetic issue smoke",
-		detail: { reason: "verifying pencil_issue_events ingest path" },
+		detail: { reason: "verifying catui_issue_events ingest path" },
 		fingerprint,
 		first_seen_at: now,
 		last_seen_at: now,
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
 		headers["Authorization"] = `Bearer ${creds.anon_key}`;
 	}
 
-	const verifyUrl = `${creds.endpoint.replace(/\/+$/, "")}/api/database/records/pencil_issue_events?fingerprint=eq.${encodeURIComponent(fingerprint)}`;
+	const verifyUrl = `${creds.endpoint.replace(/\/+$/, "")}/api/database/records/catui_issue_events?fingerprint=eq.${encodeURIComponent(fingerprint)}`;
 	const verify = await getJson(verifyUrl, headers, creds.allow_self_signed ?? false);
 	if (verify.status !== 200) {
 		console.error(`[issue-smoke] FAIL — verify HTTP ${verify.status}: ${verify.body.slice(0, 200)}`);
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
 	let rows: Array<Record<string, unknown>> = [];
 	try { rows = JSON.parse(verify.body); } catch { /* empty */ }
 	if (!Array.isArray(rows) || rows.length === 0) {
-		console.error("[issue-smoke] FAIL — fingerprint not found in pencil_issue_events");
+		console.error("[issue-smoke] FAIL — fingerprint not found in catui_issue_events");
 		process.exit(1);
 	}
 

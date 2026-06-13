@@ -5,8 +5,8 @@
  * [HERE]: core/lib/agent-core/src/agent-loop-tool-summaries.ts within agent-core; shared tool summary policy.
  */
 
-import type { ToolResultMessage } from "@pencil-agent/ai/types";
-import type { EventStream } from "@pencil-agent/ai/events";
+import type { ToolResultMessage } from "@catui/ai/types";
+import type { EventStream } from "@catui/ai/events";
 import type { AgentEvent, AgentLoopConfig, AgentMessage } from "./types.js";
 
 export type PendingToolUseSummary = {

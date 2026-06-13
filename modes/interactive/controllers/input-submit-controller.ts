@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides InputSubmitController + InputSubmitContext — editor submit pipeline orchestration
- * [FROM]: Depends on @pencil-agent/ai content types, AgentSession prompt options, image pipeline attachment type
+ * [FROM]: Depends on @catui/ai content types, AgentSession prompt options, image pipeline attachment type
  * [TO]: Consumed by modes/interactive/interactive-mode.ts as the default editor onSubmit handler
  * [HERE]: modes/interactive/controllers/input-submit-controller.ts — P5 input-submit slice (UI06, rewrite)
  *
@@ -11,14 +11,14 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { ImageContent, Model, TextContent } from "@pencil-agent/ai/types";
+import type { ImageContent, Model, TextContent } from "@catui/ai/types";
 import type { PromptOptions } from "../../../core/runtime/agent-session.js";
 import type { Attachment } from "./image-pipeline-controller.js";
 
 type AnyModel = Model<any>;
 
-const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
-const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+const _dbgEnabled = process.env.CATUI_DEBUG === "1";
+const debugLogPath = path.join(os.homedir(), ".catui", "agent", "catui-debug.log");
 function dbg(msg: string): void {
 	// Off by default; never write or crash in a release (ENOENT on fresh install).
 	if (!_dbgEnabled) return;
@@ -266,7 +266,7 @@ export class InputSubmitController {
     }
 
     try {
-      delete process.env.NANOPENCIL_JUST_SWITCHED_PERSONA;
+      delete process.env.CATUI_JUST_SWITCHED_PERSONA;
       await this.ctx.session.promptAfterRender(processedText, {
         images: images.length > 0 ? images : undefined,
       });

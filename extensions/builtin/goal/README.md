@@ -1,6 +1,6 @@
 # Goal Extension
 
-Long-running task management for nanoPencil. Set a goal with `/goal <objective>` and the
+Long-running task management for Catui. Set a goal with `/goal <objective>` and the
 agent will auto-continue working on it across turns until the objective is achieved,
 the token budget runs out, or you pause/clear it.
 

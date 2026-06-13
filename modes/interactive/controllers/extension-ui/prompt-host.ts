@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides PromptHost, PromptHostContext — single-active-prompt slot for extension dialogs
- * [FROM]: Depends on @pencil-agent/tui (Component/Container/TUI), keybindings (KeybindingsManager),
+ * [FROM]: Depends on @catui/tui (Component/Container/TUI), keybindings (KeybindingsManager),
  *         extensions-host (ExtensionUIDialogOptions), components (Extension{Selector,Input,Editor}Component)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.promptHost`; wired into
  *       ExtensionUIContext select/confirm/input/editor; focus restore called by handleEvent + resetExtensionUI)
@@ -14,7 +14,7 @@
  * Behavior of select/confirm/input/editor is identical to the former InteractiveMode methods.
  */
 
-import type { Component, Container, TUI } from "@pencil-agent/tui";
+import type { Component, Container, TUI } from "@catui/tui";
 import type { ExtensionUIDialogOptions } from "../../../../core/extensions-host/index.js";
 import type { KeybindingsManager } from "../../../../core/platform/keybindings.js";
 import { ExtensionEditorComponent } from "../../components/extension-editor.js";

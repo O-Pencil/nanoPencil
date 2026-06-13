@@ -1,14 +1,14 @@
 /**
  * [WHO]: createAgentTool, createTaskToolAlias — the "Agent" / "Task" tool for LLM invocation
- * [FROM]: Depends on @pencil-agent/agent-core ( @sinclair/typebox, ./agent-definition, ./agent-input-output, ./agent-registry, ./agent-tool-filter, ./sub-agent-backend
+ * [FROM]: Depends on @catui/agent-core ( @sinclair/typebox, ./agent-definition, ./agent-input-output, ./agent-registry, ./agent-tool-filter, ./sub-agent-backend
  * [TO]: Consumed by core/tools/index.ts ( tool registration ), core/runtime/agent-session.ts
  * [HERE]: core/sub-agent/agent-tool.ts - The Agent tool implementation per CC §VI (full spawn flow)
  * [COVENANT]: Change tool schema → update agent-input-output.ts
  */
 
-import type { AgentTool, AgentToolResult } from "@pencil-agent/agent-core";
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai/types";
+import type { AgentTool, AgentToolResult } from "@catui/agent-core";
+import type { AgentMessage } from "@catui/agent-core";
+import type { Model } from "@catui/ai/types";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ModelRegistry } from "../model-registry.js";
 import type {
@@ -167,7 +167,7 @@ export function createAgentTool(config: AgentToolConfig): AgentTool<typeof agent
   // Lazy: only set if not already configured (avoids re-reading on every tool creation)
   const sessionCwd = config.parentSession.cwd;
   if (sessionCwd && !registry.getPersistencePath?.()) {
-    registry.setPersistencePath(sessionCwd + "/.nanopencil/agent-registry.json");
+    registry.setPersistencePath(sessionCwd + "/.catui/agent-registry.json");
   }
 
   return {
@@ -880,7 +880,7 @@ async function checkMcpAvailability(
     const availableServerNames = new Set<string>();
     for (const tool of currentMcpTools) {
       if (tool.name.startsWith("mcp_")) {
-        // MCP tools are prefixed with "mcp_<serverName>_" in nanoPencil
+        // MCP tools are prefixed with "mcp_<serverName>_" in Catui
         const parts = tool.name.split("_");
         const serverName = parts.length >= 2 ? parts[1] : undefined;
         if (serverName) availableServerNames.add(serverName);

@@ -1,14 +1,14 @@
 /**
  * [WHO]: Provides ModelSelectorComponent — model picker UI with scope/filter/add-OpenRouter affordances
- * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, model-registry types, theme,
+ * [FROM]: Depends on @catui/ai, @catui/tui, model-registry types, theme,
  *         DynamicBorder, keybinding hints
  * [TO]: Consumed by modes/interactive/interactive-mode.ts and components/index.ts; emits selected
  *       models only, while provider configuration is owned by the caller
  * [HERE]: modes/interactive/components/model-selector.ts — presentation component for model selection
  */
 
-import type { Model } from "@pencil-agent/ai/types";
-import { modelsAreEqual } from "@pencil-agent/ai/models";
+import type { Model } from "@catui/ai/types";
+import { modelsAreEqual } from "@catui/ai/models";
 import {
 	Container,
 	type Focusable,
@@ -19,7 +19,7 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { ModelRegistry } from "../../../core/model-registry.js";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";

@@ -2,7 +2,7 @@
 
 ```yaml
 finding_id: CR01
-status: accepted
+status: superseded
 severity: high
 owner: config.ts + package.json
 ```
@@ -11,7 +11,7 @@ owner: config.ts + package.json
 
 The rebrand touches public package identity, the executable name, and user data paths. Combining that with a subtree redesign would couple npm migration, shell migration, and filesystem migration into one release.
 
-## Decision
+## Original Decision
 
 This phase changes only:
 
@@ -32,4 +32,4 @@ The root path is the compatibility boundary users see and scripts reference. Kee
 
 ## Follow-Up
 
-A later review can rename product concepts such as `agents/` to `cats/` if the migration cost is justified and a copy-first migrator exists.
+Superseded by [CR02](./CR02-full-brand-sweep.md). The user direction changed from a minimal rename to a full Catui brand rebuild, so package identity, docs, SDK names, env vars, telemetry keys, tests, and workspace package scopes must all be swept.

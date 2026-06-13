@@ -178,20 +178,20 @@ Paths are guidelines, not rigid rules. Adapt based on:
 
 ---
 
-## Example: Learning nanoPencil
+## Example: Learning Catui
 
-### Path A: nanoPencil Basics (L0 → L1)
+### Path A: Catui Basics (L0 → L1)
 
 | # | Topic | Duration | Builds On |
 |---|-------|----------|-----------|
-| A1 | What is nanoPencil? | 5 min | — |
+| A1 | What is Catui? | 5 min | — |
 | A2 | Basic commands | 10 min | A1 |
 | A3 | Navigation and files | 10 min | A2 |
 | A4 | Simple conversations | 15 min | A3 |
 | A5 | Using tools | 15 min | A4 |
 | A6 | First real task | 15 min | A1-A5 |
 
-### Path B: nanoPencil Intermediate (L1 → L2)
+### Path B: Catui Intermediate (L1 → L2)
 
 | # | Topic | Duration | Builds On |
 |---|-------|----------|-----------|
@@ -202,7 +202,7 @@ Paths are guidelines, not rigid rules. Adapt based on:
 | B5 | Troubleshooting | 10 min | B4 |
 | B6 | Real-world workflow | 20 min | B1-B5 |
 
-### Path C: nanoPencil Advanced (L2 → L3)
+### Path C: Catui Advanced (L2 → L3)
 
 | # | Topic | Duration | Builds On |
 |---|-------|----------|-----------|
@@ -210,5 +210,5 @@ Paths are guidelines, not rigid rules. Adapt based on:
 | C2 | Custom extensions | 15 min | C1 |
 | C3 | Performance optimization | 15 min | C2 |
 | C4 | Integration patterns | 15 min | C3 |
-| C5 | Contributing to nanoPencil | 20 min | C4 |
+| C5 | Contributing to Catui | 20 min | C4 |
 | C6 | Expert techniques | 20 min | C1-C5 |

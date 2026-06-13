@@ -6,9 +6,9 @@
  * [COVENANT]: Change filter logic → update agent-tool handler
  */
 
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import type { AgentDefinition, AgentPermissionMode } from "./agent-definition.js";
-import type { Model } from "@pencil-agent/ai/types";
+import type { Model } from "@catui/ai/types";
 import type { ModelRegistry } from "../model-registry.js";
 
 // ============================================================================
@@ -55,7 +55,7 @@ export function filterToolsForAgent(
     } else {
       // Whitelist: only include listed tool names
       const whitelist = new Set(agentDef.tools);
-      // Normalize tool names: CC uses "Read", nanoPencil uses "read"
+      // Normalize tool names: CC uses "Read", Catui uses "read"
       const normalizedWhitelist = new Set(
         Array.from(whitelist.values()).map((name) => name.toLowerCase()),
       );

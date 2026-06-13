@@ -5,13 +5,13 @@
  */
 /**
  * [WHO]: StructuredAdaptiveStreamingToolExecutor
- * [FROM]: Depends on @pencil-agent/ai, ./types, ./structured-adaptive-tool-orchestration
+ * [FROM]: Depends on @catui/ai, ./types, ./structured-adaptive-tool-orchestration
  * [TO]: Consumed by ./structured-adaptive-agent-loop.ts
  * [HERE]: core/lib/agent-core/src/structured-adaptive-streaming-tool-executor.ts - streaming tool scheduling for weak-model-compatible loop
  */
 
-import type { ToolResultMessage } from "@pencil-agent/ai/types";
-import { EventStream } from "@pencil-agent/ai/events";
+import type { ToolResultMessage } from "@catui/ai/types";
+import { EventStream } from "@catui/ai/events";
 import type { AgentToolResult } from "./types.js";
 import type {
 	AgentEvent,

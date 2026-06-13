@@ -247,7 +247,7 @@ export async function addCronTask(
  */
 export async function removeCronTasks(ids: string[], dir?: string): Promise<void> {
 	if (ids.length === 0) return;
-	// Sweep session store first. In nanoPencil, always sweep since the
+	// Sweep session store first. In Catui, always sweep since the
 	// extension API always provides dir (no daemon/REPL distinction like CC).
 	const removedFromSession = removeSessionCronTasks(ids);
 	if (removedFromSession === ids.length) return;
@@ -289,7 +289,7 @@ export async function markCronTasksFired(
  * `durable: false` so callers can distinguish them. File tasks are
  * returned as-is (durable undefined → truthy).
  *
- * In nanoPencil, always merges session tasks since the extension API
+ * In Catui, always merges session tasks since the extension API
  * always provides `dir` (no daemon/REPL distinction like CC).
  */
 export async function listAllCronTasks(dir?: string): Promise<CronTask[]> {

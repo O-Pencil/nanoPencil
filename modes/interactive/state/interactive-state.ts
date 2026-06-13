@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides InteractiveState, CompactionQueuedMessage — the shared render/turn UI state container
- * [FROM]: Depends on @pencil-agent/ai (AssistantMessage), @pencil-agent/tui (Component/Spacer/Text),
+ * [FROM]: Depends on @catui/ai (AssistantMessage), @catui/tui (Component/Spacer/Text),
  *         components (AssistantMessageComponent/CustomMessageComponent/ToolExecutionComponent) — types only
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (holds one as `this.state`); will be read by the
  *       render-layer controller when handleEvent is sliced (UI04)
@@ -13,8 +13,8 @@
  * own owner and is not consolidated here.
  */
 
-import type { AssistantMessage } from "@pencil-agent/ai/types";
-import type { Component, Spacer, Text } from "@pencil-agent/tui";
+import type { AssistantMessage } from "@catui/ai/types";
+import type { Component, Spacer, Text } from "@catui/tui";
 import type { AssistantMessageComponent } from "../components/assistant-message.js";
 import type { CustomMessageComponent } from "../components/custom-message.js";
 import type { PlanProgressPanelComponent } from "../components/plan-progress-panel.js";

@@ -1,10 +1,11 @@
 {
-  "name": "@pencil-agent/nano-pencil",
-  "version": "2.0.3",
+  "name": "@catui/agent",
+  "version": "1.0.0-beta.0",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Supports DashScope and Ali Token Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
-    "nanopencil": "dist/cli.js"
+    "catui": "dist/cli.js",
+    "catui": "dist/cli.js"
   },
   "exports": {
     ".": {
@@ -97,7 +98,7 @@
     "release": "npm version patch && npm publish"
   },
   "keywords": [
-    "nanopencil",
+    "catui",
     "writing-agent",
     "coding-agent",
     "ai",
@@ -128,9 +129,9 @@
     "@mariozechner/clipboard": "^0.3.2",
     "@mariozechner/jiti": "^2.6.2",
     "@mistralai/mistralai": "1.10.0",
-    "@pencil-agent/protocol": "^0.1.0",
-    "@pencil-agent/mem-core": "^1.1.2",
-    "@pencil-agent/soul-core": "^0.1.0",
+    "@catui/protocol": "^0.1.0",
+    "@catui/mem-core": "^1.1.2",
+    "@catui/soul-core": "^0.1.0",
     "@silvia-odwyer/photon-node": "^0.3.4",
     "@sinclair/typebox": "^0.34.41",
     "ajv": "^8.17.1",
@@ -178,13 +179,13 @@
     "@types/node": "^22.15.0",
     "zod": "^4.3.6"
   },
-  "nanopencilConfig": {
-    "name": "nanopencil",
-    "configDir": ".pencils"
+  "catuiConfig": {
+    "name": "catui",
+    "configDir": ".catui"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/O-Pencil/nanoPencil.git"
+    "url": "git+ssh://git@github.com/O-Catui/Catui.git"
   },
-  "homepage": "https://github.com/O-Pencil/nanoPencil"
+  "homepage": "https://github.com/O-Catui/Catui"
 }

@@ -5,7 +5,7 @@
  * [HERE]: extensions/builtin/btw/index.ts - quick side question without interrupting main task
  */
 
-import { Box, Container, Spacer, Text, type Component } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text, type Component } from "@catui/tui";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions-host/types.js";
 
 const BTW_MESSAGE_TYPE = "btw";

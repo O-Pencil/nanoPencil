@@ -17,7 +17,7 @@ import {
 } from "../extensions/builtin/goal/goal-format.js";
 
 function createTempAgentDir(): string {
-	return mkdtempSync(join(tmpdir(), "nanopencil-goal-"));
+	return mkdtempSync(join(tmpdir(), "catui-goal-"));
 }
 
 function fakeApi(agentDir: string): any {

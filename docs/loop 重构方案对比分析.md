@@ -23,7 +23,7 @@
   - `cron-list-tool.ts` - CronList 工具
 
 - ✅ 创建 `/loop` skill (`skill/SKILL.md`)
-  - 符合 nanoPencil skill 规范
+  - 符合 Catui skill 规范
   - 包含 interval 转 cron 规则
   - 包含 CronCreate 使用指南
 
@@ -62,7 +62,7 @@
 
 **保留差异（有意为之）**：
 1. `/loop` 仍是 extension command 而非 pure prompt skill
-   - 原因：nanoPencil 没有 Claude Code 的 bundled skill 注册系统
+   - 原因：Catui 没有 Claude Code 的 bundled skill 注册系统
    - 替代方案：创建了 SKILL.md 让模型了解如何使用 CronCreate
    - 好处：保留 --name, --max, --quiet, pause/resume 等增强功能
 
@@ -123,6 +123,6 @@
 4. **构建成功**：npm run build 无错误
 
 主要妥协：
-- `/loop` 仍是 command 而非纯 prompt skill（受限于 nanoPencil 架构）
+- `/loop` 仍是 command 而非纯 prompt skill（受限于 Catui 架构）
 - File watcher 使用简化实现（定时重载替代 chokidar）
 - 缺少自动化测试（方案有完整的测试清单）

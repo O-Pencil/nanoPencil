@@ -3,7 +3,7 @@
 > P2 | Parent: ../AGENT.md
 
 Member List
-persona-manager.ts: PersonaManager class, persona state and path management, key functions: getActivePersonaId(), setActivePersonaId(), getPersonaPath(), getPersonaPencilPath(), getPersonaSkillsDir(), key invariant: personas stored in ~/.nanopencil/agent/personas/{id}/
+persona-manager.ts: PersonaManager class, persona state and path management, key functions: getActivePersonaId(), setActivePersonaId(), getPersonaPath(), getPersonaCatuiPath(), getPersonaSkillsDir(), key invariant: personas stored in ~/.catui/agent/personas/{id}/
 
 Rule: Members complete, one item per line, parent links valid, precise terms first
 

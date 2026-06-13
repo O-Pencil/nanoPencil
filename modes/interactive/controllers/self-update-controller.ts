@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides SelfUpdateController, SelfUpdateContext — version check / update / reinstall / restart
- * [FROM]: Depends on @pencil-agent/tui (Container/Text/Spacer), config (VERSION/PACKAGE_NAME/getUpdateInstruction),
+ * [FROM]: Depends on @catui/tui (Container/Text/Spacer), config (VERSION/PACKAGE_NAME/getUpdateInstruction),
  *         theme, components/dynamic-border, node:child_process (spawn)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (constructs one, delegates /update, /reinstall, startup check)
  * [HERE]: modes/interactive/controllers/self-update-controller.ts — P5 UI slice (UI02, 纯搬)
@@ -13,7 +13,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { type Container, Spacer, Text } from "@pencil-agent/tui";
+import { type Container, Spacer, Text } from "@catui/tui";
 import { getUpdateInstruction, PACKAGE_NAME, VERSION } from "../../../config.js";
 import { DynamicBorder } from "../components/dynamic-border.js";
 import { theme } from "../theme/theme.js";
@@ -67,7 +67,7 @@ export class SelfUpdateController {
   // ----- public surface (called by mount) -----
 
   async checkForNewVersion(): Promise<string | undefined> {
-    if (process.env.NANOPENCIL_SKIP_VERSION_CHECK || process.env.NANOPENCIL_OFFLINE)
+    if (process.env.CATUI_SKIP_VERSION_CHECK || process.env.CATUI_OFFLINE)
       return undefined;
 
     try {
@@ -126,12 +126,9 @@ export class SelfUpdateController {
     this.render();
 
     try {
-      const response = await fetch(
-        "https://registry.npmjs.org/@pencil-agent/nano-pencil",
-        {
-          signal: AbortSignal.timeout(10000),
-        },
-      );
+      const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}`, {
+        signal: AbortSignal.timeout(10000),
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to check for updates: ${response.status}`);
@@ -147,7 +144,7 @@ export class SelfUpdateController {
       const versionComparison = latestVersion !== "unknown" ? this.compareVersion(latestVersion, currentVersion) : 0;
 
       const lines: string[] = [];
-      lines.push(theme.fg("accent", "📦 NanoPencil Update Checker"));
+      lines.push(theme.fg("accent", "📦 Catui Update Checker"));
       lines.push("");
       lines.push(`Current version: ${theme.fg("dim", currentVersion)}`);
       lines.push(
@@ -182,7 +179,7 @@ export class SelfUpdateController {
         lines.push(theme.fg("success", "✨ Up to date!"));
         lines.push("");
         lines.push(
-          theme.fg("dim", "You're running the latest version of NanoPencil."),
+          theme.fg("dim", "You're running the latest version of Catui."),
         );
       }
 
@@ -204,7 +201,7 @@ export class SelfUpdateController {
         new Text(
           theme.fg(
             "dim",
-            "Visit https://www.npmjs.com/package/@pencil-agent/nano-pencil to check manually",
+            `Visit https://www.npmjs.com/package/${PACKAGE_NAME} to check manually`,
           ),
           1,
           0,
@@ -221,7 +218,7 @@ export class SelfUpdateController {
   handleReinstallCommand(): void {
     this.chat.addChild(new Spacer(1));
     this.chat.addChild(
-      new Text(theme.fg("accent", "🔄 Force Reinstalling NanoPencil..."), 1, 0),
+      new Text(theme.fg("accent", "🔄 Force Reinstalling Catui..."), 1, 0),
     );
     this.chat.addChild(
       new Text(
@@ -263,10 +260,10 @@ export class SelfUpdateController {
         install.on("close", (installCode) => {
           if (installCode === 0) {
             this.chat.addChild(
-              new Text(theme.fg("success", "✅ NanoPencil reinstalled successfully!"), 1, 0),
+              new Text(theme.fg("success", "✅ Catui reinstalled successfully!"), 1, 0),
             );
             this.chat.addChild(
-              new Text(theme.fg("accent", "Press 'R' to restart NanoPencil"), 1, 0),
+              new Text(theme.fg("accent", "Press 'R' to restart Catui"), 1, 0),
             );
             this.render();
 
@@ -274,7 +271,7 @@ export class SelfUpdateController {
             const waitForRestart = async () => {
               const key = await this.waitForKeyPress(["r", "R", "q", "Q", "\x03"] as const);
               if (key === "r" || key === "R") {
-                this.restartNanoPencil();
+                this.restartCatui();
               } else {
                 process.exit(0);
               }
@@ -286,7 +283,7 @@ export class SelfUpdateController {
             );
             this.chat.addChild(
               new Text(
-                theme.fg("dim", "Try running manually: npm uninstall -g @pencil-agent/nano-pencil && npm install -g @pencil-agent/nano-pencil"),
+                theme.fg("dim", `Try running manually: npm uninstall -g ${PACKAGE_NAME} && npm install -g ${PACKAGE_NAME}`),
                 1,
                 0,
               ),
@@ -322,12 +319,9 @@ export class SelfUpdateController {
     }
 
     try {
-      const response = await fetch(
-        "https://registry.npmjs.org/@pencil-agent/nano-pencil",
-        {
-          signal: AbortSignal.timeout(5000), // Shorter timeout for startup
-        },
-      );
+      const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}`, {
+        signal: AbortSignal.timeout(5000), // Shorter timeout for startup
+      });
 
       if (!response.ok) {
         return;
@@ -435,7 +429,7 @@ export class SelfUpdateController {
         this.chat.addChild(new Spacer(1));
         this.chat.addChild(
           new Text(
-            theme.fg("success", "✅ Skip cleared! Auto-update enabled. NanoPencil will check for updates on startup."),
+            theme.fg("success", "✅ Skip cleared! Auto-update enabled. Catui will check for updates on startup."),
             1,
             0,
           ),
@@ -529,7 +523,7 @@ export class SelfUpdateController {
       this.chat.addChild(new Spacer(1));
       this.chat.addChild(
         new Text(
-          theme.fg("success", "✅ Auto-update enabled! NanoPencil will check for updates on startup."),
+          theme.fg("success", "✅ Auto-update enabled! Catui will check for updates on startup."),
           1,
           0,
         ),
@@ -557,7 +551,7 @@ export class SelfUpdateController {
   private async performUpdate(latestVersion: string, retryCount = 0): Promise<void> {
     this.chat.addChild(new Spacer(1));
     this.chat.addChild(
-      new Text(theme.fg("accent", "🔄 Updating NanoPencil..."), 1, 0),
+      new Text(theme.fg("accent", "🔄 Updating Catui..."), 1, 0),
     );
     this.render();
 
@@ -596,14 +590,14 @@ export class SelfUpdateController {
             if (key === "r" || key === "R") {
               this.chat.addChild(
                 new Text(
-                  theme.fg("dim", "🔄 Restarting NanoPencil..."),
+                  theme.fg("dim", "🔄 Restarting Catui..."),
                   1,
                   0,
                 ),
               );
               this.render();
               // Use the improved restart method
-              this.restartNanoPencil();
+              this.restartCatui();
             } else {
               process.exit(0);
             }
@@ -774,17 +768,17 @@ export class SelfUpdateController {
   }
 
   /**
-   * Restart NanoPencil by spawning a new process.
+   * Restart Catui by spawning a new process.
    * Tries to detect the correct command to restart.
    */
-  private restartNanoPencil(): void {
-    // Try to detect how NanoPencil was launched
+  private restartCatui(): void {
+    // Try to detect how Catui was launched
     const execArgv = process.argv;
-    const cmd = execArgv[0]; // e.g., /usr/local/bin/nanopencil or node
+    const cmd = execArgv[0]; // e.g., /usr/local/bin/catui or node
     const args = execArgv.slice(1);
 
-    // Check if running as global CLI (nanopencil) or via node (node dist/cli.js)
-    const isGlobalCli = cmd.includes("nanopencil");
+    // Check if running as global CLI (catui/catui) or via node (node dist/cli.js)
+    const isGlobalCli = cmd.includes("catui") || cmd.includes("catui");
 
     if (isGlobalCli) {
       // Running as global CLI command

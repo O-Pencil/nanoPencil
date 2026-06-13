@@ -17,7 +17,7 @@
  * Measured: ~−52% raw JS, ~−20% gzip tarball, behavior-neutral (all 25 builtin
  * extensions load with 0 errors on the minified output).
  *
- * Escape hatch: set NANOPENCIL_NO_MINIFY=1 for a readable dev build.
+ * Escape hatch: set CATUI_NO_MINIFY=1 for a readable dev build.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { readdirSync, statSync } from "node:fs";
@@ -52,8 +52,8 @@ async function minifyFile(file) {
 }
 
 async function main() {
-	if (process.env.NANOPENCIL_NO_MINIFY === "1") {
-		console.log("minify:dist skipped (NANOPENCIL_NO_MINIFY=1)");
+	if ((process.env.CATUI_NO_MINIFY ?? process.env.NANOPENCIL_NO_MINIFY) === "1") {
+		console.log("minify:dist skipped (CATUI_NO_MINIFY=1)");
 		return;
 	}
 	const files = listJsFiles(DIST);

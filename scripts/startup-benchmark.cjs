@@ -48,7 +48,7 @@ function runCLI(env = {}) {
 				: ["--import", "tsx", "--eval", `import('./main.ts').then(m => m.main(['--help']))`],
 			{
 				cwd: path.join(__dirname, ".."),
-				env: { ...process.env, NANOPENCIL_PROFILE_STARTUP: "1", ...env },
+				env: { ...process.env, CATUI_PROFILE_STARTUP: "1", ...env },
 				stdio: ["ignore", "pipe", "pipe"],
 			}
 		);

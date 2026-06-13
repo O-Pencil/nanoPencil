@@ -33,7 +33,7 @@ function createApiHarness(): {
 	const tools: ToolDefinition[] = [];
 	const api = {
 		cwd: process.cwd(),
-		agentDir: join(process.cwd(), ".nanopencil-test-agent"),
+		agentDir: join(process.cwd(), ".catui-test-agent"),
 		on(event: string, handler: Handler) {
 			const list = handlers.get(event) ?? [];
 			list.push(handler);
@@ -96,7 +96,7 @@ test("discipline extension discovers bundled skills and injects bootstrap", asyn
 		{} as ExtensionContext,
 	) as BeforeAgentStartResult;
 
-	assert.match(result.appendSystemPrompt ?? "", /nanoPencil Engineering Discipline/);
+	assert.match(result.appendSystemPrompt ?? "", /Catui Engineering Discipline/);
 	assert.match(result.appendSystemPrompt ?? "", /systematic-debugging/);
 	assert.match(result.appendSystemPrompt ?? "", /verification-before-completion/);
 	assert.match(result.appendSystemPrompt ?? "", /Completion claims require fresh verification evidence/);

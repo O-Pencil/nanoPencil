@@ -4,9 +4,9 @@
  * [TO]: Consumed by main.ts, modes/interactive/interactive-mode.ts, core/runtime/sdk.ts
  * [HERE]: core/model-resolver.ts - model resolution, scoping, and initial selection
  */
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
-import type { Api, KnownProvider, Model } from "@pencil-agent/ai/types";
-import { modelsAreEqual } from "@pencil-agent/ai/models";
+import type { ThinkingLevel } from "@catui/agent-core";
+import type { Api, KnownProvider, Model } from "@catui/ai/types";
+import { modelsAreEqual } from "@catui/ai/models";
 import chalk from "chalk";
 import { minimatch } from "minimatch";
 import { isValidThinkingLevel } from "../cli/args.js";

@@ -65,7 +65,7 @@ function createExtensionHarness() {
 
 test("debug command advertises and runs quick preference diagnostics", async () => {
 	const previousMemoryDir = process.env.NANOMEM_MEMORY_DIR;
-	const memoryDir = mkdtempSync(join(tmpdir(), "nanopencil-debug-prefs-"));
+	const memoryDir = mkdtempSync(join(tmpdir(), "catui-debug-prefs-"));
 	mkdirSync(memoryDir, { recursive: true });
 	process.env.NANOMEM_MEMORY_DIR = memoryDir;
 
@@ -75,7 +75,7 @@ test("debug command advertises and runs quick preference diagnostics", async () 
 
 		const debug = harness.commands.get("debug");
 		assert.ok(debug);
-		assert.match(debug.description ?? "", /Check NanoPencil health/);
+		assert.match(debug.description ?? "", /Check Catui health/);
 		assert.deepEqual(debug.getArgumentCompletions?.("pre")?.map((item) => item.value), ["preferences"]);
 		assert.match(debug.getArgumentCompletions?.("pre")?.[0]?.description ?? "", /saved preferences/);
 		assert.equal(
@@ -301,7 +301,7 @@ test("optional export and simplify commands expose safe option hints", async () 
 	const exportCommand = exportHarness.commands.get("export");
 	assert.ok(exportCommand);
 	assert.match(exportCommand.description ?? "", /Save this session as a shareable HTML file/);
-	assert.deepEqual(exportCommand.getArgumentCompletions?.(".")?.map((item) => item.value), ["./nanopencil-session.html"]);
+	assert.deepEqual(exportCommand.getArgumentCompletions?.(".")?.map((item) => item.value), ["./catui-session.html"]);
 	assert.match(exportCommand.getArgumentCompletions?.(".")?.[0]?.description ?? "", /Choose the output file/);
 
 	const simplifyHarness = createExtensionHarness();
@@ -330,7 +330,7 @@ test("figma command exposes setup and authentication completions", async () => {
 
 	const figma = harness.commands.get("figma");
 	assert.ok(figma);
-	assert.match(figma.description ?? "", /Connect NanoPencil to Figma/);
+	assert.match(figma.description ?? "", /Connect Catui to Figma/);
 	assert.deepEqual(figma.getArgumentCompletions?.("sta")?.map((item) => item.value), ["status"]);
 	assert.deepEqual(figma.getArgumentCompletions?.("auth")?.map((item) => item.value), ["auth"]);
 	assert.deepEqual(figma.getArgumentCompletions?.("rem")?.map((item) => item.value), ["remote"]);
@@ -377,9 +377,9 @@ test("subagent commands expose root actions and write flag completions", async (
 });
 
 test("team commands use readable labels in the command palette", async () => {
-	const previousAgentDir = process.env.NANOPENCIL_CODING_AGENT_DIR;
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-team-commands-"));
-	process.env.NANOPENCIL_CODING_AGENT_DIR = agentDir;
+	const previousAgentDir = process.env.CATUI_CODING_AGENT_DIR;
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-team-commands-"));
+	process.env.CATUI_CODING_AGENT_DIR = agentDir;
 
 	try {
 		const harness = createExtensionHarness();
@@ -412,9 +412,9 @@ test("team commands use readable labels in the command palette", async () => {
 		assert.doesNotMatch(psyche.description ?? "", /psyche/i);
 	} finally {
 		if (previousAgentDir === undefined) {
-			delete process.env.NANOPENCIL_CODING_AGENT_DIR;
+			delete process.env.CATUI_CODING_AGENT_DIR;
 		} else {
-			process.env.NANOPENCIL_CODING_AGENT_DIR = previousAgentDir;
+			process.env.CATUI_CODING_AGENT_DIR = previousAgentDir;
 		}
 		rmSync(agentDir, { recursive: true, force: true });
 	}

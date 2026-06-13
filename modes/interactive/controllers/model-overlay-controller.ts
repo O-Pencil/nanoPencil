@@ -1,8 +1,8 @@
 /**
  * [WHO]: Provides ModelOverlayController + ModelOverlayContext (ModelSessionPort/ModelCatalogPort/
  *        ModelSettingsPort/ProviderConfigPort/ModelOverlaySurface/ModelOverlayFooter) — interactive model selection
- * [FROM]: Depends on @pencil-agent/ai (Model), agent-core (ThinkingLevel), core/runtime/agent-session
- *         (CycleModelError), @pencil-agent/tui (Component/TUI), core/model-resolver (resolveModelScope),
+ * [FROM]: Depends on @catui/ai (Model), agent-core (ThinkingLevel), core/runtime/agent-session
+ *         (CycleModelError), @catui/tui (Component/TUI), core/model-resolver (resolveModelScope),
  *         components (Model/Provider/ScopedModels selectors)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.modelOverlay`; /model, cycle keybindings,
  *       /scoped-models delegate here)
@@ -16,10 +16,10 @@
  * grouped by capability and serving one workflow; it must not keep growing. No InteractiveMode reference.
  */
 
-import type { Model } from "@pencil-agent/ai/types";
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import type { Model } from "@catui/ai/types";
+import type { ThinkingLevel } from "@catui/agent-core";
 import { CycleModelError } from "../../../core/runtime/agent-session.js";
-import type { Component, TUI } from "@pencil-agent/tui";
+import type { Component, TUI } from "@catui/tui";
 import type { ModelRegistry } from "../../../core/model-registry.js";
 import { resolveModelScope } from "../../../core/model-resolver.js";
 import { ModelSelectorComponent } from "../components/model-selector.js";

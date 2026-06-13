@@ -37,7 +37,7 @@ components/assistant-message.ts: Assistant message display, Markdown with code b
 components/login-dialog.ts: Login UI dialog, OAuth flow initiation
 components/footer.ts: Status bar footer, displays model/session/branch info and clamp-safe context progress bars
 components/show-images-selector.ts: Image toggle selector, enables/disables image display
-components/pencil-loader.ts: Brand animation loader, rotating diamond animation
+components/catui-loader.ts: Brand animation loader, rotating diamond animation
 components/countdown-timer.ts: Countdown timer, reusable timer for dialogs
 components/visual-truncate.ts: Smart text truncation, accounts for line wrapping
 components/extension-editor.ts: Multi-line editor for extensions, Ctrl+G for external editor

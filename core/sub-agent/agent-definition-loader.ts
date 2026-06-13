@@ -25,7 +25,7 @@ import type {
 /**
  * Parse a markdown agent definition file.
  * Matches CC's mM4() function for parsing .claude/agents/*.md
- * (adapted to .nanopencil/agents/*.md).
+ * (adapted to .catui/agents/*.md).
  *
  * Format (CC §15.1):
  * ```markdown
@@ -201,7 +201,7 @@ export function parseJsonAgentDefinition(
  * Scans for .md and .json files and parses them.
  *
  * Per CC §XIV:
- * - Sources: built-in, plugin, user custom (.nanopencil/agents/*.md)
+ * - Sources: built-in, plugin, user custom (.catui/agents/*.md)
  * - Failed files are recorded for error reporting
  *
  * @param dirPath Directory to scan for agent definitions
@@ -262,8 +262,8 @@ export async function loadAgentDefinitionsFromDirectory(
 /**
  * Load custom agent definitions from the standard locations.
  * Per CC §XIV:
- * - .nanopencil/agents/*.md (project-scoped)
- * - ~/.pencils/agents/<id>/agents/*.md (user-scoped)
+ * - .catui/agents/*.md (project-scoped)
+ * - ~/.catui/agents/<id>/agents/*.md (user-scoped)
  *
  * @param cwd Project root directory
  * @param agentDir Global agent config directory
@@ -277,7 +277,7 @@ export async function loadCustomAgentDefinitions(
 }> {
   // Project-scoped agents
   const projectResult = await loadAgentDefinitionsFromDirectory(
-    join(cwd, ".nanopencil", "agents"),
+    join(cwd, ".catui", "agents"),
     "projectSettings",
   );
 

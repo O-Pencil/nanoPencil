@@ -111,7 +111,7 @@ export function executeBash(command: string, options?: BashExecutorOptions): Pro
 			// Start writing to temp file if exceeds threshold
 			if (totalBytes > DEFAULT_MAX_BYTES && !tempFilePath) {
 				const id = randomBytes(8).toString("hex");
-				tempFilePath = join(tmpdir(), `nanopencil-bash-${id}.log`);
+				tempFilePath = join(tmpdir(), `catui-bash-${id}.log`);
 				tempFileStream = createWriteStream(tempFilePath);
 				// Write already-buffered chunks to temp file
 				for (const chunk of outputChunks) {
@@ -210,7 +210,7 @@ export async function executeBashWithOperations(
 		// Start writing to temp file if exceeds threshold
 		if (totalBytes > DEFAULT_MAX_BYTES && !tempFilePath) {
 			const id = randomBytes(8).toString("hex");
-			tempFilePath = join(tmpdir(), `nanopencil-bash-${id}.log`);
+			tempFilePath = join(tmpdir(), `catui-bash-${id}.log`);
 			tempFileStream = createWriteStream(tempFilePath);
 			for (const chunk of outputChunks) {
 				tempFileStream.write(chunk);

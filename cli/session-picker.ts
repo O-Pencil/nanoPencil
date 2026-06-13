@@ -4,7 +4,7 @@
  * [TO]: Consumed by main.ts
  * [HERE]: cli/session-picker.ts - TUI session selector for --resume flag
  */
-import { ProcessTerminal, TUI } from "@pencil-agent/tui";
+import { ProcessTerminal, TUI } from "@catui/tui";
 import { KeybindingsManager } from "../core/platform/keybindings.js";
 import type { SessionInfo, SessionListProgress } from "../core/session/session-manager.js";
 import { SessionSelectorComponent } from "../modes/interactive/components/session-selector.js";

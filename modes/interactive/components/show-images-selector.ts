@@ -1,11 +1,11 @@
 /**
  * [WHO]: ShowImagesSelectorComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./dynamic-border.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/show-images-selector.ts -
  */
 
-import { Container, type SelectItem, SelectList } from "@pencil-agent/tui";
+import { Container, type SelectItem, SelectList } from "@catui/tui";
 import { getSelectListTheme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 

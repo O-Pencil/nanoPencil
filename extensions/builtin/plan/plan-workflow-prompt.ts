@@ -19,7 +19,7 @@ export function getPlanModeInstructions(
 	config?: PlanModeConfig,
 ): string {
 	const interviewEnabled = config?.interviewPhaseEnabled
-		|| process.env.NANOPENCIL_PLAN_INTERVIEW === "true";
+		|| (process.env.CATUI_PLAN_INTERVIEW ?? process.env.NANOPENCIL_PLAN_INTERVIEW) === "true";
 
 	if (reminderType === "sparse") {
 		return interviewEnabled

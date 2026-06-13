@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides CustomOverlayHost, CustomOverlayContext — extension custom component (overlay/inline)
- * [FROM]: Depends on @pencil-agent/tui (Component/Container/TUI/EditorComponent/OverlayOptions/OverlayHandle),
+ * [FROM]: Depends on @catui/tui (Component/Container/TUI/EditorComponent/OverlayOptions/OverlayHandle),
  *         theme, theme-contract (Theme), keybindings (KeybindingsManager)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (held as `this.customOverlay`; wired into
  *       ExtensionUIContext.custom)
@@ -19,7 +19,7 @@ import type {
   OverlayHandle,
   OverlayOptions,
   TUI,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import type { KeybindingsManager } from "../../../../core/platform/keybindings.js";
 import { theme } from "../../theme/theme.js";

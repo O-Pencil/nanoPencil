@@ -11,7 +11,7 @@ const promptTemplates = [
 		name: "draft",
 		description: "Draft from prompt",
 		source: "project",
-		filePath: "/workspace/.pencil/prompts/draft.md",
+		filePath: "/workspace/.catui/prompts/draft.md",
 	},
 ] as PromptTemplate[];
 
@@ -19,7 +19,7 @@ const skill: Skill = {
 	name: "review",
 	description: "Review skill",
 	source: "user",
-	filePath: "/home/user/.nanopencil/skills/review/SKILL.md",
+	filePath: "/home/user/.catui/skills/review/SKILL.md",
 	content: "",
 	disableModelInvocation: false,
 };
@@ -66,7 +66,7 @@ test("rpc command catalog shares category and shadow filtering with runtime cata
 			source: "prompt",
 			category: "workflow",
 			location: "project",
-			path: "/workspace/.pencil/prompts/draft.md",
+			path: "/workspace/.catui/prompts/draft.md",
 		},
 		{
 			name: "skill:review",
@@ -74,7 +74,7 @@ test("rpc command catalog shares category and shadow filtering with runtime cata
 			source: "skill",
 			category: "tools",
 			location: "user",
-			path: "/home/user/.nanopencil/skills/review/SKILL.md",
+			path: "/home/user/.catui/skills/review/SKILL.md",
 		},
 	]);
 });

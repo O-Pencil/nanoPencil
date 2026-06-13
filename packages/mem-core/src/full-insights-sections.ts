@@ -143,7 +143,7 @@ Return ONLY valid JSON:
 			name: "features",
 			prompt: `${OBSERVER_VOICE_RULES}
 
-Suggest NanoPencil features or workflows this user should try based on their actual usage. Prefer skills, MCP, hooks, headless commands, subagents, recap, memory, or token-save only when evidence supports it; explain why it fits this user's observed habits.
+Suggest Catui features or workflows this user should try based on their actual usage. Prefer skills, MCP, hooks, headless commands, subagents, recap, memory, or token-save only when evidence supports it; explain why it fits this user's observed habits.
 ${languageRule}
 Return ONLY valid JSON:
 {"featuresToTry":[{"title":"feature/workflow","oneLiner":"what it does","whyForYou":"why this user should try it","exampleCode":"optional command or config"}]}`,

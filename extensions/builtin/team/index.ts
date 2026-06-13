@@ -1,6 +1,6 @@
 /**
  * [WHO]: AgentTeam extension, registers /team commands for persistent teammates, harness status, psyche status, dashboard widget
- * [FROM]: Depends on @pencil-agent/tui, core/extensions-host/types, ./team-runtime, ./team-parser, ./team-types, ./team-harness, ./team-presets, ./team-dashboard
+ * [FROM]: Depends on @catui/tui, core/extensions-host/types, ./team-runtime, ./team-parser, ./team-types, ./team-harness, ./team-presets, ./team-dashboard
  * [TO]: Consumed by builtin-extensions.ts as default extension
  * [HERE]: extensions/builtin/team/index.ts - AgentTeam extension entry point
  *
@@ -237,7 +237,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 							api,
 							createTeamUtterance({
 								speakerId: "leader",
-								speakerLabel: "pencil",
+								speakerLabel: "catui",
 								role: "leader",
 								kind: "work",
 								text: targetTeammate
@@ -276,7 +276,7 @@ export default async function teamExtension(api: ExtensionAPI): Promise<void> {
 										api,
 										createTeamUtterance({
 											speakerId: "leader",
-											speakerLabel: "pencil",
+											speakerLabel: "catui",
 											role: "leader",
 											kind: "handoff",
 											text: `@${handoffTarget.identity.name} take the handoff from ${teammate ? formatSpeakerName(teammate) : result.teammateName}: ${mention.task}`,

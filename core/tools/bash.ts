@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import { createWriteStream, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { spawn } from "child_process";
 import { getShellConfig, getShellEnv, killProcessTree } from "../platform/utils/shell.js";
@@ -20,7 +20,7 @@ import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult
  */
 function getTempFilePath(): string {
 	const id = randomBytes(8).toString("hex");
-	return join(tmpdir(), `nanopencil-bash-${id}.log`);
+	return join(tmpdir(), `catui-bash-${id}.log`);
 }
 
 const DEFAULT_TIMEOUT = 120;

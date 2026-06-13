@@ -21,7 +21,7 @@
 #   ./scripts/idle-think-bisect.sh summary       # 汇总所有测试结果
 #
 # 前提：
-#   - core/lib/ai 已编译（含 NANOPENCIL_TRACE_API 追踪器）
+#   - core/lib/ai 已编译（含 CATUI_TRACE_API 追踪器）
 #   - 确认追踪器: grep "API-TRACE" core/lib/ai/dist/stream.js
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -30,8 +30,8 @@ cd "$(git rev-parse --show-toplevel)"
 
 # ─── 配置 ───────────────────────────────────────────────────────────────────
 TASK="读 README.md 然后告诉我这个项目是做什么的"
-PROVIDER="${NANOPENCIL_TEST_PROVIDER:-minimax-coding}"
-MODEL="${NANOPENCIL_TEST_MODEL:-MiniMax-M2.5}"
+PROVIDER="${CATUI_TEST_PROVIDER:-minimax-coding}"
+MODEL="${CATUI_TEST_MODEL:-MiniMax-M2.5}"
 RESULT_DIR="scripts/.idle-think-audit"
 IDLE_MONITOR_MINUTES="${2:-5}"  # 默认监控5分钟
 
@@ -84,7 +84,7 @@ run_task() {
     log "  运行: $label"
     
     # 构建环境变量
-    local env_str="NANOPENCIL_TRACE_API=1"
+    local env_str="CATUI_TRACE_API=1"
     for e in "${extra_env[@]+${extra_env[@]}}"; do
         env_str="$env_str $e"
     done
@@ -123,29 +123,29 @@ phase_task() {
 
     log ""
     log "── 1.2 禁用 idle-think ──"
-    run_task "no-idle-think" "NANOPENCIL_SKIP_EXT_IDLETHINK=1"
+    run_task "no-idle-think" "CATUI_SKIP_EXT_IDLETHINK=1"
 
     log ""
     log "── 1.3 禁用 presence ──"
-    run_task "no-presence" "NANOPENCIL_SKIP_EXT_PRESENCE=1"
+    run_task "no-presence" "CATUI_SKIP_EXT_PRESENCE=1"
 
     log ""
     log "── 1.4 禁用 idle-think + presence ──"
-    run_task "no-idle-no-presence" "NANOPENCIL_SKIP_EXT_IDLETHINK=1" "NANOPENCIL_SKIP_EXT_PRESENCE=1"
+    run_task "no-idle-no-presence" "CATUI_SKIP_EXT_IDLETHINK=1" "CATUI_SKIP_EXT_PRESENCE=1"
 
     log ""
     log "── 1.5 禁用 nanomem ──"
-    run_task "no-nanomem" "NANOPENCIL_SKIP_EXT_NANOMEM=1"
+    run_task "no-nanomem" "CATUI_SKIP_EXT_NANOMEM=1"
 
     log ""
     log "── 1.6 全部禁用（裸核心）──"
-    run_task "bare-core" "NANOPENCIL_SKIP_EXT_IDLETHINK=1" "NANOPENCIL_SKIP_EXT_PRESENCE=1" "NANOPENCIL_SKIP_EXT_NANOMEM=1" "NANOPENCIL_SKIP_EXT_SOUL=1"
+    run_task "bare-core" "CATUI_SKIP_EXT_IDLETHINK=1" "CATUI_SKIP_EXT_PRESENCE=1" "CATUI_SKIP_EXT_NANOMEM=1" "CATUI_SKIP_EXT_SOUL=1"
 
     log ""
     log "── 1.7 --no-extensions（完全无扩展）──"
     # 这里需要改命令行参数
     local logfile="$RESULT_DIR/no-extensions-$(timestamp).log"
-    NANOPENCIL_TRACE_API=1 npx tsx cli.ts --print --no-session --no-extensions --no-mcp --provider "$PROVIDER" --model "$MODEL" "$TASK" 2>"$logfile" 1>/dev/null || true
+    CATUI_TRACE_API=1 npx tsx cli.ts --print --no-session --no-extensions --no-mcp --provider "$PROVIDER" --model "$MODEL" "$TASK" 2>"$logfile" 1>/dev/null || true
     local count
     count=$(grep -c "API-TRACE" "$logfile" 2>/dev/null || echo "0")
     echo "no-extensions|$count|0|0|$logfile" >> "$RESULT_DIR/results.csv"
@@ -197,7 +197,7 @@ phase_idle() {
     log "  日志: $logfile"
     
     # 启动交互模式，不发送任何输入（模拟挂机）
-    NANOPENCIL_TRACE_API=1 npx tsx cli.ts --no-session --provider "$PROVIDER" --model "$MODEL" 2>"$logfile" </dev/null &
+    CATUI_TRACE_API=1 npx tsx cli.ts --no-session --provider "$PROVIDER" --model "$MODEL" 2>"$logfile" </dev/null &
     local pid=$!
     
     log "  PID: $pid"
@@ -244,9 +244,9 @@ phase_idle() {
     
     log ""
     log "▶ 对比建议:"
-    log "  1. 禁用 idle-think 重跑:  NANOPENCIL_SKIP_EXT_IDLETHINK=1 ./scripts/idle-think-bisect.sh idle $minutes"
-    log "  2. 禁用 presence 重跑:    NANOPENCIL_SKIP_EXT_PRESENCE=1 ./scripts/idle-think-bisect.sh idle $minutes"
-    log "  3. 两者都禁用重跑:        NANOPENCIL_SKIP_EXT_IDLETHINK=1 NANOPENCIL_SKIP_EXT_PRESENCE=1 ./scripts/idle-think-bisect.sh idle $minutes"
+    log "  1. 禁用 idle-think 重跑:  CATUI_SKIP_EXT_IDLETHINK=1 ./scripts/idle-think-bisect.sh idle $minutes"
+    log "  2. 禁用 presence 重跑:    CATUI_SKIP_EXT_PRESENCE=1 ./scripts/idle-think-bisect.sh idle $minutes"
+    log "  3. 两者都禁用重跑:        CATUI_SKIP_EXT_IDLETHINK=1 CATUI_SKIP_EXT_PRESENCE=1 ./scripts/idle-think-bisect.sh idle $minutes"
 }
 
 # ─── Phase 3: Commit 对比 ────────────────────────────────────────────────────
@@ -277,19 +277,19 @@ phase_commit_diff() {
     log "  grep 'API-TRACE' core/lib/ai/src/stream.ts"
     log ""
     log "  # 如果没有，手动在 stream() 和 streamSimple() 入口加:"
-    log "  #   if (process.env.NANOPENCIL_TRACE_API === '1') {"
+    log "  #   if (process.env.CATUI_TRACE_API === '1') {"
     log "  #     console.error('[API-TRACE #' + (++globalThis.__apiCount || (globalThis.__apiCount=1)) + ']', new Error().stack?.split('\\n').slice(1,6).join('\\n'));"
     log "  #   }"
     log ""
     log "  cd core/lib/ai && npx tsc -p tsconfig.build.json && cd ../.."
-    log "  NANOPENCIL_TRACE_API=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-before-idle-think.log 1>/dev/null"
+    log "  CATUI_TRACE_API=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-before-idle-think.log 1>/dev/null"
     log "  echo \"Before idle-think:\"; grep -c 'API-TRACE' /tmp/trace-before-idle-think.log"
     log ""
     log "─── 步骤 2: 在 idle-think 引入后的 commit 测试 ───"
     log ""
     log "  git checkout $COMMIT_IDLE_THINK"
     log "  cd core/lib/ai && npx tsc -p tsconfig.build.json && cd ../.."
-    log "  NANOPENCIL_TRACE_API=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-after-idle-think.log 1>/dev/null"
+    log "  CATUI_TRACE_API=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-after-idle-think.log 1>/dev/null"
     log "  echo \"After idle-think:\"; grep -c 'API-TRACE' /tmp/trace-after-idle-think.log"
     log ""
     log "─── 步骤 3: 回到 HEAD ───"
@@ -302,11 +302,11 @@ phase_commit_diff() {
     log "  这是更推荐的方式——不需要切换 commit，直接用 skipExt 隔离:"
     log ""
     log "  # 模拟「无 idle-think」的效果:"
-    log "  NANOPENCIL_TRACE_API=1 NANOPENCIL_SKIP_EXT_IDLETHINK=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-skip-idle.log 1>/dev/null"
+    log "  CATUI_TRACE_API=1 CATUI_SKIP_EXT_IDLETHINK=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-skip-idle.log 1>/dev/null"
     log "  echo \"Skip idle-think:\"; grep -c 'API-TRACE' /tmp/trace-skip-idle.log"
     log ""
     log "  # 模拟「无 idle-think + 无 presence」:"
-    log "  NANOPENCIL_TRACE_API=1 NANOPENCIL_SKIP_EXT_IDLETHINK=1 NANOPENCIL_SKIP_EXT_PRESENCE=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-skip-both.log 1>/dev/null"
+    log "  CATUI_TRACE_API=1 CATUI_SKIP_EXT_IDLETHINK=1 CATUI_SKIP_EXT_PRESENCE=1 npx tsx cli.ts --print --no-session --provider $PROVIDER --model $MODEL \"$TASK\" 2>/tmp/trace-skip-both.log 1>/dev/null"
     log "  echo \"Skip both:\"; grep -c 'API-TRACE' /tmp/trace-skip-both.log"
     log ""
     log "═══════════════════════════════════════════════════════════════════"
@@ -411,12 +411,12 @@ case "${1:-help}" in
         echo "  4. ./scripts/idle-think-bisect.sh summary"
         echo ""
         echo "环境变量:"
-        echo "  NANOPENCIL_SKIP_EXT_IDLETHINK=1  跳过 idle-think 扩展"
-        echo "  NANOPENCIL_SKIP_EXT_PRESENCE=1   跳过 presence 扩展"
-        echo "  NANOPENCIL_SKIP_EXT_NANOMEM=1    跳过 nanomem 扩展"
-        echo "  NANOPENCIL_SKIP_EXT_SOUL=1       跳过 soul 扩展"
-        echo "  NANOPENCIL_TEST_PROVIDER=...     覆盖测试 provider"
-        echo "  NANOPENCIL_TEST_MODEL=...        覆盖测试 model"
+        echo "  CATUI_SKIP_EXT_IDLETHINK=1  跳过 idle-think 扩展"
+        echo "  CATUI_SKIP_EXT_PRESENCE=1   跳过 presence 扩展"
+        echo "  CATUI_SKIP_EXT_NANOMEM=1    跳过 nanomem 扩展"
+        echo "  CATUI_SKIP_EXT_SOUL=1       跳过 soul 扩展"
+        echo "  CATUI_TEST_PROVIDER=...     覆盖测试 provider"
+        echo "  CATUI_TEST_MODEL=...        覆盖测试 model"
         ;;
     *)
         err "未知命令: $1"

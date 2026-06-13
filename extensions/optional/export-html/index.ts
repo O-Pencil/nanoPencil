@@ -12,7 +12,7 @@
  */
 
 
-import type { AgentState } from "@pencil-agent/agent-core";
+import type { AgentState } from "@catui/agent-core";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -26,8 +26,8 @@ import { getResolvedThemeColors, getThemeExportColors } from "../../../modes/int
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXPORT_COMMAND_COMPLETIONS = [
 	{
-		value: "./nanopencil-session.html",
-		label: "./nanopencil-session.html",
+		value: "./catui-session.html",
+		label: "./catui-session.html",
 		description: "Choose the output file for this session export",
 	},
 ];

@@ -14,7 +14,7 @@ import { allTools } from "../core/tools/index.js";
 
 test("extension-commands: mem-insights creates an HTML report and emits visible status", async () => {
 	const cwd = process.cwd();
-	const agentDir = mkdtempSync(join(tmpdir(), "nanopencil-ext-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "catui-ext-"));
 	process.env.NANOMEM_MEMORY_DIR = join(agentDir, "memory");
 
 	const settingsManager = SettingsManager.create(cwd, agentDir);

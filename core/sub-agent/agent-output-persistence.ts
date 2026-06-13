@@ -11,12 +11,12 @@ import { join } from "node:path";
 
 /**
  * Get the tasks directory path.
- * Matches CC's qR6() function: <project>/.claude/tasks/ → <project>/.nanopencil/tasks/
+ * Matches CC's qR6() function: <project>/.claude/tasks/ → <project>/.catui/tasks/
  *
- * Per CC §19: nanoPencil uses .nanopencil/ instead of .claude/
+ * Per CC §19: Catui uses .catui/ instead of .claude/
  */
 export function getTasksDir(cwd: string): string {
-  return join(cwd, ".nanopencil", "tasks");
+  return join(cwd, ".catui", "tasks");
 }
 
 /**

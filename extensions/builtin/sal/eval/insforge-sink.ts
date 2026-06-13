@@ -91,7 +91,7 @@ export class InsForgeEvalSink implements EvalSink {
 			task_file:     strOrNull(p.task_file),
 			model:         strOrNull(p.model),
 			thinking:      p.thinking === true,
-			pencil_version: strOrNull(p.pencil_version),
+			catui_version: strOrNull(p.catui_version),
 			commit_hash:   strOrNull(p.commit, "unknown"),
 			branch_name:   strOrNull(p.branch, "unknown"),
 			workspace_root: strOrNull(p.workspace_root),
@@ -319,7 +319,7 @@ function numOrNull(v: unknown): number | null {
 
 function toLegacyRunStartRow(row: Record<string, unknown>): Record<string, unknown> {
 	const {
-		pencil_version: _pencilVersion,
+		catui_version: _catuiVersion,
 		commit_hash: _commitHash,
 		branch_name: _branchName,
 		workspace_root: _workspaceRoot,

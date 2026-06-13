@@ -1,11 +1,11 @@
 /**
  * [WHO]: BranchSummaryMessageComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./keybinding-hints.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/branch-summary-message.ts -
  */
 
-import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
+import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "@catui/tui";
 import type { BranchSummaryMessage } from "../../../core/messages.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 import { editorKey } from "./keybinding-hints.js";

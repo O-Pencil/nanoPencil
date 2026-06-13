@@ -9,7 +9,7 @@
  * and which tools are active after a rebuild.
  */
 
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import type { ExtensionRunner } from "../extensions-host/runner.js";
 import type {
   RegisteredTool,

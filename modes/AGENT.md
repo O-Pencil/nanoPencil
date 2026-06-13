@@ -6,7 +6,7 @@
 
 ## Overview
 
-The `modes/` module contains the three distinct execution modes for nanoPencil. Each mode provides a different user interface paradigm while sharing the same core AgentSession.
+The `modes/` module contains the three distinct execution modes for Catui. Each mode provides a different user interface paradigm while sharing the same core AgentSession.
 
 **Key Characteristics:**
 - I/O abstraction over shared core
@@ -78,7 +78,7 @@ interactive/
 │   ├── show-images-selector.ts # Image toggle
 │   ├── dynamic-border.ts     # Animated borders
 │   ├── bordered-loader.ts    # Loading animation
-│   ├── pencil-loader.ts      # Brand animation
+│   ├── catui-loader.ts      # Brand animation
 │   ├── visual-truncate.ts    # Smart truncation
 │   ├── armin.ts              # Argon2 + Minio utilities
 │   ├── daxnuts.ts            # Data exchange nuts
@@ -94,7 +94,7 @@ interactive/
 **P3 Contract:**
 `interactive-mode.ts`:
 - [WHO]: Provides InteractiveMode class, runInteractiveMode()
-- [FROM]: Depends on @pencil-agent/tui, agent-session, components
+- [FROM]: Depends on @catui/tui, agent-session, components
 - [TO]: Consumed by cli.ts, main.ts
 - [HERE]: modes/interactive/interactive-mode.ts - TUI orchestration hub
 

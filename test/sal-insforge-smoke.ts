@@ -86,7 +86,7 @@ async function main(): Promise<void> {
 			task_description: "[smoke] tool_trace pipeline check",
 			model: "smoke-model",
 			thinking: false,
-			pencil_version: "smoke-test",
+			catui_version: "smoke-test",
 			commit: "smoke",
 			branch: "smoke",
 			workspace_root: process.cwd(),

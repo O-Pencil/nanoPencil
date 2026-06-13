@@ -9,7 +9,7 @@
 The `packages/` directory now contains only bundled packages that remain outside
 the internal `core/lib/` library layer after the phase-one skeleton move.
 
-`@pencil-agent/ai`, `@pencil-agent/agent-core`, and `@pencil-agent/tui` were moved
+`@catui/ai`, `@catui/agent-core`, and `@catui/tui` were moved
 to `core/lib/{ai,agent-core,tui}` and remain private workspace libraries.
 
 ---

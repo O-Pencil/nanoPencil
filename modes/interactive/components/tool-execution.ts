@@ -17,7 +17,7 @@ import {
 	Text,
 	type TUI,
 	truncateToWidth,
-} from "@pencil-agent/tui";
+} from "@catui/tui";
 import stripAnsi from "strip-ansi";
 import type { ToolDefinition } from "../../../core/extensions-host/types.js";
 import { computeEditDiff, type EditDiffError, type EditDiffResult } from "../../../core/tools/edit-diff.js";

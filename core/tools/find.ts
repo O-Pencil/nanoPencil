@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/tools/index.ts
  * [HERE]: core/tools/find.ts - file pattern matching via glob; consumed by orchestrator
  */
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import { spawnSync } from "child_process";
 import { existsSync } from "fs";

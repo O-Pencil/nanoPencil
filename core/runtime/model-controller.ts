@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ModelController, CycleModelError, ModelCycleResult — model + thinking-level management
- * [FROM]: Depends on @pencil-agent/ai (Model, modelsAreEqual), @pencil-agent/agent-core (types),
+ * [FROM]: Depends on @catui/ai (Model, modelsAreEqual), @catui/agent-core (types),
  *         ./session-context (ModelControllerContext), ./thinking-levels, ./model-cycle
  * [TO]: Consumed by core/runtime/agent-session.ts (constructs one, delegates the public methods)
  * [HERE]: core/runtime/agent-session.ts split — owns setModel/cycleModel and thinking-level methods
@@ -9,9 +9,9 @@
  * ModelControllerContext capabilities; behavior is identical to the former AgentSession methods.
  */
 
-import type { AgentLoopFrameworkInput, AgentLoopPolicyOptions, ThinkingLevel } from "@pencil-agent/agent-core";
-import type { Model } from "@pencil-agent/ai/types";
-import { modelsAreEqual } from "@pencil-agent/ai/models";
+import type { AgentLoopFrameworkInput, AgentLoopPolicyOptions, ThinkingLevel } from "@catui/agent-core";
+import type { Model } from "@catui/ai/types";
+import { modelsAreEqual } from "@catui/ai/models";
 import { nextCyclicIndex, pickThinkingLevelOnModelChange } from "./model-cycle.js";
 import type { ModelControllerContext } from "./session-context.js";
 import {

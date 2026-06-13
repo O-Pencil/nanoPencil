@@ -31,7 +31,7 @@ function createApiHarness() {
 
 function createContext(settings: Record<string, unknown> = {}): ExtensionContext {
 	return {
-		cwd: "/Users/alice/Dev/nanoPencil",
+		cwd: "/Users/alice/Dev/Catui",
 		model: { id: "test-model", name: "Test Model", provider: "test" },
 		getSettings: () => ({ idleThink: settings }),
 		hasPendingMessages: () => false,
@@ -49,7 +49,7 @@ function createDeps(overrides: Partial<IdleThinkDeps> = {}): IdleThinkDeps {
 		}),
 		storeInsight: async () => {},
 		loadRecentInsights: async () => [],
-		projectKeyFromCwd: () => "Dev/nanoPencil",
+		projectKeyFromCwd: () => "Dev/Catui",
 		loadCuriosityQueue: () => ({ items: [] }),
 		saveCuriosityQueue: () => {},
 		pickNextTopics: () => [],
@@ -146,7 +146,7 @@ test("idle-think persists successful insights and marks selected curiosity topic
 
 	await maybeRunExploration(api, createContext({ enabled: true, idleMinutes: 0 }), state, deps);
 
-	assert.deepEqual(stored, [{ insight: "Useful architecture insight.\n\nCuriosity:\n- Understand extension lifecycle ownership", project: "Dev/nanoPencil" }]);
+	assert.deepEqual(stored, [{ insight: "Useful architecture insight.\n\nCuriosity:\n- Understand extension lifecycle ownership", project: "Dev/Catui" }]);
 	assert.deepEqual(addedTopics, [["Understand SAL eval lifecycle"]]);
 	assert.deepEqual(exploredTopics, [["Understand team runtime lifecycle"]]);
 	assert.equal(saveCount, 2);

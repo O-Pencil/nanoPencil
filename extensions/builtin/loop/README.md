@@ -18,7 +18,7 @@ For the autonomous "keep digging until done" runner, see the sibling
 
 **Key design decisions**:
 - Single scheduler (cron scheduler) for all tasks
-- Single storage (`.nanopencil/cron-tasks.json` for durable, memory for session)
+- Single storage (`.catui/cron-tasks.json` for durable, memory for session)
 - `/loop` command and CronCreate tool both use `addCronTask`
 - Enhanced features (--name, --max, --quiet, pause/resume) built on top
 
@@ -54,14 +54,14 @@ For the autonomous "keep digging until done" runner, see the sibling
 - `--quiet` (or `-q`) — suppress per-tick UI messages. Errors and terminal
   events still surface; routine ticks are still recorded via `appendEntry`.
 - `--durable` (or `-d`) — persist the loop across sessions. Durable loops are
-  saved to `.nanopencil/cron-tasks.json` and will resume when you reopen the
+  saved to `.catui/cron-tasks.json` and will resume when you reopen the
   project.
 
 ## Notes
 
 - By default, loops are **session-scoped**: closing the session clears them.
 - Use `--durable` to persist loops across sessions.
-- Durable loops are stored in `.nanopencil/cron-tasks.json` in your project
+- Durable loops are stored in `.catui/cron-tasks.json` in your project
   directory.
 - **Auto-expiry**: Durable loops automatically expire after 7 days to prevent
   zombie tasks from accumulating.

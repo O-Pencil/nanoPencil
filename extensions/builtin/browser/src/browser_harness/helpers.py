@@ -5,7 +5,7 @@ BH_AGENT_WORKSPACE/agent_helpers.py.
 
 [WHO]: Provides Browser Harness navigation, input, screenshot, tab, JavaScript, upload, and HTTP helper functions
 [FROM]: Depends on browser_harness._ipc, CDP daemon requests, urllib, base64, importlib, and optional Pillow
-[TO]: Consumed by browser_harness.run snippets and NanoPencil browser tool calls
+[TO]: Consumed by browser_harness.run snippets and Catui browser tool calls
 [HERE]: extensions/builtin/browser/src/browser_harness/helpers.py within vendored Browser Harness package
 """
 import base64, importlib.util, json, math, os, time, urllib.request

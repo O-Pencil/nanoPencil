@@ -1,6 +1,6 @@
 ---
 name: mcp-management
-description: Use this skill when the user asks to install, configure, debug, enable, or disable MCP servers or MCP tools in NanoPencil.
+description: Use this skill when the user asks to install, configure, debug, enable, or disable MCP servers or MCP tools in Catui.
 ---
 
 # MCP Management
@@ -9,14 +9,14 @@ Use this skill when the user asks for any of the following:
 
 - Install a new MCP server
 - Configure an existing MCP server
-- Enable or disable MCP servers in NanoPencil
+- Enable or disable MCP servers in Catui
 - Debug why MCP tools are missing
 - Add API keys or environment variables for an MCP server
 
-## What NanoPencil already does
+## What Catui already does
 
-- MCP is enabled by default in NanoPencil unless the user launched it with `--no-mcp` or in offline mode.
-- NanoPencil reads MCP server definitions from `~/.nanopencil/agent/mcp.json`.
+- MCP is enabled by default in Catui unless the user launched it with `--no-mcp` or in offline mode.
+- Catui reads MCP server definitions from `~/.catui/agent/mcp.json`.
 - MCP tools are loaded into the current session at startup and on `/reload`.
 
 Important:
@@ -26,12 +26,12 @@ Important:
 
 ## How to inspect the current MCP setup
 
-1. Read `~/.nanopencil/agent/mcp.json` if it exists.
+1. Read `~/.catui/agent/mcp.json` if it exists.
 2. Check whether the target server already exists in `mcpServers`.
 3. Check whether it is enabled.
 4. Check whether required environment variables are present.
 
-If the file does not exist, NanoPencil will create a default one when MCP config is first loaded.
+If the file does not exist, Catui will create a default one when MCP config is first loaded.
 
 ## How to add a new MCP server
 
@@ -41,7 +41,7 @@ If the file does not exist, NanoPencil will create a default one when MCP config
    - `uvx <package>`
    - `python -m <module>`
    - `node /absolute/path/to/server.js`
-3. Add a server entry to `~/.nanopencil/agent/mcp.json`.
+3. Add a server entry to `~/.catui/agent/mcp.json`.
 4. Set `enabled: true` only if the command and required credentials are ready.
 5. Tell the user that `/reload` is required to apply the change.
 
@@ -65,7 +65,7 @@ Use this structure:
 }
 ```
 
-For remote HTTP/SSE MCP servers, use the server's documented transport and URL fields supported by NanoPencil's MCP config.
+For remote HTTP/SSE MCP servers, use the server's documented transport and URL fields supported by Catui's MCP config.
 
 ## Safe operating rules
 

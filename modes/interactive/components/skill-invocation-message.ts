@@ -1,11 +1,11 @@
 /**
  * [WHO]: SkillInvocationMessageComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js, ./keybinding-hints.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js, ./keybinding-hints.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/skill-invocation-message.ts -
  */
 
-import { Box, Markdown, type MarkdownTheme, Text } from "@pencil-agent/tui";
+import { Box, Markdown, type MarkdownTheme, Text } from "@catui/tui";
 import type { ParsedSkillBlock } from "../../../core/runtime/agent-session.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
 import { editorKey } from "./keybinding-hints.js";

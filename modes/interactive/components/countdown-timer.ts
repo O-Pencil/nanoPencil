@@ -9,7 +9,7 @@
  */
 
 
-import type { TUI } from "@pencil-agent/tui";
+import type { TUI } from "@catui/tui";
 
 export class CountdownTimer {
 	private intervalId: ReturnType<typeof setInterval> | undefined;

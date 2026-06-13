@@ -22,15 +22,15 @@ import type { PlanApprovalRequest, PlanApprovalResponse } from "./types.js";
 export function isInTeammateContext(): boolean {
 	// Check environment variables set by team extension for teammate sessions
 	// The team extension sets TEAMMATE_ID when running as a teammate
-	return process.env.NANOPENCIL_TEAMMATE_ID !== undefined;
+	return process.env.CATUI_TEAMMATE_ID !== undefined;
 }
 
 /**
  * Get the current teammate identity.
  */
 export function getTeammateIdentity(): { id: string; name: string } | null {
-	const id = process.env.NANOPENCIL_TEAMMATE_ID;
-	const name = process.env.NANOPENCIL_TEAMMATE_NAME;
+	const id = process.env.CATUI_TEAMMATE_ID;
+	const name = process.env.CATUI_TEAMMATE_NAME;
 	if (id) {
 		return { id, name: name || id };
 	}
@@ -41,7 +41,7 @@ export function getTeammateIdentity(): { id: string; name: string } | null {
  * Get the team name if in a team context.
  */
 export function getTeamName(): string | null {
-	return process.env.NANOPENCIL_TEAM_NAME || null;
+	return process.env.CATUI_TEAM_NAME || null;
 }
 
 // ============================================================================
@@ -78,7 +78,7 @@ export async function submitPlanToLeader(
 	const os = await import("node:os");
 	const path = await import("node:path");
 
-	const mailDir = path.join(os.homedir(), ".nanopencil", "agent", "team-mail");
+	const mailDir = path.join(os.homedir(), ".catui", "agent", "team-mail");
 	const requestFile = path.join(mailDir, `${requestId}.json`);
 
 	fs.mkdirSync(mailDir, { recursive: true });
@@ -97,7 +97,7 @@ export async function checkPlanApproval(
 	const path = await import("node:path");
 	const fs = await import("node:fs");
 
-	const mailDir = path.join(os.homedir(), ".nanopencil", "agent", "team-mail");
+	const mailDir = path.join(os.homedir(), ".catui", "agent", "team-mail");
 	const responseFile = path.join(mailDir, `response-${requestId}.json`);
 
 	if (!fs.existsSync(responseFile)) {

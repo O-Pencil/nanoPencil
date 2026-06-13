@@ -105,7 +105,7 @@ export function buildTeammatePrompt(input: {
 		lines.push("  (none yet)");
 	} else {
 		for (const msg of state.messages) {
-			const prefix = msg.direction === "leader" ? "pencil" : state.identity.name;
+			const prefix = msg.direction === "leader" ? "catui" : state.identity.name;
 			lines.push(`${prefix}: ${msg.content}`);
 		}
 	}

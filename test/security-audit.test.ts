@@ -5,8 +5,8 @@ import { join } from "node:path";
 import test, { after } from "node:test";
 import type { ExtensionAPI, ExtensionContext, ToolCallEvent, ToolCallEventResult } from "../core/extensions-host/types.js";
 
-const tempAgentDir = mkdtempSync(join(tmpdir(), "nanopencil-security-"));
-process.env.NANOPENCIL_AGENT_DIR = tempAgentDir;
+const tempAgentDir = mkdtempSync(join(tmpdir(), "catui-security-"));
+process.env.CATUI_AGENT_DIR = tempAgentDir;
 process.env.SECURITY_MODE = "strict";
 
 const { default: securityAuditExtension } = await import("../extensions/builtin/security-audit/index.js");

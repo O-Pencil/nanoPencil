@@ -1,12 +1,12 @@
 /**
  * [WHO]: OAuthSelectorComponent
- * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, ../theme/theme.js, ./dynamic-border.js
+ * [FROM]: Depends on @catui/ai, @catui/tui, ../theme/theme.js, ./dynamic-border.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/oauth-selector.ts - OAuth provider selector
  */
 
-import type { OAuthProviderInterface } from "@pencil-agent/ai/oauth";
-import { Container, getEditorKeybindings, Spacer, TruncatedText } from "@pencil-agent/tui";
+import type { OAuthProviderInterface } from "@catui/ai/oauth";
+import { Container, getEditorKeybindings, Spacer, TruncatedText } from "@catui/tui";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";
 

@@ -62,7 +62,7 @@ function createPendingHandle(id: string) {
 }
 
 test("team-runtime: stop keeps teammate in stopped state and records aborted result", async () => {
-	const storageDir = createTempDir("nanopencil-team-stop-");
+	const storageDir = createTempDir("catui-team-stop-");
 	const runtime = new TeamRuntime({ storageDir });
 	const { handle } = createPendingHandle("stop-handle");
 	(runtime as any).subAgentRuntime = {
@@ -102,7 +102,7 @@ test("team-runtime: stop keeps teammate in stopped state and records aborted res
 });
 
 test("team-runtime: error path posts task_result and writes transcript", async () => {
-	const storageDir = createTempDir("nanopencil-team-error-");
+	const storageDir = createTempDir("catui-team-error-");
 	const runtime = new TeamRuntime({ storageDir });
 	const handle: SubAgentHandle = {
 		id: "error-handle",
@@ -148,7 +148,7 @@ test("team-runtime: error path posts task_result and writes transcript", async (
 });
 
 test("team-runtime: queues concurrent sends for the same teammate", async () => {
-	const storageDir = createTempDir("nanopencil-team-queue-");
+	const storageDir = createTempDir("catui-team-queue-");
 	const runtime = new TeamRuntime({ storageDir });
 	let active = 0;
 	let maxActive = 0;
@@ -194,7 +194,7 @@ test("team-runtime: queues concurrent sends for the same teammate", async () => 
 });
 
 test("team-runtime: forwards sub-agent realtime events and clears live state after completion", async () => {
-	const storageDir = createTempDir("nanopencil-team-live-");
+	const storageDir = createTempDir("catui-team-live-");
 	const runtime = new TeamRuntime({ storageDir });
 	(runtime as any).subAgentRuntime = {
 		spawn: async (spec: { onEvent?: (event: any) => void }) => ({
@@ -244,9 +244,9 @@ test("team-runtime: forwards sub-agent realtime events and clears live state aft
 
 
 test("team-runtime: execute approval emits permission response and mode change", async () => {
-	const storageDir = createTempDir("nanopencil-team-approve-");
+	const storageDir = createTempDir("catui-team-approve-");
 	const runtime = new TeamRuntime({ storageDir });
-	const implementerWorkspace = createTempDir("nanopencil-team-worktree-");
+	const implementerWorkspace = createTempDir("catui-team-worktree-");
 	(runtime as any).worktreeManager = {
 		createGitWorktree: async (): Promise<WorkspacePath> => ({
 			path: implementerWorkspace,
@@ -277,7 +277,7 @@ test("team-runtime: execute approval emits permission response and mode change",
 });
 
 test("team-runtime: auto-generated names remain unique after reload", async () => {
-	const storageDir = createTempDir("nanopencil-team-names-");
+	const storageDir = createTempDir("catui-team-names-");
 	const firstRuntime = new TeamRuntime({ storageDir });
 
 	try {
@@ -305,8 +305,8 @@ test("team-runtime: auto-generated names remain unique after reload", async () =
 });
 
 test("team-presets: reuses named preset teammates instead of generating transient role names", async () => {
-	const storageDir = createTempDir("nanopencil-team-preset-reuse-");
-	const workDir = createTempDir("nanopencil-team-preset-work-");
+	const storageDir = createTempDir("catui-team-preset-reuse-");
+	const workDir = createTempDir("catui-team-preset-work-");
 	const runtime = new TeamRuntime({ storageDir });
 	(runtime as any).worktreeManager = {
 		createGitWorktree: async (): Promise<WorkspacePath> => ({
@@ -336,7 +336,7 @@ test("team-presets: reuses named preset teammates instead of generating transien
 });
 
 test("team-runtime: persists shared tasks and teammate mailbox across reload", async () => {
-	const storageDir = createTempDir("nanopencil-team-shared-");
+	const storageDir = createTempDir("catui-team-shared-");
 	const firstRuntime = new TeamRuntime({ storageDir });
 
 	try {
@@ -373,7 +373,7 @@ test("team-runtime: persists shared tasks and teammate mailbox across reload", a
 });
 
 test("team-runtime: injects claimed tasks and mailbox into teammate prompt", async () => {
-	const storageDir = createTempDir("nanopencil-team-context-");
+	const storageDir = createTempDir("catui-team-context-");
 	const runtime = new TeamRuntime({ storageDir });
 	let capturedPrompt = "";
 	(runtime as any).subAgentRuntime = {
@@ -415,8 +415,8 @@ test("team-runtime: injects claimed tasks and mailbox into teammate prompt", asy
 });
 
 test("team-orchestrator: prompt smoke runs leader assignment and agent response", async () => {
-	const storageDir = createTempDir("nanopencil-team-prompt-smoke-");
-	const workDir = createTempDir("nanopencil-team-prompt-work-");
+	const storageDir = createTempDir("catui-team-prompt-smoke-");
+	const workDir = createTempDir("catui-team-prompt-work-");
 	const runtime = new TeamRuntime({ storageDir });
 	const utterances: string[] = [];
 	const events: string[] = [];
@@ -475,8 +475,8 @@ test("team-orchestrator: prompt smoke runs leader assignment and agent response"
 
 		assert.equal(result.plan.completionState, "completed");
 		assert.equal(result.plan.subtasks.length, 1);
-		assert.match(utterances.join("\n"), /pencil: I split the goal/);
-		assert.match(utterances.join("\n"), /pencil: @Ada/);
+		assert.match(utterances.join("\n"), /catui: I split the goal/);
+		assert.match(utterances.join("\n"), /catui: @Ada/);
 		assert.match(utterances.join("\n"), /Ada: Architecture path mapped/);
 		assert.ok(events.includes("message_update"));
 	} finally {
@@ -489,8 +489,8 @@ test("team-orchestrator: prompt smoke runs leader assignment and agent response"
 });
 
 test("team-orchestrator: long website prompt coordinates the named squad", async () => {
-	const storageDir = createTempDir("nanopencil-team-website-smoke-");
-	const workDir = createTempDir("nanopencil-team-website-work-");
+	const storageDir = createTempDir("catui-team-website-smoke-");
+	const workDir = createTempDir("catui-team-website-work-");
 	const runtime = new TeamRuntime({ storageDir });
 	const utterances: string[] = [];
 	const startedAgents: string[] = [];
@@ -517,11 +517,11 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 						type: "message_update",
 						subAgentId: `website-${name}`,
 						timestamp: Date.now(),
-						text: `${name} is working on the nanoPencil website delivery.`,
+						text: `${name} is working on the Catui website delivery.`,
 					});
 					await new Promise((resolve) => setTimeout(resolve, 10));
 					activeAgents--;
-					return { success: true, response: `${name} completed the assigned website step for the nanoPencil homepage.` };
+					return { success: true, response: `${name} completed the assigned website step for the Catui homepage.` };
 				},
 				async abort(): Promise<void> {},
 				async terminate(): Promise<void> {},
@@ -533,7 +533,7 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 	try {
 		const result = await runLeaderOrchestration(runtime, {
 			taskDescription:
-				"Build a polished nanoPencil official website with product positioning, architecture overview, feature sections, TUI screenshots, installation flow, and release-readiness checks.",
+				"Build a polished Catui official website with product positioning, architecture overview, feature sections, TUI screenshots, installation flow, and release-readiness checks.",
 			baseCwd: process.cwd(),
 			completeSimple: async (systemPrompt) => {
 				if (systemPrompt.includes("select the smallest useful AgentTeam preset")) {
@@ -585,7 +585,7 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 		assert.deepEqual(result.plan.subtasks.map((subtask) => subtask.ownerName), ["Mason", "Ada", "Theo", "Iris", "Quinn"]);
 		assert.deepEqual([...new Set(startedAgents)].sort(), ["Ada", "Iris", "Mason", "Quinn", "Theo"]);
 		assert.equal(maxActiveAgents > 1, true);
-		assert.match(utterances.join("\n"), /pencil: @Mason/);
+		assert.match(utterances.join("\n"), /catui: @Mason/);
 		assert.match(utterances.join("\n"), /Theo: Theo completed the assigned website step/);
 		assert.match(utterances.join("\n"), /Iris: Iris completed the assigned website step/);
 		assert.match(utterances.join("\n"), /Quinn: Quinn completed the assigned website step/);
@@ -600,9 +600,9 @@ test("team-orchestrator: long website prompt coordinates the named squad", async
 });
 
 test("team-runtime: execute write tools reject paths outside cwd unless allowlisted", async () => {
-	const storageDir = createTempDir("nanopencil-team-guard-state-");
-	const workDir = createTempDir("nanopencil-team-guard-work-");
-	const outsideDir = createTempDir("nanopencil-team-guard-outside-");
+	const storageDir = createTempDir("catui-team-guard-state-");
+	const workDir = createTempDir("catui-team-guard-work-");
+	const outsideDir = createTempDir("catui-team-guard-outside-");
 	const runtime = new TeamRuntime({ storageDir });
 	(runtime as any).worktreeManager = {
 		createGitWorktree: async (): Promise<WorkspacePath> => ({
@@ -654,8 +654,8 @@ test("team-runtime: execute write tools reject paths outside cwd unless allowlis
 });
 
 test("team-runtime: recovered implementer worktree can be terminated after reload", async () => {
-	const repoDir = createTempDir("nanopencil-team-recover-repo-");
-	const storageDir = createTempDir("nanopencil-team-recover-state-");
+	const repoDir = createTempDir("catui-team-recover-repo-");
+	const storageDir = createTempDir("catui-team-recover-state-");
 
 	try {
 		writeFileSync(join(repoDir, "tracked.txt"), "base\n", "utf-8");
@@ -694,8 +694,8 @@ test("team-runtime: recovered implementer worktree can be terminated after reloa
 });
 
 test("team-runtime: harness send creates checkpoint and advances phase", async () => {
-	const repoDir = createTempDir("nanopencil-team-harness-repo-");
-	const storageDir = createTempDir("nanopencil-team-harness-state-");
+	const repoDir = createTempDir("catui-team-harness-repo-");
+	const storageDir = createTempDir("catui-team-harness-state-");
 
 	try {
 		initGitRepo(repoDir);
@@ -751,8 +751,8 @@ test("team-runtime: harness send creates checkpoint and advances phase", async (
 });
 
 test("team-runtime: harness violation is quarantined and reverted", async () => {
-	const repoDir = createTempDir("nanopencil-team-harness-revert-repo-");
-	const storageDir = createTempDir("nanopencil-team-harness-revert-state-");
+	const repoDir = createTempDir("catui-team-harness-revert-repo-");
+	const storageDir = createTempDir("catui-team-harness-revert-state-");
 
 	try {
 		initGitRepo(repoDir);
@@ -795,7 +795,7 @@ test("team-runtime: harness violation is quarantined and reverted", async () => 
 		const updated = runtime.getTeammate("builder");
 		assert.equal(updated?.harness?.phase, "fix");
 		assert.ok(updated?.harness?.lastRevertCommit);
-		assert.match(readFileSync(join(repoDir, ".nanopencil-harness", "feature_list.json"), "utf-8"), /Original feature/);
+		assert.match(readFileSync(join(repoDir, ".catui-harness", "feature_list.json"), "utf-8"), /Original feature/);
 		assert.match(
 			execFileSync("git", ["log", "--oneline", "-1"], { cwd: repoDir, encoding: "utf-8" }),
 			/Revert "harness: quarantine invalid turn"/,
@@ -818,7 +818,7 @@ function initGitRepo(repoDir: string): void {
 }
 
 function writeHarnessFeatureList(cwd: string, description: string, passes: boolean): void {
-	const harnessDir = join(cwd, ".nanopencil-harness");
+	const harnessDir = join(cwd, ".catui-harness");
 	mkdirSync(harnessDir, { recursive: true });
 	writeFileSync(
 		join(harnessDir, "feature_list.json"),

@@ -34,7 +34,7 @@ This extension implements the Phase B "true AgentTeam" per the refactor plan and
 - Each teammate has identity, stable short label, mode, status, worktree, and message history
 - Teammates run in isolated worktrees (for implementers)
 - Uses core/sub-agent/ infrastructure for actual agent spawning
-- Main chat renders a speaker stream (`pencil`, `Mason`, `Ada`, `Theo`, `Iris`, `Quinn`, ...) instead of raw status events
+- Main chat renders a speaker stream (`catui`, `Mason`, `Ada`, `Theo`, `Iris`, `Quinn`, ...) instead of raw status events
 - Leader orchestration can auto-split `/team <task>` into teammate assignments and follow `@mention` handoffs
 
 ## Commands
@@ -73,14 +73,14 @@ This extension implements the Phase B "true AgentTeam" per the refactor plan and
 
 ## State Persistence
 
-Teammate state is stored in `~/.nanopencil/agent/teams/<uuid>.json`:
+Teammate state is stored in `~/.catui/agent/teams/<uuid>.json`:
 - Identity (id, name, role, createdAt)
 - Mode and status
 - Working directory and worktree info
 - Message history
 - Last activity timestamp
 
-Shared team coordination state is also stored under `~/.nanopencil/agent/teams/`:
+Shared team coordination state is also stored under `~/.catui/agent/teams/`:
 - `tasks.json`: durable task list with status, owner, dependencies, and artifact paths
 - `mailbox.jsonl`: replayable mailbox events for leader↔teammate and teammate↔teammate routing
 

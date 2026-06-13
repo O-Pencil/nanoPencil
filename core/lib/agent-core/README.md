@@ -1,18 +1,18 @@
-# @pencil-agent/agent-core
+# @catui/agent-core
 
-> This package is derived from [nanoPencil](https://github.com/O-Pencil/nanoPencil) (MIT License). Stateful agent with tool execution and event streaming. Built on `@pencil-agent/ai`.
+> This package is derived from [Catui](https://github.com/O-Catui/Catui) (MIT License). Stateful agent with tool execution and event streaming. Built on `@catui/ai`.
 
 ## Installation
 
 ```bash
-npm install @pencil-agent/agent-core
+npm install @catui/agent-core
 ```
 
 ## Quick Start
 
 ```typescript
-import { Agent } from "@pencil-agent/agent-core";
-import { getModel } from "@pencil-agent/ai";
+import { Agent } from "@catui/agent-core";
+import { getModel } from "@catui/ai";
 
 const agent = new Agent({
   initialState: {
@@ -293,7 +293,7 @@ Follow-up messages are checked only when there are no more tool calls and no ste
 Extend `AgentMessage` via declaration merging:
 
 ```typescript
-declare module "@pencil-agent/agent-core" {
+declare module "@catui/agent-core" {
   interface CustomAgentMessages {
     notification: { role: "notification"; text: string; timestamp: number };
   }
@@ -365,7 +365,7 @@ Thrown errors are caught by the agent and reported to the LLM as tool errors wit
 For browser apps that proxy through a backend:
 
 ```typescript
-import { Agent, streamProxy } from "@pencil-agent/agent-core";
+import { Agent, streamProxy } from "@catui/agent-core";
 
 const agent = new Agent({
   streamFn: (model, context, options) =>
@@ -382,7 +382,7 @@ const agent = new Agent({
 For direct control without the Agent class:
 
 ```typescript
-import { agentLoop, agentLoopContinue } from "@pencil-agent/agent-core";
+import { agentLoop, agentLoopContinue } from "@catui/agent-core";
 
 const context: AgentContext = {
   systemPrompt: "You are helpful.",

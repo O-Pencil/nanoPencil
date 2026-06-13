@@ -1,8 +1,8 @@
-"""Browser Harness CLI-compatible runner used by NanoPencil subprocess tools.
+"""Browser Harness CLI-compatible runner used by Catui subprocess tools.
 
 [WHO]: Provides main() command dispatch, daemon auto-start, setup/doctor/update/reload flags, and snippet execution
 [FROM]: Depends on browser_harness.admin, browser_harness.helpers, urllib, os, and sys
-[TO]: Consumed by NanoPencil browser/browser_admin tools via python -m browser_harness.run
+[TO]: Consumed by Catui browser/browser_admin tools via python -m browser_harness.run
 [HERE]: extensions/builtin/browser/src/browser_harness/run.py within vendored Browser Harness package
 """
 

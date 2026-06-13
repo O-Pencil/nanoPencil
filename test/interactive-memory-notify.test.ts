@@ -43,7 +43,7 @@ test("interactive-memory-notify: NanoMem command notifications remain visible wh
 });
 
 test("session-manager: persists a user-only turn before any assistant reply", () => {
-	const rootDir = mkdtempSync(join(tmpdir(), "nanopencil-session-persist-"));
+	const rootDir = mkdtempSync(join(tmpdir(), "catui-session-persist-"));
 	const sessionDir = join(rootDir, "sessions");
 	const manager = SessionManager.create(rootDir, sessionDir);
 

@@ -1,11 +1,11 @@
 /**
  * [WHO]: TEAM_MESSAGE_TYPE, team message rendering, status/list formatting, dashboard/observer helpers
- * [FROM]: Depends on @pencil-agent/tui, core/extensions-host/types, theme colors, team runtime/types/dashboard/harness/orchestrator helpers
+ * [FROM]: Depends on @catui/tui, core/extensions-host/types, theme colors, team runtime/types/dashboard/harness/orchestrator helpers
  * [TO]: Consumed by extensions/builtin/team/index.ts
  * [HERE]: extensions/builtin/team/team-ui.ts - UI and text formatting boundary for AgentTeam
  */
 
-import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
+import { Box, Container, Spacer, Text } from "@catui/tui";
 import type { ExtensionAPI, MessageRenderer } from "../../../core/extensions-host/types.js";
 import type { ThemeColor } from "../../../modes/interactive/theme/theme.js";
 import { formatHarnessProgress } from "./team-harness.js";

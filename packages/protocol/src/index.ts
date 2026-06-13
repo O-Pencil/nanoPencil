@@ -1,5 +1,5 @@
 /**
- * [WHO]: Barrel for @pencil-agent/protocol — the stable protocol surface for extensions
+ * [WHO]: Barrel for @catui/protocol — the stable protocol surface for extensions
  * [FROM]: Re-exports the per-protocol modules (tools + lifecycle + commands + hooks + flags today; themes/permissions in later P3 checkpoints)
  * [TO]: Consumed by third-party extensions, packages/mem-core, packages/soul-core, and the host (adopting these contracts)
  * [HERE]: packages/protocol/src/index.ts - protocol public entry

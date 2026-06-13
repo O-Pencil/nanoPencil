@@ -6,7 +6,7 @@
 import { NanoMemEngine } from "./src/engine.js";
 import { getConfig } from "./src/config.js";
 
-const memoryDir = process.env.NANOMEM_MEMORY_DIR || "/Users/cunyu666/.nanopencil/agent/memory";
+const memoryDir = process.env.NANOMEM_MEMORY_DIR || "/Users/cunyu666/.catui/agent/memory";
 
 console.log("Testing dream (consolidate) functionality...");
 console.log(`Memory dir: ${memoryDir}`);

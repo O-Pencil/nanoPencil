@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/runtime/agent-session.ts, extensions/optional/export-html/index.ts
  * [HERE]: core/export-html/index.ts - HTML export functionality
  */
-import type { AgentState } from "@pencil-agent/agent-core";
+import type { AgentState } from "@catui/agent-core";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { basename, join } from "path";
 import { APP_NAME, getExportTemplateDir } from "../../config.js";

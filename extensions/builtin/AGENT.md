@@ -16,14 +16,14 @@ goal/goal-command.ts: runGoalCommand handler for /goal show/clear/edit/pause/res
 goal/README.md: Goal extension documentation - usage, LLM tools, lifecycle, persistence, status indicator, file-by-file architecture
 diagnostics/types.ts: Diagnostic event/report type contract and diagnostic:event channel name
 diagnostics/diagnostic-buffer.ts: DiagnosticBuffer, event coercion, fingerprint dedupe, prompt gating
-diagnostics/reporter.ts: User-approved InsForge pencil_issue_events reporter, configured via NANOPENCIL_ISSUE_* env vars
+diagnostics/reporter.ts: User-approved InsForge catui_issue_events reporter, configured via CATUI_ISSUE_* env vars
 diagnostics/redaction.ts: Diagnostic message normalization and secret/path redaction helpers
 browser/index.ts: Browser Harness extension entry, registers browser/browser_admin tools, /browser command, Browser Harness resource discovery, project-local browser workspace seeding; opt-in since P6/EV03 despite physical source staying under builtin pending Q2 physical/package decision
-browser/browser.md: Browser Harness day-to-day skill instructions for NanoPencil tool use and workspace contribution
+browser/browser.md: Browser Harness day-to-day skill instructions for Catui tool use and workspace contribution
 browser/install.md: Browser Harness setup and troubleshooting instructions, exposed as a skill resource
 browser/src/browser_harness/: Vendored Browser Harness Python package, CDP daemon, IPC bridge, admin commands, and helper functions
 browser/interaction-skills/: Reusable Browser Harness mechanics guides for browser interactions
-browser/agent-workspace/: Seed workspace copied to .nanopencil/browser-workspace for editable helpers and domain skills
+browser/agent-workspace/: Seed workspace copied to .catui/browser-workspace for editable helpers and domain skills
 discipline/index.ts: Engineering discipline extension entry, registers skill tool, default workflow skills, and lightweight before_agent_start bootstrap prompt
 discipline/skills/: Built-in engineering workflow skills for brainstorming, debugging, TDD, verification, planning, code review, worktrees, and branch finishing
 idle-think/index.ts: IdleThink extension entry, session lifecycle registration, activity tracking, and persistent insight prompt injection
@@ -34,7 +34,7 @@ idle-think/curiosity.ts: IdleThink curiosity queue persistence, topic selection,
 link-world/index.ts: Internet access integration entry, registers link_world_admin/link_world_exec/web_search/web_fetch tools, /link-world status/doctor/version/install commands, and bundled internet-search resources
 link-world/link-world-agent.md: Agent-facing skill that tells models to prefer web_search/web_fetch and link_world_admin/link_world_exec over bash for internet tasks
 link-world/network-routing.md: Routing skill that tells models when to use web_search/web_fetch/link-world versus browser automation
-link-world/agent-workspace/: Seed workspace copied to .nanopencil/link-world-workspace for project-local domain skills and notes
+link-world/agent-workspace/: Seed workspace copied to .catui/link-world-workspace for project-local domain skills and notes
 mcp/index.ts: MCP protocol integration extension, MCP guidance resources
 presence/index.ts: AI-driven opening + idle presence lines, git/cwd snapshot, systemPrompt injection of recent presence lines, timers/debounce/idle in-flight lock, settings.presence.enabled guard, PRESENCE_MESSAGE_TYPE renderer
 presence/presence-memory.ts: Presence memory boundary - NanoMem directory/project discovery, memory-derived locale detection, randomized preference/lesson highlight selection for greeting prompts

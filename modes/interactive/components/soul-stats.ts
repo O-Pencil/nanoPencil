@@ -7,7 +7,7 @@
 
 
 // @ts-ignore - soul package is bundled at runtime
-import type { SoulManager } from "@pencil-agent/soul";
+import type { SoulManager } from "@catui/soul";
 
 interface DisplayOptions {
   compact?: boolean;

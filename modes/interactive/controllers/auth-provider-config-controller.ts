@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides AuthProviderConfigController + AuthProviderConfigContext — interactive auth/provider configuration
- * [FROM]: Depends on @pencil-agent/ai OAuth helpers, core/model/custom-providers, config paths, TUI components
+ * [FROM]: Depends on @catui/ai OAuth helpers, core/model/custom-providers, config paths, TUI components
  * [TO]: Consumed by modes/interactive/interactive-mode.ts and model-overlay providerConfig port
  * [HERE]: modes/interactive/controllers/auth-provider-config-controller.ts — P5 auth/provider-config slice
  *
@@ -9,9 +9,9 @@
  * callbacks through a narrow bridge.
  */
 
-import type { Model } from "@pencil-agent/ai/types";
-import { getOAuthProviders, type OAuthProvider } from "@pencil-agent/ai/oauth";
-import type { Component, Container, TUI } from "@pencil-agent/tui";
+import type { Model } from "@catui/ai/types";
+import { getOAuthProviders, type OAuthProvider } from "@catui/ai/oauth";
+import type { Component, Container, TUI } from "@catui/tui";
 import { getAuthPath, getModelsPath } from "../../../config.js";
 import {
   type CustomProtocolProviderId,
@@ -24,9 +24,9 @@ import {
 } from "../../../core/model/custom-providers.js";
 import type { ModelRegistry } from "../../../core/model-registry.js";
 import {
-  NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
-  NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
-} from "../../../nanopencil-defaults.js";
+  CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
+  CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
+} from "../../../catui-defaults.js";
 import { LoginDialogComponent } from "../components/login-dialog.js";
 import {
   OAuthSelectorComponent,
@@ -279,17 +279,17 @@ export class AuthProviderConfigController {
       type: "api_key",
       key: trimmedApiKey,
     });
-    if (provider === NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER) {
+    if (provider === CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER) {
       this.ctx.modelRegistry.authStorage.set(
-        NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
+        CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER,
         {
           type: "api_key",
           key: trimmedApiKey,
         },
       );
-    } else if (provider === NANOPENCIL_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER) {
+    } else if (provider === CATUI_ALI_TOKEN_PLAN_ANTHROPIC_PROVIDER) {
       this.ctx.modelRegistry.authStorage.set(
-        NANOPENCIL_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
+        CATUI_ALI_TOKEN_PLAN_OPENAI_PROVIDER,
         {
           type: "api_key",
           key: trimmedApiKey,

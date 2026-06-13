@@ -46,7 +46,7 @@
 
 **功能特性：**
 - ✅ 支持创建持久化任务（`--durable` 或 `-d` flag）
-- ✅ 任务保存到 `.nanopencil/loop-tasks.json`
+- ✅ 任务保存到 `.catui/loop-tasks.json`
 - ✅ 会话启动时自动恢复durable任务
 - ✅ 任务状态变更时自动保存
 - ✅ 最大50个durable任务限制
@@ -86,7 +86,7 @@
 
 **功能特性：**
 - ✅ 文件锁机制防止多实例重复触发
-- ✅ 锁文件路径：`.nanopencil/loop-scheduler.lock`
+- ✅ 锁文件路径：`.catui/loop-scheduler.lock`
 - ✅ 获取锁失败时降级为非owner模式
 - ✅ 非owner模式下跳过durable任务触发
 - ✅ session-only任务不受锁影响
@@ -203,7 +203,7 @@
 ## 后续建议
 
 ### 短期（可选）
-- [ ] 手动集成测试 - 在真实nanoPencil环境中测试
+- [ ] 手动集成测试 - 在真实Catui环境中测试
 - [ ] 性能测试 - 测试大量durable任务的性能
 - [ ] 压力测试 - 测试多进程并发场景
 

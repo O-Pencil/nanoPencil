@@ -47,7 +47,7 @@ test("consolidateDetailed: aborted signal does not write meta.lastConsolidation"
 });
 
 test("SessionManager.countTouchedSince counts by mtime only", async () => {
-	const sessionDir = await mkdtemp(join(tmpdir(), "nanopencil-sessions-"));
+	const sessionDir = await mkdtemp(join(tmpdir(), "catui-sessions-"));
 	const cwd = "C:\\fake\\cwd";
 	const since = Date.now() - 60_000;
 

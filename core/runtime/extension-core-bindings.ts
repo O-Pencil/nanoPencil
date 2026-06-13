@@ -11,10 +11,10 @@ import type {
 	TextContent,
 	ToolCall,
 	Usage,
-} from "@pencil-agent/ai/types";
-import type { TSchema } from "@pencil-agent/ai/schema";
-import { completeSimple } from "@pencil-agent/ai/stream";
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+} from "@catui/ai/types";
+import type { TSchema } from "@catui/ai/schema";
+import { completeSimple } from "@catui/ai/stream";
+import type { ThinkingLevel } from "@catui/agent-core";
 import type { SettingsManager } from "../platform/config/settings-manager.js";
 import type { ResourceLoader } from "../platform/config/resource-loader.js";
 import type {

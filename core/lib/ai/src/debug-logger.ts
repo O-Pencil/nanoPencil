@@ -2,7 +2,7 @@
  * [WHO]: DebugLogger class, debug logging system for AI provider troubleshooting
  * [FROM]: Depends on node:fs, node:path, ./config-path
  * [TO]: Consumed by ai package providers for logging
- * [HERE]: core/lib/ai/src/debug-logger.ts - debug logging for nanopencil AI providers
+ * [HERE]: core/lib/ai/src/debug-logger.ts - debug logging for catui AI providers
  */
 import { appendFileSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
@@ -42,8 +42,8 @@ class DebugLogger {
 	 */
 	private detectEnabled(): boolean {
 		return (
-			process.env.NANOPENCIL_DEBUG === "1" ||
-			process.env.DEBUG?.includes("nanopencil") ||
+			process.env.CATUI_DEBUG === "1" ||
+			process.env.DEBUG?.includes("catui") ||
 			false
 		);
 	}
@@ -52,7 +52,7 @@ class DebugLogger {
 	 * Detect log level from environment
 	 */
 	private detectLevel(): DebugLogLevel {
-		const level = process.env.NANOPENCIL_DEBUG_LEVEL;
+		const level = process.env.CATUI_DEBUG_LEVEL;
 		if (level && level in LOG_LEVELS) {
 			return level as DebugLogLevel;
 		}
@@ -86,7 +86,7 @@ class DebugLogger {
 	 */
 	private isLevelEnabled(level: DebugLogLevel): boolean {
 		// Re-check environment on each log call to handle late-set env vars
-		if (!this.enabled && process.env.NANOPENCIL_DEBUG === "1") {
+		if (!this.enabled && process.env.CATUI_DEBUG === "1") {
 			this.refreshFromEnv();
 		}
 		return this.enabled && LOG_LEVELS[level] <= this.level;

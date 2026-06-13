@@ -18,7 +18,7 @@ import type {
 
 /**
  * Input schema for the Agent tool (what the LLM sees).
- * Matches CC's AgentInputSchema exactly, adapted for nanoPencil tool naming.
+ * Matches CC's AgentInputSchema exactly, adapted for Catui tool naming.
  *
  * ⚠️ Note from CC source:
  * - `cwd` is omitted from the schema sent to the LLM (internal use only)

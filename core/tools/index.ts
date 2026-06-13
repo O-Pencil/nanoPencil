@@ -78,7 +78,7 @@ export {
 } from "./write.js";
 export { createWorkspaceWriteGuard, isPathWithinRoot } from "./write-guard.js";
 
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import { type BashToolOptions, bashTool, createBashTool } from "./bash.js";
 import { createEditTool, type EditToolOptions, editTool } from "./edit.js";
 import { createFindTool, findTool } from "./find.js";
@@ -88,7 +88,7 @@ import { createReadTool, type ReadToolOptions, readTool } from "./read.js";
 import { createTimeTool, timeTool } from "./time.js";
 import { createWriteTool, type WriteToolOptions, writeTool } from "./write.js";
 
-/** Tool type (AgentTool from nanopencil-ai) */
+/** Tool type (AgentTool from catui-ai) */
 export type Tool = AgentTool<any>;
 
 // Default tools for full access mode (using process.cwd())

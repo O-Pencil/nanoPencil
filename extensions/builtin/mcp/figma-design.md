@@ -1,11 +1,11 @@
 ---
 name: figma-design
-description: Use this skill when the user wants NanoPencil to inspect, create, or edit designs in Figma through MCP.
+description: Use this skill when the user wants Catui to inspect, create, or edit designs in Figma through MCP.
 ---
 
 # Figma Design
 
-Use this skill when the user asks NanoPencil to:
+Use this skill when the user asks Catui to:
 
 - Generate a design in Figma
 - Edit an existing Figma file
@@ -16,11 +16,11 @@ Use this skill when the user asks NanoPencil to:
 
 Prefer the official Figma Remote MCP server first. Use the desktop server as a fallback or as an additional local-context path.
 
-NanoPencil includes two built-in disabled MCP presets:
+Catui includes two built-in disabled MCP presets:
 
 - Server ID: `figma-remote`
 - URL: `https://mcp.figma.com/mcp`
-- Auth: `/figma auth` tries a standalone browser OAuth flow first. If Figma blocks first-time client registration on this machine, NanoPencil can fall back to importing an existing official local session.
+- Auth: `/figma auth` tries a standalone browser OAuth flow first. If Figma blocks first-time client registration on this machine, Catui can fall back to importing an existing official local session.
 
 - Server ID: `figma-desktop`
 - URL: `http://127.0.0.1:3845/mcp`
@@ -36,11 +36,11 @@ If the Figma MCP tools are not available yet:
 /figma remote
 ```
 
-If the user already has dedicated Figma OAuth credentials for NanoPencil, they can also set:
+If the user already has dedicated Figma OAuth credentials for Catui, they can also set:
 
 ```text
-NANOPENCIL_FIGMA_CLIENT_ID
-NANOPENCIL_FIGMA_CLIENT_SECRET
+CATUI_FIGMA_CLIENT_ID
+CATUI_FIGMA_CLIENT_SECRET
 ```
 
 2. If the user wants the local desktop route instead, ask them to open the Figma desktop app and enable the desktop MCP server in Figma Dev Mode.

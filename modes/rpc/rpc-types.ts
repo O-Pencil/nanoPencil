@@ -4,8 +4,8 @@
  * [TO]: Consumed by modes/index.ts, modes/rpc/rpc-client.ts, modes/rpc/rpc-mode.ts
  * [HERE]: modes/rpc/rpc-types.ts - RPC protocol type definitions
  */
-import type { AgentLoopFramework, AgentMessage, AgentRunResult, ThinkingLevel } from "@pencil-agent/agent-core";
-import type { ImageContent, Model } from "@pencil-agent/ai/types";
+import type { AgentLoopFramework, AgentMessage, AgentRunResult, ThinkingLevel } from "@catui/agent-core";
+import type { ImageContent, Model } from "@catui/ai/types";
 import type { SessionStats } from "../../core/runtime/agent-session.js";
 import type { BashResult } from "../../core/platform/exec/bash-executor.js";
 import type { CompactionResult } from "../../core/session/compaction/index.js";

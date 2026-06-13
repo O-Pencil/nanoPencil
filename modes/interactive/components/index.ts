@@ -34,7 +34,7 @@ export { LoginDialogComponent } from "./login-dialog.js";
 export { ModelSelectorComponent } from "./model-selector.js";
 export { NotificationQueue, type NotificationOptions, type NotificationPriority, type NotificationType } from "./notification-queue.js";
 export { OAuthSelectorComponent } from "./oauth-selector.js";
-export { PencilLoader } from "./pencil-loader.js";
+export { CatuiLoader } from "./catui-loader.js";
 export { ProviderSelectorComponent } from "./provider-selector.js";
 export {
   type ModelsCallbacks,

@@ -29,13 +29,16 @@ const OPENAI_TOOL_CALL_PROVIDERS = new Set(["openai", "openai-codex", "opencode"
 
 /**
  * Resolve cache retention preference.
- * Defaults to "short" and uses NANOPENCIL_CACHE_RETENTION for backward compatibility.
+ * Defaults to "short" and uses CATUI_CACHE_RETENTION (or legacy NANOPENCIL_CACHE_RETENTION) for backward compatibility.
  */
 function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention {
 	if (cacheRetention) {
 		return cacheRetention;
 	}
-	if (typeof process !== "undefined" && process.env.NANOPENCIL_CACHE_RETENTION === "long") {
+	if (
+		typeof process !== "undefined" &&
+		(process.env.CATUI_CACHE_RETENTION ?? process.env.NANOPENCIL_CACHE_RETENTION) === "long"
+	) {
 		return "long";
 	}
 	return "short";

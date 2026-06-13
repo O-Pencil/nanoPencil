@@ -11,7 +11,7 @@ function createTempDir(prefix: string): string {
 }
 
 test("worktree-manager: snapshot workspace tracks changes and applies them back", async () => {
-	const sourceDir = createTempDir("nanopencil-workspace-src-");
+	const sourceDir = createTempDir("catui-workspace-src-");
 	const manager = new WorktreeManager();
 
 	try {
@@ -36,7 +36,7 @@ test("worktree-manager: snapshot workspace tracks changes and applies them back"
 			],
 		);
 
-		const patchPath = join(sourceDir, ".nanopencil", "subagent-runs", "snapshot.patch");
+		const patchPath = join(sourceDir, ".catui", "subagent-runs", "snapshot.patch");
 		const wrotePatch = await manager.writePatch(workspace, patchPath);
 		assert.equal(wrotePatch, true);
 		assert.equal(existsSync(patchPath), true);
@@ -54,7 +54,7 @@ test("worktree-manager: snapshot workspace tracks changes and applies them back"
 });
 
 test("worktree-manager: createGitWorktree falls back to snapshot outside a git repo", async () => {
-	const sourceDir = createTempDir("nanopencil-worktree-fallback-");
+	const sourceDir = createTempDir("catui-worktree-fallback-");
 	const manager = new WorktreeManager();
 
 	try {
@@ -72,7 +72,7 @@ test("worktree-manager: createGitWorktree falls back to snapshot outside a git r
 });
 
 test("worktree-manager: worktree patch generation reads git diff output", async () => {
-	const sourceDir = createTempDir("nanopencil-worktree-git-");
+	const sourceDir = createTempDir("catui-worktree-git-");
 	const manager = new WorktreeManager();
 
 	try {

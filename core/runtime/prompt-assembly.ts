@@ -8,7 +8,7 @@
  * Soul injection state and prompt application remain in AgentSession.
  */
 
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import type { ResourceLoader } from "../platform/config/resource-loader.js";
 import { buildSystemPrompt } from "../prompt/system-prompt.js";
 

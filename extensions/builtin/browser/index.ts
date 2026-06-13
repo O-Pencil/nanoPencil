@@ -337,7 +337,7 @@ function createBrowserRunTool(): ToolDefinition<typeof BrowserRunInputSchema> {
 			"Control the user's real Chrome/Edge browser through the vendored Browser Harness CDP bridge. Use for browser automation, scraping, screenshots, web app testing, downloads, uploads, tabs, cookies, dialogs, iframes, and remote Browser Use cloud browsers.",
 		parameters: BrowserRunInputSchema,
 		guidance:
-			"Use new_tab(url) for first navigation so you do not clobber the user's active tab. After each meaningful visible action, use capture_screenshot() or page_info() to verify. Search .nanopencil/browser-workspace/domain-skills before inventing site-specific logic.",
+			"Use new_tab(url) for first navigation so you do not clobber the user's active tab. After each meaningful visible action, use capture_screenshot() or page_info() to verify. Search .catui/browser-workspace/domain-skills before inventing site-specific logic.",
 		execute: async (_toolCallId, input: BrowserRunInput, signal, onUpdate, ctx) => {
 			const result = await runPythonModule(["-c", input.code], ctx, {
 				timeoutSeconds: input.timeout ?? DEFAULT_TIMEOUT_SECONDS,
@@ -447,7 +447,7 @@ export default function browserExtension(api: ExtensionAPI) {
 			api.sendMessage({
 				customType: "text",
 				content: [
-					"Browser Harness is built into NanoPencil.",
+					"Browser Harness is built into Catui.",
 					"",
 					"Commands:",
 					"/browser install - install the Python dependencies used by the vendored harness",

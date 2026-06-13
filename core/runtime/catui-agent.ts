@@ -1,8 +1,8 @@
 /**
- * [WHO]: PencilAgent - Simplified SDK wrapper for better DX
+ * [WHO]: CatuiAgent - Simplified SDK wrapper for better DX
  * [FROM]: Depends on sdk.ts, agent-session.ts, tools/index.ts
  * [TO]: Consumed by index.ts, external SDK users
- * [HERE]: High-level wrapper class with simplified API
+ * [HERE]: core/runtime/catui-agent.ts - high-level wrapper class with simplified API
  */
 
 import {
@@ -25,17 +25,17 @@ import {
 import { AuthStorage } from "../platform/config/auth-storage.js";
 import { SessionManager } from "../session/session-manager.js";
 import { ModelRegistry } from "../model-registry.js";
-import type { Api, Model } from "@pencil-agent/ai/types";
-import type { ThinkingLevel } from "@pencil-agent/agent-core";
+import type { Api, Model } from "@catui/ai/types";
+import type { ThinkingLevel } from "@catui/agent-core";
 
 // ============================================================================
-// PencilAgent Options
+// CatuiAgent Options
 // ============================================================================
 
 /**
- * Simplified options for PencilAgent wrapper.
+ * Simplified options for CatuiAgent wrapper.
  */
-export interface PencilAgentOptions {
+export interface CatuiAgentOptions {
   /** API key for the provider. If omitted, uses environment variable. */
   apiKey?: string;
   
@@ -48,7 +48,7 @@ export interface PencilAgentOptions {
   /**
    * Optional base URL when registering a custom provider on the fly.
    * Required when `provider` + `model` is not already defined in
-   * ~/.nanopencil/agent/models.json. Ignored when the model is found.
+   * ~/.catui/agents/default/models.json. Ignored when the model is found.
    */
   baseUrl?: string;
 
@@ -87,38 +87,38 @@ export interface PencilAgentOptions {
 }
 
 // ============================================================================
-// PencilAgent Class
+// CatuiAgent Class
 // ============================================================================
 
 /**
- * Simplified wrapper for NanoPencil SDK.
+ * Simplified wrapper for Catui SDK.
  * 
  * @example
  * ```typescript
  * // Minimal usage
- * const agent = new PencilAgent();
+ * const agent = new CatuiAgent();
  * await agent.init();
  * const result = await agent.run('Hello');
  * 
  * // With explicit config
- * const agent = new PencilAgent({
+ * const agent = new CatuiAgent({
  *   apiKey: 'sk-xxx',
  *   silent: true,
  * });
  * await agent.init();
  * ```
  */
-export class PencilAgent {
+export class CatuiAgent {
   private session: AgentSession | null = null;
   private sessionResult: CreateAgentSessionResult | null = null;
   private logger: SDKLogger;
-  private options: PencilAgentOptions;
+  private options: CatuiAgentOptions;
   private cwd: string;
   private initialized = false;
   private collectedText = '';
   private eventListeners: Array<(event: AgentSessionEvent) => void> = [];
   
-  constructor(options: PencilAgentOptions = {}) {
+  constructor(options: CatuiAgentOptions = {}) {
     this.cwd = options.cwd ?? process.cwd();
     this.options = options;
     this.logger = options.silent ? silentLogger : (options.logger ?? defaultLogger);
@@ -192,7 +192,7 @@ export class PencilAgent {
    * Resolve constructor-provided provider/model into a Model<any>.
    *
    * Lookup order:
-   *   1. Existing entry in modelRegistry (e.g. ~/.nanopencil/agent/models.json
+   *   1. Existing entry in modelRegistry (e.g. ~/.catui/agents/default/models.json
    *      already declares this provider/model — common case for users who ran
    *      /sal:setup or hand-edited models.json).
    *   2. Dynamic registration when caller supplied baseUrl + apiKey — lets a
@@ -230,14 +230,14 @@ export class PencilAgent {
         if (registered) return registered;
       } catch (err) {
         this.logger.warn(
-          `[PencilAgent] dynamic provider registration failed for ${provider}/${modelId}: ${(err as Error).message}`,
+          `[CatuiAgent] dynamic provider registration failed for ${provider}/${modelId}: ${(err as Error).message}`,
         );
       }
     }
 
     this.logger.warn(
-      `[PencilAgent] model ${provider}/${modelId} not found in registry. ` +
-      `Either add it to ~/.nanopencil/agent/models.json or pass { baseUrl, apiKey } to register it dynamically. ` +
+      `[CatuiAgent] model ${provider}/${modelId} not found in registry. ` +
+      `Either add it to ~/.catui/agent/models.json or pass { baseUrl, apiKey } to register it dynamically. ` +
       `Falling back to default model selection.`,
     );
     return undefined;
@@ -273,7 +273,7 @@ export class PencilAgent {
    */
   private ensureInit(): void {
     if (!this.initialized || !this.session) {
-      throw new Error('PencilAgent not initialized. Call init() first.');
+      throw new Error('CatuiAgent not initialized. Call init() first.');
     }
   }
   
@@ -398,15 +398,22 @@ export class PencilAgent {
 // ============================================================================
 
 /**
- * Quick factory for PencilAgent with auto-init.
+ * Quick factory for CatuiAgent with auto-init.
  * 
  * @example
  * ```typescript
  * const agent = await quickAgent({ apiKey: 'sk-xxx' });
  * ```
  */
-export async function quickAgent(options: PencilAgentOptions = {}): Promise<PencilAgent> {
-  const agent = new PencilAgent(options);
+export async function quickAgent(options: CatuiAgentOptions = {}): Promise<CatuiAgent> {
+  const agent = new CatuiAgent(options);
   await agent.init();
   return agent;
 }
+
+/**
+ * Legacy compatibility alias for SDK users migrating from the Pencil brand.
+ * New code should import CatuiAgent/CatuiAgentOptions from @catui/agent.
+ */
+export { CatuiAgent as PencilAgent };
+export type { CatuiAgentOptions as PencilAgentOptions };

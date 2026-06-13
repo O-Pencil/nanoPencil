@@ -1,12 +1,12 @@
 /**
  * [WHO]: LoginDialogComponent
- * [FROM]: Depends on @pencil-agent/ai, @pencil-agent/tui, child_process, ../theme/theme.js, ./dynamic-border.js
+ * [FROM]: Depends on @catui/ai, @catui/tui, child_process, ../theme/theme.js, ./dynamic-border.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/login-dialog.ts - OAuth login dialog
  */
 
-import { getOAuthProviders } from "@pencil-agent/ai/oauth";
-import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@pencil-agent/tui";
+import { getOAuthProviders } from "@catui/ai/oauth";
+import { Container, type Focusable, getEditorKeybindings, Input, Spacer, Text, type TUI } from "@catui/tui";
 import { exec } from "child_process";
 import { theme } from "../theme/theme.js";
 import { DynamicBorder } from "./dynamic-border.js";

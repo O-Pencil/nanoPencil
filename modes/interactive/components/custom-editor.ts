@@ -4,7 +4,7 @@
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/custom-editor.ts -
  */
-import { Editor, getEditorKeybindings, matchesKey, type EditorOptions, type EditorTheme, type TUI } from "@pencil-agent/tui";
+import { Editor, getEditorKeybindings, matchesKey, type EditorOptions, type EditorTheme, type TUI } from "@catui/tui";
 import type { AppAction, KeybindingsManager } from "../../../core/platform/keybindings.js";
 import type { Theme } from "../../../core/theme-contract.js";
 

@@ -1,12 +1,12 @@
 /**
- * [WHO]: Type declarations for @pencil-agent/nano-pencil host interface
+ * [WHO]: Type declarations for @catui/agent host interface
  * [FROM]: No external dependencies
  * [TO]: Residual after S3 (P3.2b): src/ no longer imports the host; only test/extension-commands.test.ts
  *       still references the host package. Remove together with that test relocation (P3 follow-up).
- * [HERE]: packages/mem-core/src/nano-pencil-host.d.ts - ambient type declarations (legacy host shim)
+ * [HERE]: packages/mem-core/src/catui-agent-host.d.ts - ambient type declarations (legacy host shim)
  */
 
-declare module "@pencil-agent/nano-pencil" {
+declare module "@catui/agent" {
 	export type ExtensionContext = {
 		cwd: string;
 		hasUI?: boolean;

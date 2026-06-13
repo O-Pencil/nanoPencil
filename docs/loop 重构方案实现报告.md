@@ -24,9 +24,9 @@ const scheduler = createCronScheduler({
 
 ### 问题 2: 存储文件不一致 ✅ 已修复
 
-**之前**: legacy 用 `.nanopencil/loop-tasks.json`，cron 用 `.nanopencil/cron-tasks.json`。
+**之前**: legacy 用 `.catui/loop-tasks.json`，cron 用 `.catui/cron-tasks.json`。
 
-**现在**: 统一使用 `.nanopencil/cron-tasks.json`。删除了 `loop-tasks.ts`，所有任务操作通过 `cron-tasks.ts`。
+**现在**: 统一使用 `.catui/cron-tasks.json`。删除了 `loop-tasks.ts`，所有任务操作通过 `cron-tasks.ts`。
 
 ### 问题 3: markFired 未实现 ✅ 已修复
 
@@ -132,7 +132,7 @@ npx tsc --noEmit 2>&1 | grep "extensions/defaults/loop"
 
 ### 1. 为什么保留 scheduler-parser.ts？
 
-方案中 `/loop` 是纯 prompt skill，让模型解析自然语言。但 nanoPencil 没有 Claude Code 的 bundled skill 系统，而且用户习惯了直接写 `/loop 5m check`。
+方案中 `/loop` 是纯 prompt skill，让模型解析自然语言。但 Catui 没有 Claude Code 的 bundled skill 系统，而且用户习惯了直接写 `/loop 5m check`。
 
 所以保留硬编码 parser 用于 `/loop` command，同时注册 CronCreate 工具让模型也能创建任务。两者共用 `addCronTask`。
 

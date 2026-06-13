@@ -90,6 +90,6 @@ test("idle-think insight loading ignores malformed knowledge entries", async () 
 });
 
 test("projectKeyFromCwd derives stable two-segment project keys", () => {
-	assert.equal(projectKeyFromCwd("/Users/alice/Dev/nanoPencil"), "Dev/nanoPencil");
-	assert.equal(projectKeyFromCwd("nanoPencil"), "nanoPencil");
+	assert.equal(projectKeyFromCwd("/Users/alice/Dev/Catui"), "Dev/Catui");
+	assert.equal(projectKeyFromCwd("Catui"), "Catui");
 });

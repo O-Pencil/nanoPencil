@@ -4,7 +4,7 @@
  * [TO]: Consumed by core/runtime/agent-session.ts
  * [HERE]: core/tools/orchestrator.ts - runtime tool registry, lookup, and active-tool resolution
  */
-import type { AgentTool } from "@pencil-agent/agent-core";
+import type { AgentTool } from "@catui/agent-core";
 import type { ToolDefinition, ToolInfo } from "../extensions-host/index.js";
 
 export interface ToolOrchestratorOptions {

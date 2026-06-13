@@ -1,13 +1,13 @@
 /**
  * [WHO]: CustomMessageComponent
- * [FROM]: Depends on @pencil-agent/tui, ../theme/theme.js
+ * [FROM]: Depends on @catui/tui, ../theme/theme.js
  * [TO]: Consumed by modes/interactive/components/index.ts
  * [HERE]: modes/interactive/components/custom-message.ts -
  */
 
-import type { TextContent } from "@pencil-agent/ai/types";
-import type { Component } from "@pencil-agent/tui";
-import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@pencil-agent/tui";
+import type { TextContent } from "@catui/ai/types";
+import type { Component } from "@catui/tui";
+import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@catui/tui";
 import type { MessageRenderer } from "../../../core/extensions-host/types.js";
 import type { CustomMessage } from "../../../core/messages.js";
 import { getMarkdownTheme, theme } from "../theme/theme.js";

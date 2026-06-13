@@ -34,13 +34,13 @@ Use:
 User filters load from:
 
 ```text
-~/.pencils/token-save/filters.json
+~/.catui/token-save/filters.json
 ```
 
 Project filters load from:
 
 ```text
-.nanopencil/token-save/filters.json
+.catui/token-save/filters.json
 ```
 
 Project filters are ignored unless the project explicitly opts in with:
@@ -52,5 +52,5 @@ Project filters are ignored unless the project explicitly opts in with:
 at:
 
 ```text
-.nanopencil/token-save/trust.json
+.catui/token-save/trust.json
 ```

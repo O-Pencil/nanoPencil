@@ -71,8 +71,8 @@ const IGNORED_DIRS = new Set([
 	".cache",
 	"coverage",
 	".memory-experiments",
-	".pencil",
-	".nanopencil",
+	".catui",
+	".catui",
 	"out",
 	".turbo",
 ]);

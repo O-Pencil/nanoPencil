@@ -9,10 +9,10 @@ import { join } from "path";
 
 export function getDebugLogPath(): string {
 	// Check for environment variable override
-	const envDir = process.env.NANOPENCIL_CODING_AGENT_DIR;
+	const envDir = process.env.CATUI_CODING_AGENT_DIR;
 	if (envDir) {
 		const dir = envDir === "~" ? homedir() : envDir.startsWith("~/") ? homedir() + envDir.slice(1) : envDir;
-		return join(dir, "nanopencil-debug.log");
+		return join(dir, "catui-debug.log");
 	}
-	return join(homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
+	return join(homedir(), ".catui", "agent", "catui-debug.log");
 }

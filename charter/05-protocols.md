@@ -4,7 +4,7 @@
 
 <!--
 [WHO]  全生态协议策略定义
-[FROM] pencil-platform-charter.md §5
+[FROM] catui-platform-charter.md §5
 [TO]   各项目集成设计文档
 [HERE] charter/05-protocols.md — 协议策略
 -->
@@ -15,13 +15,13 @@
 
 | 协议 | 定位 | 适用场景 | 权威文档 |
 |------|------|----------|----------|
-| **HTTP + SSE（OpenAI 兼容）** | **主线协议** — Gateway 唯一对外 API | 所有外部客户端、第三方集成；Editor Remote HTTP；Eidolon 云端模式 | Pencil-Agent-Gateway `docs/02` |
-| **ACP** | 本地直连 — Agent 引擎与宿主进程通信 | Editor 本地模式；nanoPencil CLI；IDE 插件 | nanoPencil ACP mode 实现 |
-| **PCP (WebSocket)** | 仅 Editor 内部 — Rust Server / Desktop PCP 模式 | Editor 内部维护，不对外推广 | nanopencil-editor `docs/.../pencil-client-protocol.md` |
-| **Pencil Tool Callback (v0.2)** | A 线工具回传 — Gateway ↔ caller | Editor Remote HTTP 调用本机工具 | Gateway `docs/18` + nanoPencil `docs/remote-tool-register-design.md` |
+| **HTTP + SSE（OpenAI 兼容）** | **主线协议** — Gateway 唯一对外 API | 所有外部客户端、第三方集成；Editor Remote HTTP；Eidolon 云端模式 | Catui-Agent-Gateway `docs/02` |
+| **ACP** | 本地直连 — Agent 引擎与宿主进程通信 | Editor 本地模式；Catui CLI；IDE 插件 | Catui ACP mode 实现 |
+| **PCP (WebSocket)** | 仅 Editor 内部 — Rust Server / Desktop PCP 模式 | Editor 内部维护，不对外推广 | catui-editor `docs/.../catui-client-protocol.md` |
+| **Catui Tool Callback (v0.2)** | A 线工具回传 — Gateway ↔ caller | Editor Remote HTTP 调用本机工具 | Gateway `docs/18` + Catui `docs/remote-tool-register-design.md` |
 | **Channel 协议** | 第三方 IM 适配 | 钉钉 Stream / WeChat XML / Feishu → Gateway | Gateway `docs/13` |
 | **Blackboard (KV + pub/sub)** | 多 Agent 横向通信 | O-Mesh 编排的多 Agent 协作 | O-Mesh `DOCS/` |
-| **Native Messaging** | 浏览器插件 ↔ 本地进程 | Eidolon 本地模式 → nanoPencil | Pencil-Eidolon `native-host/` |
+| **Native Messaging** | 浏览器插件 ↔ 本地进程 | Eidolon 本地模式 → Catui | Catui-Eidolon `native-host/` |
 
 ## 5.2 协议选择原则
 
@@ -32,7 +32,7 @@
 ## 5.3 Tool Callback v0.2 双通道
 
 ```
-Gateway  ── SSE event: pencil.tool_request  ──►  Caller (Editor/3rd-party)
+Gateway  ── SSE event: catui.tool_request  ──►  Caller (Editor/3rd-party)
 Caller   ── POST /v1/.../tool_response      ──►  Gateway
 ```
 
@@ -41,4 +41,4 @@ Caller   ── POST /v1/.../tool_response      ──►  Gateway
 - 无 caller heartbeat（靠 timeout_ms）
 - Asgard 可代理 tool_response（单一审计链）
 - arguments 对称封 256 KiB
-- session 失发显式事件 `pencil.session_lost`
+- session 失发显式事件 `catui.session_lost`

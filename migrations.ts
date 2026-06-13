@@ -11,8 +11,8 @@ import { CONFIG_DIR_NAME, getAgentDir, getBinDir } from "./config.js";
 import { defaultAgentDirContext, type AgentDirContext } from "./core/agent-dir/agent-dir-context.js";
 
 const MIGRATION_GUIDE_URL =
-	"https://github.com/O-Pencil/nanoPencil/blob/main/packages/coding-agent/CHANGELOG.md#extensions-migration";
-const EXTENSIONS_DOC_URL = "https://github.com/O-Pencil/nanoPencil/blob/main/packages/coding-agent/docs/extensions.md";
+	"https://github.com/O-Catui/Catui/blob/main/packages/coding-agent/CHANGELOG.md#extensions-migration";
+const EXTENSIONS_DOC_URL = "https://github.com/O-Catui/Catui/blob/main/packages/coding-agent/docs/extensions.md";
 
 /**
  * Migrate legacy oauth.json and settings.json apiKeys to auth.json.
@@ -73,13 +73,13 @@ export function migrateAuthToAuthJson(agentDir: string = getAgentDir()): string[
 }
 
 /**
- * Migrate sessions from ~/.nanopencil/agent/*.jsonl to proper session directories.
+ * Migrate sessions from ~/.catui/agent/*.jsonl to proper session directories.
  *
- * Bug in v0.30.0: Sessions were saved to ~/.nanopencil/agent/ instead of
- * ~/.nanopencil/agent/sessions/<encoded-cwd>/. This migration moves them
+ * Bug in v0.30.0: Sessions were saved to ~/.catui/agent/ instead of
+ * ~/.catui/agent/sessions/<encoded-cwd>/. This migration moves them
  * to the correct location based on the cwd in their session header.
  *
- * See: https://github.com/O-Pencil/nanoPencil/issues/320
+ * See: https://github.com/O-Catui/Catui/issues/320
  */
 export function migrateSessionsFromAgentRoot(agentDir: string = getAgentDir()): void {
 	// Find all .jsonl files directly in agentDir (not in subdirectories)
@@ -197,7 +197,7 @@ function migrateToolsToBin(agentDir: string = getAgentDir()): void {
 
 /**
  * Check for deprecated hooks/ and tools/ directories.
- * Note: tools/ may contain fd/rg binaries extracted by nanoPencil, so only warn if it has other files.
+ * Note: tools/ may contain fd/rg binaries extracted by Catui, so only warn if it has other files.
  */
 function checkDeprecatedExtensionDirs(baseDir: string, label: string): string[] {
 	const hooksDir = join(baseDir, "hooks");

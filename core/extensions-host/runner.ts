@@ -4,9 +4,9 @@
  * [TO]: Consumed by core/extensions-host/index.ts, core/extensions-host/wrapper.ts, core/runtime/agent-session.ts (delegates command dispatch via invokeCommand)
  * [HERE]: core/extensions-host/runner.ts - extension execution and lifecycle management; owns the single try/catch around command.handler so telemetry can wrap every invocation regardless of caller mode
  */
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import type { ImageContent, Model } from "@pencil-agent/ai/types";
-import type { KeyId } from "@pencil-agent/tui";
+import type { AgentMessage } from "@catui/agent-core";
+import type { ImageContent, Model } from "@catui/ai/types";
+import type { KeyId } from "@catui/tui";
 import type { Theme } from "../theme-contract.js";
 import { theme } from "../../modes/interactive/theme/theme.js";
 import type { ResourceDiagnostic } from "../platform/config/diagnostics.js";

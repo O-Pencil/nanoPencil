@@ -25,9 +25,9 @@ export interface HarnessExitResult {
 	event: string;
 }
 
-const DEFAULT_FEATURE_LIST_PATH = ".nanopencil-harness/feature_list.json";
-const DEFAULT_PROGRESS_PATH = ".nanopencil-harness/progress.txt";
-const DEFAULT_INIT_SCRIPT_PATH = ".nanopencil-harness/init.sh";
+const DEFAULT_FEATURE_LIST_PATH = ".catui-harness/feature_list.json";
+const DEFAULT_PROGRESS_PATH = ".catui-harness/progress.txt";
+const DEFAULT_INIT_SCRIPT_PATH = ".catui-harness/init.sh";
 const execFileAsync = promisify(execFile);
 
 export function createInitialHarnessState(): HarnessState {

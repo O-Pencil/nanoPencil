@@ -252,7 +252,7 @@ export class AuditLogger {
 <html>
 <head>
 	<meta charset="UTF-8">
-	<title>Security Audit Log - NanoPencil</title>
+	<title>Security Audit Log - Catui</title>
 	<style>
 		body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 20px; background: #1a1a2e; color: #eee; }
 		h1 { color: #00d4ff; }

@@ -9,7 +9,7 @@
  */
 
 
-import type { Component, TUI } from "@pencil-agent/tui";
+import type { Component, TUI } from "@catui/tui";
 import { theme } from "../theme/theme.js";
 
 // XBM image: 31x36 pixels, LSB first, 1=background, 0=foreground

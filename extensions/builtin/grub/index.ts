@@ -1,12 +1,12 @@
 /**
  * [WHO]: grubExtension default export - registers /grub command, completions, dual-phase prompts, resume support, feature-list validation, and grub renderer
- * [FROM]: Depends on @pencil-agent/agent-core, @pencil-agent/tui, core/extensions-host/types, core/runtime/event-bus, ./grub-controller, ./grub-format, ./grub-parser, ./grub-types, ./grub-harness, ./grub-prompts, ./grub-persistence, ./grub-turn
+ * [FROM]: Depends on @catui/agent-core, @catui/tui, core/extensions-host/types, core/runtime/event-bus, ./grub-controller, ./grub-format, ./grub-parser, ./grub-types, ./grub-harness, ./grub-prompts, ./grub-persistence, ./grub-turn
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/grub/index.ts - autonomous iterative task runner with Anthropic-style long-running harness (feature-list.json + durable state + phase-specialized prompts)
  */
 
-import type { AgentMessage } from "@pencil-agent/agent-core";
-import { Box, Container, Spacer, Text } from "@pencil-agent/tui";
+import type { AgentMessage } from "@catui/agent-core";
+import { Box, Container, Spacer, Text } from "@catui/tui";
 import type { ExtensionAPI, ExtensionCommandContext } from "../../../core/extensions-host/types.js";
 import { getLocale, type Locale } from "../../../core/platform/i18n/index.js";
 import type { EventBus } from "../../../core/runtime/event-bus.js";

@@ -2,10 +2,10 @@
 /**
  * [WHO]: CLI entry point, sets process.title, calls main()
  * [FROM]: Depends on main.ts
- * [TO]: Consumed by bin/nanopencil (npm binary)
+ * [TO]: Consumed by bin/catui and bin/catui (npm binaries)
  * [HERE]: Entry point; orchestrates argument parsing and mode selection
  */
-process.title = "nanopencil";
+process.title = "catui";
 
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -25,9 +25,9 @@ if (args.includes("--version")) {
 }
 
 if (args.includes("--help") || args.includes("-h")) {
-	console.log(`nanoPencil AI coding agent`);
-	console.log(`Usage: nanopencil [options]`);
-	console.log(`       nanopencil [command] [options]`);
+	console.log(`Catui AI coding agent`);
+	console.log(`Usage: catui [options]`);
+	console.log(`       catui [command] [options]`);
 	console.log(`Options:`);
 	console.log(`  --version    Show version`);
 	console.log(`  --help, -h   Show this help`);

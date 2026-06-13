@@ -1,6 +1,6 @@
 /**
  * [WHO]: KNOWN_MODEL_METADATA, lookupKnownModel(), UNKNOWN_MODEL_DEFAULTS, KnownModelMetadata
- * [FROM]: Depends on @pencil-agent/ai/types for Api type; data from known-models.generated.ts
+ * [FROM]: Depends on @catui/ai/types for Api type; data from known-models.generated.ts
  * [TO]: Consumed by core/model-registry.ts for discovered model defaults
  * [HERE]: core/model/known-models.ts - known model metadata for discovery fallback
  *
@@ -9,7 +9,7 @@
  * contextWindow, maxTokens, cost, etc. that the endpoint doesn't provide.
  */
 
-import type { Api } from "@pencil-agent/ai/types";
+import type { Api } from "@catui/ai/types";
 import { GENERATED_KNOWN_MODELS } from "./known-models.generated.js";
 
 /**

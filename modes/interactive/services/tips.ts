@@ -1,7 +1,7 @@
 /**
  * [WHO]: Tip, getTipToShow, resetTipCooldown
  * [FROM]: No external dependencies
- * [TO]: Consumed by pencil-loader.ts
+ * [TO]: Consumed by catui-loader.ts
  * [HERE]: modes/interactive/services/tips.ts - spinner tips registry and scheduling
  */
 

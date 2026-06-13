@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * measure-context.mjs — 测量 nanoPencil 实际发送给 LLM 的上下文大小
+ * measure-context.mjs — 测量 Catui 实际发送给 LLM 的上下文大小
  *
  * 原理：monkey-patch OpenAI SDK 的 fetch，拦截所有 HTTP 请求，
  * 记录每次请求的 payload 大小和 token 数（从响应 usage 字段获取）。
  *
  * 用法：
- *   NANOPENCIL_CODING_AGENT_DIR=/tmp/xxx node scripts/measure-context.mjs
+ *   CATUI_CODING_AGENT_DIR=/tmp/xxx node scripts/measure-context.mjs
  */
 
 import { writeFileSync, mkdirSync, existsSync, readFileSync, cpSync } from "fs";
@@ -130,7 +130,7 @@ globalThis.fetch = async function patchedFetch(url, options) {
 };
 
 // ── 设置临时 agent 目录 ─────────────────────────────────────────────────────
-const tmpDir = process.env.NANOPENCIL_CODING_AGENT_DIR || join(projectRoot, "scripts", ".measure-tmp");
+const tmpDir = process.env.CATUI_CODING_AGENT_DIR || join(projectRoot, "scripts", ".measure-tmp");
 if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
 
 if (!existsSync(join(tmpDir, "models.json"))) {
@@ -152,7 +152,7 @@ if (!existsSync(join(tmpDir, "models.json"))) {
 }
 
 if (!existsSync(join(tmpDir, "auth.json"))) {
-  const srcAuth = join(homedir(), ".nanopencil", "agent", "auth.json");
+  const srcAuth = join(homedir(), ".catui", "agent", "auth.json");
   if (existsSync(srcAuth)) cpSync(srcAuth, join(tmpDir, "auth.json"));
 }
 
@@ -160,9 +160,9 @@ if (!existsSync(join(tmpDir, "settings.json"))) {
   writeFileSync(join(tmpDir, "settings.json"), "{}");
 }
 
-process.env.NANOPENCIL_CODING_AGENT_DIR = tmpDir;
+process.env.CATUI_CODING_AGENT_DIR = tmpDir;
 
-// ── 运行 nanoPencil ─────────────────────────────────────────────────────────
+// ── 运行 Catui ─────────────────────────────────────────────────────────
 process.argv = [
   process.argv[0],
   process.argv[1],

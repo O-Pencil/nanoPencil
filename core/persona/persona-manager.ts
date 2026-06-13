@@ -4,9 +4,13 @@
  * [TO]: Consumed by core/platform/config/resource-loader.ts
  * [HERE]: core/persona/persona-manager.ts - persona management layer
  */
-import { existsSync, readdirSync, readFileSync, mkdirSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, mkdirSync, statSync, writeFileSync, copyFileSync } from "node:fs";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defaultAgentDirContext, type AgentDirContext } from "../agent-dir/agent-dir-context.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const BUNDLED_PERSONAS_DIR = resolve(__dirname, "../../../assets/personas");
 
 type PersonaState = {
 	activePersonaId?: string;
@@ -41,14 +45,35 @@ export class PersonaManager {
 
 	private ensurePersonasDir(): void {
 		if (!existsSync(this.personasDir)) mkdirSync(this.personasDir, { recursive: true });
-		// Ensure the default "vex" persona exists so /persona has at least one option
-		const defaultDir = join(this.personasDir, "vex");
-		if (!existsSync(defaultDir)) {
-			mkdirSync(defaultDir, { recursive: true });
-			const catuiPath = join(defaultDir, "CATUI.md");
-			if (!existsSync(catuiPath)) {
-				writeFileSync(catuiPath, "# vex\n\nDefault persona for Catui.\n", "utf-8");
+
+		// Migrate legacy PENCIL.md → CATUI.md for existing personas
+		try {
+			for (const entry of readdirSync(this.personasDir)) {
+				const personaDir = join(this.personasDir, entry);
+				if (!statSync(personaDir).isDirectory()) continue;
+				const oldPath = join(personaDir, "PENCIL.md");
+				const newPath = join(personaDir, "CATUI.md");
+				if (existsSync(oldPath) && !existsSync(newPath)) {
+					copyFileSync(oldPath, newPath);
+				}
 			}
+		} catch { /* best-effort migration */ }
+
+		// Copy bundled presets if they don't exist on disk
+		if (existsSync(BUNDLED_PERSONAS_DIR)) {
+			try {
+				for (const entry of readdirSync(BUNDLED_PERSONAS_DIR)) {
+					const srcDir = join(BUNDLED_PERSONAS_DIR, entry);
+					if (!statSync(srcDir).isDirectory()) continue;
+					const destDir = join(this.personasDir, entry);
+					if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
+					const catuiSrc = join(srcDir, "CATUI.md");
+					const catuiDest = join(destDir, "CATUI.md");
+					if (existsSync(catuiSrc) && !existsSync(catuiDest)) {
+						copyFileSync(catuiSrc, catuiDest);
+					}
+				}
+			} catch { /* best-effort copy */ }
 		}
 	}
 

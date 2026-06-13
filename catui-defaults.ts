@@ -97,6 +97,13 @@ export const CATUI_DEFAULT_MODELS_JSON = {
 					maxTokens: 65536,
 				},
 				{
+					id: "qwen3.7-plus",
+					name: "Qwen3.7 Plus",
+					input: ["text", "image"],
+					contextWindow: 1000000,
+					maxTokens: 65536,
+				},
+				{
 					id: "qwen3-max-2026-01-23",
 					name: "Qwen3 Max",
 					input: ["text"],

@@ -39,9 +39,17 @@ import { isActiveStatus, type GoalRunKind, type ThreadGoal } from "./goal-types.
 const GOAL_MESSAGE_TYPE = "goal";
 const PLAN_LOOP_FRAMEWORK = "weak-model-compatible" as const;
 
+const _dbgEnabled = process.env.NANOPENCIL_DEBUG === "1";
 const debugLogPath = path.join(os.homedir(), ".nanopencil", "agent", "nanopencil-debug.log");
 function dbg(msg: string): void {
-	fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [goal] ${msg}\n`);
+	// Off by default; never write or crash in a release (ENOENT on fresh install).
+	if (!_dbgEnabled) return;
+	try {
+		fs.mkdirSync(path.dirname(debugLogPath), { recursive: true });
+		fs.appendFileSync(debugLogPath, `[${new Date().toISOString()}] [goal] ${msg}\n`);
+	} catch {
+		// debug logging is best-effort
+	}
 }
 
 function truncate(s: string, max: number): string {

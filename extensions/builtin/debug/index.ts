@@ -329,6 +329,7 @@ export default async function debugExtension(api: ExtensionAPI): Promise<void> {
 					prefs.push(newPref);
 				}
 
+				fs.mkdirSync(memoryDir, { recursive: true });
 				fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
 				ctx.ui.notify(`Locale set to ${trimmed === "zh" ? "中文" : "English"}. Restart or run /debug preferences to verify.`, "info");
 			} catch (error) {

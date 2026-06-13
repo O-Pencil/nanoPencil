@@ -98,14 +98,20 @@ function loadSessionEntries(filePath: string): SessionEntry[] {
 // Main pipeline
 // ============================================================================
 
+export type InsightsProgressCallback = (phase: string, detail?: string) => void;
+
 async function generateUsageReport(
 	ctx: ExtensionCommandContext,
+	onProgress?: InsightsProgressCallback,
 ): Promise<{ htmlPath: string; sessionCount: number; messageCount: number; dateRange: { start: string; end: string }; totalSessionsScanned: number }> {
 	const agentDir = ctx.agentDir;
 	const sessionsDir = join(agentDir, "sessions");
 	const dataDir = getDataDir(agentDir);
+	const t0 = Date.now();
+	const elapsed = () => `${((Date.now() - t0) / 1000).toFixed(1)}s`;
 
 	// Phase 1: Lite scan — filesystem metadata only
+	onProgress?.("Scanning sessions...");
 	const allScannedSessions = await scanAllSessions(sessionsDir);
 	const totalSessionsScanned = allScannedSessions.length;
 
@@ -114,6 +120,7 @@ async function generateUsageReport(
 	}
 
 	// Phase 2: Load SessionMeta — cache where available, parse only uncached
+	onProgress?.(`Loading session metadata (${elapsed()})...`);
 	let allMetas: SessionMeta[] = [];
 	const uncachedSessions: LiteSessionInfo[] = [];
 
@@ -184,6 +191,7 @@ async function generateUsageReport(
 	const substantiveMetas = allMetas.filter(isSubstantive);
 
 	// Phase 5: Facet extraction — cache-first, LLM for uncached
+	onProgress?.(`Extracting facets from ${substantiveMetas.length} sessions (${elapsed()})...`);
 	const facets = new Map<string, SessionFacets>();
 	const toExtract: Array<{ entries: SessionEntry[]; sessionId: string }> = [];
 
@@ -209,6 +217,7 @@ async function generateUsageReport(
 	// Extract facets in batches
 	for (let i = 0; i < toExtract.length; i += FACET_CONCURRENCY) {
 		const batch = toExtract.slice(i, i + FACET_CONCURRENCY);
+		onProgress?.(`Extracting facets (${i + 1}-${Math.min(i + FACET_CONCURRENCY, toExtract.length)}/${toExtract.length}, ${elapsed()})...`);
 		const results = await Promise.all(
 			batch.map(async ({ entries, sessionId }) => {
 				const newFacets = await extractFacetsFromTranscript(entries, sessionId, ctx);
@@ -240,13 +249,16 @@ async function generateUsageReport(
 	}
 
 	// Phase 7: Aggregate data
+	onProgress?.(`Aggregating data (${elapsed()})...`);
 	const aggregated = aggregateData(substantiveSessions, substantiveFacets);
 	aggregated.total_sessions_scanned = totalSessionsScanned;
 
 	// Phase 8: Generate parallel insights
+	onProgress?.(`Generating insights (7 parallel LLM calls, ${elapsed()})...`);
 	const insights = await generateParallelInsights(aggregated, facets, ctx);
 
 	// Phase 9: Generate HTML report
+	onProgress?.(`Rendering report (${elapsed()})...`);
 	const htmlReport = generateHtmlReport(aggregated, insights);
 
 	// Phase 10: Save report
@@ -300,9 +312,16 @@ export default async function insightsExtension(api: ExtensionAPI): Promise<void
 		description: "Generate a report analyzing your Catui sessions",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			try {
-				ctx.ui.notify("Analyzing your sessions...", "info");
+				const t0 = Date.now();
+				ctx.ui.setStatus("insights", "insights: scanning...");
 
-				const { htmlPath, sessionCount, messageCount, dateRange, totalSessionsScanned } = await generateUsageReport(ctx);
+				const { htmlPath, sessionCount, messageCount, dateRange, totalSessionsScanned } = await generateUsageReport(
+					ctx,
+					(phase) => ctx.ui.setStatus("insights", `insights: ${phase}`),
+				);
+
+				ctx.ui.setStatus("insights", undefined);
+				const totalElapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
 				const summary = buildTerminalSummary(
 					htmlPath,
@@ -312,8 +331,9 @@ export default async function insightsExtension(api: ExtensionAPI): Promise<void
 					dateRange,
 				);
 
-				ctx.ui.notify(summary, "info");
+				ctx.ui.notify(`${summary}\n\nElapsed: ${totalElapsed}s`, "info");
 			} catch (error) {
+				ctx.ui.setStatus("insights", undefined);
 				const message = error instanceof Error ? error.message : String(error);
 				ctx.ui.notify(`Insights error: ${message}`, "error");
 			}

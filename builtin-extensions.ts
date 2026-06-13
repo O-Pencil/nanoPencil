@@ -40,6 +40,8 @@ const BUNDLED_MCP_EXTENSION = join(__dirname, "extensions", "builtin", "mcp", "i
 const BUNDLED_TASK_EXTENSION = join(__dirname, "extensions", "builtin", "task", "index.js");
 const BUNDLED_LSP_EXTENSION = join(__dirname, "extensions", "builtin", "lsp", "index.js");
 const BUNDLED_INSIGHTS_EXTENSION = join(__dirname, "extensions", "builtin", "insights", "index.js");
+const BUNDLED_NOTEBOOK_EXTENSION = join(__dirname, "extensions", "builtin", "notebook", "index.js");
+const BUNDLED_SKILL_TOOL_EXTENSION = join(__dirname, "extensions", "builtin", "skill-tool", "index.js");
 
 export type BuiltinExtensionRiskLevel = "passive" | "command" | "tool" | "background" | "write-capable";
 export type BuiltinExtensionTestContract = "lifecycle" | "external-process" | "resource-discovery" | "write-guard";
@@ -85,6 +87,8 @@ export const builtInExtensions: readonly BuiltinExtension[] = [
 	{ id: "task", category: "default", defaultEnabled: true, riskLevel: "tool", requiresUI: false, startsTimers: false, writesWorkspace: true, externalProcess: false },
 	{ id: "lsp", category: "default", defaultEnabled: true, riskLevel: "tool", requiresUI: false, startsTimers: false, writesWorkspace: false, externalProcess: true },
 	{ id: "insights", category: "default", defaultEnabled: true, riskLevel: "command", requiresUI: false, startsTimers: false, writesWorkspace: true, externalProcess: false },
+	{ id: "notebook", category: "default", defaultEnabled: true, riskLevel: "write-capable", requiresUI: false, startsTimers: false, writesWorkspace: true, externalProcess: false },
+	{ id: "skill-tool", category: "default", defaultEnabled: true, riskLevel: "tool", requiresUI: false, startsTimers: false, writesWorkspace: false, externalProcess: false },
 	{ id: "simplify", category: "optional", defaultEnabled: false, riskLevel: "write-capable", requiresUI: false, startsTimers: false, writesWorkspace: true, externalProcess: true, testContracts: ["external-process", "write-guard"], testFiles: ["test/simplify-extension.test.ts"] },
 	{ id: "export-html", category: "optional", defaultEnabled: false, riskLevel: "write-capable", requiresUI: false, startsTimers: false, writesWorkspace: true, externalProcess: false, testContracts: ["write-guard"], testFiles: ["test/extension-smoke.test.ts", "test/export-html-branch-navigation.test.ts"] },
 ];
@@ -356,6 +360,22 @@ export function getBuiltinExtensionPaths(): string[] {
 	} else {
 		const insightsTs = join(__dirname, "extensions", "builtin", "insights", "index.ts");
 		if (existsSync(insightsTs)) paths.push(insightsTs);
+	}
+
+	// === Notebook extension (NotebookEdit tool for .ipynb files) ===
+	if (existsSync(BUNDLED_NOTEBOOK_EXTENSION)) {
+		paths.push(BUNDLED_NOTEBOOK_EXTENSION);
+	} else {
+		const notebookTs = join(__dirname, "extensions", "builtin", "notebook", "index.ts");
+		if (existsSync(notebookTs)) paths.push(notebookTs);
+	}
+
+	// === Skill tool extension (LLM-callable skill invocation) ===
+	if (existsSync(BUNDLED_SKILL_TOOL_EXTENSION)) {
+		paths.push(BUNDLED_SKILL_TOOL_EXTENSION);
+	} else {
+		const skillToolTs = join(__dirname, "extensions", "builtin", "skill-tool", "index.ts");
+		if (existsSync(skillToolTs)) paths.push(skillToolTs);
 	}
 
 	return paths;

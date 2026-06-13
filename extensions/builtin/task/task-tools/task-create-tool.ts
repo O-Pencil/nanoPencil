@@ -37,6 +37,7 @@ export function createTaskCreateTool() {
 		name: "TaskCreate",
 		label: "Create Task",
 		description: "Create a new task in the task list.",
+		aliases: ["TodoWrite"],
 		parameters: taskCreateSchema,
 
 		renderCall: (args: unknown, theme: Theme): Component => {

@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.2] - 2026-06-13
+## [1.1.0] - 2026-06-13
 
 ### Added
+- feat(sdk): align with anthropic-sdk for GUI consumption
 - feat: bundle preset personas, add qwen3.7-plus to dashscope-coding
 - feat(tui): replace welcome banner ASCII art
 - feat(goal): strengthen continuation prompts and raise limits

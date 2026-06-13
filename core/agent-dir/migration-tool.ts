@@ -40,7 +40,7 @@ export class MigrationManager {
 	}
 
 	async run(options: MigrationOptions): Promise<void> {
-		console.log(chalk.bold("\n🚀 Catui Data Migration Tool"));
+		console.log(chalk.bold("\nCatui Data Migration Tool"));
 		console.log(chalk.dim("---------------------------------"));
 		console.log(`Source: ${chalk.cyan(this.legacyNanoRoot)} / ${chalk.cyan(this.legacyPencilsRoot)}`);
 		console.log(`Target: ${chalk.cyan(this.newRoot)}`);
@@ -56,13 +56,13 @@ export class MigrationManager {
 
 		console.log(chalk.bold("Migration Tasks:"));
 		for (const task of tasks) {
-			console.log(`  ${chalk.blue("•")} ${task.label}`);
+			console.log(`  ${chalk.blue("-")} ${task.label}`);
 			console.log(`    ${chalk.dim("From:")} ${task.source}`);
 			console.log(`    ${chalk.dim("To:  ")} ${task.target}`);
 		}
 
 		if (options.dryRun) {
-			console.log(chalk.yellow("\n⚠️ This was a dry run. No files were changed."));
+			console.log(chalk.yellow("\n[!] This was a dry run. No files were changed."));
 			console.log(`Run with ${chalk.bold("--apply")} to execute the migration.`);
 			return;
 		}
@@ -71,10 +71,10 @@ export class MigrationManager {
 		for (const task of tasks) {
 			try {
 				this.execute(task, options.copy);
-				console.log(`${chalk.green("✓")} Migrated: ${task.label}`);
+				console.log(`${chalk.green("[ok]")} Migrated: ${task.label}`);
 				this.logMigration(task);
 			} catch (err) {
-				console.error(chalk.red(`✗ Failed to migrate ${task.label}: ${err instanceof Error ? err.message : err}`));
+				console.error(chalk.red(`[fail] Failed to migrate ${task.label}: ${err instanceof Error ? err.message : err}`));
 			}
 		}
 

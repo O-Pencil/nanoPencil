@@ -13,6 +13,7 @@ import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { getTask, updateTask } from "../task-store.js";
 import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
+import { killBackgroundTask, getBackgroundTask } from "../../../../core/tools/bash.js";
 
 const taskStopSchema = Type.Object({
 	task_id: Type.String({ description: "The ID of the task to stop/complete" }),
@@ -25,7 +26,8 @@ export function createTaskStopTool() {
 		name: "TaskStop",
 		label: "Stop Task",
 		description:
-			"Stop a running task by marking it as completed. In Catui, tasks are state-managed (no background processes), so this is equivalent to setting status=completed.",
+			"Stop a running task by marking it as completed, or kill a background shell process.",
+		aliases: ["KillShell"],
 		parameters: taskStopSchema,
 
 		renderCall: (args: unknown, theme: Theme): Component => {
@@ -67,6 +69,21 @@ export function createTaskStopTool() {
 			try {
 				const task = await getTask(ctx.agentDir, DEFAULT_TASK_LIST_ID, params.task_id);
 				if (!task) {
+					// Fallback: try to kill a background bash task
+					const bgTask = getBackgroundTask(params.task_id);
+					if (bgTask) {
+						if (bgTask.status !== "running") {
+							return {
+								content: [{ type: "text", text: `Background task ${params.task_id} is already ${bgTask.status}` }],
+								details: { success: true, task_id: params.task_id, message: `Already ${bgTask.status}` },
+							};
+						}
+						const killed = killBackgroundTask(params.task_id);
+						return {
+							content: [{ type: "text", text: killed ? `Killed background task: ${params.task_id}` : `Failed to kill task: ${params.task_id} (no pid)` }],
+							details: { success: killed, task_id: params.task_id, task_type: "background_shell", command: "bash" },
+						};
+					}
 					return {
 						content: [{ type: "text", text: `No task found with ID: ${params.task_id}` }],
 						details: { success: false, task_id: params.task_id, error: "Task not found" },

@@ -5,7 +5,7 @@
  * [HERE]: core/tools/bash.ts - shell command execution boundary; consumed by orchestrator
  */
 import { randomBytes } from "node:crypto";
-import { createWriteStream, existsSync } from "node:fs";
+import { createWriteStream, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import type { AgentTool } from "@catui/agent-core";
@@ -37,6 +37,38 @@ interface BackgroundTask {
 
 /** Module-level registry of background tasks */
 const backgroundTasks = new Map<string, BackgroundTask>();
+
+/** Get a background task by ID. */
+export function getBackgroundTask(taskId: string): BackgroundTask | undefined {
+	return backgroundTasks.get(taskId);
+}
+
+/** List all background tasks. */
+export function listBackgroundTasks(): BackgroundTask[] {
+	return Array.from(backgroundTasks.values());
+}
+
+/** Kill a background task's process tree. Returns true if task was found and killed. */
+export function killBackgroundTask(taskId: string): boolean {
+	const task = backgroundTasks.get(taskId);
+	if (!task || task.status !== "running" || !task.pid) return false;
+	killProcessTree(task.pid);
+	task.status = "failed";
+	task.exitCode = -1;
+	task.endTime = Date.now();
+	return true;
+}
+
+/** Read the output of a background task (if finished). */
+export function readBackgroundTaskOutput(taskId: string): string | null {
+	const task = backgroundTasks.get(taskId);
+	if (!task || task.status === "running") return null;
+	try {
+		return readFileSync(task.outputPath, "utf-8");
+	} catch {
+		return null;
+	}
+}
 
 const bashSchema = Type.Object({
 	command: Type.Optional(Type.String({ description: "Bash command to execute" })),
@@ -73,15 +105,16 @@ export interface BashOperations {
 			signal?: AbortSignal;
 			timeout?: number;
 			env?: NodeJS.ProcessEnv;
+			onSpawn?: (pid: number) => void;
 		},
-	) => Promise<{ exitCode: number | null }>;
+	) => Promise<{ exitCode: number | null; pid?: number }>;
 }
 
 /**
  * Default bash operations using local shell
  */
 const defaultBashOperations: BashOperations = {
-	exec: (command, cwd, { onData, signal, timeout, env }) => {
+	exec: (command, cwd, { onData, signal, timeout, env, onSpawn }) => {
 		return new Promise((resolve, reject) => {
 			const { shell, args } = getShellConfig();
 
@@ -96,6 +129,8 @@ const defaultBashOperations: BashOperations = {
 				env: env ?? getShellEnv(),
 				stdio: ["ignore", "pipe", "pipe"],
 			});
+
+			if (child.pid) onSpawn?.(child.pid);
 
 			let timedOut = false;
 
@@ -155,7 +190,7 @@ const defaultBashOperations: BashOperations = {
 					return;
 				}
 
-				resolve({ exitCode: code });
+				resolve({ exitCode: code, pid: child.pid });
 			});
 		});
 	},
@@ -280,6 +315,7 @@ export function createBashTool(cwd: string, options?: BashToolOptions): AgentToo
 					onData: (data) => fileStream.write(data),
 					timeout: effectiveTimeout,
 					env: spawnContext.env,
+					onSpawn: (pid) => { backgroundTask.pid = pid; },
 				})
 					.then(({ exitCode }) => {
 						fileStream.end();

@@ -2559,34 +2559,20 @@ export class InteractiveMode {
         const modelLine =
           model?.name ??
           (model?.provider ? `${model.provider}` : "DashScope · Ollama");
-        const buildAsciiLines = (frame: number) => {
-          const blink = frame % 8 === 5;
-          const leftStar = frame % 4 < 2 ? "*" : ".";
-          const rightStar = frame % 4 >= 2 ? "*" : ".";
+        const buildAsciiLines = (_frame: number) => {
           const lines = [
-            `             ${leftStar}     ,MMM8&&&.            ${rightStar}`,
-            "                  MMMM88&&&&&    .",
-            "                 MMMM88&&&&&&&",
-            "     *           MMM88&&&&&&&&",
-            "                 MMM88&&&&&&&&",
-            "                 'MMM88&&&&&&'",
-            `                   'MMM8&&&'      ${rightStar}    _`,
-            "          |\\___/|                      \\\\",
-            "          )     (    |\\_/|              ||    '",
-            blink
-              ? '         =\\     /=   )- - \'._.-""""-.  //'
-              : '         =\\     /=   )a a \'._.-""""-.  //',
-            "           )===(    =\\T_= /    ~  ~  \\//",
-            "          /     \\     `\"`\\   ~   / ~  /",
-            "          |     |         |~   \\ |  ~/",
-            "         /       \\         \\  ~/- \\ ~\\",
-            "         \\       /         || |  // /`",
-            "     _/\\_/\\_   _/_/\\_/\\_/\\_((_|\\((_//\\_/\\_/\\_",
-            "  |  |  |  |( (  |  |  |  |  |  |  |  |  |  |",
-            "  |  |  |  | ) ) |  |  |  |  |  |  |  |  |  |",
-            "  |  |  |  |(_(  |  |  |  |  |  |  |  |  |  |",
-            "  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |",
-            "  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |",
+            "                               ,",
+            "              ,-.       _,---._ __  / \\",
+            "             /  )    .-'       `./ /   \\",
+            "            (  (   ,'            `/    /|",
+            "             \\  `\"-             \\'\\   / |",
+            "              `.              ,  \\ \\ /  |",
+            "               /`.          ,'-`----Y   |",
+            "              (            ;        |   '",
+            "              |  ,-.    ,-'         |  /",
+            "              |  | (   |CATUI@2026  | /",
+            "              )  |  \\  `.___________|/",
+            "              `--'   `--'",
           ];
           const width = Math.max(...lines.map((line) => line.length));
           return lines.map((line) => line.padEnd(width));

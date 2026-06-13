@@ -19,7 +19,7 @@ import { registerOAuthProvider, type OAuthProviderInterface } from "@pencil-agen
 import { registerApiProvider } from "@pencil-agent/ai/registry";
 import { type Static, Type } from "@sinclair/typebox";
 import AjvModule from "ajv";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { getAgentDir } from "../config.js";
 import type { AuthStorage } from "./platform/config/auth-storage.js";
@@ -1010,6 +1010,7 @@ export class ModelRegistry {
 			models: prevModels,
 		};
 
+		mkdirSync(dirname(modelsPath), { recursive: true });
 		writeFileSync(modelsPath, JSON.stringify(data, null, 2), "utf-8");
 		this.refresh();
 	}

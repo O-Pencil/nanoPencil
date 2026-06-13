@@ -5,7 +5,8 @@
  * [HERE]: core/model/custom-providers.ts - custom provider registration
  */
 import type { AuthStorage } from "../platform/config/auth-storage.js";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { dirname } from "node:path";
 
 export const CUSTOM_ANTHROPIC_PROVIDER = "custom-anthropic";
 export const CUSTOM_OPENAI_PROVIDER = "custom-openai";
@@ -71,6 +72,7 @@ function readModelsConfig(modelsPath: string): ModelsConfigFile {
 }
 
 function writeModelsConfig(modelsPath: string, config: ModelsConfigFile): void {
+	mkdirSync(dirname(modelsPath), { recursive: true });
 	writeFileSync(modelsPath, JSON.stringify(config, null, 2), "utf-8");
 }
 

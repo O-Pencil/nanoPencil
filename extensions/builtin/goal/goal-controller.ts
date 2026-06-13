@@ -196,7 +196,7 @@ export class GoalController {
 		});
 	}
 
-	/** Public API: tool-driven update_goal. Only complete/blocked transitions. */
+	/** Public API: tool-driven UpdateGoal. Only complete/blocked transitions. */
 	async apply_update_goal(args: UpdateGoalArgs): Promise<ThreadGoal | null> {
 		return this.withLock(() => {
 			const mode: GoalAccountingMode = args.status === "complete" ? "ActiveOrComplete" : "ActiveOrStopped";
@@ -290,9 +290,9 @@ export class GoalController {
 	}
 
 	/** Hook: a tool finished. Accrue usage from internal turn state.
-	 *  Skips the update_goal tool itself (it should not be counted toward goal progress). */
+	 *  Skips the UpdateGoal tool itself (it should not be counted toward goal progress). */
 	on_tool_finish(toolName: string): { crossed: boolean; goal?: ThreadGoal } {
-		if (toolName === "update_goal") return { crossed: false };
+		if (toolName === "UpdateGoal") return { crossed: false };
 		const turn = this.state.currentTurn;
 		if (!turn || !turn.activeGoalId) return { crossed: false };
 		// Re-account using the tokens already recorded via on_token_usage (message_end)
@@ -318,7 +318,7 @@ export class GoalController {
 		this.clearActiveTurn();
 
 		// If the goal just transitioned to terminal (complete/blocked) during this
-		// turn via the update_goal tool, surface it as not_active_status so the
+		// turn via the UpdateGoal tool, surface it as not_active_status so the
 		// extension can clear stale followUps and report the terminal state.
 		if (this.goalJustTransitionedToTerminal) {
 			this.goalJustTransitionedToTerminal = false;

@@ -1,5 +1,5 @@
 /**
- * [WHO]: goalExtension default export - wires the GoalController per thread; registers /goal command + completions; registers get_goal/create_goal/update_goal tools; subscribes to lifecycle hooks for accounting (turn_end), pull-model continuation + run-error blocking (agent_end, mirrors Codex continue_if_idle), and budget-limit steering; renders GOAL_MESSAGE_TYPE custom messages
+ * [WHO]: goalExtension default export - wires the GoalController per thread; registers /goal command + completions; registers GetGoal/CreateGoal/UpdateGoal tools; subscribes to lifecycle hooks for accounting (turn_end), pull-model continuation + run-error blocking (agent_end, mirrors Codex continue_if_idle), and budget-limit steering; renders GOAL_MESSAGE_TYPE custom messages
  * [FROM]: Depends on @catui/agent-core, @catui/tui, core/extensions-host/types, ./goal-controller, ./goal-tools, ./goal-command, ./goal-parser, ./goal-types, ./goal-format
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/goal/index.ts - extension entry; owns the per-thread controller and the controller host singleton

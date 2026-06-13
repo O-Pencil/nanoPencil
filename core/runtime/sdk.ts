@@ -10,6 +10,7 @@ import {
   type AgentLoopFrameworkInput,
   type AgentLoopPolicyOptions,
   type AgentMessage,
+  type AgentToolPermissionDecision,
   type ThinkingLevel,
 } from "@catui/agent-core";
 import type { Message, Model } from "@catui/ai/types";
@@ -30,6 +31,7 @@ import { ModelRegistry } from "../model-registry.js";
 import { findInitialModel } from "../model-resolver.js";
 import type { ResourceLoader } from "../platform/config/resource-loader.js";
 import { DefaultResourceLoader } from "../platform/config/resource-loader.js";
+import { getBuiltinExtensionPaths } from "../../builtin-extensions.js";
 import { SessionManager } from "../session/session-manager.js";
 import { SettingsManager } from "../platform/config/settings-manager.js";
 import { AgentDirContext, defaultAgentDirContext } from "../agent-dir/agent-dir-context.js";
@@ -168,10 +170,28 @@ export interface CreateAgentSessionOptions extends SoulOptionsContract {
   additionalSkillPaths?: string[];
   /** Additional directories to search for AGENT.md/CLAUDE.md context files. */
   additionalAgentDirs?: string[];
+  /** Additional extension paths to load (merged with built-in extensions). */
+  additionalExtensionPaths?: string[];
   /** Custom MCP config file path. Overrides default agentDir/mcp.json. */
   mcpConfigPath?: string;
   /** Debug event verbosity level. "off" = none, "basic" = lifecycle, "verbose" = all. Default: "off" */
   debugLevel?: "off" | "basic" | "verbose";
+
+  /**
+   * Optional tool permission gate for intercepting tool calls before execution.
+   *
+   * Called after schema validation and before the tool executes.
+   * Return `{ decision: "allow" }` to proceed, or `{ decision: "deny", reason }` to block.
+   * Useful for GUI consumers that want to intercept tools like AskUserQuestion
+   * and handle them in their own UI layer.
+   */
+  canUseTool?: (event: {
+    toolCallId: string;
+    toolName: string;
+    requestedToolName: string;
+    input: unknown;
+    rawInput: unknown;
+  }) => Promise<AgentToolPermissionDecision> | AgentToolPermissionDecision;
 
   /** Session manager. Default: SessionManager.create(cwd) */
   sessionManager?: SessionManager;
@@ -224,6 +244,7 @@ export type {
   SlashCommandSource,
   ToolDefinition,
 } from "../extensions-host/index.js";
+export type { AgentToolPermissionDecision } from "@catui/agent-core";
 export type { PromptTemplate } from "../prompt/prompt-templates.js";
 export type { Skill } from "../skills.js";
 export type { Tool } from "../tools/index.js";
@@ -359,6 +380,7 @@ export async function createAgentSession(
   const sessionManager = options.sessionManager ?? SessionManager.create(cwd, undefined, agentCtx);
 
   if (!resourceLoader) {
+    const builtinPaths = getBuiltinExtensionPaths();
     resourceLoader = new DefaultResourceLoader({
       cwd,
       agentDir,
@@ -366,6 +388,7 @@ export async function createAgentSession(
       agentCtx,
       additionalSkillPaths: options.additionalSkillPaths,
       additionalAgentDirs: options.additionalAgentDirs,
+      additionalExtensionPaths: [...builtinPaths, ...(options.additionalExtensionPaths ?? [])],
     });
     await resourceLoader.reload();
     time("resourceLoader.reload");
@@ -519,6 +542,7 @@ export async function createAgentSession(
     maxModelErrorRecoveryAttempts:
       options.maxModelErrorRecoveryAttempts ?? options.loopPolicy?.maxModelErrorRecoveryAttempts,
     maxStopHookContinuations: options.maxStopHookContinuations ?? options.loopPolicy?.maxStopHookContinuations,
+    canUseTool: options.canUseTool as any,
     getApiKey: async (provider) => {
       // Use the provider argument from the in-flight request;
       // agent.state.model may already be switched mid-turn.

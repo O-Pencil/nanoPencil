@@ -51,17 +51,17 @@ export function buildContinuationPrompt(goal: ThreadGoal): string {
 		"- Treat uncertain or indirect evidence as not achieved; gather stronger evidence or continue the work.",
 		"- The audit must prove completion, not merely fail to find obvious remaining work.",
 		"",
-		"Do not rely on intent, partial progress, memory of earlier work, or a plausible final answer as proof of completion. Marking the goal complete is a claim that the full objective has been finished and can withstand requirement-by-requirement scrutiny. Only mark the goal achieved when current evidence proves every requirement has been satisfied and no required work remains. If the evidence is incomplete, weak, indirect, merely consistent with completion, or leaves any requirement missing, incomplete, or unverified, keep working instead of marking the goal complete. If the objective is achieved, call update_goal with status \"complete\" so usage accounting is preserved. If the achieved goal has a token budget, report the final consumed token budget to the user after update_goal succeeds.",
+		"Do not rely on intent, partial progress, memory of earlier work, or a plausible final answer as proof of completion. Marking the goal complete is a claim that the full objective has been finished and can withstand requirement-by-requirement scrutiny. Only mark the goal achieved when current evidence proves every requirement has been satisfied and no required work remains. If the evidence is incomplete, weak, indirect, merely consistent with completion, or leaves any requirement missing, incomplete, or unverified, keep working instead of marking the goal complete. If the objective is achieved, call UpdateGoal with status \"complete\" so usage accounting is preserved. If the achieved goal has a token budget, report the final consumed token budget to the user after UpdateGoal succeeds.",
 		"",
 		"Blocked audit:",
-		"- Do not call update_goal with status \"blocked\" the first time a blocker appears.",
+		"- Do not call UpdateGoal with status \"blocked\" the first time a blocker appears.",
 		"- Only use status \"blocked\" when the same blocking condition has repeated for at least three consecutive goal turns, counting the original/user-triggered turn and any automatic goal continuations.",
-		"- If the user resumes a goal that was previously marked \"blocked\", treat the resumed run as a fresh blocked audit. If the same blocking condition then repeats for at least three consecutive resumed goal turns, call update_goal with status \"blocked\" again.",
+		"- If the user resumes a goal that was previously marked \"blocked\", treat the resumed run as a fresh blocked audit. If the same blocking condition then repeats for at least three consecutive resumed goal turns, call UpdateGoal with status \"blocked\" again.",
 		"- Use status \"blocked\" only when you are truly at an impasse and cannot make meaningful progress without user input or an external-state change.",
-		"- Once the blocked threshold is satisfied, do not keep reporting that you are still blocked while leaving the goal active; call update_goal with status \"blocked\".",
+		"- Once the blocked threshold is satisfied, do not keep reporting that you are still blocked while leaving the goal active; call UpdateGoal with status \"blocked\".",
 		"- Never use status \"blocked\" merely because the work is hard, slow, uncertain, incomplete, or would benefit from clarification.",
 		"",
-		"Do not call update_goal unless the goal is complete or the strict blocked audit above is satisfied. Do not mark a goal complete merely because the budget is nearly exhausted or because you are stopping work.",
+		"Do not call UpdateGoal unless the goal is complete or the strict blocked audit above is satisfied. Do not mark a goal complete merely because the budget is nearly exhausted or because you are stopping work.",
 	].join("\n");
 }
 
@@ -83,7 +83,7 @@ export function buildCompletionAuditPrompt(goal: ThreadGoal): string {
 		"4. For each item, determine whether the evidence proves completion, contradicts completion, shows incomplete work, is too weak or indirect to verify completion, or is missing.",
 		"5. Match the verification scope to the requirement's scope; do not use a narrow check to support a broad claim.",
 		"6. Treat uncertain or indirect evidence as not achieved; gather stronger evidence or continue the work.",
-		"7. If ALL requirements are proven complete by authoritative evidence → call update_goal with status \"complete\" immediately. Do not start new work.",
+		"7. If ALL requirements are proven complete by authoritative evidence → call UpdateGoal with status \"complete\" immediately. Do not start new work.",
 		"8. If something is missing, incomplete, or unverified → describe what remains, then continue working on it.",
 		"",
 		"The audit must prove completion, not merely fail to find obvious remaining work. Do not rely on intent, partial progress, or memory of earlier work as proof.",
@@ -109,7 +109,7 @@ export function buildBudgetLimitPrompt(goal: ThreadGoal): string {
 		"",
 		"The system has marked the goal as budget_limited, so do not start new substantive work for this goal. Wrap up this turn soon: summarize useful progress, identify remaining work or blockers, and leave the user with a clear next step.",
 		"",
-		"Do not call update_goal unless the goal is actually complete.",
+		"Do not call UpdateGoal unless the goal is actually complete.",
 	].join("\n");
 }
 

@@ -1,5 +1,5 @@
 /**
- * [WHO]: Factory functions that return the three goal LLM tools (get_goal, create_goal, update_goal) as ToolDefinition objects, plus a getter for the controller singleton map
+ * [WHO]: Factory functions that return the three goal LLM tools (GetGoal, CreateGoal, UpdateGoal) as ToolDefinition objects, plus a getter for the controller singleton map
  * [FROM]: Depends on @sinclair/typebox, @catui/agent-core, core/extensions-host/types, ./goal-controller, ./goal-types, ./goal-format, ./goal-prompts
  * [TO]: Consumed by ./index (registerTool); the controller map is shared with ./index via ./goal-runtime
  * [HERE]: extensions/builtin/goal/goal-tools.ts - LLM-facing tool boundary; no I/O beyond the controller
@@ -134,16 +134,16 @@ function renderGoalResult(
 
 export function createGetGoalTool(): ToolDefinition {
 	return {
-		name: "get_goal",
+		name: "GetGoal",
 		label: "Get Goal",
 		description:
 			"Get the current thread goal. Returns null-equivalent (\"No goal is currently set.\") when none exists.",
 		parameters: GetGoalInputSchema,
 		isConcurrencySafe: true,
 		guidance:
-			"Call get_goal before deciding whether the user wants a new goal or to continue the existing one. " +
+			"Call GetGoal before deciding whether the user wants a new goal or to continue the existing one. " +
 			"Use the returned objective verbatim when judging whether the work is done.",
-		renderCall: (_args, theme) => renderGoalCall("get_goal", undefined, theme),
+		renderCall: (_args, theme) => renderGoalCall("GetGoal", undefined, theme),
 		renderResult: (result, _opts, theme) => renderGoalResult(result, theme, "Get Goal"),
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			const controller = getControllerFromContext(ctx);
@@ -161,7 +161,7 @@ export function createGetGoalTool(): ToolDefinition {
 
 export function createCreateGoalTool(): ToolDefinition {
 	return {
-		name: "create_goal",
+		name: "CreateGoal",
 		label: "Create Goal",
 		description:
 			"Create a new goal. Use only when the user explicitly asks for one. " +
@@ -177,13 +177,13 @@ export function createCreateGoalTool(): ToolDefinition {
 			const a = args as { objective?: string; token_budget?: number };
 			const parts = [a.objective ? `"${a.objective}"` : "(objective)"];
 			if (a.token_budget) parts.push(`budget: ${a.token_budget}`);
-			return renderGoalCall("create_goal", parts.join(" | "), theme);
+			return renderGoalCall("CreateGoal", parts.join(" | "), theme);
 		},
 		renderResult: (result, _opts, theme) => renderGoalResult(result, theme, "Create Goal"),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const controller = getControllerFromContext(ctx);
 			if (!controller) {
-				return errorResult("create_goal is unavailable: goal runtime is not initialized.");
+				return errorResult("CreateGoal is unavailable: goal runtime is not initialized.");
 			}
 			const obj = params as { objective?: unknown; token_budget?: unknown };
 			const validatedObjective = validateObjective(typeof obj.objective === "string" ? obj.objective : "");
@@ -210,7 +210,7 @@ export function createCreateGoalTool(): ToolDefinition {
 
 export function createUpdateGoalTool(): ToolDefinition {
 	return {
-		name: "update_goal",
+		name: "UpdateGoal",
 		label: "Update Goal",
 		description:
 			"Update the existing goal. Use only to mark 'complete' or 'blocked'. " +
@@ -220,17 +220,17 @@ export function createUpdateGoalTool(): ToolDefinition {
 		isConcurrencySafe: false,
 		interruptBehavior: "cancel",
 		guidance:
-			"Do not call update_goal with pause/resume/budget_limited/usage_limited \u2014 those are user-driven and happen via /goal. " +
-			"Do not call update_goal during plan mode.",
+			"Do not call UpdateGoal with pause/resume/budget_limited/usage_limited \u2014 those are user-driven and happen via /goal. " +
+			"Do not call UpdateGoal during plan mode.",
 		renderCall: (args, theme) => {
 			const a = args as { status?: string };
-			return renderGoalCall("update_goal", `status -> ${a.status ?? "?"}`, theme);
+			return renderGoalCall("UpdateGoal", `status -> ${a.status ?? "?"}`, theme);
 		},
 		renderResult: (result, _opts, theme) => renderGoalResult(result, theme, "Update Goal"),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const controller = getControllerFromContext(ctx);
 			if (!controller) {
-				return errorResult("update_goal is unavailable: goal runtime is not initialized.");
+				return errorResult("UpdateGoal is unavailable: goal runtime is not initialized.");
 			}
 			const obj = params as { status?: unknown };
 			if (obj.status !== "complete" && obj.status !== "blocked") {

@@ -25,9 +25,9 @@ The extension registers three LLM-facing tools:
 
 | Tool | Purpose | Who can call |
 |------|---------|--------------|
-| `get_goal` | Read the current goal | LLM |
-| `create_goal` | Create a new goal (only when the user explicitly asks) | LLM |
-| `update_goal` | Mark the goal `complete` or `blocked` | LLM |
+| `GetGoal` | Read the current goal | LLM |
+| `CreateGoal` | Create a new goal (only when the user explicitly asks) | LLM |
+| `UpdateGoal` | Mark the goal `complete` or `blocked` | LLM |
 
 The LLM is only allowed to set the goal's status to `complete` or `blocked`. Pause /
 resume / budget limits are user-driven and happen exclusively through `/goal`.
@@ -61,7 +61,7 @@ session restarts and are keyed by the active session ID.
 | `goal-format.ts` | Time/token formatting, summary lines, status indicator, validators |
 | `goal-prompts.ts` | Continuation / budget-limit / objective-updated prompt templates |
 | `goal-controller.ts` | Per-thread runtime: mutex, turn accounting, idle continuation |
-| `goal-tools.ts` | `get_goal`, `create_goal`, `update_goal` LLM tool definitions |
+| `goal-tools.ts` | `GetGoal`, `CreateGoal`, `UpdateGoal` LLM tool definitions |
 | `goal-parser.ts` | `/goal` slash-command argument parsing |
 | `goal-command.ts` | `/goal` slash-command handler (UI + controller dispatch) |
 | `index.ts` | Extension entry: tools, command, lifecycle hooks, status indicator |

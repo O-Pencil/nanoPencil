@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.7] - 2026-06-14
+
+### Added
+- feat(sdk): expose 42 settings getter/setter methods on AgentSession for GUI consumption
+- feat(sdk): add CronCreate/CronDelete/CronList and TeamCreate/TeamDelete tool mappings
+- feat(sdk): session tag API (tagSession/getSessionTags)
+
 ## [1.1.6] - 2026-06-14
 
 ### Added

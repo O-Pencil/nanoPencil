@@ -16,7 +16,7 @@ F06/F07 identify real startup and package-size waste, but P6 must not become a b
 
 The top-level question is:
 
-> Which costs are intrinsic to running nanoPencil, and which costs belong only to a selected mode, optional extension, or selected provider?
+> Which costs are intrinsic to running catui, and which costs belong only to a selected mode, optional extension, or selected provider?
 
 P6 should move costs to the smallest honest owner without breaking behavior.
 

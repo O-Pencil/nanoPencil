@@ -86,7 +86,7 @@ The split must preserve the current synchronous API. Async catalog loading is re
 Before implementation, capture on a capable machine:
 
 ```text
-M1: cold `nanopencil -v` or equivalent startup timing before/after.
+M1: cold `catui -v` or equivalent startup timing before/after.
 M2: import timing for `@pencil-agent/ai/models` and `@pencil-agent/ai/stream`.
 M3: `npm publish --dry-run --tag beta` package file sizes before/after.
 M4: generated file churn: number of files touched by one provider metadata update.

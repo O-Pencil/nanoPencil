@@ -73,7 +73,7 @@ build_static: pass
 package_smoke:
   publish_dry_run_tag_beta: pass (2.0.0-beta.6, 1.8MB packed, 1059 files)
   fresh_global_install_beta: skipped (not run to avoid disrupting current global install)
-  nanopencil_version_smoke: pass (--list-models + --print both exit 0)
+  catui_version_smoke: pass (--list-models + --print both exit 0)
 tests:
   characterization: fail (read-file golden: temp dir name variance, non-regression)
   full_vitest: 112 suites failed / 20 passed / 6 skipped

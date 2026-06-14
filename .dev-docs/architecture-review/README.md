@@ -2,15 +2,15 @@
 
 > ⚠ **Audience: a dedicated Architecture Review Agent.** Not for the self-diagnosis agent, not for users.
 >
-> **Purpose**: this handbook is the operations manual for a separate Claude Code agent (henceforth "the **Arch Agent**") that performs a one-time, systematic architectural review of the nanoPencil codebase. The Arch Agent runs in **a different session** from the self-diagnosis agent. Context separation is the point — daily diagnosis carries one set of priors (issue triage, fingerprint clusters), architectural review carries another (module depth, deletion tests, refactor backlogs). Mixing them would pollute both.
+> **Purpose**: this handbook is the operations manual for a separate Claude Code agent (henceforth "the **Arch Agent**") that performs a one-time, systematic architectural review of the catui codebase. The Arch Agent runs in **a different session** from the self-diagnosis agent. Context separation is the point — daily diagnosis carries one set of priors (issue triage, fingerprint clusters), architectural review carries another (module depth, deletion tests, refactor backlogs). Mixing them would pollute both.
 >
-> **Source methodology**: this handbook synthesizes the mattpocock "Improve Codebase Architecture" skill (SKILL.md) with nanoPencil's own DIP protocol (P1 / P2 / P3 doctrine). The merger is documented in `methodology.md`.
+> **Source methodology**: this handbook synthesizes the mattpocock "Improve Codebase Architecture" skill (SKILL.md) with catui's own DIP protocol (P1 / P2 / P3 doctrine). The merger is documented in `methodology.md`.
 
 ---
 
 ## Why a separate handbook
 
-The maintainer noticed in 2026-05 that nanoPencil's organic growth had outpaced its structural plan: the directory layout, packaging boundaries, and build pipeline had each accreted suboptimally over ~20 release cycles. Symptoms reported:
+The maintainer noticed in 2026-05 that catui's organic growth had outpaced its structural plan: the directory layout, packaging boundaries, and build pipeline had each accreted suboptimally over ~20 release cycles. Symptoms reported:
 
 - Directory structure no longer maps to mental model
 - Bundle size growing
@@ -32,7 +32,7 @@ This is a one-shot exercise. After the maintainer has acted on the Arch Agent's 
 ├── inputs.md                ← what the Arch Agent reads before forming opinions
 ├── workflow.md              ← three phases: Explore → Report → Grilling
 ├── output-format.md         ← finding-card schema, refactor-plan schema
-├── project-context.md       ← nanoPencil-specific anchors (key files, modules, history)
+├── project-context.md       ← catui-specific anchors (key files, modules, history)
 ├── machine-constraints.md   ← hard limits (no build, no dev, RAM/disk guardrails)
 └── handoff.md               ← boundary contract between the Arch Agent and the self-diagnosis agent
 ```
@@ -56,6 +56,7 @@ This is a one-shot exercise. After the maintainer has acted on the Arch Agent's 
 - `startup-async-review.md` — P7 启动线（MCP 异步非阻塞 + build:deps 并行/incremental，**已实现 2026-06-10**；启动默认 ~56s→1.9s）
 - `bundle-redesign-review/` — P7 体积线（BR01–04，closed-as-gated；BR02-04 体积代码未执行）
 - `sdk-surface-review/` — P8 SDK 收窄（SK01–03，**review-open = 未实现，deferred 到 major 窗口**）
+- `dev-loop-review/` — 仓库自用 agent-agnostic 开发闭环（DL01–02，implementation-open）
 - `findings/` F01–F08 — 微观判断（决策起点）
 - `top-level-structure-review.md` — 为什么选候选 D
 - `refactor-plan.md` / `refactor-validation.md` — 计划 + 验收结论
@@ -77,7 +78,7 @@ This is a one-shot exercise. After the maintainer has acted on the Arch Agent's 
 3. `machine-constraints.md` — know what you cannot do
 4. `handoff.md` — know what you must not touch
 5. `inputs.md` — know what to read from the codebase
-6. `project-context.md` — nanoPencil-specific orientation
+6. `project-context.md` — catui-specific orientation
 7. `workflow.md` — the procedure
 8. `output-format.md` — how to deliver
 

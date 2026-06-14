@@ -30,7 +30,7 @@ why_needed: |
 | B4 | 有文本输入时无法用方向键选附件（含多行） | 进栏判据先用 `isEditorEmpty` 再用 `isEditorSingleLine`，都拒多行 | 终版：`isEditorCursorAtTop`（光标在首视觉行即进栏）；为此给 tui `Editor` 加公共 `isCursorOnFirstVisualLine()`（`Editor.state` 为 private）(`52c982f` → tui 改动) | ✅ |
 | B5 | 对话结束栏清空但磁盘路径还在；新粘贴复用旧图文件名 | `clearAttachments`/`takePendingAttachments` 重置 seq→0 但不删盘文件 → 新粘贴复用 `_np_clipboard_image_1.png` | `clearAttachments` 同时删盘文件 (`52c982f`) | ✅ |
 
-> 非代码 bug（记录以备追溯）：图片"未送达模型" → 实为自定义端点/模型不支持视觉；nanoPencil 发送链正确（paste→attachment→userContent→provider image_url）。换支持视觉的端点后正常。
+> 非代码 bug（记录以备追溯）：图片"未送达模型" → 实为自定义端点/模型不支持视觉；catui 发送链正确（paste→attachment→userContent→provider image_url）。换支持视觉的端点后正常。
 
 ### 交互模型（梳理后定稿）
 

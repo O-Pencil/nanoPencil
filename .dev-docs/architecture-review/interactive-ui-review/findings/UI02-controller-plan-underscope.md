@@ -35,7 +35,7 @@ F02 草拟了 5 个 controller（slash-dispatcher / model-overlay / session-tree
 
 - `checkForNewVersion`/`checkAutoUpdateOnStartup`/`showNewVersionNotification`
 - `handleUpdateCommand`/`showUpdateOptions`/`handleReinstallCommand`
-- `performUpdate`/`showRetryOptions`/`waitForKeyPress`/`restartNanoPencil`/`compareVersion`
+- `performUpdate`/`showRetryOptions`/`waitForKeyPress`/`restartcatui`/`compareVersion`
 - 顶层 helper `spawnNpm`
 
 它调 `npm`/`spawn`、重启进程，本质是**CLI update workflow**，恰好用 TUI 提示；P5 先在 interactive 内部拆 controller，只有出现 print/rpc/acp 等第二消费者时再上移 `modes/_shell/update`。

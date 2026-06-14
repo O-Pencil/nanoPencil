@@ -1,6 +1,6 @@
 # Agent Loop Frameworks
 
-nanoPencil supports per-model agent loop selection through `agentLoopFramework`.
+catui supports per-model agent loop selection through `agentLoopFramework`.
 
 ## Frameworks
 
@@ -80,7 +80,7 @@ RPC clients can call `set_agent_loop_framework` with `"standard"`, `"weak-model-
 CLI and SDK callers can set non-persistent overrides for the current process/session:
 
 ```bash
-nanopencil -p --agent-loop weak-model-compatible \
+catui -p --agent-loop weak-model-compatible \
   --max-turns-per-prompt 3 \
   --max-tool-calls-per-prompt 8 \
   --max-tool-concurrency 2 \
@@ -104,10 +104,10 @@ For local compatibility, older experimental values `"high-intelligence"`, `"low-
 
 `weak-model-compatible` batches read-only/concurrency-safe tools. The default maximum concurrency is `10`.
 
-Set `NANOPENCIL_MAX_TOOL_USE_CONCURRENCY` to tune the default without changing code:
+Set `CATUI_MAX_TOOL_USE_CONCURRENCY` to tune the default without changing code:
 
 ```bash
-NANOPENCIL_MAX_TOOL_USE_CONCURRENCY=3 nanopencil
+CATUI_MAX_TOOL_USE_CONCURRENCY=3 catui
 ```
 
 Programmatic callers can still override this per run with `maxToolConcurrency`.

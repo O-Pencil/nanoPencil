@@ -48,7 +48,7 @@ P7 当前关闭为 **closed-as-gated**：
 | V7-1 | 发布边界 | public package / embedded private lib 分类与 tarball 内容一致 |
 | V7-1a | 静态守卫 | `npm run verify:package-boundary` 通过 |
 | V7-1b | 产物守卫 | capable machine 上 build 后 `npm run verify:package-boundary:dist` 通过 |
-| V7-2 | 安装冒烟 | fresh global beta install + `nanopencil -v` 无 package/extension load 错 |
+| V7-2 | 安装冒烟 | fresh global beta install + `catui -v` 无 package/extension load 错 |
 | V7-2a | Browser 默认缺省 | fresh host install 下 browser 不默认加载，`/browser` 仍是清晰发现入口 |
 | V7-2b | Browser 显式启用 | 显式 opt-in 后 `/browser status` 可运行；用户不需要理解内部 harness/package 拆分 |
 | V7-3 | 构建等价 | 产物功能与 P6 等价 |

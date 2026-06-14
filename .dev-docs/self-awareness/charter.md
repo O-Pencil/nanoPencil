@@ -1,6 +1,6 @@
 # Pencil Self-Diagnosis Charter
 
-> ⚠ **Audience: pencil maintainers only.** This is internal R&D. Code paths described here are invoked manually from `scripts/`, do not auto-load into user sessions, do not consume user tokens, and do not write to user-side persistent state (user mem-core, user soul-core, user CLAUDE.md, etc.). The insforge backend used here is developer-owned; credentials live in `.memory-experiments/credentials.json` (gitignored) or `NANOPENCIL_*` env vars.
+> ⚠ **Audience: pencil maintainers only.** This is internal R&D. Code paths described here are invoked manually from `scripts/`, do not auto-load into user sessions, do not consume user tokens, and do not write to user-side persistent state (user mem-core, user soul-core, user CLAUDE.md, etc.). The insforge backend used here is developer-owned; credentials live in `.memory-experiments/credentials.json` (gitignored) or `CATUI_*` env vars.
 >
 > **What this is**: the governance document for how maintainers observe, examine, and improve pencil — via three coordinated activities (audit / diagnosis / reflexive self-study) against shared developer telemetry.
 >

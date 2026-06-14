@@ -21,7 +21,7 @@ Every finding card in `output-format.md` uses these terms verbatim. Don't invent
 
 Anything with **an interface and an implementation**. A file. A function. A package. A directory. A symbol exported across a boundary.
 
-In nanoPencil terms:
+In catui terms:
 - `core/runtime/agent-session.ts` is a module (interface = `AgentSession` class; implementation = ~3000 lines of orchestration).
 - `extensions/defaults/diagnostics/` is a module (interface = the registered extension surface; implementation = the four files).
 - A single function inside a file is a module if it's exported.
@@ -64,7 +64,7 @@ Apply the deletion test to every finding. The card schema in `output-format.md` 
 
 ---
 
-## 2. Vocabulary (DIP — nanoPencil's own protocol)
+## 2. Vocabulary (DIP — catui's own protocol)
 
 ### 2.1 P1 / P2 / P3 layering
 
@@ -97,7 +97,7 @@ When the P3 header gets these wrong, the *answer the file actually gives* (vs. w
 
 Some example failure modes and which lens catches each:
 
-| Failure mode | Caught by | Example in nanoPencil |
+| Failure mode | Caught by | Example in catui |
 |--------------|-----------|------------------------|
 | Shallow module: interface ≈ impl | depth | A helper file with one function that's called once, used inline elsewhere |
 | Missing seam: hardcoded coupling | seam | Tool registry tightly coupled to extension loader (hypothetical — verify) |

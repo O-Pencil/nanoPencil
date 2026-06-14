@@ -110,7 +110,7 @@ Add `package.json` `exports` subpaths; remove from root:
 
 | Symbols | Disposition |
 |---------|-------------|
-| `main` (main.ts) | **remove** — CLI entry is the `nanopencil` bin, not an SDK export |
+| `main` (main.ts) | **remove** — CLI entry is the `catui` bin, not an SDK export |
 | `InteractiveMode`, `runPrintMode`, `runRpcMode`, `*ModeOptions` (modes) | remove from root; no first-implementation subpath because modes are not a supported public API yet |
 | 38 interactive UI components (`*Component`, selectors, `appKey`/`keyHint`/`renderDiff`, editor keys) | remove from root; no first-implementation `./ui` surface because TUI internals change frequently |
 | theme utils (`getMarkdownTheme`, `highlightCode`, `initTheme`, `Theme`, `ThemeColor`, …) | remove from root; future public UI/theme surface requires a focused review |
@@ -143,7 +143,7 @@ Add `package.json` `exports` subpaths; remove from root:
 - Sessions/compaction/config/models/runtime/tools/skills internals
   → import from `@pencil-agent/nano-pencil/{session,config,models,runtime,tools,skills}`.
 - Interactive UI components & theme are no longer public in the first P8 implementation.
-- `main` and CLI utilities are no longer exported (use the `nanopencil` bin).
+- `main` and CLI utilities are no longer exported (use the `catui` bin).
 
 Codemod: most imports change only the module specifier, not the symbol names.
 ```

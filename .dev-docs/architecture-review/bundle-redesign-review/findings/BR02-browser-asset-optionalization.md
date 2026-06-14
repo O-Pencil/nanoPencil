@@ -86,7 +86,7 @@ Near-term recommendation:
 Future recommendation:
 
 - If package size must be reduced, package the **whole Browser extension** as an optional extension package, not only its harness assets.
-- That should happen with a user-facing command such as `nanopencil extension install browser` or an equivalent config/package flow, so first use is guided and reversible.
+- That should happen with a user-facing command such as `catui extension install browser` or an equivalent config/package flow, so first use is guided and reversible.
 - The user should never need to understand "asset package" vs "extension shell".
 
 Do **not** add a browser package to host `dependencies` or `optionalDependencies`. npm installs optional dependencies by default, so that would not reduce default install size.
@@ -119,13 +119,13 @@ Do **not** add a browser package to host `dependencies` or `optionalDependencies
 
 - Do not publish a raw `@pencil-agent/browser-harness` asset package as the first slice; it optimizes install size at the cost of first-use clarity.
 - Do not publish any browser package as a host dependency; it defeats the size goal.
-- Do not make first use download arbitrary network assets inside nanoPencil; that creates runtime/network/privacy complexity.
+- Do not make first use download arbitrary network assets inside catui; that creates runtime/network/privacy complexity.
 - Do not remove `/browser` fallback; it is the discovery path for users who have not installed the optional package.
 - Do not claim token savings; this is install-size only and must not alter prompts/request payloads.
 
 ## Acceptance
 
-- `nanopencil` normal startup works without browser package.
+- `catui` normal startup works without browser package.
 - `/browser` remains smooth and does not require users to understand internal asset/package boundaries.
 - explicit browser opt-in still loads full tools.
 - if size reduction is claimed, dry-run package contents show the **whole Browser extension** moved out of host, not just harness assets.
@@ -144,5 +144,5 @@ Capable/release machine:
 
 - `npm run build`
 - `npm publish --dry-run --tag beta` for host
-- fresh host install + `nanopencil -v`
+- fresh host install + `catui -v`
 - explicit browser opt-in + `/browser status`

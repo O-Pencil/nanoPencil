@@ -1,6 +1,6 @@
 # Debug Logging
 
-nanoPencil includes a debug logging system to help troubleshoot issues with AI providers, especially for non-standard providers like dashscope-coding.
+catui includes a debug logging system to help troubleshoot issues with AI providers, especially for non-standard providers like dashscope-coding.
 
 ## Quick Start
 
@@ -8,35 +8,35 @@ Enable debug logging by setting an environment variable:
 
 ```bash
 # Enable debug logging
-export NANOPENCIL_DEBUG=1
+export CATUI_DEBUG=1
 
 # Or use the legacy name
 export PI_DEBUG=1
 
-# Run nanopencil
-nanopencil
+# Run catui
+catui
 ```
 
 ## Log Levels
 
-Control the verbosity with `NANOPENCIL_DEBUG_LEVEL`:
+Control the verbosity with `CATUI_DEBUG_LEVEL`:
 
 ```bash
-export NANOPENCIL_DEBUG_LEVEL=trace  # Most verbose
-export NANOPENCIL_DEBUG_LEVEL=debug
-export NANOPENCIL_DEBUG_LEVEL=info   # Default
-export NANOPENCIL_DEBUG_LEVEL=warn
-export NANOPENCIL_DEBUG_LEVEL=error  # Least verbose
+export CATUI_DEBUG_LEVEL=trace  # Most verbose
+export CATUI_DEBUG_LEVEL=debug
+export CATUI_DEBUG_LEVEL=info   # Default
+export CATUI_DEBUG_LEVEL=warn
+export CATUI_DEBUG_LEVEL=error  # Least verbose
 ```
 
 ## Log File Location
 
 Debug logs are written to:
-- `~/.nanopencil/agent/nanopencil-debug.log`
+- `~/.catui/agent/catui-debug.log`
 
 View the log:
 ```bash
-tail -f ~/.nanopencil/agent/nanopencil-debug.log
+tail -f ~/.catui/agent/catui-debug.log
 ```
 
 ## What Gets Logged
@@ -107,10 +107,10 @@ The log file is automatically rotated when it exceeds 10MB. To manually clear:
 
 ```bash
 # Clear the current log
-> ~/.nanopencil/agent/nanopencil-debug.log
+> ~/.catui/agent/catui-debug.log
 
 # Or remove the backup
-rm ~/.nanopencil/agent/nanopencil-debug.log.old
+rm ~/.catui/agent/catui-debug.log.old
 ```
 
 ## Performance Impact

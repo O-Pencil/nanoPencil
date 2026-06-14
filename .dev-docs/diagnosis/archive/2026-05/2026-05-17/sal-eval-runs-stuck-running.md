@@ -19,7 +19,7 @@ SOP §3.3: any fix touches `extensions/defaults/sal/eval/insforge-sink.ts` (tele
 ## Likely code path(s)
 
 - `extensions/defaults/sal/eval/insforge-sink.ts:268–286` — the `run_end` PATCH against `/api/database/records/eval_runs?run_id=eq.<id>`. If this PATCH fails or never fires, the run stays `running` forever.
-- `extensions/defaults/sal/index.ts` — emergency flush on `beforeExit`/`SIGHUP`/`SIGTERM`. Per the index.ts P3 header (`extensions/CLAUDE.md`): "emergency flush on beforeExit/SIGHUP/SIGTERM; stale run cleanup is opt-in via NANOPENCIL_EVAL_CLEANUP_STALE_RUNS / credentials cleanup_stale_runs". So a janitor exists but is opt-in and apparently off in production.
+- `extensions/defaults/sal/index.ts` — emergency flush on `beforeExit`/`SIGHUP`/`SIGTERM`. Per the index.ts P3 header (`extensions/CLAUDE.md`): "emergency flush on beforeExit/SIGHUP/SIGTERM; stale run cleanup is opt-in via CATUI_EVAL_CLEANUP_STALE_RUNS / credentials cleanup_stale_runs". So a janitor exists but is opt-in and apparently off in production.
 - `extensions/defaults/loop/cron/cron-scheduler.ts:259` — the lock-contention path observed today suggests the SAL sink may run while the loop scheduler is in a degraded mode; the interaction is not clearly intentional.
 
 ## Evidence
@@ -59,13 +59,13 @@ The session **did** write its `output.md` file (4 lines of bootstrap chatter, no
 Two design questions for one bug:
 
 1. **Why doesn't `run_end` reliably fire?** The known emergency-flush hooks (`beforeExit`/`SIGHUP`/`SIGTERM`) clearly miss ~58% of terminations. Is the flush running but the PATCH timing out silently, or is the hook itself not firing on the most common exit paths (clean exit from `--print` mode, process killed, etc.)?
-2. **Should `eval_runs` self-heal at startup?** A janitor exists but is opt-in (`NANOPENCIL_EVAL_CLEANUP_STALE_RUNS`). Today its absence means every analytics query has to filter out stale-running rows manually. Should the janitor default to ON for SAL-enabled installations, or should there be a one-shot reaper script the user runs periodically?
+2. **Should `eval_runs` self-heal at startup?** A janitor exists but is opt-in (`CATUI_EVAL_CLEANUP_STALE_RUNS`). Today its absence means every analytics query has to filter out stale-running rows manually. Should the janitor default to ON for SAL-enabled installations, or should there be a one-shot reaper script the user runs periodically?
 
 ## Suggested options
 
 1. **Add synthetic `run_end` on `process.on('exit')`.** Beyond the existing beforeExit/SIGHUP/SIGTERM hooks. Captures the case the audit missed. Risk: `exit` is synchronous-only — the PATCH would have to be best-effort and may not land before the process is gone. But at least the *attempt* would be made.
 2. **Server-side TTL job.** A scheduled task on the InsForge side (or a separate script) that marks `status='running' AND started_at < now() - interval '24 hours'` as `status='abandoned'` with `ended_at = now()` and a synthetic `error_message`. Decouples cleanup from client lifecycle entirely.
-3. **Default the existing janitor to ON.** Flip `NANOPENCIL_EVAL_CLEANUP_STALE_RUNS` default from off to on for `adapter=insforge`. Cheapest change; relies on the janitor actually working.
+3. **Default the existing janitor to ON.** Flip `CATUI_EVAL_CLEANUP_STALE_RUNS` default from off to on for `adapter=insforge`. Cheapest change; relies on the janitor actually working.
 4. **Investigate the lock-contention side-effect first.** If running pencil without the cron lock contention reproduces the issue, eliminate that as a confound before designing the fix.
 5. **Defer.** Live with the leak; document the filter (`WHERE status='completed'`) as canonical for analytics; revisit when analytics actually consume `eval_runs` at scale.
 

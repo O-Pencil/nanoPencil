@@ -2,7 +2,7 @@
 
 ## Scope
 
-Restore the Catui startup welcome banner and README artwork to the historical NanoPencil moon-and-cats ASCII from commit `7b427f1848a3c6674b2a83ad4f86b7f628fcb331`.
+Restore the Catui startup welcome banner and README artwork to the historical catui moon-and-cats ASCII from commit `7b427f1848a3c6674b2a83ad4f86b7f628fcb331`.
 
 ## Owner
 

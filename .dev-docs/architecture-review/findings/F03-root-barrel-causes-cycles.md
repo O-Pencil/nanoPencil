@@ -50,7 +50,7 @@ status: open
 引入"双 barrel"模式：
 
 ```
-nanoPencil/
+catui/
 ├── index.ts             ← 仅服务外部 npm 包消费者
 │                          只 re-export 类型 + 稳定公共 API
 │                          内部禁止 import

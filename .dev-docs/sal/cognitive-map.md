@@ -10,7 +10,7 @@
 
 ## Identity
 
-This draft defines a cognitive-map architecture for nanoPencil that combines:
+This draft defines a cognitive-map architecture for catui that combines:
 1. DIP as the project's structural coordinate system
 2. NanoMem as the long-term experience substrate
 3. Graph-based reasoning as the bridge from retrieval to active understanding

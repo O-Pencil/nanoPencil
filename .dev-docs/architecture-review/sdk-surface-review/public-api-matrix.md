@@ -26,7 +26,7 @@ No source code should change until this matrix is signed off.
 
 ## Bucket A: Keep Root
 
-Root should stay small and boring: enough to embed nanoPencil as an SDK or run a
+Root should stay small and boring: enough to embed catui as an SDK or run a
 headless agent, not enough to depend on internals.
 
 | Current exports | Destination | Decision |
@@ -84,7 +84,7 @@ in root by accident.
 
 | Current exports | Destination | Decision |
 |-----------------|-------------|----------|
-| `main` | `remove` | CLI entry is the `nanopencil` bin. |
+| `main` | `remove` | CLI entry is the `catui` bin. |
 | `copyToClipboard` | `remove` or `./utils` only if consumer proves need | Mode utility, not stable SDK. |
 | `parseFrontmatter`, `stripFrontmatter` | `remove` or `./utils` only if consumer proves need | Generic utility leaked through root. |
 | `getShellConfig` | `remove` or `./config` after review | Platform shell helper, not root SDK. |

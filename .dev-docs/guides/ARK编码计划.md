@@ -1,6 +1,6 @@
 # 火山引擎方舟 Coding Plan 配置指南
 
-NanoPencil 支持火山引擎方舟 Coding Plan，可接入 Doubao、Kimi、DeepSeek、GLM、MiniMax 等模型。
+catui 支持火山引擎方舟 Coding Plan，可接入 Doubao、Kimi、DeepSeek、GLM、MiniMax 等模型。
 
 ## 获取 API Key
 
@@ -11,7 +11,7 @@ NanoPencil 支持火山引擎方舟 Coding Plan，可接入 Doubao、Kimi、Deep
 
 ### 方式一：首次启动时配置
 
-首次运行 `nanopencil` 时，若未配置任何 Coding Plan API Key，会提示选择：
+首次运行 `catui` 时，若未配置任何 Coding Plan API Key，会提示选择：
 
 ```
 请选择要配置的 Coding Plan：1) 百炼 (Alibaba) 2) 千帆 (Baidu) 3) 方舟 (Volcano) [1]:

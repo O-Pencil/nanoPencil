@@ -1,10 +1,10 @@
-# NanoPencil MCP 快速参考
+# catui MCP 快速参考
 
 ## 🚀 快速开始
 
 ```bash
 # 启用 MCP
-nanopencil --enable-mcp
+catui --enable-mcp
 ```
 
 ## 🎯 默认启用的免费工具
@@ -49,7 +49,7 @@ nanopencil --enable-mcp
 
 ## 📁 配置文件
 
-**位置**: `~/.nanopencil/agent/mcp.json`
+**位置**: `~/.catui/agent/mcp.json`
 
 **启用 GitHub**:
 ```json

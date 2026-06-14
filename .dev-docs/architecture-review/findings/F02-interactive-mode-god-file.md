@@ -20,9 +20,9 @@ status: open
 
 - **7 868 行**，是 `core/CLAUDE.md §Quality Rules` "Single file limit: ~400 lines" 的 **19.6×**
 - 比同为 god 嫌疑的 `agent-session.ts`（3408 行）还大 2.3×
-- 仅靠 import 头（120 行）就横跨：`@pencil-agent/agent-core / ai / tui`、`config`、`core/custom-providers`、`core/runtime/agent-session`、`core/session/compaction`、`core/extensions`、`core/footer-data-provider`、`core/keybindings`、`core/messages`、`core/mcp/mcp-config`、`core/model-resolver`、`core/config/resource-loader`、`core/session/session-manager`、`core/slash-commands`、`core/i18n`、`core/persona/persona-manager`、`core/tools/truncate`、`nanopencil-defaults`、`utils/changelog`、`modes/utils/clipboard`、本地 `components/`、本地 `theme/`、`child_process.spawn`、`node:crypto/fs/os/path` ……
+- 仅靠 import 头（120 行）就横跨：`@pencil-agent/agent-core / ai / tui`、`config`、`core/custom-providers`、`core/runtime/agent-session`、`core/session/compaction`、`core/extensions`、`core/footer-data-provider`、`core/keybindings`、`core/messages`、`core/mcp/mcp-config`、`core/model-resolver`、`core/config/resource-loader`、`core/session/session-manager`、`core/slash-commands`、`core/i18n`、`core/persona/persona-manager`、`core/tools/truncate`、`catui-defaults`、`utils/changelog`、`modes/utils/clipboard`、本地 `components/`、本地 `theme/`、`child_process.spawn`、`node:crypto/fs/os/path` ……
 
-观察 1：这条 import 列表本身就是 finding —— 一个 mode 不应该同时 import `core/mcp/mcp-config`、`core/persona/persona-manager`、`core/model-resolver`、`nanopencil-defaults`、`core/custom-providers`。每条 import 都暗示一个本应封装在 `AgentSession` 内的能力被泄漏到了 UI 层。
+观察 1：这条 import 列表本身就是 finding —— 一个 mode 不应该同时 import `core/mcp/mcp-config`、`core/persona/persona-manager`、`core/model-resolver`、`catui-defaults`、`core/custom-providers`。每条 import 都暗示一个本应封装在 `AgentSession` 内的能力被泄漏到了 UI 层。
 
 观察 2：`modes/interactive/components/` 已经按组件拆出（47 个文件），但**主控文件**没有跟着拆，导致组件目录是平的而 orchestrator 是 god。
 

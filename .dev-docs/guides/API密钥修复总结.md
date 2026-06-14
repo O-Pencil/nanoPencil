@@ -1,4 +1,4 @@
-# NanoPencil API Key 管理改进
+# catui API Key 管理改进
 
 ## 问题
 
@@ -7,7 +7,7 @@
 - 修复输入错误的 API Key
 - 切换到不同的账号
 
-只能手动编辑 `~/.nanopencil/agent/auth.json` 文件，非常不便。
+只能手动编辑 `~/.catui/agent/auth.json` 文件，非常不便。
 
 ## 解决方案
 

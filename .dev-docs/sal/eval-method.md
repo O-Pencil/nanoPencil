@@ -76,8 +76,8 @@ mkdir -p "$ROOT/control" "$ROOT/sal" "$ROOT/compare"
 ```bash
 cd "$CTRL_WS"
 NANOMEM_MEMORY_DIR="$ROOT/control/memory" \
-NANOPENCIL_EVAL_RUN_ID="$RUN_ID-control" \
-NANOPENCIL_EVAL_VARIANT=control \
+CATUI_EVAL_RUN_ID="$RUN_ID-control" \
+CATUI_EVAL_VARIANT=control \
 pencil --nosal "你的任务提示"
 ```
 
@@ -86,9 +86,9 @@ pencil --nosal "你的任务提示"
 ```bash
 cd "$SAL_WS"
 NANOMEM_MEMORY_DIR="$ROOT/sal/memory" \
-NANOPENCIL_EVAL_RUN_ID="$RUN_ID-sal" \
-NANOPENCIL_EVAL_VARIANT=sal \
-NANOPENCIL_EXPERIMENT_ID="$RUN_ID" \
+CATUI_EVAL_RUN_ID="$RUN_ID-sal" \
+CATUI_EVAL_VARIANT=sal \
+CATUI_EXPERIMENT_ID="$RUN_ID" \
 pencil --sal-ab "同一条任务提示"
 ```
 

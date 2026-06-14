@@ -86,14 +86,14 @@ Fresh install smoke:
 ```bash
 npm uninstall -g @pencil-agent/nano-pencil
 npm install -g @pencil-agent/nano-pencil@beta
-nanopencil -v
+catui -v
 ```
 
 Pass criteria:
 
 - dry-run includes `dist/**/*.js`, `dist/**/*.d.ts`, `dist/**/*.json`, and required runtime assets.
 - fresh global install succeeds.
-- `nanopencil -v` exits without package-resolution or extension-load errors.
+- `catui -v` exits without package-resolution or extension-load errors.
 - no errors like missing `@pencil-agent/ai`, missing `./config.js`, or `No "exports" main defined`.
 
 Record:
@@ -102,7 +102,7 @@ Record:
 package_smoke:
   publish_dry_run_tag_beta: pass | fail
   fresh_global_install_beta: pass | fail
-  nanopencil_version_smoke: pass | fail
+  catui_version_smoke: pass | fail
   published_version_tested: ""
   notes: ""
 ```

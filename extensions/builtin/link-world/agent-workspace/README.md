@@ -6,7 +6,7 @@ This directory is copied to:
 .nanopencil/link-world-workspace/
 ```
 
-Use it to store project-local, reusable internet-access knowledge for NanoPencil.
+Use it to store project-local, reusable internet-access knowledge for catui.
 
 Suggested layout:
 

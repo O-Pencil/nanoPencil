@@ -42,7 +42,7 @@ scope: 全仓库（D1–D8 全功能域）
 `core/runtime/`（**除** `agent-session.ts`，见 R）、
 `core/{model-registry, model-resolver, package-manager, slash-commands, soul-integration}.ts`、
 `modes/{rpc, acp, print-mode.ts}`、`modes/interactive/`（**除** `interactive-mode.ts`，见 R）、
-`packages/{mem-core, soul-core}`、root `{cli, main, config, index, builtin-extensions, nanopencil-defaults, migrations}.ts`
+`packages/{mem-core, soul-core}`、root `{cli, main, config, index, builtin-extensions, catui-defaults, migrations}.ts`
 
 > root `index.ts` / `main.ts` / `modes/index.ts` 原地不动，但**逻辑会在大阶段二改**（F06/F03 step3）——见 R / 大阶段二。
 

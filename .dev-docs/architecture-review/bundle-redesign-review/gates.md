@@ -24,7 +24,7 @@ applies_to:
 | BR-G2 Publish order | Public packages required by host must be published before host beta | `npm view <pkg>@<version>` on capable/networked machine |
 | BR-G3 Embedded lib completeness | `core/lib/{ai,agent-core,tui}` embedded package manifests resolve from `dist/main.js` base | `require.resolve` check from `dist/main.js` base |
 | BR-G4 Package contents | `npm publish --dry-run` contains all runtime assets and no accidental source-only dependency | dry-run file list review |
-| BR-G5 Runtime install smoke | Fresh global install of beta starts without extension-load errors | `npm i -g @pencil-agent/nano-pencil@beta && nanopencil -v` |
+| BR-G5 Runtime install smoke | Fresh global install of beta starts without extension-load errors | `npm i -g @pencil-agent/nano-pencil@beta && catui -v` |
 | BR-G6 Public package smoke | `mem-core` published package can import `./extension` and load its transitive relative files | temp install/import smoke |
 | BR-G7 Size claim evidence | Any claimed size reduction has before/after tarball and unpacked size metrics | measurement log |
 | BR-G8 Token neutrality | P7 cannot alter prompts, request payloads, or token usage unless explicitly scoped | diff review + provider smoke |

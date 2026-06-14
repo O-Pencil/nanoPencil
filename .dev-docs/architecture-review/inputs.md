@@ -26,7 +26,7 @@ What the Arch Agent reads before forming opinions. **Read in this order.** Skipp
 | Root `CLAUDE.md` | P1 — global topology, stack, directory structure, code standards. Read in full. |
 | `AGENTS.md` | Claude Code specific guidance. Skim for relevant tool/skill conventions. |
 | `.PENCIL.md` | Product personality charter. Read to understand product intent (informs which directions are out of scope). |
-| `README.md` (root) | User-facing description. Read to know what users think nanoPencil is. |
+| `README.md` (root) | User-facing description. Read to know what users think catui is. |
 
 ---
 
@@ -77,7 +77,7 @@ Recommended walking path:
 12. `extensions/defaults/` (in alphabetical order)
 13. `extensions/optional/`
 14. `scripts/` (build & utility scripts)
-15. `migrations.ts`, `nanopencil-defaults.ts`, `builtin-extensions.ts` (root-level orchestration)
+15. `migrations.ts`, `catui-defaults.ts`, `builtin-extensions.ts` (root-level orchestration)
 16. `index.ts` (package barrel)
 
 For each step:

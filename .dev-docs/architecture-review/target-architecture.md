@@ -120,7 +120,7 @@ audience: pencil maintainer
 
 **U2 + U3 合起来**揭示一个深层问题：**Pencil 既想做"轻量库"又想做"重量级应用"**。
 - 当成"库"时，`@pencil-agent/ai` 这类包应该独立发布、严格 semver、不被 host 反向引用
-- 当成"应用"时，所有代码塞在 `nanoPencil/` 一个仓库，vendor 整 copy，根本不存包发布问题
+- 当成"应用"时，所有代码塞在 `catui/` 一个仓库，vendor 整 copy，根本不存包发布问题
 - 现状是**两者都做了一半**：有 workspace 包 + bundle-deps，但 package 边界并不真的隔离
 
 这是 Phase 3 grilling 的核心议题之一（见 §6.Q1）。
@@ -144,13 +144,13 @@ audience: pencil maintainer
 业界对标依据：Continue.dev 33k★ TS 项目使用 `core/`（顶层业务核心）+ `packages/`（细粒度真发布库，含 SDK）+ `extensions/`（host 适配器）三层布局，与本目标结构同形。
 
 ```
-nanoPencil/
+catui/
 │
 ├── cli.ts                              ← CLI 入口（不变）
 ├── main.ts                              ← 模式分发（变薄；改 dynamic dispatch）
 ├── index.ts                             ← 【语义变更】仅服务外部 SDK，禁止内部 import
 ├── builtin-extensions.ts                ← 不变
-├── nanopencil-defaults.ts               ← 不变
+├── catui-defaults.ts               ← 不变
 ├── migrations.ts                        ← 不变
 │
 ├── core/                                ← Continue 风："仓库核心"（业务 + 通用库 + 横切）
@@ -420,10 +420,10 @@ nanoPencil/
 ### D3 AI Provider 抽象 → `core/lib/ai/`
 
 - **从 `packages/ai/` 退到 `core/lib/ai/`**：当前 0 外部消费者 + 0.0.1 不动 + 无可见独立路线
-- `nanopencil-ai` bin 仍可保留（在 lib/ai/package.json 中），但**不作为发布 CLI 入口**
+- `catui-ai` bin 仍可保留（在 lib/ai/package.json 中），但**不作为发布 CLI 入口**
 - `models.generated.ts` 是 codegen 产物；provider 元数据来自上游 API，需要定期 refresh
 - **F07 拆完后**：按 provider 切 11 个文件，运行时只 lazy import 用户配置的 provider
-- **未来路径**：若 OpenRouter / 其他项目想用 nanoPencil 的 multi-provider 抽象，跑 `promote-to-package.ts ai` 升回 `packages/ai/`
+- **未来路径**：若 OpenRouter / 其他项目想用 catui 的 multi-provider 抽象，跑 `promote-to-package.ts ai` 升回 `packages/ai/`
 
 ### D4 存储 / 持久化 → `core/session/` + `core/platform/config/` + `core/agent-dir/` + 用户 `~/.pencils/agents/`
 

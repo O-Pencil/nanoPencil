@@ -49,6 +49,11 @@ jobs:
         env:
           CI: true
 
+      - name: Run dev-loop tests
+        run: npm run test:dev-loop
+        env:
+          CI: true
+
       - name: Run security boundary tests
         run: npm run test:security
         env:
@@ -86,7 +91,7 @@ jobs:
         run: npm run build:deps
 
       - name: Run agent-core tests
-        run: npm test --workspace=packages/agent-core
+        run: npm test --workspace=core/lib/agent-core
 
       - name: Run ai tests
-        run: npm test --workspace=packages/ai
+        run: npm test --workspace=core/lib/ai

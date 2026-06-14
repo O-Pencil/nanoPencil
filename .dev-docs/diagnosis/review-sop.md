@@ -244,7 +244,7 @@ skipped: S   # PRs not matching agent/diagnosis or auto/issue-* patterns
 
 ## Borderline (links + reason)
 
-- #126 — <pr-url> — change renames `NANOPENCIL_X_ENV`; §3.3 says env-var names are STABILITY CONTRACT; maintainer should confirm whether this rename was intended as a contract change
+- #126 — <pr-url> — change renames `CATUI_X_ENV`; §3.3 says env-var names are STABILITY CONTRACT; maintainer should confirm whether this rename was intended as a contract change
 
 ## Notes
 

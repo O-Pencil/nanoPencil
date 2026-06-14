@@ -10,8 +10,10 @@ coverage/
 .env
 .env.local
 .claude/
-# Project-local NanoPencil workspace (skills copies, browser workspace, etc.)
+# Project-local catui workspace (skills copies, browser workspace, etc.)
 .nanopencil/
+# Repo dev-loop runtime artifacts (local verification/check logs)
+.catui/dev-loop/
 # Daily pencil-on-pencil self-study runtime artifacts (task prompts + outputs)
 .pencil-self-study/
 # scripts/self-diagnosis/ per-run artifacts (task + output + analysis, gitkeep stays)

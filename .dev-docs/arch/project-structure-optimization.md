@@ -1,8 +1,8 @@
-# nanoPencil 项目结构与构建优化方案
+# catui 项目结构与构建优化方案
 
 ## 1. 现状分析与优化动机
 
-随着 nanoPencil 功能的不断丰富，项目在工程化方面面临以下挑战：
+随着 catui 功能的不断丰富，项目在工程化方面面临以下挑战：
 - **整包体积膨胀**：由于 `packages/` 下各模块依赖重复打包，以及缺乏有效的 Tree-shaking，发布产物中存在大量冗余代码。
 - **构建链路复杂**：依赖手写的 `bundle-deps.js` 进行模块管理，未充分利用现代 Monorepo 工具。
 - **边界模糊**：部分核心逻辑（Core）与扩展逻辑（Extensions）界限不清晰，导致核心包过于沉重。
@@ -45,7 +45,7 @@ Extension 应具备 **“可插拔”** 与 **“自愈性”**：
 ## 4. 目录结构调整建议
 
 ```markdown
-nanoPencil/
+catui/
 ├── packages/              # 核心模块 (独立 NPM 包，内部源码引用)
 │   ├── agent-core/        # 运行引擎
 │   ├── soul-core/         # 灵魂引擎

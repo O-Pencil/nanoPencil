@@ -60,7 +60,7 @@ Provider runtime functions such as `streamAnthropic` are documented in `core/lib
 |--------|----------------------|------------------------|---------------------|--------------|
 | A. Remove provider exports from `@pencil-agent/ai` root now | Breaking | High for root imports | High | Reject for P6 |
 | B. Keep root as-is and stop here | Safe | EV04 benefits only direct `stream.ts` path; root barrel remains eager | Low | Acceptable but incomplete |
-| C. Add explicit subpath exports, keep root legacy, migrate internal imports gradually | Compatible | High for internal nanoPencil paths once migrated | Medium | Selected |
+| C. Add explicit subpath exports, keep root legacy, migrate internal imports gradually | Compatible | High for internal catui paths once migrated | Medium | Selected |
 | D. Add subpaths and immediately narrow root | Breaking unless major/P8 | High | High | Defer to P8 |
 | E. Split package `files` or move provider assets now | Packaging risk | Possible size benefit | High | Defer until package snapshot review |
 
@@ -73,7 +73,7 @@ Selected path:
 ```text
 1. Keep @pencil-agent/ai root barrel as legacy-compatible.
 2. Add explicit subpath exports in a dedicated implementation slice.
-3. Migrate nanoPencil internal imports from root to subpaths by capability group.
+3. Migrate catui internal imports from root to subpaths by capability group.
 4. Leave external deprecation/removal for P8 or a breaking-change release.
 ```
 
@@ -138,4 +138,4 @@ After code:
 
 ## Implementation Result
 
-Additive `@pencil-agent/ai/*` subpaths have been added while preserving the root entry. Maintainer confirmed build/quality validation passed. Internal import migration is complete for ordinary nanoPencil code: type-only, models, OAuth, registry, events, schema, stream, env, overflow, and json slices all passed maintainer build/quality validation. The only internal root import intentionally retained is the extension-loader bundling shim that exposes the legacy-compatible root package to extension code.
+Additive `@pencil-agent/ai/*` subpaths have been added while preserving the root entry. Maintainer confirmed build/quality validation passed. Internal import migration is complete for ordinary catui code: type-only, models, OAuth, registry, events, schema, stream, env, overflow, and json slices all passed maintainer build/quality validation. The only internal root import intentionally retained is the extension-loader bundling shim that exposes the legacy-compatible root package to extension code.

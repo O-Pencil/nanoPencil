@@ -24,7 +24,7 @@ EV05 selected additive `@pencil-agent/ai/*` subpaths, but subpaths should not si
 
 ## External Calibration
 
-This review used primary/public project material as calibration, not as a source of truth for nanoPencil:
+This review used primary/public project material as calibration, not as a source of truth for catui:
 
 - `pi-book` describes pi-mono as an architecture-decision book, with separate topics for unified LLM vendors, agent loop, product runtime, built-in vs external capabilities, tools, and terminal/browser/RPC entrypoints: https://github.com/ZhangHanDong/pi-book
 - `pi-mono` exposes package-level separation: `pi-ai` for unified multi-provider LLM API, `pi-agent-core` for agent runtime, `pi-coding-agent` for CLI, `pi-tui` for terminal UI, and `pi-web-ui` for web components: https://github.com/earendil-works/pi
@@ -41,7 +41,7 @@ TUI/web/messaging entrypoints belong outside the AI package.
 Memory/personality systems belong outside the AI package, connected through explicit host callbacks.
 ```
 
-## Current nanoPencil Package Shape
+## Current catui Package Shape
 
 ```text
 @pencil-agent/ai
@@ -239,4 +239,4 @@ Root `@pencil-agent/ai` remains legacy-compatible.
 
 ## Next Step
 
-Internal import migration is complete for ordinary nanoPencil code. The remaining root `@pencil-agent/ai` import is `core/extensions-host/loader.ts`, which intentionally bundles the legacy-compatible root package for extension virtual modules. Further P6 work should move to EV04 metadata chunking or EV03 browser physical/package decisions, not more AI import slicing.
+Internal import migration is complete for ordinary catui code. The remaining root `@pencil-agent/ai` import is `core/extensions-host/loader.ts`, which intentionally bundles the legacy-compatible root package for extension virtual modules. Further P6 work should move to EV04 metadata chunking or EV03 browser physical/package decisions, not more AI import slicing.

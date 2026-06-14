@@ -1,17 +1,17 @@
-# nanoPencil Remote Tool Register — Interface Proposal
+# catui Remote Tool Register — Interface Proposal
 
 > **Status**: draft (2026-05-21)
 > **Scope**: nano-pencil engine SDK ↔ Pencil-Agent-Gateway tool callback channel
 > **Counterpart**: `Pencil-Agent-Gateway/docs/18-tool-callback-protocol-v0.2.md` (gateway-side wire format)
-> **Required by**: Gateway milestone **M-tools-2** (NanoPencilEngineAdapter integration)
+> **Required by**: Gateway milestone **M-tools-2** (catuiEngineAdapter integration)
 
 ---
 
 ## DIP Metadata
 
 ```text
-[WHO]  nanoPencil engine maintainers + NanoPencilEngineAdapter authors in Pencil-Agent-Gateway
-[FROM] Caller advertises tools (pencil_client_tools) via Gateway → adapter passes them into a nanoPencil session
+[WHO]  catui engine maintainers + catuiEngineAdapter authors in Pencil-Agent-Gateway
+[FROM] Caller advertises tools (pencil_client_tools) via Gateway → adapter passes them into a catui session
 [TO]   nano-pencil tool registry exposes those tools as AgentTools whose execute() delegates back through a transport callback
 [HERE] docs/remote-tool-register-design.md — SDK contract for embedding nano-pencil inside a host that owns the tool runtime
 ```
@@ -24,7 +24,7 @@
 |---|---|
 | §1 Problem | Why does Gateway need this at all? |
 | §2 Decisions | What we are committing to (and rejecting) |
-| §3 Public API | What new types/exports nanoPencil ships |
+| §3 Public API | What new types/exports catui ships |
 | §4 Wiring | How an embedder hooks the transport in |
 | §5 Engine-Side Flow | What happens inside agent-loop when a remote tool gets called |
 | §6 Lifecycle & Errors | Timeout, cancel, abort, mismatched ids |
@@ -37,7 +37,7 @@
 
 ## 1. Problem
 
-`Pencil-Agent-Gateway` hosts a nanoPencil engine inside a server process. Callers (`nanopencil-editor` Remote HTTP mode, third-party HTTP clients) reach the engine over the Gateway's OpenAI-compatible HTTP+SSE API. The engine reasons, decides to call a tool — but the **tool implementation must run on the caller's machine** (so that `read_file`, `bash`, `grep` see the user's workspace, not the Gateway container's filesystem). See Gateway docs/18 §1 for the full motivation.
+`Pencil-Agent-Gateway` hosts a catui engine inside a server process. Callers (`catui-editor` Remote HTTP mode, third-party HTTP clients) reach the engine over the Gateway's OpenAI-compatible HTTP+SSE API. The engine reasons, decides to call a tool — but the **tool implementation must run on the caller's machine** (so that `read_file`, `bash`, `grep` see the user's workspace, not the Gateway container's filesystem). See Gateway docs/18 §1 for the full motivation.
 
 The dual-channel wire protocol on the Gateway side is already designed (and M-tools-1 already ships the wire-format machinery on Gateway). What is missing is the **engine-side SDK seam**: a stable way for the Gateway adapter to say *"these tools exist for this session — when the model wants one, call this callback instead of executing locally"*.
 
@@ -58,7 +58,7 @@ Everything HTTP-shaped stays in Gateway. nano-pencil stays embeddable, terminal-
 | D-1 | Where do remote tools enter the tool registry? | Through `ToolSource`, the existing pluggable surface. We extend `ToolSourceType` with `"remote"` and ship a `RemoteToolSource`. | The `ToolSource` interface is already the documented way to add tool families (builtin/mcp/extension). Reusing it means no new code path in `ToolOrchestrator`, agent-loop, extensions, or session lifecycle. |
 | D-2 | How does the engine invoke a remote tool? | The tool's `execute()` calls `transport.invoke({toolCallId, name, arguments, signal})` and returns the `RemoteToolResponse`. Single async call per invocation. | Matches `AgentTool.execute()` shape exactly; nothing else in the loop needs to know "this tool is remote". |
 | D-3 | How does the embedder deliver responses back? | The embedder calls `transport.respond(toolCallId, response)`. The engine-side Promise from `invoke()` resolves. | Mirrors the Gateway-side `EngineAdapter.provideToolResponse()` contract — same wire as docs/18 §9. |
-| D-4 | Where does the transport live? | A `RemoteToolTransport` object the embedder owns and passes via SDK options. nanoPencil never constructs one itself. | Keeps nanoPencil free of any transport-layer concerns. Multiple embedders (Gateway, future SDK users) can supply their own. |
+| D-4 | Where does the transport live? | A `RemoteToolTransport` object the embedder owns and passes via SDK options. catui never constructs one itself. | Keeps catui free of any transport-layer concerns. Multiple embedders (Gateway, future SDK users) can supply their own. |
 | D-5 | How does the embedder update advertisements mid-session? | `RemoteToolSource.replaceAdvertisements(next)`. New tools take effect on the next turn. In-flight invocations on removed tools are still allowed to resolve. | Editor sessions typically declare tools once per chat; mid-stream replacement is allowed but not optimized. |
 | D-6 | Parallel invocations? | Engine side allows 0 or 1 pending invocation per session at a time. Matches Gateway docs/18 §16 decision 1 (serialized). | Matches the wire decision and keeps the transport's state model trivial. The engine already does not parallelize tool calls in single-threaded agent-loop. |
 | D-7 | Do we expose a separate "non-streaming non-remote" code path? | No. `RemoteToolSource` is one more `ToolSource`; with no advertisements registered it loads zero tools and the engine behaves as today. | Avoids a v0.1-vs-v0.2 engine fork. |
@@ -123,7 +123,7 @@ export interface RemoteToolInvocation {
 }
 
 /**
- * Transport object the embedder owns. nanoPencil only calls `invoke`; the
+ * Transport object the embedder owns. catui only calls `invoke`; the
  * embedder is the one calling `respond` from wherever the response arrives
  * (HTTP POST handler, IPC, in-memory test harness, etc.).
  */
@@ -230,10 +230,10 @@ Inside `createAgentSession()`: if `options.remoteTools` is set, construct a `Rem
 
 ## 4. Wiring — From Embedder's POV
 
-Concrete usage from `Pencil-Agent-Gateway`'s `NanoPencilEngineAdapter`:
+Concrete usage from `Pencil-Agent-Gateway`'s `catuiEngineAdapter`:
 
 ```ts
-// In NanoPencilEngineAdapter.run(req, opts):
+// In catuiEngineAdapter.run(req, opts):
 //
 // req.clientTools comes from the Gateway chat route, mapped from the
 // wire field `pencil_client_tools`. See Pencil-Agent-Gateway docs/18 §5
@@ -333,13 +333,13 @@ The embedder is the source of truth for what is invokable; the engine is the sou
 
 | Project | Concrete Change |
 |---|---|
-| **nanoPencil** | New files `core/runtime/remote-tools.ts` + `core/tools/remote-source.ts`; `ToolSourceType` union + 1; `SDKOptions.remoteTools` field. Approx +400 LOC including tests. Public API additions ONLY (no edits to existing types). |
+| **catui** | New files `core/runtime/remote-tools.ts` + `core/tools/remote-source.ts`; `ToolSourceType` union + 1; `SDKOptions.remoteTools` field. Approx +400 LOC including tests. Public API additions ONLY (no edits to existing types). |
 | **Pencil-Agent-Gateway** | `src/engine/nano-adapter.ts` constructs a `RemoteToolTransport` from `EngineRunOptions` callbacks and passes `req.clientTools` into `createAgentSession({ remoteTools })`. Replaces the M-tools-2 placeholder in `docs/18 §15`. |
-| **nanopencil-editor** | No change yet — editor work begins once Gateway adapter ships. Editor's eventual job is in `HttpChatProvider`: handle SSE `pencil.tool_request`, run a tool locally (likely a thin shim over the existing local-mode tool registry), POST `tool_response`. |
+| **catui-editor** | No change yet — editor work begins once Gateway adapter ships. Editor's eventual job is in `HttpChatProvider`: handle SSE `pencil.tool_request`, run a tool locally (likely a thin shim over the existing local-mode tool registry), POST `tool_response`. |
 | **Asgard Platform** | No change yet — proxy `tool_response` POSTs alongside chat completions (already-decided §16.3); no Asgard code knows about engine internals. |
 
 Documentation isomorphism (DIP):
-- This file (`nanoPencil/docs/remote-tool-register-design.md`) — source of truth.
+- This file (`catui/docs/remote-tool-register-design.md`) — source of truth.
 - Gateway `docs/18` §9 (EngineAdapter Contract Extension) — pointer to this doc once approved.
 - `core/runtime/CLAUDE.md` P2 — add `remote-tools.ts` line item in the M-tools-2 PR.
 - `core/tools/CLAUDE.md` (if separate) — add `remote-source.ts` line item in the same PR.
@@ -391,7 +391,7 @@ To resolve before N-tools-1 starts:
 |---|---|---|---|
 | Q-1 | Should `RemoteToolSource` impl be in `core/tools/` (alongside `source.ts`) or in `packages/agent-core/`? | `core/tools/` — it depends on `ToolDefinition` which lives in `core/extensions/types.ts`, so colocating with other ToolSource impls is consistent. | Cross-package dependency direction. |
 | Q-2 | Do we surface remote tools to extensions' `tool_call` hook? | Yes — they are AgentTools like any other; `ExtensionRunner`'s wrapping path applies automatically. No special-case. | Determines whether `before_tool_call` / `after_tool_call` extension hooks fire for remote tools. Default keeps everything uniform. |
-| Q-3 | Where does the Gateway-side `pendingTools` Promise registry live? | Inside `NanoPencilEngineAdapter` (i.e. Gateway's `src/engine/nano-adapter.ts`), separate from the existing `ToolCorrelation` table. | The two registries handle different concerns: `ToolCorrelation` is for HTTP-route correlation; `pendingTools` is for engine-adapter ↔ transport invoke()/respond() bridging. |
+| Q-3 | Where does the Gateway-side `pendingTools` Promise registry live? | Inside `catuiEngineAdapter` (i.e. Gateway's `src/engine/nano-adapter.ts`), separate from the existing `ToolCorrelation` table. | The two registries handle different concerns: `ToolCorrelation` is for HTTP-route correlation; `pendingTools` is for engine-adapter ↔ transport invoke()/respond() bridging. |
 | Q-4 | Should `RemoteToolTransport.invoke()` receive the `Tool` parameters typed schema, or just the raw args object? | Raw `Record<string, unknown>`. Gateway already validates names; arg-shape validation is the model+execute() boundary, not the transport's job. | Keeps the transport interface schema-free (no TypeBox dependency leaks into Gateway). |
 | Q-5 | Engine personality / soul integration — does Soul evolve on remote tool usage the same way it does on local tool usage? | Yes. RemoteToolSource produces ordinary AgentTools and Soul hooks see them through the normal event bus. | Decided here to avoid Soul forking later. |
 
@@ -401,7 +401,7 @@ This proposal does NOT:
 
 - Define the HTTP wire protocol (lives in Gateway docs/18).
 - Define how the editor implements its local tool registry (lives in editor `remote-http-chat-provider-design.md` and follow-ups).
-- Add a "remote engine" abstraction to nanoPencil — there is no notion of nano-pencil-talking-to-nano-pencil-over-HTTP at this layer.
+- Add a "remote engine" abstraction to catui — there is no notion of nano-pencil-talking-to-nano-pencil-over-HTTP at this layer.
 - Change the AgentTool / ToolDefinition interfaces — the entire premise is "remote tools are ordinary tools whose execute() happens to delegate over a callback".
 - Add a tool-result streaming protocol — v0.2 is single-shot request/response.
 - Make claims about persistence — pending invocations live in memory; engine restart aborts in-flight tools.
@@ -412,9 +412,9 @@ This proposal does NOT:
 
 | Term | Defined here as |
 |---|---|
-| **Embedder** | The host process that calls `createAgentSession()`. For v0.2 the embedder is `Pencil-Agent-Gateway`'s `NanoPencilEngineAdapter`. |
+| **Embedder** | The host process that calls `createAgentSession()`. For v0.2 the embedder is `Pencil-Agent-Gateway`'s `catuiEngineAdapter`. |
 | **Remote tool** | A tool whose `execute()` is implemented by the embedder's transport callback rather than by code that runs inside nano-pencil. |
-| **Caller** | The party at the far end of the embedder's HTTP/IPC connection. For Gateway, the caller is `nanopencil-editor` (or a third-party HTTP client). |
+| **Caller** | The party at the far end of the embedder's HTTP/IPC connection. For Gateway, the caller is `catui-editor` (or a third-party HTTP client). |
 | **Transport** | The duplex callback object (`RemoteToolTransport`) that nano-pencil uses outbound (`invoke`) and the embedder uses inbound (`respond`, which is NOT on this interface — see §3.1 note). |
 | **Advertisement** | A `RemoteToolAdvertisement` — the caller's declaration that "I can execute a tool with this name and this argument schema". |
 

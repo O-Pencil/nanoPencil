@@ -1,7 +1,7 @@
 /**
  * [WHO]: Verifies Catui legacy filesystem migration planning/execution
  * [FROM]: Depends on node:test, node:assert, node:fs, node:os, node:path, MigrationManager
- * [TO]: Guards migration from legacy Pencil/NanoPencil roots into the Catui root
+ * [TO]: Guards migration from legacy Pencil/catui roots into the Catui root
  * [HERE]: test/catui-migration-tool.test.ts - focused migration compatibility coverage
  */
 import assert from "node:assert/strict";
@@ -11,7 +11,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { MigrationManager } from "../core/agent-dir/migration-tool.js";
 
-test("migration copies legacy NanoPencil and Pencil roots into Catui agents", () => {
+test("migration copies legacy catui and Pencil roots into Catui agents", () => {
 	const home = mkdtempSync(join(tmpdir(), "catui-migration-"));
 	try {
 		const nanoAgent = join(home, ".nanopencil", "agent");

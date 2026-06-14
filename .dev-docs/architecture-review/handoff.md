@@ -2,7 +2,7 @@
 
 # Handoff — boundaries with other agents
 
-The Arch Agent does not work in isolation. Three adjacent agents share the nanoPencil data and code surface but operate independently — the Diagnosis Agent and its dedicated Review Agent (the two-agent diagnosis pair documented at `.dev-docs/diagnosis/sop.md` and `.dev-docs/diagnosis/review-sop.md`), plus a hypothetical SAL Agent. This file defines who owns what and how findings cross boundaries (when they cross at all).
+The Arch Agent does not work in isolation. Three adjacent agents share the catui data and code surface but operate independently — the Diagnosis Agent and its dedicated Review Agent (the two-agent diagnosis pair documented at `.dev-docs/diagnosis/sop.md` and `.dev-docs/diagnosis/review-sop.md`), plus a hypothetical SAL Agent. This file defines who owns what and how findings cross boundaries (when they cross at all).
 
 ---
 

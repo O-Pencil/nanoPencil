@@ -45,7 +45,7 @@ new_review_targets:
 
 ### 1.2 两个决定性反差证据
 
-**证据 A — `nanoPencil/package.json:87-119` 的 `dependencies` 没有任何 `@pencil-agent/*`**：
+**证据 A — `catui/package.json:87-119` 的 `dependencies` 没有任何 `@pencil-agent/*`**：
 
 ```jsonc
 "dependencies": {
@@ -179,7 +179,7 @@ Pencil-Agent-Gateway          Pencil-extension/native-host
 
 | 子包 | 实质角色 | 表 vs 里一致吗？ |
 |------|----------|-----------------|
-| `ai` | host 内部模块，被 vendored 进 dist；版本号停在 0.0.1；有自己的 `nanopencil-ai` bin（但没在主 bin 注册）| ❌ 装独立但实际不独立 |
+| `ai` | host 内部模块，被 vendored 进 dist；版本号停在 0.0.1；有自己的 `catui-ai` bin（但没在主 bin 注册）| ❌ 装独立但实际不独立 |
 | `agent-core` | 同上，被 vendored；`@pencil-agent/agent-core` 名字暗示"通用 agent 抽象"但只有 nano-pencil 用 | ❌ |
 | `tui` | 同上，被 vendored；可独立的 TUI 库，但没人单独用 | ❌ |
 | `mem-core` | 真在迭代版本号（1.1.0），有 `extension.ts` 入口；README 力推 | ⚠️ 想独立但反向 import host |
@@ -281,7 +281,7 @@ extensions/
 
 **缺口 4：MCP servers 是唯一真正可第三方扩展的能力**
 - 但 MCP 只覆盖"tools"一类，不覆盖"themes"和"behaviors"。
-- README §"Built-in tools include" 列了 5 个内置工具，但用户能不能用 MCP 给 nanopencil 加新工具？技术上可以，但**文档缺位**。
+- README §"Built-in tools include" 列了 5 个内置工具，但用户能不能用 MCP 给 catui 加新工具？技术上可以，但**文档缺位**。
 
 ### 4.4 扩展能力综合评分
 
@@ -332,13 +332,13 @@ extensions/
 | **Continue.dev** | 33k | TS | **`core/`** `packages/` `extensions/` `gui/` `binary/` `skills/` | **`core/` 作顶层** | 8 个细粒度发布库 | `packages/continue-sdk/` |
 | Aider | 45k | Py | `aider/` `benchmark/` | `aider/` 单 module | 无 | 不显式 |
 | Codex (OpenAI) | 86k | Rust+TS+Py | `codex-rs/` `codex-cli/` `sdk/` `tools/` | `codex-rs/core/` 子目录 | 100+ Rust crate | **`sdk/typescript/` `sdk/python/`** 顶层 |
-| **nanoPencil 现状** | - | TS | `core/` `packages/` `modes/` `extensions/` | `core/` 但语义混乱 | 半发布 0 外部消费者 | 无 |
+| **catui 现状** | - | TS | `core/` `packages/` `modes/` `extensions/` | `core/` 但语义混乱 | 半发布 0 外部消费者 | 无 |
 
 **3 个关键观察**：
 
 1. **`core/` 是业界合法且常见选择** —— Continue.dev（33k★）顶层、Codex（86k★）子目录都用 `core/`。保留 `core/` 有充分先例。
 2. **Continue.dev 的拓扑就是候选 D 的形态** —— `core/`（业务核心，不发布）+ `packages/`（细粒度真发布库，含 SDK）+ `extensions/`（host 适配器）。8 个 packages：`continue-sdk` / `config-types` / `llm-info` / `openai-adapters` / `hub` / `fetch` / `terminal-security` / `config-yaml`，全部是**真有外部消费者**的小库。
-3. **Codex 100+ crate 是 Rust 特例**，npm package 边界成本高，nanoPencil 不应跟随。
+3. **Codex 100+ crate 是 Rust 特例**，npm package 边界成本高，catui 不应跟随。
 
 **结论**：候选 D 路线（`core/` + 精选 `packages/`）有 Continue.dev 直接背书。
 
@@ -359,7 +359,7 @@ extensions/
 **核心理念**：承认 packages/ 是**内部代码组织手段**，不再装"未来独立发布"。
 
 ```
-nanoPencil/
+catui/
 ├── cli.ts / main.ts / index.ts          ← 顶层入口（不变）
 │
 ├── src/                                  ← ★ 新增：把现 core/ 和 packages/ 合并的根
@@ -429,7 +429,7 @@ Pencil/                                  ← ecosystem 顶层
 │   ├── @pencil-agent/soul-core/         ← 跨项目性格能力
 │   └── @pencil-agent/extension-sdk/     ← ★ 新增：扩展开发 SDK
 │
-├── nanoPencil/                          ← nano-pencil 仅作为 ecosystem 一员
+├── catui/                          ← nano-pencil 仅作为 ecosystem 一员
 │   ├── src/                             ← 业务核心（不含 ai/agent-core/tui/mem/soul）
 │   ├── modes/                           ← TUI / print / rpc / acp
 │   ├── extensions/builtin/              ← 内置扩展
@@ -438,7 +438,7 @@ Pencil/                                  ← ecosystem 顶层
 │   └── package.json                     ← dependencies: @pencil-agent/ai, etc.（真依赖！）
 │
 ├── Pencil-Agent-Gateway/                ← 也消费 ecosystem packages
-├── nanopencil-editor/                   ← 也消费
+├── catui-editor/                   ← 也消费
 ├── Pencil-Pet/                          ← 未来可以用 mem/soul
 └── ...
 ```
@@ -514,7 +514,7 @@ Pencil/                                  ← ecosystem 顶层
 
 | 子包 | 独立发布意义 | 候选 D 归属 | 理由 |
 |------|------------|------------|------|
-| `ai` | 0 外部消费者 + 0.0.1 不动 + 无可见独立路线 | **退到 `core/lib/ai/`** | 当前是 nanoPencil 内部库 |
+| `ai` | 0 外部消费者 + 0.0.1 不动 + 无可见独立路线 | **退到 `core/lib/ai/`** | 当前是 catui 内部库 |
 | `agent-core` | 0 外部消费者 + 0.0.1 不动 | **退到 `core/lib/agent-core/`** | 同上 |
 | `tui` | 0 外部消费者 + 0.0.1 不动 | **退到 `core/lib/tui/`** | 同上 |
 | `mem-core` | README 力推 + maintainer 明确想保 + 已发 1.1.0 + 未来可接外部 store/provider | **保 `packages/mem-core/`** | 真发布的官方基础记忆实现 |
@@ -526,7 +526,7 @@ Pencil/                                  ← ecosystem 顶层
 本文不维护完整目录树，避免与 `target-architecture.md` 重复。候选 D 的权威目标目录见 `target-architecture.md §4`；本文只保留顶层骨架决策：
 
 ```text
-nanoPencil/
+catui/
 ├── core/        ← 仓库核心：runtime/tools/mcp/extensions-host + lib/platform（continuity/agent-profile = 演进保留）
 ├── modes/       ← 入口形态：interactive/print/rpc/acp
 ├── extensions/  ← 第一方能力实现：builtin/optional（browser 本轮 builtin→optional；升 Tool Runtime = 演进）

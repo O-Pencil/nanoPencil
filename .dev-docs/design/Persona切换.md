@@ -1,17 +1,17 @@
 # Persona 切换（人格包）
 
-Persona 切换用于在同一套 NanoPencil 运行环境内切换不同的「身份/性格/能力」组合。
+Persona 切换用于在同一套 catui 运行环境内切换不同的「身份/性格/能力」组合。
 
 ## 目录结构
 
 默认 persona 状态存储：
-`~/.nanopencil/agent/persona.json`
+`~/.catui/agent/persona.json`
 
 persona 目录：
-`~/.nanopencil/agent/personas/<personaId>/`
+`~/.catui/agent/personas/<personaId>/`
 
 推荐放置以下文件/目录（按需）：
-- `PENCIL.md`：人格上下文正文（会替换全局的 `~/.nanopencil/agent/.PENCIL.md` 注入内容）
+- `PENCIL.md`：人格上下文正文（会替换全局的 `~/.catui/agent/.PENCIL.md` 注入内容）
 - `skills/`：该人格专属技能（用于 `SKILL.md` 的载入）
 - `mcp.json`：该人格专属 MCP server 开关（用于启用/禁用不同的 MCP tools）
 - `soul/`：Soul 人格持久化存储
@@ -32,8 +32,8 @@ persona 目录：
 以 `designer` / `game-planner` 为例（你可以用任意目录名）：
 
 1. 创建目录：
-   - `mkdir -p ~/.nanopencil/agent/personas/designer/{skills,memory,soul}`
-   - `mkdir -p ~/.nanopencil/agent/personas/game-planner/{skills,memory,soul}`
+   - `mkdir -p ~/.catui/agent/personas/designer/{skills,memory,soul}`
+   - `mkdir -p ~/.catui/agent/personas/game-planner/{skills,memory,soul}`
 2. 为每个 persona 写入 `PENCIL.md`（让身份描述明显不同）。
 3. （可选）为每个 persona 准备不同的 `skills/` 目录与 `SKILL.md`（至少保证其中一个技能存在且名字不同）。
 4. （可选）为每个 persona 写入不同的 `mcp.json`：
@@ -42,7 +42,7 @@ persona 目录：
 
 ## 2. 验证 Pencil（系统提示词注入）
 
-1. 启动 nanoPencil 并执行：
+1. 启动 catui 并执行：
    - `/persona list`
    - `/persona use designer`
 2. 发送一条提问（例如“给我一个你作为 designer 的写作风格示例”）。

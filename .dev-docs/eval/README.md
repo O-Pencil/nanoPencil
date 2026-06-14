@@ -1,4 +1,4 @@
-# NanoPencil Eval
+# catui Eval
 
 > Type: Evaluation Overview
 > Status: Draft

@@ -64,7 +64,7 @@ dist/packages/           0.9 MB   ← mem-core + soul-core
 1. **拆 Browser 扩展为 opt-in**：
    - 不再默认 vendored 到 `dist/extensions/defaults/browser/`
    - 改为 `npm install -g @pencil-agent/browser-harness`（独立包）
-   - `nanopencil` 启动时检测到该包就启用 browser tools，否则给出安装提示
+   - `catui` 启动时检测到该包就启用 browser tools，否则给出安装提示
    - 预计 `dist/` 减少 ~1.3MB
 
 2. **`@pencil-agent/ai` lazy provider loading**：

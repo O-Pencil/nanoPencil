@@ -1,6 +1,6 @@
 {
   "name": "catui-agent",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "CLI writing agent with read, bash, edit, write tools and session management. Supports DashScope and Ali Token Plan. Soul enabled by default for AI personality evolution.",
   "type": "module",
   "bin": {
@@ -55,6 +55,7 @@
   ],
   "scripts": {
     "dev": "tsx cli.ts",
+    "test": "npm run test:dev-loop && npm run test:security && npm run test:commands && npm run test:tools",
     "build": "npm run clean:dist && npm run build:deps && tsc -p tsconfig.build.json && npm run copy:internal-libs && npm run copy:theme:json && npm run copy:assets && npm run build:meta && npm run minify:dist",
     "build:meta": "node scripts/generate-build-meta.js",
     "minify:dist": "node scripts/minify-dist.js",
@@ -69,6 +70,11 @@
     "benchmark:save": "node scripts/startup-benchmark.cjs --output .benchmarks/baseline.json",
     "benchmark:compare": "node scripts/startup-benchmark.cjs --baseline .benchmarks/baseline.json",
     "scaffold:docs": "node --import tsx scripts/scaffold-feature-docs.ts",
+    "dev-loop:plan": "node --import tsx scripts/dev-loop/verification-plan.ts",
+    "dev-loop:verify": "node --import tsx scripts/dev-loop/run-verification.ts",
+    "dev-loop:parse": "node --import tsx scripts/dev-loop/failure-parser.ts",
+    "dev-loop:pr": "node --import tsx scripts/dev-loop/github-provider.ts",
+    "dev-loop:watch": "node --import tsx scripts/dev-loop/watch.ts",
     "verify:dip": "node --import tsx scripts/verify-dip.ts",
     "verify:quality": "node --import tsx scripts/verify-quality.ts",
     "verify:package-boundary": "node --import tsx scripts/verify-package-boundary.ts",
@@ -81,6 +87,7 @@
     "wiki:all": "node --import tsx scripts/llm-wiki.ts all",
     "watch": "tsc --watch",
     "test:subagent": "node --test --import tsx test/subagent-parser.test.ts test/worktree-manager.test.ts test/bash-sandbox.test.ts",
+    "test:dev-loop": "node --test --import tsx test/dev-loop.test.ts",
     "test:team": "node --test --import tsx test/team-parser.test.ts test/team-runtime.test.ts",
     "test:plan": "node --test --import tsx test/plan-mode.test.ts",
     "test:utils": "node --test --import tsx test/logger.test.ts",

@@ -33,7 +33,7 @@ P5 interactive entry stable
 | 7 ✅ reviewed | package surface review | EV05 / Q3 / P8 | docs only | Q3 selects additive subpaths plus internal migration; do not narrow root exports in P6 |
 | 8 ✅ reviewed | AI package layer review | EV05 / Q3 | docs only | Confirms AI owns LLM contracts/catalog/stream/provider/oauth, not runtime/TUI/mem/soul |
 | 9 ✅ done | additive AI subpath exports | EV05 / Q3 | landed | Added explicit `@pencil-agent/ai/*` subpaths while keeping root legacy-compatible; maintainer validation passed |
-| 10 ✅ done | internal AI import migration | EV05 / Q3 | landed | Ordinary nanoPencil code now uses explicit AI subpaths; root import retained only for extension-loader bundling shim; maintainer validation passed |
+| 10 ✅ done | internal AI import migration | EV05 / Q3 | landed | Ordinary catui code now uses explicit AI subpaths; root import retained only for extension-loader bundling shim; maintainer validation passed |
 
 ## Conflict Matrix With P5
 

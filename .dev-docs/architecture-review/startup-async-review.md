@@ -20,13 +20,13 @@ api_change: additive (non-breaking) — declared per GB-2
 
 P6 cut cold-start ~75% by lazy-loading modes/providers, but **MCP was still
 awaited synchronously inside `createAgentSession`, before the session/UI even
-existed** (`sdk.ts`, old line 556). MCP is enabled by default for nanopencil
+existed** (`sdk.ts`, old line 556). MCP is enabled by default for catui
 (`main.ts`), and the **default config ships three npx-based servers enabled**
 (`filesystem`, `sequential-thinking`, `memory` — `DEFAULT_MCP_CONFIG`). Spawning
 `npx -y @modelcontextprotocol/server-*` serially and awaiting the handshake
 blocks the prompt for a long time.
 
-### Measured before-baseline (NANOPENCIL_TIMING / isolated `MCPManager.initialize`)
+### Measured before-baseline (CATUI_TIMING / isolated `MCPManager.initialize`)
 
 | MCP config | blocking init (on critical path) |
 |------------|----------------------------------|

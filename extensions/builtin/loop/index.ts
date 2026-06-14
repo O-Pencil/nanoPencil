@@ -25,6 +25,12 @@ import { createCronCreateTool, createCronDeleteTool, createCronListTool } from "
 import { buildLoopPrompt, getLoopUsageMessage } from "./loop-skill.js";
 
 const LOOP_CUSTOM_TYPE = "loop";
+const LOOP_COMMAND_COMPLETIONS = [
+	{ value: "every", label: "every", description: "Schedule a prompt with natural interval syntax" },
+	{ value: "status", label: "status", description: "Show scheduled tasks" },
+	{ value: "delete", label: "delete", description: "Delete a scheduled task" },
+	{ value: "--quiet", label: "--quiet", description: "Hide per-run messages" },
+];
 
 // Per-session state
 const schedulerByBus = new WeakMap<object, CronScheduler>();
@@ -119,6 +125,16 @@ export default async function loopExtension(api: ExtensionAPI) {
 	api.registerCommand("loop", {
 		description:
 			"Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo, defaults to 10m)",
+		getArgumentCompletions: (argumentPrefix, context) => {
+			const prefix = argumentPrefix.trim().toLowerCase();
+			if (prefix.startsWith("--")) {
+				const values = LOOP_COMMAND_COMPLETIONS.filter((item) => item.value.startsWith(prefix));
+				return values.length > 0 ? values : null;
+			}
+			if (context && context.tokenIndex > 0) return null;
+			const values = LOOP_COMMAND_COMPLETIONS.filter((item) => !item.value.startsWith("--") && item.value.startsWith(prefix));
+			return values.length > 0 ? values : null;
+		},
 		handler: async (args: string) => {
 			const trimmed = args.trim();
 

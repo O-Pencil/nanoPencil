@@ -1,6 +1,6 @@
 > 🗄️ **历史文档（重构期 Arch-Agent 操作手册）**：重构已结案（cutover 2026-06-09）。本文是当时执行一次性重构评审的操作说明，仅作历史参考、不再维护。日常开发流程见 [`../feature-workflow.md`](../feature-workflow.md)；活文档索引见 [`README.md`](./README.md)。
 
-# Project Context — nanoPencil-specific anchors
+# Project Context — catui-specific anchors
 
 Pointers, not summaries. The Arch Agent uses this file to **locate** project-specific anchors, not to substitute for reading them. Reading the file itself is always required.
 
@@ -76,7 +76,7 @@ These are highest-yield first inspections based on the symptoms above. The walki
 - `scripts/bundle-deps.js` and `npm run build:deps` order — failure modes
 - `core/tools/` + `core/tools/index.ts` — orchestrator depth vs tool depth
 - `core/extensions/types.ts` and `loader.ts` — extension contract surface
-- `builtin-extensions.ts` (root) + `nanopencil-defaults.ts` (root) — root-level orchestration; their existence outside `core/` or `extensions/` is itself a signal
+- `builtin-extensions.ts` (root) + `catui-defaults.ts` (root) — root-level orchestration; their existence outside `core/` or `extensions/` is itself a signal
 
 ---
 

@@ -39,7 +39,7 @@ Q3 selects the compatible subpath route:
 - keep root barrels compatible in P6
 - do not remove provider exports from `@pencil-agent/ai`
 - add explicit subpath exports only as an additive package-surface slice
-- migrate nanoPencil internal imports by capability group after subpaths exist
+- migrate catui internal imports by capability group after subpaths exist
 - defer root export narrowing/deprecation to P8 or a breaking-change release
 
 Detailed matrix: [package-surface-matrix.md](../package-surface-matrix.md)

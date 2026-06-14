@@ -24,7 +24,7 @@ audience: pencil maintainer · 未来 PARP RFC 作者
 
 ## 1. 定义
 
-**PARP（Pencil Agent Runtime Protocol）**：Pencil 的底层不是单一 CLI，而是一套可宿主、可组合、可扩展的 Agent Runtime Protocol。CLI 是默认 host profile；Browser 是 browser tool runtime + browser agent profile；Gateway 是 remote host adapter；Editor 是 caller-owned tool runtime。nanoPencil 的长期定位不是"一个 CLI + 插件"，而是 Pencil 生态里能配置出多类 PencilAgent 的 runtime 内核。
+**PARP（Pencil Agent Runtime Protocol）**：Pencil 的底层不是单一 CLI，而是一套可宿主、可组合、可扩展的 Agent Runtime Protocol。CLI 是默认 host profile；Browser 是 browser tool runtime + browser agent profile；Gateway 是 remote host adapter；Editor 是 caller-owned tool runtime。catui 的长期定位不是"一个 CLI + 插件"，而是 Pencil 生态里能配置出多类 PencilAgent 的 runtime 内核。
 
 > **PARP ≠ 新 wire protocol**。经调研（见 `industry-protocol-survey.md`），PARP 不是业界没有的新协议，更像是**业界第一次把已有标准显式组合起来的形态 + 如何复用业内已有标准**。它**不重新定义** Editor↔Agent、Host↔Tool、Host↔Host 的传输层，而是一份**组合契约（composition contract）**，把以下事实标准在 pencil 内统一组装：
 > - **MCP**（Model Context Protocol）= Tool Runtime 的远程分支事实标准

@@ -59,7 +59,7 @@ The main reason is not that esbuild is bad; it is that its strongest wins requir
 | Fewer runtime files if bundled | Node startup/module resolution | possible | current `dist` has hundreds of files; fewer files can reduce filesystem/module loader overhead |
 | Minified JS size | unpacked package size | possible medium | tarball/gzip savings may be smaller than raw JS savings; must be measured |
 | Tree-shaking provider/runtime imports | startup and package size | limited unless package surface changes | root barrels and extension virtual modules intentionally keep compatibility imports |
-| Single executable/binary pipeline foundation | future distribution | strategic | only relevant if nanoPencil later ships a bundled binary/app image |
+| Single executable/binary pipeline foundation | future distribution | strategic | only relevant if catui later ships a bundled binary/app image |
 
 ## What Esbuild Does Not Solve
 
@@ -88,7 +88,7 @@ Reopen only after:
 - there is a concrete size/performance target that previous slices did not meet.
 - a capable machine captures baseline measurements:
   - build time for `npm run build`
-  - cold `nanopencil -v` startup
+  - cold `catui -v` startup
   - `npm publish --dry-run --tag beta` tarball/unpacked size
   - extension loading smoke with built-in, optional, user-dir, and npm-package extensions
 

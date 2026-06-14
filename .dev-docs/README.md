@@ -46,7 +46,7 @@ Empty subdirectories above will fill in during step D of the GSA rollout (docume
 
 1. **No code in `extensions/defaults/`** as part of self-diagnosis or maintainer tooling. Default extensions auto-load in user sessions and consume user tokens.
 2. **No writes to user-side persistent state** (`~/.pencils/agents/<id>/mem-core/`, `~/.pencils/agents/<id>/soul/`) from anything in this directory's scope. Self-diagnosis observes; it does not mutate user behavior.
-3. **No insforge credentials in pencil source.** The backend is developer-owned; credentials live in `.memory-experiments/credentials.json` (gitignored) or `NANOPENCIL_*` env vars supplied by the maintainer.
+3. **No insforge credentials in pencil source.** The backend is developer-owned; credentials live in `.memory-experiments/credentials.json` (gitignored) or `CATUI_*` env vars supplied by the maintainer.
 4. **No cron / no schedule routines for self-diagnosis.** All runs are manual maintainer dispatch from `scripts/`.
 5. **`variant` field discipline.** Runs originating from `scripts/self-diagnosis/` must write `eval_runs.variant='self-diagnosis'` (not `'sal'`), so SAL experiment data and self-diagnosis data do not pollute each other.
 

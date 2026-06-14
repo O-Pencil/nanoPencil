@@ -2,7 +2,7 @@
 
 ## 概述
 
-NanoPencil 内置了智能的 API Key 引导系统。**MCP 默认启用**免费工具，当 AI 尝试使用需要 API Key 的工具时，系统会自动引导用户获取和配置密钥。
+catui 内置了智能的 API Key 引导系统。**MCP 默认启用**免费工具，当 AI 尝试使用需要 API Key 的工具时，系统会自动引导用户获取和配置密钥。
 
 ## 免费工具（默认启用）
 
@@ -150,10 +150,10 @@ AI: ⚠️  PostgreSQL - 未配置连接字符串
 ### 方法 1: 直接编辑配置文件
 ```bash
 # Windows
-notepad %USERPROFILE%\.nanopencil\agent\mcp.json
+notepad %USERPROFILE%\.catui\agent\mcp.json
 
 # Linux/Mac
-nano ~/.nanopencil/agent/mcp.json
+nano ~/.catui/agent/mcp.json
 ```
 
 ### 方法 2: 使用 `/mcp` 命令 (计划中)

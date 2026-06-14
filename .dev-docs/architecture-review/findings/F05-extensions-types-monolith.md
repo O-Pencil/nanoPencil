@@ -77,7 +77,7 @@ core/extensions/
 
 ## Benefits
 
-- **Leverage**：incremental TS compile 单点修改触发的重建集大幅缩小（实测 monolith 类型文件是 nanoPencil tsc 速度的主要限制之一）
+- **Leverage**：incremental TS compile 单点修改触发的重建集大幅缩小（实测 monolith 类型文件是 catui tsc 速度的主要限制之一）
 - **Locality**：UI 类型改动不影响 backend extension 重编译；新增 hook 不触碰 UI 类型空间
 - **Decouples one cross-layer import**：解 `core → modes/interactive/theme` 反向依赖
 - **DIP isomorphism**：P2 描述将变成可枚举的成员列表，而不是 "All X"

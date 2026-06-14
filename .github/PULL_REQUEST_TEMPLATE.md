@@ -1,6 +1,6 @@
 ## Pull Request Template
 
-**Thank you for contributing to NanoPencil!**
+**Thank you for contributing to catui!**
 
 Please fill out the following sections to help us review your PR.
 
@@ -70,5 +70,5 @@ Please fill out the following sections to help us review your PR.
 
 By submitting this PR, I confirm that:
 
-1. My contribution is made under the terms of the [GPL-3.0 License](https://github.com/O-Pencil/nanoPencil/blob/main/LICENSE)
+1. My contribution is made under the terms of the [GPL-3.0 License](https://github.com/O-Pencil/catui/blob/main/LICENSE)
 2. I have the right to submit this contribution

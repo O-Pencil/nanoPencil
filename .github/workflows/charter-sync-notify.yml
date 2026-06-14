@@ -45,7 +45,7 @@ jobs:
       matrix:
         repo:
           - O-Pencil/Pencil-Agent-Gateway
-          - O-Pencil/nanopencil-editor
+          - O-Pencil/catui-editor
           - O-Pencil/Asgard-platform
           - O-Pencil/Asgard-api
           - O-Pencil/Asgard-web
@@ -119,7 +119,7 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "The platform charter at \`nanoPencil/docs/pencil-platform-charter.md\` was just updated."
+            echo "The platform charter at \`catui/docs/pencil-platform-charter.md\` was just updated."
             echo ""
             echo "## What changed"
             echo ""
@@ -133,7 +133,7 @@ jobs:
             echo ""
             echo "- [ ] Open the charter at the new commit and skim §2 / §4 / §6 / §7 / §8 for anything this repo references"
             echo "- [ ] If a pointer needs to update wording (not just a link), file a PR in this repo"
-            echo "- [ ] If you find a charter mistake while reviewing, file a PR in **nanoPencil**, not here"
+            echo "- [ ] If you find a charter mistake while reviewing, file a PR in **catui**, not here"
             echo "- [ ] Close this issue when verification is done"
             echo ""
             echo "## Links"
@@ -143,7 +143,7 @@ jobs:
             echo "- Charter §10.3 (this workflow rationale): ${REPO_URL}/blob/main/docs/pencil-platform-charter.md#103-同步检测"
             echo ""
             echo "---"
-            echo "*Automated by nanoPencil/.github/workflows/charter-sync-notify.yml. Add \`[skip-charter-sync]\` to a charter commit message to suppress future notifications.*"
+            echo "*Automated by catui/.github/workflows/charter-sync-notify.yml. Add \`[skip-charter-sync]\` to a charter commit message to suppress future notifications.*"
           } > /tmp/sync/issue-body.md
 
       - name: Ensure charter-sync label exists in target repo
@@ -154,7 +154,7 @@ jobs:
           # Idempotent: creating an existing label returns a non-zero we swallow.
           gh label create "charter-sync" \
             --color "FFCC00" \
-            --description "Triggered by nanoPencil platform charter update" \
+            --description "Triggered by catui platform charter update" \
             -R "${{ matrix.repo }}" 2>/dev/null || true
 
       - name: Create tracking issue in ${{ matrix.repo }}

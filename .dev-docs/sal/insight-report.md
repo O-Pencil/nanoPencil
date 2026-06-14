@@ -36,9 +36,9 @@ nanomem insights --simple
 nanomem insights --simple --output ./simple-report.html
 ```
 
-### 方式二：NanoPencil 扩展命令
+### 方式二：catui 扩展命令
 
-在 NanoPencil 交互界面中：
+在 catui 交互界面中：
 
 ```
 /mem-insights
@@ -116,7 +116,7 @@ TypeScript 编译错误：TS2345     8 次
 
 ```
 ┌─────────────────────────────────────────┐
-│  nanoPencil                             │
+│  catui                             │
 ├─────────────────────────────────────────┤
 │  会话数：28                             │
 │  进度：重构核心模块，迁移 Soul 到扩展层   │
@@ -244,7 +244,7 @@ packages/mem-core/src/
 ├── human-insights.ts       # 开发者画像 + 人话洞察
 ├── full-insights-html.ts   # HTML 渲染器（完整版）
 ├── insights-html.ts        # HTML 渲染器（简化版）
-├── extension.ts            # NanoPencil 扩展集成
+├── extension.ts            # catui 扩展集成
 └── cli.ts                  # 独立 CLI 入口
 ```
 
@@ -268,7 +268,7 @@ start ./insights.html    # Windows
 0 17 * * 5 cd ~/projects/my-app && nanomem insights --output ./reports/week-$(date +%Y%m%d).html
 ```
 
-### 示例 3：在 NanoPencil 会话中查看
+### 示例 3：在 catui 会话中查看
 
 ```
 你：/mem-insights ./reports/march.html
@@ -294,11 +294,11 @@ AI: ✅ NanoMem: Generating full insights report...
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `NANOMEM_LOCALE` | 报告语言 | `zh-CN` |
-| `NANOMEM_CONFIG_DIR` | 配置目录 | `~/.nanopencil/agent/memory` |
+| `NANOMEM_CONFIG_DIR` | 配置目录 | `~/.catui/agent/memory` |
 
 ### 本地配置
 
-在 `~/.nanopencil/agent/settings.json` 中：
+在 `~/.catui/agent/settings.json` 中：
 
 ```json
 {
@@ -324,12 +324,12 @@ AI: ✅ NanoMem: Generating full insights report...
 ```bash
 nanomem stats
 ```
-如果会话数为 0，说明还没有记忆数据。正常使用 NanoPencil 后会自动积累。
+如果会话数为 0，说明还没有记忆数据。正常使用 catui 后会自动积累。
 
 ### Q: 如何删除旧数据重新生成？
 **A:** 清除记忆目录：
 ```bash
-rm -rf ~/.nanopencil/agent/memory/*
+rm -rf ~/.catui/agent/memory/*
 ```
 
 ### Q: 可以自定义报告样式吗？
@@ -349,4 +349,4 @@ rm -rf ~/.nanopencil/agent/memory/*
 ---
 
 **最后更新:** 2026-03-19  
-**维护者:** Word @ nanoPencil Team
+**维护者:** Word @ catui Team

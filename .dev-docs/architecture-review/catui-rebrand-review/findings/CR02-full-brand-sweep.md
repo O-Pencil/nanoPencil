@@ -9,7 +9,7 @@ owner: repo-wide
 
 ## Observation
 
-The current repository still contains active Pencil/nanoPencil references across package metadata, runtime config, SDK exports, extension aliases, diagnostics, docs, tests, and charter files. Leaving those references in active surfaces creates a split identity: users install Catui but see Pencil in errors, docs, env vars, storage hints, and import paths.
+The current repository still contains active Pencil/catui references across package metadata, runtime config, SDK exports, extension aliases, diagnostics, docs, tests, and charter files. Leaving those references in active surfaces creates a split identity: users install Catui but see Pencil in errors, docs, env vars, storage hints, and import paths.
 
 ## Decision
 
@@ -39,6 +39,6 @@ This is a public-API and user-data-path change. It must not ship as an incidenta
 
 ## Acceptance
 
-- `rg -n "pencil|Pencil|PENCILS|NANOPENCIL|nanopencil|nanoPencil|nano-pencil|@pencil-agent|\\.pencils|\\.nanopencil"` has no unclassified active-surface matches.
+- `rg -n "pencil|Pencil|PENCILS|CATUI|catui|catui|nano-pencil|@pencil-agent|\\.pencils|\\.catui"` has no unclassified active-surface matches.
 - Remaining matches are either in `CHANGELOG.md`/historical issue files or explicitly labeled legacy compatibility paths.
 - Build and all workflow gates pass.

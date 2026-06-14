@@ -279,6 +279,7 @@ describe("Cache Retention (CATUI_CACHE_RETENTION)", () => {
 		it("should omit prompt_cache_key when cacheRetention is none", async () => {
 			const model = getModel("openai", "gpt-4o-mini");
 			let capturedPayload: any = null;
+			const abort = new AbortController();
 
 			const { streamOpenAIResponses } = await import("../src/providers/openai-responses.js");
 
@@ -287,8 +288,10 @@ describe("Cache Retention (CATUI_CACHE_RETENTION)", () => {
 					apiKey: "fake-key",
 					cacheRetention: "none",
 					sessionId: "session-1",
+					signal: abort.signal,
 					onPayload: (payload) => {
 						capturedPayload = payload;
+						abort.abort();
 					},
 				});
 
@@ -307,6 +310,7 @@ describe("Cache Retention (CATUI_CACHE_RETENTION)", () => {
 		it("should set prompt_cache_retention when cacheRetention is long", async () => {
 			const model = getModel("openai", "gpt-4o-mini");
 			let capturedPayload: any = null;
+			const abort = new AbortController();
 
 			const { streamOpenAIResponses } = await import("../src/providers/openai-responses.js");
 
@@ -315,8 +319,10 @@ describe("Cache Retention (CATUI_CACHE_RETENTION)", () => {
 					apiKey: "fake-key",
 					cacheRetention: "long",
 					sessionId: "session-2",
+					signal: abort.signal,
 					onPayload: (payload) => {
 						capturedPayload = payload;
+						abort.abort();
 					},
 				});
 

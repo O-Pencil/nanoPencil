@@ -2,7 +2,7 @@
 
 ## 概述
 
-NanoPencil 现在支持 MCP (Model Context Protocol)，允许 AI 助手调用外部 MCP 服务器提供的工具。
+catui 现在支持 MCP (Model Context Protocol)，允许 AI 助手调用外部 MCP 服务器提供的工具。
 
 ## 什么是 MCP？
 
@@ -17,11 +17,11 @@ MCP 是一个开放协议，让 AI 应用能够：
 
 ### 配置文件位置
 
-MCP 配置文件位于: `~/.nanopencil/agent/mcp.json`
+MCP 配置文件位于: `~/.catui/agent/mcp.json`
 
 ### 默认配置
 
-NanoPencil 预配置了几个常用的 MCP 服务器：
+catui 预配置了几个常用的 MCP 服务器：
 
 ```json
 {
@@ -61,7 +61,7 @@ NanoPencil 预配置了几个常用的 MCP 服务器：
 如需禁用 MCP，使用 `--disable-mcp` 参数：
 
 ```bash
-nanopencil --disable-mcp
+catui --disable-mcp
 ```
 
 ### 可用的 MCP 服务器
@@ -138,10 +138,10 @@ MCP 工具通过以下格式调用：
 
 ```bash
 # Windows
-notepad %USERPROFILE%\.nanopencil\agent\mcp.json
+notepad %USERPROFILE%\.catui\agent\mcp.json
 
 # Linux/Mac
-nano ~/.nanopencil/agent/mcp.json
+nano ~/.catui/agent/mcp.json
 ```
 
 ### 2. 添加服务器配置
@@ -160,10 +160,10 @@ nano ~/.nanopencil/agent/mcp.json
 }
 ```
 
-### 3. 重启 NanoPencil
+### 3. 重启 catui
 
 ```bash
-nanopencil --enable-mcp
+catui --enable-mcp
 ```
 
 ## 环境变量
@@ -245,7 +245,7 @@ AI: 我会使用 brave-search 工具来搜索
 
 - [MCP 官方文档](https://modelcontextprotocol.io)
 - [MCP 服务器列表](https://github.com/modelcontextprotocol/servers)
-- NanoPencil 工具系统文档
+- catui 工具系统文档
 
 ## 注意事项
 

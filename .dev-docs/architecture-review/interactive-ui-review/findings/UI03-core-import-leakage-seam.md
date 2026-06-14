@@ -23,7 +23,7 @@ core/model/custom-providers · core/runtime/agent-session · core/session/compac
 core/extensions-host · core/platform/keybindings · core/messages · core/mcp/mcp-config
 core/model-resolver · core/platform/config/resource-loader · core/session/session-manager
 core/slash-commands · core/platform/i18n · core/persona/persona-manager
-core/tools/truncate · nanopencil-defaults · core/platform/utils/tools-manager
+core/tools/truncate · catui-defaults · core/platform/utils/tools-manager
 core/platform/timings · core/theme-contract
 ```
 

@@ -104,7 +104,7 @@ For each promoted candidate, write `findings/F<NN>-<short-slug>.md` using the sc
 
 ### 2.4 Render the HTML overview
 
-mattpocock SKILL.md specifies a self-contained HTML file in OS temp directory. For nanoPencil, place it at `$TMPDIR/architecture-review-<YYYYMMDDhhmm>.html` (or `/tmp/...` on Linux, `%TEMP%/...` on Windows). The file:
+mattpocock SKILL.md specifies a self-contained HTML file in OS temp directory. For catui, place it at `$TMPDIR/architecture-review-<YYYYMMDDhhmm>.html` (or `/tmp/...` on Linux, `%TEMP%/...` on Windows). The file:
 
 - self-contained — no external assets, embedded CSS, inline SVG/Mermaid where applicable
 - one card per finding (mirroring `findings/F<NN>-*.md`)

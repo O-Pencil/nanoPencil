@@ -126,7 +126,7 @@ import { main } from "@pencil-agent/nano-pencil";
 After:
 
 ```bash
-nanopencil
+catui
 ```
 
 `main` is not an SDK contract; the CLI entry is the package bin.

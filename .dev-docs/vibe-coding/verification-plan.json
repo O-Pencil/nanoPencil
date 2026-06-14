@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "repository": "O-Catui/Catui",
+  "description": "Agent-agnostic verification map for developing the CATUI/nanoPencil repository.",
+  "artifactRoot": ".catui/dev-loop",
+  "commands": [
+    {
+      "id": "dev-loop-tests",
+      "label": "Dev-loop focused tests",
+      "command": "npm run test:dev-loop",
+      "required": true,
+      "category": "test",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "dip",
+      "label": "DIP documentation map",
+      "command": "npm run verify:dip",
+      "required": true,
+      "category": "dip",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "quality",
+      "label": "Architecture quality boundaries",
+      "command": "npm run verify:quality",
+      "required": true,
+      "category": "quality",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "package-boundary",
+      "label": "Package boundary",
+      "command": "npm run verify:package-boundary",
+      "required": true,
+      "category": "package-boundary",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "build",
+      "label": "Build project",
+      "command": "npm run build",
+      "required": true,
+      "category": "build",
+      "timeoutMs": 600000
+    },
+    {
+      "id": "typecheck",
+      "label": "TypeScript type check",
+      "command": "npx tsc --noEmit",
+      "required": true,
+      "category": "typecheck",
+      "timeoutMs": 300000
+    },
+    {
+      "id": "security-tests",
+      "label": "Security boundary tests",
+      "command": "npm run test:security",
+      "required": true,
+      "category": "test",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "command-tests",
+      "label": "Slash command catalog tests",
+      "command": "npm run test:commands",
+      "required": true,
+      "category": "test",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "tool-tests",
+      "label": "Tool boundary tests",
+      "command": "npm run test:tools",
+      "required": true,
+      "category": "test",
+      "timeoutMs": 120000
+    }
+  ],
+  "prChecks": {
+    "provider": "gh",
+    "command": "gh pr checks <number> --json name,state,link,workflow,bucket,description,startedAt,completedAt",
+    "watchCommand": "gh pr checks <number> --watch --json name,state,link,workflow,bucket,description,startedAt,completedAt"
+  }
+}

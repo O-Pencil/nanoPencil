@@ -1,8 +1,8 @@
-# NanoPencil 内置 MCP 工具
+# catui 内置 MCP 工具
 
 ## 概述
 
-NanoPencil 内置了多个免费的 MCP (Model Context Protocol) 服务器，让 AI 助手可以：
+catui 内置了多个免费的 MCP (Model Context Protocol) 服务器，让 AI 助手可以：
 - 🌐 读取网页内容
 - 🔍 搜索网络
 - 🤖 自动化浏览器操作
@@ -225,33 +225,33 @@ AI:
 
 ## 配置文件位置
 
-配置文件: `~/.nanopencil/agent/mcp.json`
+配置文件: `~/.catui/agent/mcp.json`
 
 查看当前配置:
 ```bash
-cat ~/.nanopencil/agent/mcp.json
+cat ~/.catui/agent/mcp.json
 ```
 
 编辑配置:
 ```bash
 # Windows
-notepad %USERPROFILE%\.nanopencil\agent\mcp.json
+notepad %USERPROFILE%\.catui\agent\mcp.json
 
 # Linux/Mac
-nano ~/.nanopencil/agent/mcp.json
+nano ~/.catui/agent/mcp.json
 ```
 
-## 启用 NanoPencil with MCP
+## 启用 catui with MCP
 
 **MCP 默认已启用**，免费工具会自动加载。直接运行：
 
 ```bash
-nanopencil
+catui
 ```
 
 如需禁用 MCP：
 ```bash
-nanopencil --disable-mcp
+catui --disable-mcp
 ```
 
 ## 工具调用格式
@@ -318,7 +318,7 @@ nanopencil --disable-mcp
 ## 相关资源
 
 - [MCP 官方服务器列表](https://github.com/modelcontextprotocol/servers)
-- [NanoPencil MCP 指南](MCP集成指南.md)
+- [catui MCP 指南](MCP集成指南.md)
 - [MCP 规范](https://modelcontextprotocol.io)
 
 ---

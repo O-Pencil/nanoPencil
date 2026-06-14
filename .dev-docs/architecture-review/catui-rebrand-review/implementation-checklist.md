@@ -15,7 +15,7 @@ Each item must move through:
 [x] pending -> [x] in progress -> [x] accepted
 ```
 
-Do not mark an item accepted unless its local acceptance command or review check has passed. Remaining Pencil/nanoPencil matches must be classified as one of:
+Do not mark an item accepted unless its local acceptance command or review check has passed. Remaining Pencil/catui matches must be classified as one of:
 
 - legacy compatibility alias
 - immutable history
@@ -47,13 +47,13 @@ Do not mark an item accepted unless its local acceptance command or review check
   - Change: `bin.catui`, CLI help, README quick start, update/reinstall prompts.
   - Acceptance: `node dist/cli.js --help` shows `Usage: catui`.
 
-- [x] Keep or remove legacy `nanopencil` bin by explicit policy.
+- [x] Keep or remove legacy `catui` bin by explicit policy.
   - Change: if kept, mark as deprecated compatibility alias; if removed, document breaking change.
   - Acceptance: `package.json` bin map matches CR03 policy.
 
 - [x] Replace process titles, temp prefixes, and user-visible labels.
   - Change: `process.title`, temp filenames, logs, startup banners.
-  - Acceptance: `rg -n "nanopencil|nanoPencil|NanoPencil" cli.ts main.ts modes core utils` has no unclassified active matches.
+  - Acceptance: `rg -n "catui|catui|catui" cli.ts main.ts modes core utils` has no unclassified active matches.
 
 ### 3. Runtime Config And Filesystem
 
@@ -66,16 +66,16 @@ Do not mark an item accepted unless its local acceptance command or review check
   - Acceptance: env override smoke tests prove `CATUI_*` wins over defaults.
 
 - [x] Keep old env vars only as legacy aliases.
-  - Change: `PENCILS_*`, `NANOPENCIL_*` reads stay centralized and commented.
-  - Acceptance: compatibility tests cover at least `NANOPENCIL_CODING_AGENT_DIR` and `PENCILS_HOME`.
+  - Change: `PENCILS_*`, `CATUI_*` reads stay centralized and commented.
+  - Acceptance: compatibility tests cover at least `CATUI_CODING_AGENT_DIR` and `PENCILS_HOME`.
 
 - [x] Update migration tool to copy from old roots to `~/.catui`.
   - Change: `core/agent-dir/migration-tool.ts`.
-  - Acceptance: dry-run fixture test shows `~/.nanopencil/agent -> ~/.catui/agents/default` and `~/.pencils/agents/<id> -> ~/.catui/agents/<id>`.
+  - Acceptance: dry-run fixture test shows `~/.catui/agent -> ~/.catui/agents/default` and `~/.pencils/agents/<id> -> ~/.catui/agents/<id>`.
 
 - [x] Decide project-local dot directory policy.
-  - Change: `.nanopencil` project-local dirs in sub-agent/task/loop storage either become `.catui` or are classified as legacy read aliases.
-  - Acceptance: `rg -n "\\.nanopencil|\\.pencils" core extensions modes test` returns only migration/legacy compatibility matches.
+  - Change: `.catui` project-local dirs in sub-agent/task/loop storage either become `.catui` or are classified as legacy read aliases.
+  - Acceptance: `rg -n "\\.catui|\\.pencils" core extensions modes test` returns only migration/legacy compatibility matches.
 
 ### 4. Public SDK And API Names
 
@@ -103,25 +103,25 @@ Do not mark an item accepted unless its local acceptance command or review check
 
 - [x] Update built-in extension labels and prompts.
   - Change: goal, debug, soul, token-save, browser/link-world messages where old brand appears.
-  - Acceptance: `rg -n "NanoPencil|nanoPencil|nanopencil|Pencil" extensions` has no unclassified active matches.
+  - Acceptance: `rg -n "catui|catui|catui|Pencil" extensions` has no unclassified active matches.
 
 ### 6. Runtime Identifiers
 
 - [x] Rename diagnostic global keys.
-  - Change: `Symbol.for("nanopencil...")` to `catui...`, preserving old read bridge only if required.
-  - Acceptance: diagnostics tests pass and scan has no unclassified `nanopencil.diagnostic`.
+  - Change: `Symbol.for("catui...")` to `catui...`, preserving old read bridge only if required.
+  - Acceptance: diagnostics tests pass and scan has no unclassified `catui.diagnostic`.
 
 - [x] Rename debug/profile/offline env vars.
-  - Change: `NANOPENCIL_DEBUG`, `NANOPENCIL_PROFILE_STARTUP`, `NANOPENCIL_OFFLINE`, etc. to `CATUI_*`.
+  - Change: `CATUI_DEBUG`, `CATUI_PROFILE_STARTUP`, `CATUI_OFFLINE`, etc. to `CATUI_*`.
   - Acceptance: tests or smoke commands prove both canonical and legacy env behavior.
 
 - [x] Rename HTML export meta names and URL param keys if user-visible.
-  - Change: `nanopencil-url-params`, `nanopencil-share-base-url`, share viewer envs.
+  - Change: `catui-url-params`, `catui-share-base-url`, share viewer envs.
   - Acceptance: export tests pass and old keys are documented only if preserved for compatibility.
 
 ### 7. Defaults, Prompts, And Generated Files
 
-- [x] Rename `nanopencil-defaults.ts` and exported default symbols, or document staged internal cleanup.
+- [x] Rename `catui-defaults.ts` and exported default symbols, or document staged internal cleanup.
   - Change: file name, imports, P3 headers, P2 member lists.
   - Acceptance: DIP passes.
 
@@ -131,7 +131,7 @@ Do not mark an item accepted unless its local acceptance command or review check
 
 - [x] Update default user-facing error messages.
   - Change: startup auth prompts, missing model messages, update notices.
-  - Acceptance: `rg -n "nanoPencil|NanoPencil|nano-pencil" nanopencil-defaults.ts main.ts modes core` has only legacy compatibility matches.
+  - Acceptance: `rg -n "catui|catui|nano-pencil" catui-defaults.ts main.ts modes core` has only legacy compatibility matches.
 
 ### 8. Documentation And Charter
 
@@ -141,7 +141,7 @@ Do not mark an item accepted unless its local acceptance command or review check
 
 - [x] Update README, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT.
   - Change: active user docs and links.
-  - Acceptance: `rg -n "NanoPencil|nanoPencil|@pencil-agent|nanopencil" README.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md` returns no unclassified active matches.
+  - Acceptance: `rg -n "catui|catui|@pencil-agent|catui" README.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md` returns no unclassified active matches.
 
 - [x] Update charter current-state docs or move them to historical status.
   - Change: `charter/` docs that currently define Pencil ecosystem terms.
@@ -154,11 +154,11 @@ Do not mark an item accepted unless its local acceptance command or review check
 ### 9. Tests And Fixtures
 
 - [x] Update test temp names and assertions.
-  - Change: `nanopencil-*` temp dirs, import names, expected prompts.
+  - Change: `catui-*` temp dirs, import names, expected prompts.
   - Acceptance: relevant test suites pass.
 
 - [x] Add migration compatibility tests.
-  - Change: tests for `~/.nanopencil`, `~/.pencils`, legacy env aliases.
+  - Change: tests for `~/.catui`, `~/.pencils`, legacy env aliases.
   - Acceptance: tests fail before migration code and pass after.
 
 - [x] Add extension import compatibility tests.
@@ -168,7 +168,7 @@ Do not mark an item accepted unless its local acceptance command or review check
 ### 10. Final Gates
 
 - [x] Run full brand scan.
-  - Command: `rg -n "pencil|Pencil|PENCILS|NANOPENCIL|nanopencil|nanoPencil|nano-pencil|@pencil-agent|\\.pencils|\\.nanopencil" -S --glob '!dist/**' --glob '!node_modules/**'`.
+  - Command: `rg -n "pencil|Pencil|PENCILS|CATUI|catui|catui|nano-pencil|@pencil-agent|\\.pencils|\\.catui" -S --glob '!dist/**' --glob '!node_modules/**'`.
   - Acceptance: every remaining match is listed as legacy compatibility, immutable history, or external future work.
 
 - [x] Run DIP.
@@ -206,7 +206,7 @@ Last checked: 2026-06-13
 Commands accepted:
 
 ```bash
-rg -n "pencil|Pencil|PENCILS|NANOPENCIL|nanopencil|nanoPencil|nano-pencil|@pencil-agent|\.pencils|\.nanopencil" -S --glob '!dist/**' --glob '!node_modules/**' --glob '!CHANGELOG.md' --glob '!issues/**' --glob '!.dev-docs/architecture-review/catui-rebrand-review/**'
+rg -n "pencil|Pencil|PENCILS|CATUI|catui|catui|nano-pencil|@pencil-agent|\.pencils|\.catui" -S --glob '!dist/**' --glob '!node_modules/**' --glob '!CHANGELOG.md' --glob '!issues/**' --glob '!.dev-docs/architecture-review/catui-rebrand-review/**'
 npm run verify:dip
 npm run verify:quality
 npm run verify:package-boundary
@@ -219,7 +219,7 @@ node --import tsx test/extension-loader-catui-aliases.test.ts
 
 Residual old-brand matches are accepted only in these categories:
 
-- Legacy filesystem migration sources: `core/agent-dir/migration-tool.ts` and `test/catui-migration-tool.test.ts` intentionally reference `~/.nanopencil`, `~/.pencils`, and Pencil/NanoPencil labels so old user data can be copied into `~/.catui/agents/*`.
-- Legacy environment aliases: `config.ts`, `core/package-manager.ts`, `core/platform/*`, `core/lib/*`, `utils/*`, `scripts/self-diagnosis/*`, and `extensions/builtin/plan/*` read `NANOPENCIL_*` or `PENCILS_*` only as fallback after the canonical `CATUI_*` variable.
+- Legacy filesystem migration sources: `core/agent-dir/migration-tool.ts` and `test/catui-migration-tool.test.ts` intentionally reference `~/.catui`, `~/.pencils`, and Pencil/catui labels so old user data can be copied into `~/.catui/agents/*`.
+- Legacy environment aliases: `config.ts`, `core/package-manager.ts`, `core/platform/*`, `core/lib/*`, `utils/*`, `scripts/self-diagnosis/*`, and `extensions/builtin/plan/*` read `CATUI_*` or `PENCILS_*` only as fallback after the canonical `CATUI_*` variable.
 - Legacy SDK and extension compatibility aliases: `core/runtime/catui-agent.ts` exports deprecated `PencilAgent` types; `core/extensions-host/loader.ts` keeps `@pencil-agent/nano-pencil` as an extension import alias.
 - Immutable history remains outside this checklist scan in `CHANGELOG.md` and `issues/**`.

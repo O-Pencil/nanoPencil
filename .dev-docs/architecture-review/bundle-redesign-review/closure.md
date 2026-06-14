@@ -105,7 +105,7 @@ npm run build
 npm run verify:package-boundary:dist
 npm publish --dry-run --tag beta
 npm install -g @pencil-agent/nano-pencil@beta
-nanopencil -v
+catui -v
 ```
 
 Notes:
@@ -178,7 +178,7 @@ per-file transform, **not a bundle** — import/export statements and module
 boundaries are byte-for-byte preserved, so the embedded private-lib strategy,
 jiti aliases, dynamic imports, and asset-relative paths are untouched.
 `keepNames` keeps Function/class `.name` at runtime (stack traces, error
-fingerprints, name-based wiring intact). Escape hatch: `NANOPENCIL_NO_MINIFY=1`.
+fingerprints, name-based wiring intact). Escape hatch: `CATUI_NO_MINIFY=1`.
 
 Measured (same tree, before/after `npm pack`):
 

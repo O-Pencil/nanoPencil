@@ -7,7 +7,7 @@
 
 ## Responsibility
 
-This directory documents NanoPencil evaluation work. It does not define production behavior by itself. Eval documents produce observations and suggestions; adoption requires a follow-up experiment, replay, human review, or code-level validation.
+This directory documents catui evaluation work. It does not define production behavior by itself. Eval documents produce observations and suggestions; adoption requires a follow-up experiment, replay, human review, or code-level validation.
 
 ## Members
 

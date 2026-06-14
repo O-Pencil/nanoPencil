@@ -2,14 +2,14 @@
 
 ## 功能
 
-`/apikey` 命令允许用户在运行时更新当前模型提供商的 API Key，无需重启 nanopencil。
+`/apikey` 命令允许用户在运行时更新当前模型提供商的 API Key，无需重启 catui。
 
 ## 使用方法
 
-1. 在 nanopencil 交互界面中，输入 `/apikey` 并按回车
+1. 在 catui 交互界面中，输入 `/apikey` 并按回车
 2. 系统会提示你输入新的 API Key
 3. 输入完成后按回车确认
-4. API Key 会立即保存到 `~/.nanopencil/agent/auth.json` 并生效
+4. API Key 会立即保存到 `~/.catui/agent/auth.json` 并生效
 
 ## 示例
 

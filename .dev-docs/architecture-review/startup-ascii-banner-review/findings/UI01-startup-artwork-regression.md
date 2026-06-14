@@ -2,7 +2,7 @@
 
 ## Finding
 
-The previous rebrand replaced the historical NanoPencil moon-and-cats startup artwork with a simpler Catui banner. The user wanted the original two-cat artwork restored while keeping the Catui brand.
+The previous rebrand replaced the historical catui moon-and-cats startup artwork with a simpler Catui banner. The user wanted the original two-cat artwork restored while keeping the Catui brand.
 
 ## Resolution
 

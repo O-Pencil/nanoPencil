@@ -13,13 +13,13 @@ import type { Tool } from "../tools/index.js";
 
 /** Realtime lifecycle event emitted by a running SubAgent. */
 export type SubAgentEvent =
-  | { type: "agent_start"; subAgentId: string; timestamp: number; agentType: string; description: string; isAsync: boolean }
+  | { type: "agent_start"; subAgentId: string; timestamp: number; agentType: string; description: string; isAsync: boolean; parentToolCallId?: string }
   | { type: "message_update"; subAgentId: string; timestamp: number; text: string; deltaType?: string }
   | { type: "message_end"; subAgentId: string; timestamp: number; text: string }
-  | { type: "tool_start"; subAgentId: string; timestamp: number; toolName: string; args: unknown }
+  | { type: "tool_start"; subAgentId: string; timestamp: number; toolName: string; args: unknown; parentToolCallId?: string }
   | { type: "tool_update"; subAgentId: string; timestamp: number; toolName: string; partialResult: unknown }
-  | { type: "tool_end"; subAgentId: string; timestamp: number; toolName: string; isError: boolean; result?: unknown; durationMs?: number }
-  | { type: "agent_end"; subAgentId: string; timestamp: number; success: boolean; error?: string };
+  | { type: "tool_end"; subAgentId: string; timestamp: number; toolName: string; isError: boolean; result?: unknown; durationMs?: number; parentToolCallId?: string }
+  | { type: "agent_end"; subAgentId: string; timestamp: number; success: boolean; error?: string; parentToolCallId?: string };
 
 /**
  * Specification for spawning a SubAgent.
@@ -37,6 +37,8 @@ export interface SubAgentSpec {
   description?: string;
   /** Whether this agent was launched as a background/async agent */
   isAsync?: boolean;
+  /** The tool call ID of the parent Agent tool that spawned this SubAgent */
+  parentToolCallId?: string;
   /** Abort signal for stopping the SubAgent (required) */
   signal: AbortSignal;
   /** Optional timeout in milliseconds */

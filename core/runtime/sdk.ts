@@ -204,6 +204,37 @@ export interface CreateAgentSessionOptions extends SoulOptionsContract {
     rawInput: unknown;
   }) => Promise<AgentToolPermissionDecision> | AgentToolPermissionDecision;
 
+  /**
+   * Tool whitelist. When specified, only these tools are allowed to execute.
+   * All other tools will be denied. Useful for constraining the agent to a
+   * specific set of capabilities.
+   *
+   * Applied BEFORE `canUseTool` — if a tool is not in `allowedTools`, it is
+   * denied without calling `canUseTool`.
+   */
+  allowedTools?: string[];
+
+  /**
+   * Tool blacklist. When specified, these tools are always denied.
+   * Useful for disabling specific tools without restricting everything else.
+   *
+   * Applied BEFORE `canUseTool` — if a tool is in `disallowedTools`, it is
+   * denied without calling `canUseTool`.
+   */
+  disallowedTools?: string[];
+
+  /**
+   * Custom system prompt suffix. Appended to the agent's base system prompt.
+   * Useful for injecting user-defined instructions (e.g., "Always respond in Chinese").
+   */
+  systemPrompt?: string;
+
+  /**
+   * Additional environment variables to merge into the agent's process environment.
+   * Applied at session creation; child processes inherit these.
+   */
+  env?: Record<string, string>;
+
   /** Session manager. Default: SessionManager.create(cwd) */
   sessionManager?: SessionManager;
 
@@ -353,6 +384,55 @@ function getDefaultAgentDir(): string {
  * });
  * ```
  */
+
+/**
+ * Build the composite canUseTool function from session options.
+ * Chains: allowedTools/disallowedTools filter → plan-mode check → user's canUseTool.
+ */
+function buildCanUseTool(
+  options: CreateAgentSessionOptions,
+  cwd: string,
+): ((event: any) => any) | undefined {
+  const { allowedTools, disallowedTools, permissionMode, canUseTool: userCanUseTool } = options;
+
+  // If no filtering options and no plan mode, pass through directly
+  if (!allowedTools && !disallowedTools && permissionMode !== "plan") {
+    return userCanUseTool as any;
+  }
+
+  // Build the composite function
+  const toolFilter = (event: { toolName: string; requestedToolName: string }) => {
+    const name = event.toolName ?? event.requestedToolName;
+    if (disallowedTools?.includes(name)) {
+      return { decision: "deny" as const, reason: `Tool '${name}' is disallowed` };
+    }
+    if (allowedTools && !allowedTools.includes(name)) {
+      return { decision: "deny" as const, reason: `Tool '${name}' is not in the allowed tools list` };
+    }
+    return undefined; // not filtered — pass through to next check
+  };
+
+  if (permissionMode === "plan") {
+    const planCheck = createPlanModeCanUseTool(cwd);
+    return composePlanModeCanUseTool(
+      planCheck,
+      async (event: any) => {
+        const filtered = toolFilter(event);
+        if (filtered) return filtered;
+        if (userCanUseTool) return userCanUseTool(event);
+        return { decision: "allow" as const };
+      },
+    ) as any;
+  }
+
+  return (async (event: any) => {
+    const filtered = toolFilter(event);
+    if (filtered) return filtered;
+    if (userCanUseTool) return userCanUseTool(event);
+    return { decision: "allow" as const };
+  }) as any;
+}
+
 export async function createAgentSession(
   options: CreateAgentSessionOptions = {},
 ): Promise<CreateAgentSessionResult> {
@@ -365,6 +445,15 @@ export async function createAgentSession(
 
   // Setup logger
   const logger = options.silent ? silentLogger : (options.logger ?? defaultLogger);
+
+  // Merge custom env vars into process.env (before MCP init so servers can use them)
+  if (options.env) {
+    for (const [key, value] of Object.entries(options.env)) {
+      if (!(key in process.env)) {
+        process.env[key] = value;
+      }
+    }
+  }
 
   const cwd = options.cwd ?? process.cwd();
   const agentCtx = options.agentCtx ?? defaultAgentDirContext();
@@ -553,9 +642,7 @@ export async function createAgentSession(
     maxModelErrorRecoveryAttempts:
       options.maxModelErrorRecoveryAttempts ?? options.loopPolicy?.maxModelErrorRecoveryAttempts,
     maxStopHookContinuations: options.maxStopHookContinuations ?? options.loopPolicy?.maxStopHookContinuations,
-    canUseTool: options.permissionMode === "plan"
-      ? composePlanModeCanUseTool(createPlanModeCanUseTool(cwd), options.canUseTool) as any
-      : options.canUseTool as any,
+    canUseTool: buildCanUseTool(options, cwd),
     getApiKey: async (provider) => {
       // Use the provider argument from the in-flight request;
       // agent.state.model may already be switched mid-turn.
@@ -728,6 +815,12 @@ export async function createAgentSession(
   }
 
   const extensionsResult = resourceLoader.getExtensions();
+
+  // Append custom system prompt if provided
+  if (options.systemPrompt) {
+    const currentPrompt = session.systemPrompt ?? session.agent.state.systemPrompt ?? "";
+    session.agent.setSystemPrompt(currentPrompt + "\n\n" + options.systemPrompt);
+  }
 
   return {
     session,

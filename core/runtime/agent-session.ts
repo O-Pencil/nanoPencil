@@ -217,12 +217,18 @@ export type AgentSessionEvent =
       // "MCP ready" status without blocking startup. See warmupMcpTools().
       type: "sdk:mcp_ready";
       toolCount: number;
+      /** Full list of active tool names at the time of emission. */
+      tools: string[];
+      /** Current model ID, if any. */
+      model?: string;
+      /** Names of MCP-powered tools (subset of tools[]). */
+      mcpTools: string[];
     }
   // Sub-agent lifecycle events (forwarded from SubAgentEvent)
-  | { type: "sub_agent_start"; subAgentId: string; agentType: string; description: string; isAsync: boolean }
-  | { type: "sub_agent_tool_start"; subAgentId: string; toolName: string; input?: unknown }
-  | { type: "sub_agent_tool_end"; subAgentId: string; toolName: string; isError: boolean; output?: unknown; durationMs?: number }
-  | { type: "sub_agent_end"; subAgentId: string; success: boolean }
+  | { type: "sub_agent_start"; subAgentId: string; agentType: string; description: string; isAsync: boolean; parentToolCallId?: string }
+  | { type: "sub_agent_tool_start"; subAgentId: string; toolName: string; input?: unknown; parentToolCallId?: string }
+  | { type: "sub_agent_tool_end"; subAgentId: string; toolName: string; isError: boolean; output?: unknown; durationMs?: number; parentToolCallId?: string }
+  | { type: "sub_agent_end"; subAgentId: string; success: boolean; parentToolCallId?: string }
   | { type: "tool_input_delta"; toolCallId: string; toolName: string; delta: string }
   | {
       type: "debug";
@@ -240,13 +246,13 @@ export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
 function mapSubAgentEvent(event: SubAgentEvent): AgentSessionEvent | undefined {
   switch (event.type) {
     case "agent_start":
-      return { type: "sub_agent_start", subAgentId: event.subAgentId, agentType: event.agentType, description: event.description, isAsync: event.isAsync };
+      return { type: "sub_agent_start", subAgentId: event.subAgentId, agentType: event.agentType, description: event.description, isAsync: event.isAsync, parentToolCallId: event.parentToolCallId };
     case "tool_start":
-      return { type: "sub_agent_tool_start", subAgentId: event.subAgentId, toolName: event.toolName, input: event.args };
+      return { type: "sub_agent_tool_start", subAgentId: event.subAgentId, toolName: event.toolName, input: event.args, parentToolCallId: event.parentToolCallId };
     case "tool_end":
-      return { type: "sub_agent_tool_end", subAgentId: event.subAgentId, toolName: event.toolName, isError: event.isError, output: event.result, durationMs: event.durationMs };
+      return { type: "sub_agent_tool_end", subAgentId: event.subAgentId, toolName: event.toolName, isError: event.isError, output: event.result, durationMs: event.durationMs, parentToolCallId: event.parentToolCallId };
     case "agent_end":
-      return { type: "sub_agent_end", subAgentId: event.subAgentId, success: event.success };
+      return { type: "sub_agent_end", subAgentId: event.subAgentId, success: event.success, parentToolCallId: event.parentToolCallId };
     default:
       return undefined;
   }
@@ -2158,7 +2164,15 @@ export class AgentSession {
         flagValues: this._extensionRunner?.getFlagValues(),
         includeAllExtensionTools: true,
       });
-      this._emit({ type: "sdk:mcp_ready", toolCount });
+      const tools = this.getActiveToolNames();
+      const mcpTools = tools.filter((n) => n.startsWith("mcp_"));
+      this._emit({
+        type: "sdk:mcp_ready",
+        toolCount,
+        tools,
+        model: this.model?.id,
+        mcpTools,
+      });
       this._emitDebug("basic", "mcp", "mcp_warmup_complete", { toolCount });
     } catch (error) {
       // MCP problems must never crash startup (background warmup is

@@ -55,7 +55,7 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
 
     const { session } = await this.createSession(options);
     const unsubscribe = session.subscribe((event) => {
-      const subAgentEvent = toSubAgentEvent(id, event);
+      const subAgentEvent = toSubAgentEvent(id, event, spec.parentToolCallId);
       if (subAgentEvent) {
         spec.onEvent?.(subAgentEvent);
       }
@@ -85,6 +85,7 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
           agentType: spec.agentType ?? "Agent",
           description: spec.description ?? "",
           isAsync: spec.isAsync ?? false,
+          parentToolCallId: spec.parentToolCallId,
         });
         await session.prompt(prompt, {
           images: spec.images,
@@ -143,6 +144,7 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
           timestamp: Date.now(),
           success: result?.success ?? false,
           error: result?.error,
+          parentToolCallId: spec.parentToolCallId,
         });
       }
     })();
@@ -177,7 +179,7 @@ function isAssistantMessage(message: AgentMessage): message is AgentMessage & { 
   return message.role === "assistant" && "content" in message;
 }
 
-function toSubAgentEvent(subAgentId: string, event: AgentSessionEvent): SubAgentEvent | undefined {
+function toSubAgentEvent(subAgentId: string, event: AgentSessionEvent, parentToolCallId?: string): SubAgentEvent | undefined {
   const timestamp = Date.now();
   switch (event.type) {
     case "message_update":
@@ -202,6 +204,7 @@ function toSubAgentEvent(subAgentId: string, event: AgentSessionEvent): SubAgent
         timestamp,
         toolName: event.toolName,
         args: event.args,
+        parentToolCallId,
       };
     case "tool_execution_update":
       return {
@@ -220,6 +223,7 @@ function toSubAgentEvent(subAgentId: string, event: AgentSessionEvent): SubAgent
         isError: event.isError,
         result: event.result,
         durationMs: event.durationMs,
+        parentToolCallId,
       };
     default:
       return undefined;

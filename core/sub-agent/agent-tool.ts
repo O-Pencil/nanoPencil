@@ -394,6 +394,7 @@ export function createAgentTool(config: AgentToolConfig): AgentTool<typeof agent
           registry,
           config,
           backend,
+          toolCallId,
         );
         return {
           content: [{ type: "text", text: formatAsyncOutputForParent(asyncOutput) }],
@@ -417,6 +418,7 @@ export function createAgentTool(config: AgentToolConfig): AgentTool<typeof agent
           config,
           backend,
           config.autoBackgroundMs ?? AUTO_BACKGROUND_THRESHOLD_MS,
+          toolCallId,
         );
 
         // Format the result for the parent LLM
@@ -470,6 +472,7 @@ async function executeSync(
   config: AgentToolConfig,
   backend: InProcessSubAgentBackend,
   autoBackgroundMs: number,
+  parentToolCallId?: string,
 ): Promise<AgentOutputCompleted | AgentOutputAsync> {
   const abortController = new AbortController();
   let autoBackgroundTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -487,6 +490,7 @@ async function executeSync(
       agentType: agentDef.agentType,
       description: args.description,
       isAsync: metadata.isAsync,
+      parentToolCallId,
       onEvent: (event: SubAgentEvent) => {
         // Forward sub-agent events to parent session's UI display (CC §XV)
         config.onSubAgentEvent?.(event);
@@ -621,6 +625,7 @@ async function executeAsync(
   registry: AgentDefinitionRegistry,
   config: AgentToolConfig,
   backend: InProcessSubAgentBackend,
+  parentToolCallId?: string,
 ): Promise<AgentOutputAsync> {
   const abortController = new AbortController();
 
@@ -641,6 +646,7 @@ async function executeAsync(
     agentType: agentDef.agentType,
     description: args.description,
     isAsync: metadata.isAsync,
+    parentToolCallId,
     exitHook: async (result) => {
       // Write output to file when completed (CC §11.3)
       const completedOutput = buildCompletedOutput(result, agentId, metadata);

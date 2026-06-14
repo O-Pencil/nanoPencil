@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides SelfUpdateController, SelfUpdateContext — version check / update / reinstall / restart
- * [FROM]: Depends on @catui/tui (Container/Text/Spacer), config (VERSION/PACKAGE_NAME/getUpdateInstruction),
+ * [FROM]: Depends on @catui/tui (Container/Text/Spacer), config (VERSION/PACKAGE_NAME),
  *         theme, components/dynamic-border, node:child_process (spawn)
  * [TO]: Consumed by modes/interactive/interactive-mode.ts (constructs one, delegates /update, /reinstall, startup check)
  * [HERE]: modes/interactive/controllers/self-update-controller.ts — P5 UI slice (UI02, 纯搬)
@@ -14,7 +14,7 @@
 
 import { spawn } from "node:child_process";
 import { type Container, Spacer, Text } from "@catui/tui";
-import { getUpdateInstruction, PACKAGE_NAME, VERSION } from "../../../config.js";
+import { PACKAGE_NAME, VERSION } from "../../../config.js";
 import { DynamicBorder } from "../components/dynamic-border.js";
 import { theme } from "../theme/theme.js";
 
@@ -96,18 +96,15 @@ export class SelfUpdateController {
     }
   }
 
-  showNewVersionNotification(newVersion: string): void {
-    const action = theme.fg("accent", getUpdateInstruction(PACKAGE_NAME));
-    const updateInstruction =
-      theme.fg("muted", `New version ${newVersion} is available. `) + action;
-
+  async showNewVersionNotification(newVersion: string): Promise<void> {
     this.chat.addChild(new Spacer(1));
     this.chat.addChild(
       new DynamicBorder((text) => theme.fg("warning", text)),
     );
     this.chat.addChild(
       new Text(
-        `${theme.bold(theme.fg("warning", "Update Available"))}\n${updateInstruction}`,
+        `${theme.bold(theme.fg("warning", "Update Available"))}\n` +
+          theme.fg("muted", `New version ${newVersion} is available. Updating automatically...`),
         1,
         0,
       ),
@@ -116,6 +113,8 @@ export class SelfUpdateController {
       new DynamicBorder((text) => theme.fg("warning", text)),
     );
     this.render();
+
+    await this.performUpdate(newVersion);
   }
 
   async handleUpdateCommand(): Promise<void> {

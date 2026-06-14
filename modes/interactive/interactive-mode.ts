@@ -1203,9 +1203,9 @@ export class InteractiveMode {
     // Start version check asynchronously (for notification only, if auto-update is not enabled)
     const autoUpdate = this.settingsManager.getAutoUpdate();
     if (autoUpdate !== "always") {
-      this.selfUpdate.checkForNewVersion().then((newVersion) => {
+      this.selfUpdate.checkForNewVersion().then(async (newVersion) => {
         if (newVersion) {
-          this.selfUpdate.showNewVersionNotification(newVersion);
+          await this.selfUpdate.showNewVersionNotification(newVersion);
         }
       });
     }

@@ -224,10 +224,21 @@ export interface CreateAgentSessionOptions extends SoulOptionsContract {
   disallowedTools?: string[];
 
   /**
-   * Custom system prompt suffix. Appended to the agent's base system prompt.
-   * Useful for injecting user-defined instructions (e.g., "Always respond in Chinese").
+   * Custom system prompt. Two forms:
+   *
+   * - `string`: Appended to the agent's base system prompt as-is.
+   * - `{ type: 'preset', preset: string, append?: string }`: Uses the named
+   *   preset as the base prompt, then appends `append` if provided.
+   *   In catui-agent, the default base prompt is always used; `preset` is
+   *   accepted for API compatibility but does not change the base prompt.
    */
-  systemPrompt?: string;
+  systemPrompt?: string | { type: "preset"; preset: string; append?: string };
+
+  /**
+   * Token budgets for each thinking level. Overrides settings-level defaults.
+   * Maps thinking level names to max token counts for extended thinking.
+   */
+  thinkingBudgets?: { minimal?: number; low?: number; medium?: number; high?: number };
 
   /**
    * Additional environment variables to merge into the agent's process environment.
@@ -627,7 +638,7 @@ export async function createAgentSession(
     followUpMode: settingsManager.getFollowUpMode(),
     transport: settingsManager.getTransport(),
     agentLoopFramework: options.agentLoopFramework ?? (settingsManager.getAgentLoopFramework() as any),
-    thinkingBudgets: settingsManager.getThinkingBudgets(),
+    thinkingBudgets: options.thinkingBudgets ?? settingsManager.getThinkingBudgets(),
     maxRetryDelayMs: settingsManager.getRetrySettings().maxDelayMs,
     maxToolResultBatchSizeChars:
       options.maxToolResultBatchSizeChars ??
@@ -818,8 +829,13 @@ export async function createAgentSession(
 
   // Append custom system prompt if provided
   if (options.systemPrompt) {
-    const currentPrompt = session.systemPrompt ?? session.agent.state.systemPrompt ?? "";
-    session.agent.setSystemPrompt(currentPrompt + "\n\n" + options.systemPrompt);
+    const appendText = typeof options.systemPrompt === "string"
+      ? options.systemPrompt
+      : options.systemPrompt.append ?? "";
+    if (appendText) {
+      const currentPrompt = session.systemPrompt ?? session.agent.state.systemPrompt ?? "";
+      session.agent.setSystemPrompt(currentPrompt + "\n\n" + appendText);
+    }
   }
 
   return {

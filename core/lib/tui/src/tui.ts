@@ -18,6 +18,17 @@ import { getCapabilities, isImageLine, setCellDimensions } from "./terminal-imag
 import { extractSegments, sliceByColumn, sliceWithWidth, visibleWidth } from "./utils.js";
 
 /**
+ * When true, an over-width rendered line throws (loud dev/test signal) instead
+ * of being clipped. Off by default so a misbehaving component can never crash a
+ * user's session in production; opt in with CATUI_STRICT_RENDER=1 (or
+ * NODE_ENV=test) to catch component width bugs during development. Read at call
+ * time so tests can toggle it without reimporting the module.
+ */
+function isStrictRender(): boolean {
+	return process.env.CATUI_STRICT_RENDER === "1" || process.env.NODE_ENV === "test";
+}
+
+/**
  * Component interface - all components must implement this
  */
 export interface Component {
@@ -1103,10 +1114,11 @@ export class TUI extends Container {
 		for (let i = firstChanged; i <= renderEnd; i++) {
 			if (i > firstChanged) buffer += "\r\n";
 			buffer += "\x1b[2K"; // Clear current line
-			const line = newLines[i];
+			let line = newLines[i];
 			const isImage = isImageLine(line);
 			if (!isImage && visibleWidth(line) > width) {
-				// Log all lines to crash file for debugging
+				// A component returned an over-width line. Always record full
+				// diagnostics so the offending component can be tracked down.
 				const crashLogPath = path.join(os.homedir(), ".catui", "agent", "catui-crash.log");
 				const crashData = [
 					`Crash at ${new Date().toISOString()}`,
@@ -1117,21 +1129,32 @@ export class TUI extends Container {
 					...newLines.map((l, idx) => `[${idx}] (w=${visibleWidth(l)}) ${l}`),
 					"",
 				].join("\n");
-				fs.mkdirSync(path.dirname(crashLogPath), { recursive: true });
-				fs.writeFileSync(crashLogPath, crashData);
+				try {
+					fs.mkdirSync(path.dirname(crashLogPath), { recursive: true });
+					fs.writeFileSync(crashLogPath, crashData);
+				} catch {
+					/* best-effort diagnostics; never let logging itself crash render */
+				}
 
-				// Clean up terminal state before throwing
-				this.stop();
+				if (isStrictRender()) {
+					// Opt-in strict mode (dev/test): surface the component bug loudly.
+					this.stop();
+					const errorMsg = [
+						`Rendered line ${i} exceeds terminal width (${visibleWidth(line)} > ${width}).`,
+						"",
+						"This is likely caused by a custom TUI component not truncating its output.",
+						"Use visibleWidth() to measure and truncateToWidth() to truncate lines.",
+						"",
+						`Debug log written to: ${crashLogPath}`,
+					].join("\n");
+					throw new Error(errorMsg);
+				}
 
-				const errorMsg = [
-					`Rendered line ${i} exceeds terminal width (${visibleWidth(line)} > ${width}).`,
-					"",
-					"This is likely caused by a custom TUI component not truncating its output.",
-					"Use visibleWidth() to measure and truncateToWidth() to truncate lines.",
-					"",
-					`Debug log written to: ${crashLogPath}`,
-				].join("\n");
-				throw new Error(errorMsg);
+				// Production resilience: a single over-width line must never crash
+				// the user's session. Clip it to the terminal width (matching the
+				// overlay compositing path above) and keep rendering. The crash log
+				// above preserves the full content for diagnosis.
+				line = sliceByColumn(line, 0, width, true);
 			}
 			buffer += line;
 		}

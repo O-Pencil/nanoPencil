@@ -226,11 +226,16 @@ export class FooterComponent implements Component {
 			? pwd.slice(0, availableForPwd - 1) + "…"
 			: pwd;
 		const remaining = width - truncatedPwd.length - sepWidth - statsWidth;
-		if (remaining > sepWidth + 3) {
+		// Only re-attach the right side (model name) when it genuinely fits; the
+		// previous `remaining > sepWidth + 3` check let a long model name overflow
+		// past `width` because the full rightSide was appended regardless of room.
+		if (remaining >= sepWidth + rightWidth) {
 			const padding = " ".repeat(Math.max(0, remaining - sepWidth - rightWidth));
-			return [theme.fg("dim", truncatedPwd) + sep + statsStr + sep + theme.fg("dim", rightSide) + padding];
+			const line = theme.fg("dim", truncatedPwd) + sep + statsStr + sep + theme.fg("dim", rightSide) + padding;
+			return [truncateToWidth(line, width, "…")];
 		}
 		const padding = " ".repeat(Math.max(0, width - truncatedPwd.length - sepWidth - statsWidth));
-		return [theme.fg("dim", truncatedPwd) + sep + statsStr + padding];
+		const line = theme.fg("dim", truncatedPwd) + sep + statsStr + padding;
+		return [truncateToWidth(line, width, "…")];
 	}
 }

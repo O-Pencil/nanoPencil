@@ -1200,6 +1200,9 @@ export class InteractiveMode {
     // Check for auto-update on startup (if enabled)
     await this.selfUpdate.checkAutoUpdateOnStartup();
 
+    // Start background polling for silent auto-updates (every 30 min, "always" mode only)
+    this.selfUpdate.startBackgroundPolling();
+
     // Start version check asynchronously (for notification only, if auto-update is not enabled)
     const autoUpdate = this.settingsManager.getAutoUpdate();
     if (autoUpdate !== "always") {
@@ -2721,6 +2724,9 @@ export class InteractiveMode {
   private async shutdown(): Promise<void> {
     if (this.isShuttingDown) return;
     this.isShuttingDown = true;
+
+    // Stop background auto-update polling
+    this.selfUpdate.stopBackgroundPolling();
 
     // Emit shutdown event to extensions with a timeout guard.
     // Extensions (e.g. SAL eval sink) may need to flush HTTP requests,

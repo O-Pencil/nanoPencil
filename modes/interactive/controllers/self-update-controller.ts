@@ -53,7 +53,12 @@ export interface SelfUpdateContext {
   showSelector(title: string, options: string[]): Promise<string | undefined>;
 }
 
+/** Background auto-update polling interval: 30 minutes (CC-aligned). */
+const AUTO_UPDATE_INTERVAL_MS = 30 * 60 * 1000;
+
 export class SelfUpdateController {
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor(private readonly ctx: SelfUpdateContext) {}
 
   private get chat(): Container {
@@ -309,85 +314,147 @@ export class SelfUpdateController {
   }
 
   /**
-   * Check for updates on startup if auto-update is enabled.
+   * Check for updates on startup.
+   * - "always": silently install in background, notify user when done.
+   * - "prompt": show selector dialog asking user what to do.
+   * - "never": no-op.
    */
   async checkAutoUpdateOnStartup(): Promise<void> {
     const autoUpdate = this.ctx.getAutoUpdate();
-    if (autoUpdate !== "always") {
-      return;
-    }
+    if (autoUpdate === "never") return;
 
     try {
-      const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}`, {
-        signal: AbortSignal.timeout(5000), // Shorter timeout for startup
-      });
+      const latestVersion = await this.fetchLatestVersion();
+      if (!latestVersion) return;
 
-      if (!response.ok) {
-        return;
-      }
-
-      const data = (await response.json()) as {
-        "dist-tags": { latest?: string };
-      };
-
-      const latestVersion = data["dist-tags"]?.latest;
-      if (!latestVersion) {
-        return;
-      }
-
-      const currentVersion = VERSION;
       const skippedVersion = this.ctx.getSkippedVersion();
+      if (skippedVersion === latestVersion) return;
 
-      // Skip if already skipped this version
-      if (skippedVersion === latestVersion) {
+      if (this.compareVersion(latestVersion, VERSION) <= 0) return;
+
+      if (autoUpdate === "always") {
+        // Silent background install — no prompt, no interaction
+        await this.silentInstall(latestVersion);
         return;
       }
 
-      // Compare versions properly
-      if (this.compareVersion(latestVersion, currentVersion) > 0) {
-        // Show confirmation dialog before auto-update
-        const title = `${theme.fg("accent", "📦 Update Available")}\n\n${theme.fg("dim", `Current: ${currentVersion}`)}\n${theme.fg("success", `Latest:  ${latestVersion}`)}\n\n${theme.fg("dim", "A new version is available. Would you like to update now?")}`;
+      // "prompt" mode: show selector dialog
+      const title = `${theme.fg("accent", "📦 Update Available")}\n\n${theme.fg("dim", `Current: ${VERSION}`)}\n${theme.fg("success", `Latest:  ${latestVersion}`)}\n\n${theme.fg("dim", "A new version is available. Would you like to update now?")}`;
 
-        const options = [
-          "1. Update now and restart",
-          "2. Skip this version",
-          "3. Continue without updating",
-        ];
+      const choice = await this.ctx.showSelector(title, [
+        "1. Update now and restart",
+        "2. Skip this version",
+        "3. Continue without updating",
+      ]);
 
-        const choice = await this.ctx.showSelector(title, options);
+      if (!choice) return;
 
-        if (!choice) {
-          // User cancelled, continue without update
-          return;
-        }
+      if (choice.includes("Update now")) {
+        await this.performUpdate(latestVersion);
+      } else if (choice.includes("Skip")) {
+        this.ctx.setSkippedVersion(latestVersion);
+        this.chat.addChild(new Spacer(1));
+        this.chat.addChild(
+          new Text(theme.fg("dim", `⏭️  Skipped version ${latestVersion}. You won't be prompted again.`), 1, 0),
+        );
+        this.render();
+      }
+    } catch {
+      // Silently fail — don't block user
+    }
+  }
 
-        if (choice.includes("Update now")) {
-          // Perform update
-          await this.performUpdate(latestVersion);
-        } else if (choice.includes("Skip")) {
-          // Skip this version
-          this.ctx.setSkippedVersion(latestVersion);
+  /**
+   * Start background polling for updates (every 30 minutes).
+   * Only active when autoUpdate is "always".
+   */
+  startBackgroundPolling(): void {
+    if (this.ctx.getAutoUpdate() !== "always") return;
+    if (this.pollTimer) return; // already running
+
+    this.pollTimer = setInterval(async () => {
+      try {
+        const latestVersion = await this.fetchLatestVersion();
+        if (!latestVersion) return;
+
+        const skippedVersion = this.ctx.getSkippedVersion();
+        if (skippedVersion === latestVersion) return;
+
+        if (this.compareVersion(latestVersion, VERSION) <= 0) return;
+
+        await this.silentInstall(latestVersion);
+      } catch {
+        // Silently fail — don't disturb user
+      }
+    }, AUTO_UPDATE_INTERVAL_MS);
+  }
+
+  /**
+   * Stop background polling (called on shutdown).
+   */
+  stopBackgroundPolling(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  /**
+   * Fetch the latest version from npm registry.
+   * Returns the version string or undefined if check fails.
+   */
+  private async fetchLatestVersion(): Promise<string | undefined> {
+    if (process.env.CATUI_SKIP_VERSION_CHECK || process.env.CATUI_OFFLINE)
+      return undefined;
+
+    const response = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}`,
+      { signal: AbortSignal.timeout(10000) },
+    );
+    if (!response.ok) return undefined;
+
+    const data = (await response.json()) as {
+      "dist-tags"?: { latest?: string };
+      version?: string;
+    };
+    return data["dist-tags"]?.latest ?? data.version ?? undefined;
+  }
+
+  /**
+   * Silently install update in background. On success, show a persistent
+   * notification banner. No interactive prompts — user discovers it passively.
+   */
+  private async silentInstall(latestVersion: string): Promise<void> {
+    return new Promise((resolve) => {
+      const child = spawnNpm(["install", "-g", "--force", `${PACKAGE_NAME}@latest`]);
+
+      child.on("close", (code) => {
+        if (code === 0) {
           this.chat.addChild(new Spacer(1));
           this.chat.addChild(
+            new DynamicBorder((text) => theme.fg("success", text)),
+          );
+          this.chat.addChild(
             new Text(
-              theme.fg("dim", `⏭️  Skipped version ${latestVersion}. You won't be prompted again.`),
+              `${theme.bold(theme.fg("success", "Update Installed"))}\n` +
+                theme.fg("muted", `Catui has been updated to v${latestVersion}. Restart to apply.`),
               1,
               0,
             ),
           );
-          this.render();
-        } else if (choice.includes("Continue")) {
-          // Continue without updating
-          this.chat.addChild(new Spacer(1));
           this.chat.addChild(
-            new Text(theme.fg("dim", "Continuing without update..."), 1, 0),
+            new DynamicBorder((text) => theme.fg("success", text)),
           );
           this.render();
         }
-      }
-    } catch {
-      // Silently fail on startup check - don't block user
-    }
+        resolve();
+      });
+
+      child.on("error", () => {
+        // Silent failure — don't disturb user
+        resolve();
+      });
+    });
   }
 
   // ----- private -----

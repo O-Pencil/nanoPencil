@@ -39,7 +39,7 @@ export interface TerminalSettings {
 	showImages?: boolean; // default: true (only relevant if terminal supports images)
 	clearOnShrink?: boolean; // default: false (clear empty rows when content shrinks)
 	showTokenStats?: boolean; // default: true (show token usage in footer)
-	showWorkingTrace?: boolean; // default: false (show tool and coding execution steps in chat)
+	showWorkingTrace?: boolean; // default: true (show tool and coding execution steps in chat)
 	showMemoryTrace?: boolean; // default: false (show NanoMem search/recall/alignment traces in chat)
 	buddyEnabled?: boolean; // default: false (enable buddy pet display)
 	buddySpecies?: number; // default: 0 (species index)
@@ -1169,7 +1169,7 @@ export class SettingsManager {
 	}
 
 	getShowWorkingTrace(): boolean {
-		return this.settings.terminal?.showWorkingTrace ?? false;
+		return this.settings.terminal?.showWorkingTrace ?? true;
 	}
 
 	setShowWorkingTrace(enabled: boolean): void {

@@ -253,6 +253,8 @@ async function runLoop(
 	let firstTurn = true;
 	let turnCount = 0;
 	let toolCallCount = 0;
+	let turnWarningInjected = false;
+	let toolCallWarningInjected = false;
 	const startedAt = Date.now();
 	const timing: LoopTiming = { loopStart: performance.now(), streamStart: 0, firstTokenAt: 0, turnCount: 0 };
 	_tlog(`run_loop start`);
@@ -331,6 +333,16 @@ async function runLoop(
 			}
 
 			turnCount++;
+			// Overthinking guard: warn agent to wrap up before hitting hard limit
+			if (!turnWarningInjected && turnCount > maxTurns * 0.8) {
+				turnWarningInjected = true;
+				const warningMsg: AgentMessage = {
+					role: "user",
+					content: `[System] You have used ${turnCount} of ${maxTurns} allowed turns. Stop exploring and produce your final output now. Summarize what you've found and respond to the user.`,
+					timestamp: Date.now(),
+				};
+				pendingMessages.push(warningMsg);
+			}
 			if (turnCount > maxTurns) {
 				const limitMessage = createLoopLimitMessage(
 					config,
@@ -484,6 +496,16 @@ async function runLoop(
 					return;
 				}
 				toolCallCount += toolCalls.length;
+				// Overthinking guard: warn agent to wrap up before hitting tool call limit
+				if (!toolCallWarningInjected && toolCallCount > maxToolCalls * 0.8) {
+					toolCallWarningInjected = true;
+					const warningMsg: AgentMessage = {
+						role: "user",
+						content: `[System] You have used ${toolCallCount} of ${maxToolCalls} allowed tool calls. Stop making further tool calls and produce your final output now.`,
+						timestamp: Date.now(),
+					};
+					pendingMessages.push(warningMsg);
+				}
 				const toolExecution = await executeToolCalls(
 					currentContext.tools,
 					message,

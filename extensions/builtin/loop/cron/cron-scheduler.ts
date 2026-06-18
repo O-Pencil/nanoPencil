@@ -24,6 +24,7 @@ import {
 	hasCronTasksSync,
 	jitteredNextCronRunMs,
 	markCronTasksFired,
+	nextCronRunMs,
 	oneShotJitteredNextCronRunMs,
 	readCronTasks,
 	removeCronTasks,
@@ -255,6 +256,13 @@ export function createCronScheduler(
 							t.id,
 							jitterCfg,
 						) ?? Infinity);
+				// Recurring tasks that have been idle (e.g. app was closed for days)
+				// may compute a next-fire that's still in the past. Reschedule to
+				// the actual next future occurrence instead of firing immediately.
+				// The normal fire path will re-apply jitter on the next reschedule.
+				if (t.recurring && next < now) {
+					next = nextCronRunMs(t.cron, now) ?? Infinity;
+				}
 				nextFireAt.set(t.id, next);
 			}
 

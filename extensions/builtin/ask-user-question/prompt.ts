@@ -44,5 +44,12 @@ Usage notes:
 - Use multiSelect: true to allow multiple answers to be selected for a question
 - If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label
 
+Do NOT use this tool when:
+- User asks "A or B?" — they want your analysis and recommendation, not options repeated back as buttons
+- User is venting or processing emotions — respond supportively, don't present choices
+- User asks for your opinion (e.g., "What do you think of X?") — give your perspective directly
+- User already gave detailed constraints — proceed with their constraints, don't second-guess
+- Factual questions — just answer
+
 Plan mode note: In plan mode, use this tool to clarify requirements or choose between approaches BEFORE finalizing your plan. Do NOT use this tool to ask "Is my plan ready?" or "Should I proceed?" - use ExitPlanMode for plan approval. IMPORTANT: Do not reference "the plan" in your questions (e.g., "Do you have feedback about the plan?", "Does the plan look good?") because the user cannot see the plan in the UI until you call ExitPlanMode. If you need plan approval, use ExitPlanMode instead.
 `;

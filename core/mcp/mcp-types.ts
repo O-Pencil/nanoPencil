@@ -16,6 +16,8 @@ export interface MCPServerConfig {
   args?: string[];
   /** Streamable HTTP endpoint for remote/local HTTP MCP servers */
   url?: string;
+  /** SSE endpoint URL for SSE transport (separate from `url` which is for HTTP POST) */
+  sseUrl?: string;
   /** Additional headers for HTTP MCP servers */
   headers?: Record<string, string>;
   /** Credential provider id stored in auth.json for HTTP MCP servers */

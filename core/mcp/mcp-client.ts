@@ -105,6 +105,21 @@ interface ServerSentEventPayload {
   data?: string;
 }
 
+interface SSESession {
+  /** The POST endpoint URL received from the `endpoint` event */
+  postEndpoint?: string;
+  /** SSE connection abort controller */
+  abortController: AbortController;
+  /** Whether the SSE connection is active */
+  connected: boolean;
+  /** Pending requests waiting for responses on the SSE stream */
+  pendingRequests: Map<number, PendingRequest>;
+  /** Next request ID counter */
+  nextRequestId: number;
+  /** Reconnect attempt count */
+  reconnectAttempts: number;
+}
+
 /**
  * MCP Client class
  * Manages connections to MCP servers and tool calls
@@ -114,6 +129,7 @@ export class MCPClient {
   private serverRuntimes = new Map<string, ServerRuntime>();
   private serverTools = new Map<string, MCPTool[]>();
   private httpSessions = new Map<string, HTTPSession>();
+  private sseSessions = new Map<string, SSESession>();
   private authStorage: AuthStorage;
   private agentDir?: string;
   private mcpConfigPath?: string;

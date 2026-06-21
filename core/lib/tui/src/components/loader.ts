@@ -25,15 +25,16 @@ export class Loader extends Text {
 	) {
 		super("", 1, 0);
 		this.ui = ui;
-		this.start();
+		this.start({ requestRender: false });
 	}
 
 	render(width: number): string[] {
 		return ["", ...super.render(width)];
 	}
 
-	start() {
-		this.updateDisplay();
+	start(options?: { requestRender?: boolean }) {
+		if (this.intervalId) return;
+		this.updateDisplay(options);
 		this.intervalId = setInterval(() => {
 			this.currentFrame = (this.currentFrame + 1) % this.frames.length;
 			this.updateDisplay();
@@ -52,10 +53,10 @@ export class Loader extends Text {
 		this.updateDisplay();
 	}
 
-	private updateDisplay() {
+	private updateDisplay(options?: { requestRender?: boolean }) {
 		const frame = this.frames[this.currentFrame];
 		this.setText(`${this.spinnerColorFn(frame)} ${this.messageColorFn(this.message)}`);
-		if (this.ui) {
+		if (this.ui && options?.requestRender !== false) {
 			this.ui.requestRender();
 		}
 	}

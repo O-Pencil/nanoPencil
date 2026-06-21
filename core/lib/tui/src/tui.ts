@@ -247,11 +247,15 @@ export class TUI extends Container {
 	/** Global callback for debug key (Shift+Ctrl+D). Called before input is forwarded to focused component. */
 	public onDebug?: () => void;
 	private renderRequested = false;
+	private forceRenderRequested = false;
 	private renderWaiters: Array<() => void> = [];
 	private cursorRow = 0; // Logical cursor row (end of rendered content)
 	private hardwareCursorRow = 0; // Actual terminal cursor row (may differ due to IME positioning)
+	private hardwareCursorCol = 0; // Actual terminal cursor column after IME positioning
+	private hardwareCursorVisible = false; // Actual terminal hardware cursor visibility
 	private inputBuffer = ""; // Buffer for parsing terminal responses
 	private cellSizeQueryPending = false;
+	private cellSizeQueryRequested = false;
 	private showHardwareCursor = process.env.CATUI_HARDWARE_CURSOR === "1";
 	private clearOnShrink = process.env.CATUI_CLEAR_ON_SHRINK === "1"; // Clear empty rows when content shrinks (default: off)
 	private maxLinesRendered = 0; // Track terminal's working area (max lines ever rendered)
@@ -293,9 +297,6 @@ export class TUI extends Container {
 	setShowHardwareCursor(enabled: boolean): void {
 		if (this.showHardwareCursor === enabled) return;
 		this.showHardwareCursor = enabled;
-		if (!enabled) {
-			this.terminal.hideCursor();
-		}
 		this.requestRender();
 	}
 
@@ -313,6 +314,7 @@ export class TUI extends Container {
 	}
 
 	private wrapRenderBuffer(buffer: string): string {
+		buffer += this.consumeCellSizeQueryBuffer();
 		if (!this.synchronizedOutputEnabled) {
 			return buffer;
 		}
@@ -344,7 +346,6 @@ export class TUI extends Container {
 		if (this.isOverlayVisible(entry)) {
 			this.setFocus(component);
 		}
-		this.terminal.hideCursor();
 		this.requestRender();
 
 		// Return handle for controlling this overlay
@@ -358,7 +359,6 @@ export class TUI extends Container {
 						const topVisible = this.getTopmostVisibleOverlay();
 						this.setFocus(topVisible?.component ?? entry.preFocus);
 					}
-					if (this.overlayStack.length === 0) this.terminal.hideCursor();
 					this.requestRender();
 				}
 			},
@@ -391,7 +391,6 @@ export class TUI extends Container {
 		// Find topmost visible overlay, or fall back to preFocus
 		const topVisible = this.getTopmostVisibleOverlay();
 		this.setFocus(topVisible?.component ?? overlay.preFocus);
-		if (this.overlayStack.length === 0) this.terminal.hideCursor();
 		this.requestRender();
 	}
 
@@ -430,8 +429,7 @@ export class TUI extends Container {
 			(data) => this.handleInput(data),
 			() => this.requestRender(),
 		);
-		this.terminal.hideCursor();
-		this.queryCellSize();
+		this.requestCellSizeQuery();
 		this.requestRender();
 	}
 
@@ -446,15 +444,23 @@ export class TUI extends Container {
 		this.inputListeners.delete(listener);
 	}
 
-	private queryCellSize(): void {
+	private requestCellSizeQuery(): void {
 		// Only query if terminal supports images (cell size is only used for image rendering)
 		if (!getCapabilities().images) {
 			return;
 		}
+		this.cellSizeQueryRequested = true;
+	}
+
+	private consumeCellSizeQueryBuffer(): string {
+		if (!this.cellSizeQueryRequested) {
+			return "";
+		}
+		this.cellSizeQueryRequested = false;
 		// Query terminal for cell size in pixels: CSI 16 t
 		// Response format: CSI 6 ; height ; width t
 		this.cellSizeQueryPending = true;
-		this.terminal.write("\x1b[16t");
+		return "\x1b[16t";
 	}
 
 	stop(): void {
@@ -477,12 +483,7 @@ export class TUI extends Container {
 
 	requestRender(force = false): void {
 		if (force) {
-			this.previousLines = [];
-			this.previousWidth = -1; // -1 triggers widthChanged, forcing a full clear
-			this.cursorRow = 0;
-			this.hardwareCursorRow = 0;
-			this.maxLinesRendered = 0;
-			this.previousViewportTop = 0;
+			this.forceRenderRequested = true;
 		}
 		if (this.renderRequested) return;
 		this.renderRequested = true;
@@ -918,6 +919,8 @@ export class TUI extends Container {
 
 	private doRender(): void {
 		if (this.stopped) return;
+		const forceRender = this.forceRenderRequested;
+		this.forceRenderRequested = false;
 		const width = this.terminal.columns;
 		const height = this.terminal.rows;
 		this.debugLog(`doRender: width=${width} height=${height} stopped=${this.stopped} children=${this.children.length}`);
@@ -943,8 +946,25 @@ export class TUI extends Container {
 
 		newLines = this.applyLineResets(newLines);
 
+		if (
+			forceRender &&
+			this.previousWidth === width &&
+			this.previousLines.length === newLines.length &&
+			this.previousLines.every((line, index) => line === newLines[index])
+		) {
+			this.cursorRow = Math.max(0, newLines.length - 1);
+			this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
+			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
+			if (!this.isHardwareCursorAlreadyPositioned(cursorPos, newLines.length)) {
+				this.positionHardwareCursor(cursorPos, newLines.length);
+			}
+			return;
+		}
+
 		// Width changed - need full re-render (line wrapping changes)
-		const widthChanged = this.previousWidth !== 0 && this.previousWidth !== width;
+		const widthChanged =
+			forceRender ||
+			(this.previousWidth !== 0 && this.previousWidth !== width);
 
 		// Helper to clear scrollback and viewport and render all new lines
 		const fullRender = (clear: boolean): void => {
@@ -955,7 +975,6 @@ export class TUI extends Container {
 				if (i > 0) buffer += "\r\n";
 				buffer += newLines[i];
 			}
-			this.terminal.write(this.wrapRenderBuffer(buffer));
 			this.cursorRow = Math.max(0, newLines.length - 1);
 			this.hardwareCursorRow = this.cursorRow;
 			// Reset max lines when clearing, otherwise track growth
@@ -965,7 +984,8 @@ export class TUI extends Container {
 				this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
 			}
 			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
-			this.positionHardwareCursor(cursorPos, newLines.length);
+			buffer += this.buildHardwareCursorBuffer(cursorPos, newLines.length);
+			this.terminal.write(this.wrapRenderBuffer(buffer));
 			this.previousLines = newLines;
 			this.previousWidth = width;
 		};
@@ -1027,7 +1047,9 @@ export class TUI extends Container {
 
 		// No changes - but still need to update hardware cursor position if it moved
 		if (firstChanged === -1) {
-			this.positionHardwareCursor(cursorPos, newLines.length);
+			if (!this.isHardwareCursorAlreadyPositioned(cursorPos, newLines.length)) {
+				this.positionHardwareCursor(cursorPos, newLines.length);
+			}
 			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
 			return;
 		}
@@ -1059,11 +1081,13 @@ export class TUI extends Container {
 				if (extraLines > 0) {
 					buffer += `\x1b[${extraLines}A`;
 				}
-				this.terminal.write(this.wrapRenderBuffer(buffer));
 				this.cursorRow = targetRow;
 				this.hardwareCursorRow = targetRow;
+				buffer += this.buildHardwareCursorBuffer(cursorPos, newLines.length);
+				this.terminal.write(this.wrapRenderBuffer(buffer));
+			} else {
+				this.positionHardwareCursor(cursorPos, newLines.length);
 			}
-			this.positionHardwareCursor(cursorPos, newLines.length);
 			this.previousLines = newLines;
 			this.previousWidth = width;
 			this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
@@ -1207,9 +1231,6 @@ export class TUI extends Container {
 			fs.writeFileSync(debugPath, debugData);
 		}
 
-		// Write entire buffer at once
-		this.terminal.write(this.wrapRenderBuffer(buffer));
-
 		// Track cursor position for next render
 		// cursorRow tracks end of content (for viewport calculation)
 		// hardwareCursorRow tracks actual terminal cursor position (for movement)
@@ -1219,22 +1240,19 @@ export class TUI extends Container {
 		this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
 		this.previousViewportTop = Math.max(0, this.maxLinesRendered - height);
 
-		// Position hardware cursor for IME
-		this.positionHardwareCursor(cursorPos, newLines.length);
+		// Position hardware cursor for IME in the same terminal write as the frame.
+		buffer += this.buildHardwareCursorBuffer(cursorPos, newLines.length);
+
+		// Write entire buffer at once to avoid split-frame flicker.
+		this.terminal.write(this.wrapRenderBuffer(buffer));
 
 		this.previousLines = newLines;
 		this.previousWidth = width;
 	}
 
-	/**
-	 * Position the hardware cursor for IME candidate window.
-	 * @param cursorPos The cursor position extracted from rendered output, or null
-	 * @param totalLines Total number of rendered lines
-	 */
-	private positionHardwareCursor(cursorPos: { row: number; col: number } | null, totalLines: number): void {
+	private buildHardwareCursorBuffer(cursorPos: { row: number; col: number } | null, totalLines: number): string {
 		if (!cursorPos || totalLines <= 0) {
-			this.terminal.hideCursor();
-			return;
+			return "\x1b[?25l";
 		}
 
 		// Clamp cursor position to valid range
@@ -1252,15 +1270,33 @@ export class TUI extends Container {
 		// Move to absolute column (1-indexed)
 		buffer += `\x1b[${targetCol + 1}G`;
 
-		if (buffer) {
-			this.terminal.write(buffer);
-		}
-
 		this.hardwareCursorRow = targetRow;
-		if (this.showHardwareCursor) {
-			this.terminal.showCursor();
-		} else {
-			this.terminal.hideCursor();
+		this.hardwareCursorCol = targetCol;
+		this.hardwareCursorVisible = this.showHardwareCursor;
+		buffer += this.hardwareCursorVisible ? "\x1b[?25h" : "\x1b[?25l";
+		return buffer;
+	}
+
+	private isHardwareCursorAlreadyPositioned(cursorPos: { row: number; col: number } | null, totalLines: number): boolean {
+		if (!cursorPos || totalLines <= 0) {
+			return !this.hardwareCursorVisible;
 		}
+		const targetRow = Math.max(0, Math.min(cursorPos.row, totalLines - 1));
+		const targetCol = Math.max(0, cursorPos.col);
+		return (
+			this.hardwareCursorRow === targetRow &&
+			this.hardwareCursorCol === targetCol &&
+			this.hardwareCursorVisible === this.showHardwareCursor
+		);
+	}
+
+	/**
+	 * Position the hardware cursor for IME candidate window.
+	 * @param cursorPos The cursor position extracted from rendered output, or null
+	 * @param totalLines Total number of rendered lines
+	 */
+	private positionHardwareCursor(cursorPos: { row: number; col: number } | null, totalLines: number): void {
+		const buffer = this.buildHardwareCursorBuffer(cursorPos, totalLines);
+		if (buffer) this.terminal.write(buffer);
 	}
 }

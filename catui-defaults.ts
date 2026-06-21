@@ -451,6 +451,13 @@ export const CATUI_DEFAULT_MODELS_JSON = {
 			api: "openai-completions",
 			models: [
 				{
+					id: "MiniMax-M3",
+					name: "MiniMax M3",
+					input: ["text"],
+					contextWindow: 1000000,
+					maxTokens: 65536,
+				},
+				{
 					id: "MiniMax-M2.7",
 					name: "MiniMax M2.7",
 					input: ["text"],

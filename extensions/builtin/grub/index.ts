@@ -213,6 +213,18 @@ export default async function grubExtension(api: ExtensionAPI) {
 		return { messages: event.messages.slice(0, -1) };
 	});
 
+	api.on("agent_result", (event) => {
+		// Only fold into the running grub task. Stale events after the task has
+		// already terminated would otherwise pollute the next run.
+		if (!controller.hasActiveTask()) return;
+		controller.accumulateRunResult({
+			turnCount: event.turnCount,
+			toolCallCount: event.toolCallCount,
+			durationMs: event.durationMs,
+			usage: event.usage,
+		});
+	});
+
 	api.on("agent_end", (event) => {
 		const activeTask = controller.getActiveTask();
 		if (!activeTask?.awaitingTurn) return;

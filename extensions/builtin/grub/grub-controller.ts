@@ -18,6 +18,7 @@ import type {
 	GrubTaskSnapshot,
 	GrubTaskState,
 } from "./grub-types.js";
+import type { Usage } from "@catui/ai/types";
 
 const DEFAULT_MAX_ITERATIONS = 99;
 const DEFAULT_MAX_CONSECUTIVE_FAILURES = 3;
@@ -28,6 +29,35 @@ const DEFAULT_MAX_INITIALIZER_FAILURES = 5;
 const BLOCKED_THRESHOLD = 3;
 const INITIALIZER_MIN_FEATURES = 15;
 const INITIALIZER_MAX_FEATURES = 40;
+
+function emptyUsage(): Usage {
+	return {
+		input: 0,
+		output: 0,
+		cacheRead: 0,
+		cacheWrite: 0,
+		totalTokens: 0,
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	};
+}
+
+function addUsage(target: Usage, incoming: Usage | undefined): Usage {
+	if (!incoming) return target;
+	return {
+		input: target.input + (incoming.input ?? 0),
+		output: target.output + (incoming.output ?? 0),
+		cacheRead: target.cacheRead + (incoming.cacheRead ?? 0),
+		cacheWrite: target.cacheWrite + (incoming.cacheWrite ?? 0),
+		totalTokens: target.totalTokens + (incoming.totalTokens ?? 0),
+		cost: {
+			input: target.cost.input + (incoming.cost?.input ?? 0),
+			output: target.cost.output + (incoming.cost?.output ?? 0),
+			cacheRead: target.cost.cacheRead + (incoming.cost?.cacheRead ?? 0),
+			cacheWrite: target.cost.cacheWrite + (incoming.cost?.cacheWrite ?? 0),
+			total: target.cost.total + (incoming.cost?.total ?? 0),
+		},
+	};
+}
 
 export interface GrubStartOptions {
 	maxIterations?: number;
@@ -88,6 +118,10 @@ export class GrubController {
 			stateFilePath: stateFilePathFor(harnessDirectory),
 			progressLogPath: join(harnessDirectory, "progress-log.md"),
 			initScriptPath: join(harnessDirectory, "init.sh"),
+			cumulativeTurnCount: 0,
+			cumulativeToolCallCount: 0,
+			cumulativeDurationMs: 0,
+			cumulativeUsage: emptyUsage(),
 		};
 
 		this.activeTask = task;
@@ -103,7 +137,17 @@ export class GrubController {
 		if (this.activeTask && this.activeTask.id !== task.id) {
 			throw new Error(`Cannot adopt task ${task.id}; ${this.activeTask.id} is already active.`);
 		}
-		const resumed: GrubTaskState = { ...task, locale: task.locale ?? "en", consecutiveBlockedAttempts: task.consecutiveBlockedAttempts ?? 0, awaitingTurn: false, updatedAt: Date.now() };
+		const resumed: GrubTaskState = {
+			...task,
+			locale: task.locale ?? "en",
+			consecutiveBlockedAttempts: task.consecutiveBlockedAttempts ?? 0,
+			awaitingTurn: false,
+			updatedAt: Date.now(),
+			cumulativeTurnCount: task.cumulativeTurnCount ?? 0,
+			cumulativeToolCallCount: task.cumulativeToolCallCount ?? 0,
+			cumulativeDurationMs: task.cumulativeDurationMs ?? 0,
+			cumulativeUsage: task.cumulativeUsage ?? emptyUsage(),
+		};
 		this.activeTask = resumed;
 		this.safePersist(resumed);
 		return resumed;
@@ -138,11 +182,54 @@ export class GrubController {
 			initScriptPath: finalTask.initScriptPath,
 			lastDecision: finalTask.lastDecision,
 			lastError: reason || finalTask.lastError,
+			cumulativeTurnCount: finalTask.cumulativeTurnCount,
+			cumulativeToolCallCount: finalTask.cumulativeToolCallCount,
+			cumulativeDurationMs: finalTask.cumulativeDurationMs,
+			cumulativeUsage: finalTask.cumulativeUsage,
 		};
 
 		this.activeTask = undefined;
 		this.lastTerminalTask = snapshot;
 		return snapshot;
+	}
+
+	/**
+	 * Fold a single agent-run result into the active task's cumulative totals.
+	 * Called by the extension when an `agent_result` event fires while a grub
+	 * task is in flight. No-op when there is no active task (e.g. between
+	 * consecutive grub runs) so old events do not pollute the next run.
+	 */
+	accumulateRunResult(input: {
+		turnCount?: number;
+		toolCallCount?: number;
+		durationMs?: number;
+		usage?: Usage;
+	}): void {
+		const task = this.activeTask;
+		if (!task) return;
+		task.cumulativeTurnCount += input.turnCount ?? 0;
+		task.cumulativeToolCallCount += input.toolCallCount ?? 0;
+		task.cumulativeDurationMs += input.durationMs ?? 0;
+		task.cumulativeUsage = addUsage(task.cumulativeUsage, input.usage);
+		task.updatedAt = Date.now();
+		this.safePersist(task);
+	}
+
+	/** Read-only accessor used by tests and by the extension for live preview. */
+	getActiveCumulative(): {
+		turnCount: number;
+		toolCallCount: number;
+		durationMs: number;
+		usage: Usage;
+	} | undefined {
+		const task = this.activeTask;
+		if (!task) return undefined;
+		return {
+			turnCount: task.cumulativeTurnCount,
+			toolCallCount: task.cumulativeToolCallCount,
+			durationMs: task.cumulativeDurationMs,
+			usage: task.cumulativeUsage,
+		};
 	}
 
 	isGrubPrompt(prompt: string): boolean {

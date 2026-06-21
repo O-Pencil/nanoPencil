@@ -26,6 +26,20 @@ function hasCjk(text: string): boolean {
 	return /[\u3400-\u9fff]/.test(text);
 }
 
+export function formatDuration(ms: number): string {
+	const totalSeconds = Math.max(0, Math.round(ms / 1000));
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
+	if (hours > 0) {
+		return `${hours}h ${minutes}m ${seconds}s`;
+	}
+	if (minutes > 0) {
+		return `${minutes}m ${seconds}s`;
+	}
+	return `${seconds}s`;
+}
+
 const GRUB_TEXT = {
 	en: {
 		prefix: "[Grub]",
@@ -93,6 +107,15 @@ const GRUB_TEXT = {
 		invalidLoopRetry: (iteration: number | undefined) =>
 			`[Grub] I could not read the round summary. Retrying round ${iteration}.`,
 		prematureComplete: (reason: string) => `[Grub] Not done yet: ${reason}. Continuing.`,
+		statsHeading: "Run summary",
+		statDuration: (ms: number) => `Total time: ${formatDuration(ms)}`,
+		statTurns: (turns: number) => `Total turns: ${turns}`,
+		statToolCalls: (calls: number) => `Tool calls: ${calls}`,
+		statTokens: (usage: { input: number; output: number; cacheRead: number; cacheWrite: number; totalTokens: number }) =>
+			`Tokens: ${usage.totalTokens.toLocaleString("en-US")} (in ${usage.input.toLocaleString("en-US")} / out ${usage.output.toLocaleString("en-US")} / cache read ${usage.cacheRead.toLocaleString("en-US")} / cache write ${usage.cacheWrite.toLocaleString("en-US")})`,
+		statCost: (cost: number) => `Estimated cost: $${cost.toFixed(4)}`,
+		recapHeading: "Recap",
+		recapEmpty: "(No decision summary recorded.)",
 		harnessCreated: "- Harness created by /grub.",
 		structuredFeatureNote: "- Structured feature list lives in feature-list.json; only passes/evidence may change.",
 		initScriptNote: "- init.sh performs get-bearings + smoke before every iteration.",
@@ -185,6 +208,15 @@ const GRUB_TEXT = {
 		invalidLoopState: "我无法从 assistant 回复中读到本轮总结。",
 		invalidLoopRetry: (iteration: number | undefined) => `[Grub] 我无法读到本轮总结，准备重试第 ${iteration} 轮。`,
 		prematureComplete: (reason: string) => `[Grub] 还不能结束：${reason}。继续执行。`,
+		statsHeading: "本次运行总览",
+		statDuration: (ms: number) => `总耗时：${formatDuration(ms)}`,
+		statTurns: (turns: number) => `总轮数：${turns}`,
+		statToolCalls: (calls: number) => `工具调用次数：${calls}`,
+		statTokens: (usage: { input: number; output: number; cacheRead: number; cacheWrite: number; totalTokens: number }) =>
+			`Token 消耗：${usage.totalTokens.toLocaleString("zh-CN")}（输入 ${usage.input.toLocaleString("zh-CN")} / 输出 ${usage.output.toLocaleString("zh-CN")} / 缓存读 ${usage.cacheRead.toLocaleString("zh-CN")} / 缓存写 ${usage.cacheWrite.toLocaleString("zh-CN")}）`,
+		statCost: (cost: number) => `估算费用：$${cost.toFixed(4)}`,
+		recapHeading: "Recap",
+		recapEmpty: "（没有记录到本轮决策摘要。）",
 		harnessCreated: "- Harness 由 /grub 创建。",
 		structuredFeatureNote: "- 结构化功能清单位于 feature-list.json；后续只能修改 passes/evidence。",
 		initScriptNote: "- 每轮开始前由 init.sh 执行环境定位和烟测。",

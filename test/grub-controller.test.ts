@@ -962,3 +962,191 @@ test("consecutiveBlockedAttempts persists across round trips", () => {
 		cleanup(cwd);
 	}
 });
+
+test("accumulateRunResult folds per-run metrics into cumulative totals", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		controller.start("metrics test", cwd);
+
+		controller.accumulateRunResult({
+			turnCount: 3,
+			toolCallCount: 7,
+			durationMs: 4500,
+			usage: {
+				input: 100,
+				output: 50,
+				cacheRead: 10,
+				cacheWrite: 5,
+				totalTokens: 165,
+				cost: { input: 0.01, output: 0.02, cacheRead: 0.001, cacheWrite: 0.002, total: 0.033 },
+			},
+		});
+		controller.accumulateRunResult({
+			turnCount: 2,
+			toolCallCount: 4,
+			durationMs: 2000,
+			usage: {
+				input: 80,
+				output: 40,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 120,
+				cost: { input: 0.005, output: 0.01, cacheRead: 0, cacheWrite: 0, total: 0.015 },
+			},
+		});
+
+		const cumulative = controller.getActiveCumulative();
+		assert.ok(cumulative);
+		assert.equal(cumulative.turnCount, 5);
+		assert.equal(cumulative.toolCallCount, 11);
+		assert.equal(cumulative.durationMs, 6500);
+		assert.equal(cumulative.usage.input, 180);
+		assert.equal(cumulative.usage.output, 90);
+		assert.equal(cumulative.usage.totalTokens, 285);
+		assert.equal(cumulative.usage.cost.total, 0.048);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("accumulateRunResult is a no-op when no task is active", () => {
+	const controller = new GrubController();
+	// Should not throw or mutate anything.
+	controller.accumulateRunResult({ turnCount: 5, toolCallCount: 5, durationMs: 1000 });
+	assert.equal(controller.getActiveCumulative(), undefined);
+});
+
+test("stop snapshot carries cumulative metrics into lastTerminal", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		controller.start("snapshot stats test", cwd);
+		controller.accumulateRunResult({
+			turnCount: 4,
+			toolCallCount: 9,
+			durationMs: 8000,
+			usage: {
+				input: 200,
+				output: 100,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 300,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
+		});
+
+		const snapshot = controller.stop("user cancelled", "stopped");
+		assert.ok(snapshot);
+		assert.equal(snapshot.cumulativeTurnCount, 4);
+		assert.equal(snapshot.cumulativeToolCallCount, 9);
+		assert.equal(snapshot.cumulativeDurationMs, 8000);
+		assert.equal(snapshot.cumulativeUsage?.totalTokens, 300);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("persisted state round-trips cumulative metrics", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		const task = controller.start("persist cumulative", cwd);
+		controller.accumulateRunResult({
+			turnCount: 6,
+			toolCallCount: 12,
+			durationMs: 9999,
+			usage: {
+				input: 300,
+				output: 150,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 450,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
+		});
+
+		const loaded = loadState(task.stateFilePath);
+		assert.ok(loaded);
+		assert.equal(loaded.task.cumulativeTurnCount, 6);
+		assert.equal(loaded.task.cumulativeToolCallCount, 12);
+		assert.equal(loaded.task.cumulativeDurationMs, 9999);
+		assert.equal(loaded.task.cumulativeUsage.totalTokens, 450);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("formatSnapshot appends stats heading and recap when metrics exist", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		const { task } = enterExecutionPhase(controller, "format snapshot stats", cwd);
+		// Mark all features passing so complete is honored, then accumulate.
+		const baseline = featureList(task.goal);
+		writeFeatureList(task.featureListPath, {
+			...baseline,
+			features: baseline.features.map((f) => ({ ...f, passes: true })),
+		});
+		controller.accumulateRunResult({
+			turnCount: 2,
+			toolCallCount: 5,
+			durationMs: 1234,
+			usage: {
+				input: 100,
+				output: 50,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 150,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
+		});
+		controller.markDispatched();
+		controller.finishTurn({ status: "complete", summary: "all checks green\nshipped v1" });
+
+		const snapshot = controller.getState().lastTerminal;
+		assert.ok(snapshot);
+		const formatted = formatSnapshot(snapshot);
+		assert.match(formatted, /Run summary/);
+		assert.match(formatted, /Total time: 1s/);
+		assert.match(formatted, /Total turns: 2/);
+		assert.match(formatted, /Tool calls: 5/);
+		assert.match(formatted, /Tokens: 150/);
+		assert.match(formatted, /Recap/);
+		assert.match(formatted, /shipped v1/);
+	} finally {
+		cleanup(cwd);
+	}
+});
+
+test("adoptResumedTask backfills missing cumulative fields", () => {
+	const cwd = createTempWorkspace();
+	try {
+		const controller = new GrubController();
+		// Persist a legacy task without cumulative fields.
+		const legacyTask = controller.start("legacy resume", cwd);
+		// Manually strip cumulative fields to simulate an older persisted shape.
+		const loaded = loadState(legacyTask.stateFilePath);
+		assert.ok(loaded);
+		const stripped = {
+			...loaded.task,
+			cumulativeTurnCount: undefined as unknown as number,
+			cumulativeToolCallCount: undefined as unknown as number,
+			cumulativeDurationMs: undefined as unknown as number,
+			cumulativeUsage: undefined as unknown as import("@catui/ai/types").Usage,
+		} as typeof loaded.task;
+		persistState(stripped);
+
+		// Build a fresh controller and adopt from disk.
+		const fresh = new GrubController();
+		const persisted = loadState(stripped.stateFilePath);
+		assert.ok(persisted);
+		const resumed = fresh.adoptResumedTask(persisted.task);
+		assert.equal(resumed.cumulativeTurnCount, 0);
+		assert.equal(resumed.cumulativeToolCallCount, 0);
+		assert.equal(resumed.cumulativeDurationMs, 0);
+		assert.equal(resumed.cumulativeUsage.totalTokens, 0);
+	} finally {
+		cleanup(cwd);
+	}
+});

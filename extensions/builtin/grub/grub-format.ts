@@ -6,8 +6,46 @@
  */
 
 import { readFeatureList } from "./grub-feature-list.js";
-import { grubText, type GrubLocale } from "./grub-i18n.js";
+import { formatDuration, grubText, type GrubLocale } from "./grub-i18n.js";
 import type { GrubDecision, GrubTaskSnapshot, GrubTaskState } from "./grub-types.js";
+
+const EMPTY_USAGE = {
+	input: 0,
+	output: 0,
+	cacheRead: 0,
+	cacheWrite: 0,
+	totalTokens: 0,
+	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+};
+
+function formatRunStats(snapshot: GrubTaskSnapshot, locale: GrubLocale): string[] {
+	const text = grubText(locale);
+	const usage = snapshot.cumulativeUsage ?? EMPTY_USAGE;
+	const total = snapshot.cumulativeUsage?.cost?.total ?? usage.cost.total;
+	const lines: string[] = [`${text.prefix} ${text.statsHeading}`];
+	lines.push(`  ${text.statDuration(snapshot.cumulativeDurationMs ?? 0)}`);
+	lines.push(`  ${text.statTurns(snapshot.cumulativeTurnCount ?? 0)}`);
+	lines.push(`  ${text.statToolCalls(snapshot.cumulativeToolCallCount ?? 0)}`);
+	lines.push(`  ${text.statTokens(usage)}`);
+	if (total > 0) {
+		lines.push(`  ${text.statCost(total)}`);
+	}
+	return lines;
+}
+
+function formatRecap(snapshot: GrubTaskSnapshot, locale: GrubLocale): string[] {
+	const text = grubText(locale);
+	const lines: string[] = [`${text.prefix} ${text.recapHeading}`];
+	const summary = snapshot.lastDecision?.summary?.trim();
+	if (summary) {
+		for (const line of summary.split(/\r?\n/)) {
+			lines.push(`  ${line}`);
+		}
+	} else {
+		lines.push(`  ${text.recapEmpty}`);
+	}
+	return lines;
+}
 
 export function formatTaskState(task: GrubTaskState): string {
 	const text = grubText(task.locale ?? "en");
@@ -65,7 +103,21 @@ export function formatSnapshot(snapshot: GrubTaskSnapshot): string {
 	lines.push(`${text.savedIn}: ${snapshot.harnessDirectory}`);
 	lines.push(`${text.taskFiles}: ${snapshot.featureListPath}, ${snapshot.progressLogPath}`);
 
+	if (hasRunStats(snapshot)) {
+		lines.push(...formatRunStats(snapshot, locale));
+		lines.push(...formatRecap(snapshot, locale));
+	}
+
 	return lines.join("\n");
+}
+
+function hasRunStats(snapshot: GrubTaskSnapshot): boolean {
+	if ((snapshot.cumulativeTurnCount ?? 0) > 0) return true;
+	if ((snapshot.cumulativeToolCallCount ?? 0) > 0) return true;
+	if ((snapshot.cumulativeDurationMs ?? 0) > 0) return true;
+	const usage = snapshot.cumulativeUsage;
+	if (usage && (usage.totalTokens > 0 || usage.input > 0 || usage.output > 0)) return true;
+	return false;
 }
 
 export function describeDecision(decision: GrubDecision, locale: GrubLocale): string {

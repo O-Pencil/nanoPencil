@@ -1,9 +1,11 @@
 /**
  * [WHO]: GrubStatus, GrubDecisionStatus, GrubDecision, GrubPhase, GrubTaskState, GrubTaskSnapshot, GrubControllerState, ParsedGrubCommand, FeatureItem, FeatureList, PersistedGrubState
- * [FROM]: No external dependencies
+ * [FROM]: Depends on @catui/agent-core for Usage type
  * [TO]: Consumed by ./grub-controller.ts, ./grub-parser.ts, ./grub-feature-list.ts, ./grub-persistence.ts, ./index.ts
  * [HERE]: extensions/builtin/grub/grub-types.ts - grub task type definitions including feature-list JSON schema and persistence envelope
  */
+import type { Usage } from "@catui/ai/types";
+
 export type GrubStatus = "running" | "complete" | "blocked" | "stopped" | "failed";
 
 export type GrubDecisionStatus = "continue" | "complete" | "blocked";
@@ -43,6 +45,11 @@ export interface GrubTaskState {
 	featureListBaseline?: FeatureList;
 	lastDecision?: GrubDecision;
 	lastError?: string;
+	/** Cumulative cost since task start; populated incrementally from each agent_result event. */
+	cumulativeTurnCount: number;
+	cumulativeToolCallCount: number;
+	cumulativeDurationMs: number;
+	cumulativeUsage: Usage;
 }
 
 export interface GrubTaskSnapshot {
@@ -64,6 +71,11 @@ export interface GrubTaskSnapshot {
 	initScriptPath: string;
 	lastDecision?: GrubDecision;
 	lastError?: string;
+	/** Cumulative run metrics; always present on freshly minted snapshots. Older persisted snapshots may lack these. */
+	cumulativeTurnCount?: number;
+	cumulativeToolCallCount?: number;
+	cumulativeDurationMs?: number;
+	cumulativeUsage?: Usage;
 }
 
 export interface GrubControllerState {

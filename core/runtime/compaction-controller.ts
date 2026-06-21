@@ -9,6 +9,10 @@
  * Extracted from AgentSession (AS04). Owns the manual compaction flow and its cancellation state.
  * Auto-compaction (loop-driven) is a later slice (P4.x-b). Session state is reached through the
  * narrow CompactionControllerContext; behavior is identical to the former AgentSession.compact().
+ *
+ * Circuit breaker: tracks consecutive auto-compaction failures. After
+ * MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES (3), auto-compaction is disabled for the session
+ * to prevent infinite retry loops. Resets on success.
  */
 
 import type { AgentMessage } from "@catui/agent-core";
@@ -18,11 +22,18 @@ import type { CompactionEntry } from "../session/session-manager.js";
 import { AbortSlot } from "../platform/abort-slot.js";
 import type { CompactionControllerContext } from "./session-context.js";
 
+/** Maximum consecutive auto-compaction failures before circuit breaker trips (CC: MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES). */
+const MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3;
+
 export class CompactionController {
   /** Cancellation slot for the in-flight manual compaction. */
   private readonly _slot = new AbortSlot();
   /** Cancellation slot for the in-flight auto (loop-driven) compaction. */
   private readonly _autoSlot = new AbortSlot();
+  /** Consecutive auto-compaction failure counter (circuit breaker). */
+  private _consecutiveAutoFailures = 0;
+  /** Whether the circuit breaker has tripped (auto-compaction disabled). */
+  private _circuitBroken = false;
 
   constructor(private readonly ctx: CompactionControllerContext) {}
 
@@ -157,8 +168,18 @@ export class CompactionController {
    * auto_compaction_start/end, and returns the rebuilt messages on success (or undefined when
    * compaction was skipped/aborted/failed). The loop-continuation decision (retry / kick the
    * queue) stays in AgentSession — this only owns the compaction itself.
+   *
+   * Circuit breaker: after MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES consecutive failures,
+   * auto-compaction is disabled for the session to prevent infinite retry loops.
    */
   async runAuto(reason: "overflow" | "threshold", willRetry: boolean): Promise<AgentMessage[] | undefined> {
+    // Circuit breaker: stop trying after too many consecutive failures
+    if (this._circuitBroken) {
+      this.ctx.logInfo("Auto-compaction skipped (circuit breaker tripped)", { consecutiveFailures: this._consecutiveAutoFailures });
+      this.ctx.emitAutoCompactionEnd({ result: undefined, aborted: false, willRetry: false, errorMessage: "Auto-compaction disabled after consecutive failures" });
+      return undefined;
+    }
+
     this.ctx.logInfo("Auto-compaction triggered", { reason, willRetry });
     const settings = this.ctx.getCompactionSettings();
 
@@ -251,9 +272,23 @@ export class CompactionController {
       const result: CompactionResult = { summary, firstKeptEntryId, tokensBefore, details };
       this.ctx.emitAutoCompactionEnd({ result, aborted: false, willRetry });
 
+      // Reset circuit breaker on success
+      this._consecutiveAutoFailures = 0;
+
       return messages;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "compaction failed";
+
+      // Track consecutive failures for circuit breaker
+      this._consecutiveAutoFailures++;
+      if (this._consecutiveAutoFailures >= MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES) {
+        this._circuitBroken = true;
+        this.ctx.logInfo("Auto-compaction circuit breaker tripped", {
+          consecutiveFailures: this._consecutiveAutoFailures,
+          maxFailures: MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES,
+        });
+      }
+
       this.ctx.emitAutoCompactionEnd({
         result: undefined,
         aborted: false,

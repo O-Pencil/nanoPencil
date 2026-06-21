@@ -12,7 +12,7 @@ import type { ExtensionContext } from "../../../../core/extensions-host/types.js
 import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { getTask } from "../task-store.js";
-import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
+
 
 const taskGetSchema = Type.Object({
 	taskId: Type.String({ description: "The ID of the task to retrieve" }),
@@ -20,7 +20,7 @@ const taskGetSchema = Type.Object({
 
 export type TaskGetInput = Static<typeof taskGetSchema>;
 
-export function createTaskGetTool() {
+export function createTaskGetTool(resolveTaskListId: (ctx: ExtensionContext) => string) {
 	return {
 		name: "TaskGet",
 		label: "Get Task",
@@ -94,7 +94,8 @@ Returns full task details:
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const task = await getTask(ctx.agentDir, DEFAULT_TASK_LIST_ID, params.taskId);
+				const taskListId = resolveTaskListId(ctx);
+				const task = await getTask(ctx.agentDir, taskListId, params.taskId);
 
 				if (!task) {
 					return {

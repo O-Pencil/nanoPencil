@@ -12,12 +12,12 @@ import type { ExtensionContext } from "../../../../core/extensions-host/types.js
 import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { listTasks } from "../task-store.js";
-import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
+
 
 const taskListSchema = Type.Object({});
 export type TaskListInput = Static<typeof taskListSchema>;
 
-export function createTaskListTool() {
+export function createTaskListTool(resolveTaskListId: (ctx: ExtensionContext) => string) {
 	return {
 		name: "TaskList",
 		label: "List Tasks",
@@ -81,7 +81,8 @@ Use TaskGet with a specific task ID to view full details including description a
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const allTasks = (await listTasks(ctx.agentDir, DEFAULT_TASK_LIST_ID)).filter(
+				const taskListId = resolveTaskListId(ctx);
+				const allTasks = (await listTasks(ctx.agentDir, taskListId)).filter(
 					t => !(t.metadata as Record<string, unknown>)?._internal,
 				);
 

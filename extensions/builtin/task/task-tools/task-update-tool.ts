@@ -12,7 +12,7 @@ import type { ExtensionContext } from "../../../../core/extensions-host/types.js
 import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { blockTask, deleteTask, getTask, updateTask, listTasks } from "../task-store.js";
-import { DEFAULT_TASK_LIST_ID, TaskStatusValues } from "../task-types.js";
+import { TaskStatusValues } from "../task-types.js";
 import type { TaskStatus, TaskUpdateStatus } from "../task-types.js";
 
 const taskUpdateSchema = Type.Object({
@@ -47,7 +47,7 @@ const taskUpdateSchema = Type.Object({
 
 export type TaskUpdateInput = Static<typeof taskUpdateSchema>;
 
-export function createTaskUpdateTool() {
+export function createTaskUpdateTool(resolveTaskListId: (ctx: ExtensionContext) => string) {
 	return {
 		name: "TaskUpdate",
 		label: "Update Task",
@@ -171,7 +171,7 @@ Set up task dependencies:
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const taskListId = DEFAULT_TASK_LIST_ID;
+				const taskListId = resolveTaskListId(ctx);
 				const existingTask = await getTask(ctx.agentDir, taskListId, params.taskId);
 				if (!existingTask) {
 					return {

@@ -4,12 +4,17 @@
 `issue:cron-tasks-path-mismatch`
 
 ## 状态
-`open`
+`closed — fixed`
 
 ## 日期
 `2026-05-22`
 
+## 关闭日期
+`2026-06-20`
+
 ---
+
+> **注意**：此 issue 已在后续重构中修复。当前代码使用 `api.agentDir` / `ctx.agentDir` 作为 cron 任务的存储基准路径，而非 `api.cwd`。cron 文件路径已改为 `.claude/scheduled_tasks.json`（相对于 agentDir）。此文档保留作为历史记录。
 
 ## 问题描述
 

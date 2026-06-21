@@ -44,7 +44,7 @@ import { PlanProgressPanelComponent } from "../components/plan-progress-panel.js
 import { TaskStatusPanelComponent, type TaskStatusEntry } from "../components/task-status-panel.js";
 import type { InteractiveState, PlanProgressState, SubAgentState } from "../state/interactive-state.js";
 import { theme } from "../theme/theme.js";
-import { listTasks, onTasksUpdated, resetTaskList } from "../../../extensions/builtin/task/task-store.js";
+import { listTasks, onTasksUpdated, resetTaskList, getTaskListId } from "../../../extensions/builtin/task/task-store.js";
 import { DEFAULT_TASK_LIST_ID } from "../../../extensions/builtin/task/task-types.js";
 
 export interface StreamRenderStatePort {
@@ -622,8 +622,12 @@ export class StreamRenderController {
     const agentDir = this.ctx.runtime.getAgentDir();
     if (!agentDir) return;
 
+    // Resolve task list ID per CC semantics (env > team > session ID)
+    const sessionId = this.ctx.loaders.getSessionId?.();
+    const taskListId = getTaskListId(sessionId);
+
     try {
-      const rawTasks = await listTasks(agentDir, DEFAULT_TASK_LIST_ID);
+      const rawTasks = await listTasks(agentDir, taskListId);
       // Filter out internal tasks
       const tasks = rawTasks
         .filter((t) => !(t.metadata as Record<string, unknown>)?._internal)
@@ -667,13 +671,17 @@ export class StreamRenderController {
           this.taskAutoHideTimer = setTimeout(async () => {
             this.taskAutoHideTimer = undefined;
             // Verify still all done
-            const currentTasks = await listTasks(agentDir, DEFAULT_TASK_LIST_ID)
+            const currentTasks = await listTasks(agentDir, taskListId)
               .catch(() => []);
             const stillAllDone = currentTasks.length > 0 &&
               currentTasks.every((t) => t.status === "completed");
             if (stillAllDone) {
-              await resetTaskList(agentDir, DEFAULT_TASK_LIST_ID).catch(() => {});
-              // Panel will be removed by the next task signal notification
+              // Just remove the panel — don't reset the task list (user may want to review)
+              if (state.taskStatusPanel) {
+                statusContainer.removeChild(state.taskStatusPanel);
+                state.taskStatusPanel = undefined;
+              }
+              this.ctx.layout.requestRender();
             }
           }, TASK_AUTO_HIDE_DELAY_MS);
         }

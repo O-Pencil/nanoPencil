@@ -13,8 +13,8 @@ import { Type } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
 import type { AgentToolResult } from "@catui/agent-core";
 import type { ExtensionContext } from "../../../../core/extensions-host/types.js";
-import { getTask } from "../task-store.js";
-import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
+import { getTask, getTaskListId } from "../task-store.js";
+
 import { getBackgroundTask, readBackgroundTaskOutput } from "../../../../core/tools/bash.js";
 
 const taskOutputSchema = Type.Object({
@@ -37,7 +37,7 @@ const taskOutputSchema = Type.Object({
 
 export type TaskOutputInput = Static<typeof taskOutputSchema>;
 
-export function createTaskOutputTool() {
+export function createTaskOutputTool(resolveTaskListId: (ctx: ExtensionContext) => string = () => getTaskListId()) {
 	return {
 		name: "TaskOutput",
 		label: "Task Output",
@@ -61,11 +61,12 @@ export function createTaskOutputTool() {
 			_onUpdate: undefined,
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
+			const taskListId = resolveTaskListId(ctx);
 			const shouldBlock = params.block !== false;
 			const timeout = params.timeout ?? 30000;
 
 			// 1. Try CRUD task store first
-			const task = await getTask(ctx.agentDir, DEFAULT_TASK_LIST_ID, params.task_id);
+			const task = await getTask(ctx.agentDir, taskListId, params.task_id);
 			if (task) {
 				const isComplete = task.status === "completed";
 				return {

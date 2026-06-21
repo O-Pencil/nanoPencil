@@ -12,7 +12,6 @@ import type { ExtensionContext } from "../../../../core/extensions-host/types.js
 import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { createTask } from "../task-store.js";
-import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
 
 const taskCreateSchema = Type.Object({
 	subject: Type.String({ description: "A brief title for the task" }),
@@ -32,7 +31,7 @@ const taskCreateSchema = Type.Object({
 
 export type TaskCreateInput = Static<typeof taskCreateSchema>;
 
-export function createTaskCreateTool() {
+export function createTaskCreateTool(resolveTaskListId: (ctx: ExtensionContext) => string) {
 	return {
 		name: "TaskCreate",
 		label: "Create Task",
@@ -116,7 +115,8 @@ All tasks are created with status \`pending\`.
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const task = await createTask(ctx.agentDir, DEFAULT_TASK_LIST_ID, {
+				const taskListId = resolveTaskListId(ctx);
+				const task = await createTask(ctx.agentDir, taskListId, {
 					subject: params.subject,
 					description: params.description,
 					activeForm: params.activeForm,

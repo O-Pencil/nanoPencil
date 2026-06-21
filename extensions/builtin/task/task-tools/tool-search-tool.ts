@@ -250,6 +250,7 @@ function searchToolsWithKeywords(
  */
 export function createToolSearchTool(
 	getAllTools: () => Array<{ name: string; description: string; parameters: unknown; searchHint?: string }>,
+	resolveTaskListId: (ctx: ExtensionContext) => string,
 ) {
 	return {
 		name: TOOL_SEARCH_TOOL_NAME,
@@ -268,6 +269,7 @@ export function createToolSearchTool(
 			_ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
+				const taskListId = resolveTaskListId(_ctx);
 				const allTools = getAllTools();
 				const { query, max_results = 5 } = params;
 

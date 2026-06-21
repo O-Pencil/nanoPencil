@@ -3,12 +3,47 @@
  * [FROM]: Inspired by Claude Code utils/tasks.ts
  * [TO]: Consumed by all task tools
  * [HERE]: extensions/builtin/task/task-store.ts - task state management with atomic file writes
+ *
+ * Task list isolation: per CC semantics, each session/terminal gets its own
+ * task list. Priority: CATUI_TASK_LIST_ID env > team name > session ID.
+ * Legacy fallback: DEFAULT_TASK_LIST_ID ("tasklist") for existing data.
+ *
+ * Cross-terminal updates: fs.watch monitors the tasks directory and notifies
+ * in-process listeners. A 5s polling fallback handles edge cases.
  */
 
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
 import type { Task, TaskStatus } from "./task-types.js";
 import { sanitizePathComponent, DEFAULT_TASK_LIST_ID } from "./task-types.js";
+
+// ============================================================================
+// Task list ID resolution (CC: session isolation)
+// ============================================================================
+
+/**
+ * Resolve the task list ID for the current context.
+ *
+ * Priority (per CC):
+ * 1. CATUI_TASK_LIST_ID env var (explicit override)
+ * 2. Team name (if in team context)
+ * 3. Session ID (default — each terminal gets its own task list)
+ *
+ * Falls back to DEFAULT_TASK_LIST_ID ("tasklist") for legacy compatibility.
+ */
+export function getTaskListId(sessionId?: string, teamName?: string): string {
+	if (process.env.CATUI_TASK_LIST_ID) {
+		return process.env.CATUI_TASK_LIST_ID;
+	}
+	if (teamName) {
+		return teamName;
+	}
+	if (sessionId) {
+		return sessionId;
+	}
+	return DEFAULT_TASK_LIST_ID;
+}
 
 // ============================================================================
 // Task update signal (in-process notification)
@@ -31,6 +66,68 @@ export function onTasksUpdated(listener: TaskUpdateListener): () => void {
 }
 
 // ============================================================================
+// fs.watch for cross-terminal live updates (CC: TasksV2Store)
+// ============================================================================
+
+const watchers = new Map<string, FSWatcher>();
+const POLL_INTERVAL_MS = 5000;
+const pollTimers = new Map<string, ReturnType<typeof setInterval>>();
+
+/**
+ * Start watching a task directory for changes (fs.watch + 5s polling fallback).
+ * Multiple calls with the same dir are idempotent.
+ */
+export function startTaskFileWatcher(dir: string): void {
+	if (watchers.has(dir) || pollTimers.has(dir)) return;
+
+	// Primary: fs.watch
+	try {
+		const watcher = watch(dir, { recursive: false }, () => {
+			notifyTasksUpdated();
+		});
+		watcher.unref?.();
+		watchers.set(dir, watcher);
+	} catch {
+		// fs.watch may fail on some platforms — fall through to polling
+	}
+
+	// Fallback: 5s polling (handles edge cases like NFS, Docker mounts)
+	const timer = setInterval(() => {
+		notifyTasksUpdated();
+	}, POLL_INTERVAL_MS);
+	timer.unref?.();
+	pollTimers.set(dir, timer);
+}
+
+/**
+ * Stop watching a task directory.
+ */
+export function stopTaskFileWatcher(dir: string): void {
+	const watcher = watchers.get(dir);
+	if (watcher) {
+		watcher.close();
+		watchers.delete(dir);
+	}
+	const timer = pollTimers.get(dir);
+	if (timer) {
+		clearInterval(timer);
+		pollTimers.delete(dir);
+	}
+}
+
+/**
+ * Stop all task file watchers. Called on session shutdown.
+ */
+export function stopAllTaskFileWatchers(): void {
+	for (const [dir] of watchers) {
+		stopTaskFileWatcher(dir);
+	}
+	for (const [dir] of pollTimers) {
+		stopTaskFileWatcher(dir);
+	}
+}
+
+// ============================================================================
 // Path helpers
 // ============================================================================
 
@@ -38,6 +135,10 @@ const HIGH_WATER_MARK_FILE = ".highwatermark";
 
 export function getTasksDir(agentDir: string, taskListId: string = DEFAULT_TASK_LIST_ID): string {
 	return join(agentDir, "tasks", sanitizePathComponent(taskListId));
+}
+
+function watchTaskList(agentDir: string, taskListId: string): void {
+	startTaskFileWatcher(getTasksDir(agentDir, taskListId));
 }
 
 function getTaskPath(agentDir: string, taskListId: string, taskId: string): string {
@@ -130,6 +231,7 @@ export async function createTask(
 	taskData: Omit<Task, "id">,
 ): Promise<Task> {
 	await ensureTasksDir(agentDir, taskListId);
+	watchTaskList(agentDir, taskListId);
 	const highestId = await findHighestTaskId(agentDir, taskListId);
 	const id = String(highestId + 1);
 	const task: Task = { id, ...taskData };
@@ -147,6 +249,7 @@ export async function getTask(
 	taskListId: string,
 	taskId: string,
 ): Promise<Task | null> {
+	watchTaskList(agentDir, taskListId);
 	const path = getTaskPath(agentDir, taskListId, taskId);
 	try {
 		const content = await readFile(path, "utf-8");
@@ -226,6 +329,7 @@ export async function listTasks(
 	agentDir: string,
 	taskListId: string,
 ): Promise<Task[]> {
+	watchTaskList(agentDir, taskListId);
 	const dir = getTasksDir(agentDir, taskListId);
 	let files: string[];
 	try {

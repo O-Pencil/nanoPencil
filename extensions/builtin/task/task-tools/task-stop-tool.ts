@@ -12,7 +12,7 @@ import type { ExtensionContext } from "../../../../core/extensions-host/types.js
 import { Container, Text, type Component } from "@catui/tui";
 import type { Theme } from "../../../../core/theme-contract.js";
 import { getTask, updateTask } from "../task-store.js";
-import { DEFAULT_TASK_LIST_ID } from "../task-types.js";
+
 import { killBackgroundTask, getBackgroundTask } from "../../../../core/tools/bash.js";
 
 const taskStopSchema = Type.Object({
@@ -21,7 +21,7 @@ const taskStopSchema = Type.Object({
 
 export type TaskStopInput = Static<typeof taskStopSchema>;
 
-export function createTaskStopTool() {
+export function createTaskStopTool(resolveTaskListId: (ctx: ExtensionContext) => string) {
 	return {
 		name: "TaskStop",
 		label: "Stop Task",
@@ -67,7 +67,8 @@ export function createTaskStopTool() {
 			ctx: ExtensionContext,
 		): Promise<AgentToolResult<unknown>> {
 			try {
-				const task = await getTask(ctx.agentDir, DEFAULT_TASK_LIST_ID, params.task_id);
+				const taskListId = resolveTaskListId(ctx);
+				const task = await getTask(ctx.agentDir, taskListId, params.task_id);
 				if (!task) {
 					// Fallback: try to kill a background bash task
 					const bgTask = getBackgroundTask(params.task_id);
@@ -97,7 +98,7 @@ export function createTaskStopTool() {
 					};
 				}
 
-				await updateTask(ctx.agentDir, DEFAULT_TASK_LIST_ID, params.task_id, {
+				await updateTask(ctx.agentDir, taskListId, params.task_id, {
 					status: "completed",
 				});
 

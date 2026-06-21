@@ -683,6 +683,62 @@ describe("Editor component", () => {
 		});
 	});
 
+	describe("Paste rendering", () => {
+		it("emits one change notification for a single-line bracketed paste", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+			const changes: string[] = [];
+			editor.onChange = (text) => {
+				changes.push(text);
+			};
+
+			editor.handleInput("\x1b[200~hello world\x1b[201~");
+
+			assert.strictEqual(editor.getText(), "hello world");
+			assert.deepStrictEqual(changes, ["hello world"]);
+		});
+
+		it("recovers pending bracketed paste when the end marker is missing", () => {
+			const originalSetTimeout = globalThis.setTimeout;
+			const originalClearTimeout = globalThis.clearTimeout;
+			const scheduled: Array<() => void> = [];
+			globalThis.setTimeout = ((callback: () => void) => {
+				scheduled.push(callback);
+				return scheduled.length as never;
+			}) as typeof setTimeout;
+			globalThis.clearTimeout = (() => {}) as typeof clearTimeout;
+
+			try {
+				const editor = new Editor(createTestTUI(), defaultEditorTheme);
+				editor.handleInput("\x1b[200~unterminated");
+				assert.strictEqual(editor.getText(), "");
+
+				scheduled.shift()?.();
+				assert.strictEqual(editor.getText(), "unterminated");
+
+				editor.handleInput("!");
+				assert.strictEqual(editor.getText(), "unterminated!");
+			} finally {
+				globalThis.setTimeout = originalSetTimeout;
+				globalThis.clearTimeout = originalClearTimeout;
+			}
+		});
+	});
+
+	describe("Programmatic text updates", () => {
+		it("does not emit a change notification when setText receives the current text", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+			editor.setText("same text");
+			const changes: string[] = [];
+			editor.onChange = (text) => {
+				changes.push(text);
+			};
+
+			editor.setText("same text");
+
+			assert.deepStrictEqual(changes, []);
+		});
+	});
+
 	describe("Word wrapping", () => {
 		it("wraps at word boundaries instead of mid-word", () => {
 			const editor = new Editor(createTestTUI(), defaultEditorTheme);
@@ -2623,6 +2679,22 @@ describe("Editor component", () => {
 			// Move down - preferredVisualCol was kept at 15
 			editor.handleInput("\x1b[B"); // Down to line 1
 			assert.deepStrictEqual(editor.getCursor(), { line: 1, col: 15 });
+		});
+	});
+
+	describe("Wrapping stability", () => {
+		it("keeps rendered lines within terminal width when typing full-width characters in a narrow editor", () => {
+			const editor = new Editor(createTestTUI(8, 10), defaultEditorTheme);
+			editor.setText("你好");
+
+			const rendered = editor.render(2);
+
+			for (const line of rendered) {
+				assert.ok(
+					visibleWidth(line) <= 2,
+					`Expected line to fit width 2, got width ${visibleWidth(line)} for ${JSON.stringify(line)}`,
+				);
+			}
 		});
 	});
 });

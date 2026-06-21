@@ -201,6 +201,7 @@ export class Editor implements Component, Focusable {
 	// Bracketed paste mode buffering
 	private pasteBuffer: string = "";
 	private isInPaste: boolean = false;
+	private pasteTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	// Prompt history for up/down navigation
 	private history: string[] = [];
@@ -425,11 +426,15 @@ export class Editor implements Component, Focusable {
 				} else {
 					// Cursor is at the end - add highlighted space
 					const cursor = "\x1b[7m \x1b[0m";
-					displayText = before + marker + cursor;
-					lineVisibleWidth = lineVisibleWidth + 1;
-					// If cursor overflows content width into the padding, flag it
-					if (lineVisibleWidth > contentWidth && paddingX > 0) {
-						cursorInPadding = true;
+					if (lineVisibleWidth + 1 > contentWidth && paddingX === 0) {
+						displayText = before + marker;
+					} else {
+						displayText = before + marker + cursor;
+						lineVisibleWidth = lineVisibleWidth + 1;
+						// If cursor overflows content width into the padding, flag it
+						if (lineVisibleWidth > contentWidth && paddingX > 0) {
+							cursorInPadding = true;
+						}
 					}
 				}
 			}
@@ -509,6 +514,7 @@ export class Editor implements Component, Focusable {
 			this.isInPaste = true;
 			this.pasteBuffer = "";
 			data = data.replace("\x1b[200~", "");
+			this.resetPasteTimeout();
 		}
 
 		if (this.isInPaste) {
@@ -516,6 +522,7 @@ export class Editor implements Component, Focusable {
 			const endIndex = this.pasteBuffer.indexOf("\x1b[201~");
 			if (endIndex !== -1) {
 				const pasteContent = this.pasteBuffer.substring(0, endIndex);
+				this.clearPasteTimeout();
 				if (pasteContent.length > 0) {
 					this.handlePaste(pasteContent);
 				}
@@ -527,6 +534,7 @@ export class Editor implements Component, Focusable {
 				}
 				return;
 			}
+			this.resetPasteTimeout();
 			return;
 		}
 
@@ -887,10 +895,11 @@ export class Editor implements Component, Focusable {
 	setText(text: string): void {
 		this.lastAction = null;
 		this.historyIndex = -1; // Exit history browsing mode
-		// Push undo snapshot if content differs (makes programmatic changes undoable)
-		if (this.getText() !== text) {
-			this.pushUndoSnapshot();
+		if (this.getText() === text) {
+			return;
 		}
+		// Push undo snapshot if content differs (makes programmatic changes undoable)
+		this.pushUndoSnapshot();
 		this.setTextInternal(text);
 	}
 
@@ -1066,15 +1075,53 @@ export class Editor implements Component, Focusable {
 		}
 
 		if (pastedLines.length === 1) {
-			// Single line - insert character by character to trigger autocomplete
-			for (const char of filteredText) {
-				this.insertCharacter(char, true);
-			}
+			// Single-line paste is one logical edit. Insert it atomically so
+			// parent UI state (bash-mode border, overlays) observes one change,
+			// then refresh autocomplete from the final cursor context.
+			this.insertTextAtCursorInternal(filteredText);
+			this.refreshAutocompleteAfterTextChange();
 			return;
 		}
 
 		// Multi-line paste - use direct state manipulation
 		this.insertTextAtCursorInternal(filteredText);
+	}
+
+	private resetPasteTimeout(): void {
+		this.clearPasteTimeout();
+		this.pasteTimeout = setTimeout(() => {
+			this.flushPendingPaste();
+		}, 100);
+	}
+
+	private clearPasteTimeout(): void {
+		if (!this.pasteTimeout) return;
+		clearTimeout(this.pasteTimeout);
+		this.pasteTimeout = undefined;
+	}
+
+	private flushPendingPaste(): void {
+		if (!this.isInPaste) return;
+		const pasteContent = this.pasteBuffer;
+		this.isInPaste = false;
+		this.pasteBuffer = "";
+		this.pasteTimeout = undefined;
+		if (pasteContent.length > 0) {
+			this.handlePaste(pasteContent);
+		}
+	}
+
+	private refreshAutocompleteAfterTextChange(): void {
+		if (this.autocompleteState) {
+			this.updateAutocomplete();
+			return;
+		}
+
+		const currentLine = this.state.lines[this.state.cursorLine] || "";
+		const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
+		if (this.isInSlashCommandContext(textBeforeCursor) || textBeforeCursor.match(/(?:^|[\s])@[^\s]*$/)) {
+			this.tryTriggerAutocomplete();
+		}
 	}
 
 	private addNewLine(): void {

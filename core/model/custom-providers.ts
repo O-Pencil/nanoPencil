@@ -281,6 +281,27 @@ export function getCustomProtocolProviderModelName(
 	return getStoredModelId(getStoredProviderConfig(modelsPath, provider));
 }
 
+export function getCustomProtocolProviderModelLimits(
+	modelsPath: string,
+	provider: CustomProtocolProviderId,
+): { contextWindow?: number; maxTokens?: number } {
+	const providerConfig = getStoredProviderConfig(modelsPath, provider);
+	const models = providerConfig?.models;
+	if (!Array.isArray(models) || models.length === 0) {
+		return {};
+	}
+	const first = models[0];
+	if (typeof first !== "object" || first === null) {
+		return {};
+	}
+	const contextWindow = (first as { contextWindow?: unknown }).contextWindow;
+	const maxTokens = (first as { maxTokens?: unknown }).maxTokens;
+	return {
+		contextWindow: typeof contextWindow === "number" && contextWindow > 0 ? contextWindow : undefined,
+		maxTokens: typeof maxTokens === "number" && maxTokens > 0 ? maxTokens : undefined,
+	};
+}
+
 export function ensureCustomProtocolProvidersInModels(modelsPath: string): void {
 	let config: ModelsConfigFile;
 	try {
@@ -301,7 +322,31 @@ export function ensureCustomProtocolProvidersInModels(modelsPath: string): void 
 		const modelName = shouldResetModelName
 			? DEFAULT_CUSTOM_MODEL_NAME
 			: getStoredModelId(existing) ?? DEFAULT_CUSTOM_MODEL_NAME;
-		const nextModels = [createCustomModelDefinition(provider, modelName)];
+		const existingLimits = (() => {
+			const models = existing?.models;
+			if (!Array.isArray(models) || models.length === 0) return undefined;
+			const first = models[0];
+			if (typeof first !== "object" || first === null) return undefined;
+			return first as { contextWindow?: unknown; maxTokens?: unknown };
+		})();
+		const preservedOverrides: { contextWindow?: number; maxTokens?: number } = {};
+		if (
+			existingLimits &&
+			typeof existingLimits.contextWindow === "number" &&
+			existingLimits.contextWindow > 0
+		) {
+			preservedOverrides.contextWindow = existingLimits.contextWindow;
+		}
+		if (
+			existingLimits &&
+			typeof existingLimits.maxTokens === "number" &&
+			existingLimits.maxTokens > 0
+		) {
+			preservedOverrides.maxTokens = existingLimits.maxTokens;
+		}
+		const nextModels = [
+			createCustomModelDefinition(provider, modelName, preservedOverrides),
+		];
 
 		if (!existing) {
 			config.providers[provider] = {
@@ -342,6 +387,7 @@ export async function saveCustomProtocolProviderConfig(
 		baseUrl: string;
 		modelName: string;
 		apiKey?: string;
+		overrides?: { contextWindow?: number; maxTokens?: number };
 	},
 ): Promise<{ contextWindow?: number; maxTokens?: number } | null> {
 	const trimmedBaseUrl = configUpdate.baseUrl.trim();
@@ -353,13 +399,33 @@ export async function saveCustomProtocolProviderConfig(
 		throw new Error("Model name cannot be empty.");
 	}
 
-	// Probe for real context window (silently falls back to defaults on failure)
-	const probed = await probeModelContextWindow(
-		provider,
-		trimmedBaseUrl,
-		configUpdate.apiKey,
-		trimmedModelName,
-	);
+	const overrides = configUpdate.overrides;
+	const priorLimits = getCustomProtocolProviderModelLimits(modelsPath, provider);
+	let probed: { contextWindow?: number; maxTokens?: number } | null = null;
+	if (!overrides || overrides.contextWindow === undefined || overrides.maxTokens === undefined) {
+		probed = await probeModelContextWindow(
+			provider,
+			trimmedBaseUrl,
+			configUpdate.apiKey,
+			trimmedModelName,
+		);
+	}
+
+	const effective: { contextWindow?: number; maxTokens?: number } = {};
+	if (overrides?.contextWindow !== undefined) {
+		effective.contextWindow = overrides.contextWindow;
+	} else if (probed?.contextWindow !== undefined) {
+		effective.contextWindow = probed.contextWindow;
+	} else if (priorLimits.contextWindow !== undefined) {
+		effective.contextWindow = priorLimits.contextWindow;
+	}
+	if (overrides?.maxTokens !== undefined) {
+		effective.maxTokens = overrides.maxTokens;
+	} else if (probed?.maxTokens !== undefined) {
+		effective.maxTokens = probed.maxTokens;
+	} else if (priorLimits.maxTokens !== undefined) {
+		effective.maxTokens = priorLimits.maxTokens;
+	}
 
 	const config = readModelsConfig(modelsPath);
 	config.providers ??= {};
@@ -368,10 +434,10 @@ export async function saveCustomProtocolProviderConfig(
 		...(config.providers[provider] ?? {}),
 		baseUrl: trimmedBaseUrl,
 		customProviderVersion: CUSTOM_PROVIDER_CONFIG_VERSION,
-		models: [createCustomModelDefinition(provider, trimmedModelName, probed ?? undefined)],
+		models: [createCustomModelDefinition(provider, trimmedModelName, effective)],
 	};
 	writeModelsConfig(modelsPath, config);
-	return probed;
+	return effective;
 }
 
 export function saveCustomProtocolProviderApiKey(

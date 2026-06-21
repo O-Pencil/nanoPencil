@@ -17,6 +17,7 @@ import {
   type CustomProtocolProviderId,
   getCustomProtocolProviderBaseUrl,
   getCustomProtocolProviderDefinition,
+  getCustomProtocolProviderModelLimits,
   getCustomProtocolProviderModelName,
   isCustomProtocolProvider,
   saveCustomProtocolProviderApiKey,
@@ -370,6 +371,9 @@ export class AuthProviderConfigController {
       "custom-model";
     const currentApiKey = this.getStoredApiKey(provider) ?? "";
     const hasExistingApiKey = authStorage.has(provider);
+    const storedLimits = getCustomProtocolProviderModelLimits(modelsPath, provider);
+    const defaultContextWindow = storedLimits.contextWindow ?? 256000;
+    const defaultMaxTokens = storedLimits.maxTokens ?? 32768;
 
     if (
       !options.force &&
@@ -427,10 +431,53 @@ export class AuthProviderConfigController {
       return false;
     }
 
-    const probed = await saveCustomProtocolProviderConfig(modelsPath, provider, {
+    const contextWindowInput = await this.ctx.surface.promptInput(
+      `${definition.label} context window (tokens)`,
+      String(defaultContextWindow),
+      { initialValue: String(defaultContextWindow) },
+    );
+    if (contextWindowInput === undefined) {
+      return false;
+    }
+    const contextWindow = parsePositiveInteger(
+      contextWindowInput,
+      "Context window",
+    );
+    if (contextWindow === null) {
+      this.ctx.surface.showError(
+        "Context window must be a positive integer (e.g. 200000).",
+      );
+      return false;
+    }
+
+    const maxTokensInput = await this.ctx.surface.promptInput(
+      `${definition.label} max output tokens`,
+      String(defaultMaxTokens),
+      { initialValue: String(defaultMaxTokens) },
+    );
+    if (maxTokensInput === undefined) {
+      return false;
+    }
+    const maxTokens = parsePositiveInteger(maxTokensInput, "Max output tokens");
+    if (maxTokens === null) {
+      this.ctx.surface.showError(
+        "Max output tokens must be a positive integer (e.g. 32768).",
+      );
+      return false;
+    }
+
+    if (maxTokens >= contextWindow) {
+      this.ctx.surface.showError(
+        "Max output tokens must be smaller than context window.",
+      );
+      return false;
+    }
+
+    const saved = await saveCustomProtocolProviderConfig(modelsPath, provider, {
       baseUrl: trimmedBaseUrl,
       modelName: trimmedModelName,
       apiKey: trimmedApiKey || undefined,
+      overrides: { contextWindow, maxTokens },
     });
     if (trimmedApiKey) {
       saveCustomProtocolProviderApiKey(authStorage, provider, trimmedApiKey);
@@ -438,14 +485,15 @@ export class AuthProviderConfigController {
 
     this.ctx.modelRegistry.refresh();
     await this.refreshCurrentModelForProvider(provider, trimmedModelName);
-    if (probed?.contextWindow) {
-      const ctxK = probed.contextWindow >= 1000
-        ? `${Math.round(probed.contextWindow / 1000)}k`
-        : String(probed.contextWindow);
-      this.ctx.surface.showStatus(`Saved ${definition.label} configuration (context window: ${ctxK})`);
-    } else {
-      this.ctx.surface.showStatus(`Saved ${definition.label} configuration`);
-    }
+    const ctxK = contextWindow >= 1000
+      ? `${Math.round(contextWindow / 1000)}k`
+      : String(contextWindow);
+    const maxK = maxTokens >= 1000
+      ? `${Math.round(maxTokens / 1000)}k`
+      : String(maxTokens);
+    this.ctx.surface.showStatus(
+      `Saved ${definition.label} configuration (context: ${ctxK}, max output: ${maxK})`,
+    );
     return true;
   }
 
@@ -581,4 +629,19 @@ export class AuthProviderConfigController {
       }
     }
   }
+}
+
+function parsePositiveInteger(
+  input: string,
+  label: string,
+): number | null {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
 }

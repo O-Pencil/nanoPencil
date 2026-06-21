@@ -270,17 +270,17 @@ export class InputSubmitController {
       dbg("handleIdleSubmit → skipping optimistic message for extension command");
     }
 
-    // If the main interactive loop is waiting for input (getUserInput),
-    // hand off the text to it — the loop will call session.prompt() directly.
-    if (this.ctx.editor.handleExternalInput(text)) {
-      dbg("handleIdleSubmit → handed off to main loop via handleExternalInput");
-      return;
-    }
-
     // Prepend @-mention file context to the prompt (CC §XI)
     const promptText = atMentionContext
       ? atMentionContext + "\n\n" + finalText
       : finalText;
+
+    // If the main interactive loop is waiting for input (getUserInput),
+    // hand off the model-facing prompt — the loop will call session.prompt() directly.
+    if (this.ctx.editor.handleExternalInput(promptText)) {
+      dbg("handleIdleSubmit → handed off to main loop via handleExternalInput");
+      return;
+    }
 
     try {
       delete process.env.CATUI_JUST_SWITCHED_PERSONA;

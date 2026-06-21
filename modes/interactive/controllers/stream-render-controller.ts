@@ -44,6 +44,7 @@ import { PlanProgressPanelComponent } from "../components/plan-progress-panel.js
 import { TaskStatusPanelComponent, type TaskStatusEntry } from "../components/task-status-panel.js";
 import type { InteractiveState, PlanProgressState, SubAgentState } from "../state/interactive-state.js";
 import { theme } from "../theme/theme.js";
+import { consumeMatchingVisibleUserQuery } from "../user-query-dedupe.js";
 import { listTasks, onTasksUpdated, resetTaskList, getTaskListId } from "../../../extensions/builtin/task/task-store.js";
 import { DEFAULT_TASK_LIST_ID } from "../../../extensions/builtin/task/task-types.js";
 
@@ -218,12 +219,10 @@ export class StreamRenderController {
         } else if (event.message.role === "user") {
           const textContent = this.ctx.surface.getUserMessageText(event.message);
           if (
-            state.optimisticUserMessages.length > 0 &&
-            state.optimisticUserMessages[0]?.text === textContent
+            consumeMatchingVisibleUserQuery(state.optimisticUserMessages, textContent, {
+              consumeOldestOnMismatch: true,
+            })
           ) {
-            state.optimisticUserMessages.shift();
-            this.ctx.layout.updatePendingMessagesDisplay();
-            this.ctx.layout.requestRender();
             break;
           }
           this.ctx.layout.addMessageToChat(event.message);

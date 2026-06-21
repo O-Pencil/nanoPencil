@@ -106,6 +106,7 @@ import { SlashDispatcherController } from "./controllers/slash-dispatcher-contro
 import { InputSubmitController } from "./controllers/input-submit-controller.js";
 import { InterruptController } from "./controllers/interrupt-controller.js";
 import { StreamRenderController } from "./controllers/stream-render-controller.js";
+import { consumeMatchingVisibleUserQuery } from "./user-query-dedupe.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
@@ -672,7 +673,6 @@ export class InteractiveMode {
         handleExternalInput: (text) => {
           if (!this.onInputCallback) return false;
           this.onInputCallback(text);
-          this.editor.addToHistory?.(text);
           return true;
         },
         setBashMode: (enabled) => {
@@ -1130,7 +1130,7 @@ export class InteractiveMode {
     await this.initExtensions();
 
     // Render initial messages AFTER showing loaded resources
-    this.renderInitialMessages();
+    this.renderInitialMessages({ requestRender: false });
 
     // Start the UI
     this.ui.start();
@@ -1143,8 +1143,6 @@ export class InteractiveMode {
 
     // Subscribe to agent events
     this.subscribeToAgent();
-    this.chatContainer.clear();
-    this.renderInitialMessages();
     await this.session.extensionRunner?.emit({ type: "session_ready" });
 
     // Set up theme file watcher
@@ -2477,7 +2475,11 @@ export class InteractiveMode {
    */
   private renderSessionContext(
     sessionContext: SessionContext,
-    options: { updateFooter?: boolean; populateHistory?: boolean } = {},
+    options: {
+      updateFooter?: boolean;
+      populateHistory?: boolean;
+      requestRender?: boolean;
+    } = {},
   ): void {
     this.state.pendingTools.clear();
     this.state.customStreamComponents.clear();
@@ -2541,10 +2543,12 @@ export class InteractiveMode {
     }
 
     this.state.pendingTools.clear();
-    this.ui.requestRender();
+    if (options.requestRender !== false) {
+      this.ui.requestRender();
+    }
   }
 
-  renderInitialMessages(): void {
+  renderInitialMessages(options: { requestRender?: boolean } = {}): void {
     this.stopWelcomeBannerTimer();
 
     // Get aligned messages and entries from session context
@@ -2552,6 +2556,7 @@ export class InteractiveMode {
     this.renderSessionContext(context, {
       updateFooter: true,
       populateHistory: true,
+      requestRender: options.requestRender,
     });
 
     // Show welcome when session has no messages
@@ -2679,7 +2684,9 @@ export class InteractiveMode {
     // Force full re-render to reset viewport state after rebuilding chat.
     // Without this, maxLinesRendered retains the old value and the viewport
     // may point past the actual content end after compaction or session switch.
-    this.ui.requestRender(true);
+    if (options.requestRender !== false) {
+      this.ui.requestRender(true);
+    }
   }
 
   async getUserInput(): Promise<string> {
@@ -2695,9 +2702,17 @@ export class InteractiveMode {
     this.clearStatusTimers();
     this.chatContainer.clear();
     const context = this.sessionManager.buildSessionContext();
-    this.renderSessionContext(context);
+    this.renderSessionContext(context, { requestRender: false });
+    const renderedUserTexts = context.messages
+      .filter((message) => message.role === "user")
+      .map((message) => this.getUserMessageText(message));
     // Re-add optimistic user messages not yet persisted to session.
     // Cleared by chatContainer.clear() above but absent from buildSessionContext().
+    for (const text of renderedUserTexts) {
+      consumeMatchingVisibleUserQuery(this.state.optimisticUserMessages, text, {
+        consumeOldestOnMismatch: true,
+      });
+    }
     for (const msg of this.state.optimisticUserMessages) {
       this.addMessageToChat({
         role: "user",

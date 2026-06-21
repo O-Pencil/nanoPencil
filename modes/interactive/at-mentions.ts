@@ -140,7 +140,7 @@ export function extractAtMentionedFiles(
 
       // Replace the @-mention with a display reference
       const ref = `[file: ${m.filePath}${m.startLine ? ` ${rangeDesc}` : ""}]`;
-      cleanedText = cleanedText.slice(0, m.index) + ref + cleanedText.slice(m.index + m.fullMatch.length);
+      cleanedText = cleanedText.slice(0, m.index) + m.prefix + ref + cleanedText.slice(m.index + m.fullMatch.length);
     } catch {
       // Skip files that can't be read
     }

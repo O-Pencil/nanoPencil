@@ -94,7 +94,7 @@ import {
 } from "./slash-command-catalog.js";
 import { RetryCoordinator, type RetryCoordinatorHost, type RetrySessionEvent } from "./retry-coordinator.js";
 import { createLogger, type AgentLogger } from "../platform/utils/logger.js";
-import { createAgentTool, createTaskToolAlias, createSendMessageTool, AGENT_TOOL_NAME, TASK_TOOL_NAME, SEND_MESSAGE_TOOL_NAME, type CreateSessionFn, type SubAgentEvent } from "../sub-agent/index.js";
+import { createAgentTool, createTaskToolAlias, createSendMessageTool, AGENT_TOOL_NAME, TASK_TOOL_NAME, SEND_MESSAGE_TOOL_NAME, InProcessSubAgentBackend, type CreateSessionFn, type SubAgentEvent } from "../sub-agent/index.js";
 
 export type { SessionSlashCommandDescriptor } from "./slash-command-catalog.js";
 export { CycleModelError } from "./model-controller.js";
@@ -421,6 +421,8 @@ export class AgentSession {
   private _agentTool?: any;
   /** Factory for creating child sessions (injected via config to avoid sdk.ts cycle) */
   private _createSessionFactory?: CreateSessionFn;
+  /** Shared InProcessSubAgentBackend for session tracking (SendMessage routing, CC §XI) */
+  private _subAgentBackend?: InProcessSubAgentBackend;
   private _cwd: string;
   private _extensionRunnerRef?: { current?: ExtensionRunner };
   private _soulManager?: any; // SoulManager from nanosoul
@@ -490,6 +492,10 @@ export class AgentSession {
     this._soulManager = config.soulManager;
     this._baseToolsOverride = config.baseToolsOverride;
     this._createSessionFactory = config.createSession;
+    // Create shared backend for Agent/SendMessage tool session tracking (CC §XI)
+    if (config.createSession) {
+      this._subAgentBackend = new InProcessSubAgentBackend(config.createSession);
+    }
     this._extensionEventBridge = new ExtensionEventBridge({
       getExtensionRunner: () => this._extensionRunner,
     });
@@ -2365,6 +2371,7 @@ export class AgentSession {
       parentModel: this.model,
       createSession: this._createSessionFactory!,
       onSubAgentEvent,
+      backend: this._subAgentBackend,
     });
     toolRuntime.activeTools.push(this._agentTool as unknown as AgentTool);
     this._toolOrchestrator.registerTool(AGENT_TOOL_NAME, this._agentTool as unknown as AgentTool);
@@ -2375,16 +2382,15 @@ export class AgentSession {
       parentModel: this.model,
       createSession: this._createSessionFactory!,
       onSubAgentEvent,
+      backend: this._subAgentBackend,
     });
     toolRuntime.activeTools.push(taskTool as unknown as AgentTool);
     this._toolOrchestrator.registerTool(TASK_TOOL_NAME, taskTool as unknown as AgentTool);
 
     // --- SendMessage tool (CC §XI: inter-agent messaging) ---
     const sendMessageTool = createSendMessageTool({
-      parentSession: this as any,
-      parentPermissionMode: "default",
-      parentModel: this.model,
-      createSession: this._createSessionFactory!,
+      registry: undefined, // use default global registry
+      backend: this._subAgentBackend,
     });
     toolRuntime.activeTools.push(sendMessageTool as unknown as AgentTool);
     this._toolOrchestrator.registerTool(SEND_MESSAGE_TOOL_NAME, sendMessageTool as unknown as AgentTool);

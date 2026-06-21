@@ -151,6 +151,8 @@ export interface AgentToolConfig {
   modelRegistry?: ModelRegistry;
   /** Factory for creating AgentSession instances (injected to avoid cycle with runtime/sdk) */
   createSession: CreateSessionFn;
+  /** Shared InProcessSubAgentBackend for session tracking (SendMessage routing, CC §XI) */
+  backend?: InProcessSubAgentBackend;
 }
 
 // ============================================================================
@@ -160,7 +162,7 @@ export interface AgentToolConfig {
 export function createAgentTool(config: AgentToolConfig): AgentTool<typeof agentSchema> {
   const registry = config.registry ?? agentDefinitionRegistry;
   const worktreeManager = config.worktreeManager ?? new WorktreeManager();
-  const backend = new InProcessSubAgentBackend(config.createSession);
+  const backend = config.backend ?? new InProcessSubAgentBackend(config.createSession);
   const modelRegistry = config.modelRegistry ?? config.parentSession.modelRegistry;
 
   // Wire up name registry persistence path (CC §XIV, §18.6)
@@ -491,6 +493,7 @@ async function executeSync(
       description: args.description,
       isAsync: metadata.isAsync,
       parentToolCallId,
+      agentId,
       onEvent: (event: SubAgentEvent) => {
         // Forward sub-agent events to parent session's UI display (CC §XV)
         config.onSubAgentEvent?.(event);
@@ -647,6 +650,7 @@ async function executeAsync(
     description: args.description,
     isAsync: metadata.isAsync,
     parentToolCallId,
+    agentId,
     exitHook: async (result) => {
       // Write output to file when completed (CC §11.3)
       const completedOutput = buildCompletedOutput(result, agentId, metadata);

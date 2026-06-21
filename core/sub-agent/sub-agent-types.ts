@@ -53,6 +53,8 @@ export interface SubAgentSpec {
   exitHook?: (result: SubAgentResult) => Promise<void> | void;
   /** Optional realtime observer for TUI/status integrations */
   onEvent?: (event: SubAgentEvent) => void;
+  /** Optional agent ID for session tracking (used by InProcessSubAgentBackend for SendMessage routing) */
+  agentId?: string;
 }
 
 /**

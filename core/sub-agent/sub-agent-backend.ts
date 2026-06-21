@@ -28,6 +28,9 @@ export type CreateSessionFn = (
  * Wraps createAgentSession() to run SubAgent in the same process.
  */
 export class InProcessSubAgentBackend implements SubAgentBackend {
+  /** Running sessions indexed by agentId (for SendMessage routing, CC §XI) */
+  private sessions = new Map<string, { session: AgentSession; abort: () => void }>();
+
   constructor(private createSession: CreateSessionFn) {}
 
   async spawn(spec: SubAgentSpec): Promise<SubAgentHandle> {
@@ -61,6 +64,15 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
       }
     });
     const timeoutMs = spec.timeoutMs;
+
+    // Track session for SendMessage routing (CC §XI)
+    const agentId = spec.agentId;
+    if (agentId) {
+      this.sessions.set(agentId, {
+        session,
+        abort: () => internalAbortController.abort(),
+      });
+    }
 
     let status: "running" | "done" | "aborted" | "error" = "running";
     let result: SubAgentResult | undefined;
@@ -137,6 +149,10 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
         }
         // Clean up signal handler
         spec.signal.removeEventListener("abort", signalHandler);
+        // Clean up session tracking (CC §XI)
+        if (agentId) {
+          this.sessions.delete(agentId);
+        }
         unsubscribe();
         spec.onEvent?.({
           type: "agent_end",
@@ -172,6 +188,14 @@ export class InProcessSubAgentBackend implements SubAgentBackend {
         await session.abort();
       },
     };
+  }
+
+  /**
+   * Get a running agent's session by agent ID (for SendMessage routing, CC §XI).
+   * Returns undefined if the agent is not running or has completed.
+   */
+  getSession(agentId: string): { session: AgentSession; abort: () => void } | undefined {
+    return this.sessions.get(agentId);
   }
 }
 

@@ -1,6 +1,6 @@
 /**
  * [WHO]: createSendMessageTool — the "SendMessage" tool for addressing named running agents
- * [FROM]: Depends on @catui/agent-core, @sinclair/typebox, ./agent-registry, ./agent-definition
+ * [FROM]: Depends on @catui/agent-core, @sinclair/typebox, ./agent-registry, ./sub-agent-backend
  * [TO]: Consumed by core/runtime/agent-session.ts (tool registration alongside Agent/Task tools)
  * [HERE]: core/sub-agent/send-message-tool.ts - SendMessage tool per CC §XI (inter-agent messaging)
  * [COVENANT]: Change message protocol → update agent-input-output.ts
@@ -10,7 +10,7 @@ import type { AgentTool } from "@catui/agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import type { AgentDefinitionRegistry } from "./agent-registry.js";
 import { agentDefinitionRegistry } from "./agent-registry.js";
-import type { AgentToolConfig } from "./agent-tool.js";
+import type { InProcessSubAgentBackend } from "./sub-agent-backend.js";
 
 // ============================================================================
 // Constants
@@ -53,9 +53,13 @@ export type SendMessageInput = Static<typeof sendMessageSchema>;
  * to an already-running one.
  */
 export function createSendMessageTool(
-  config: AgentToolConfig,
+  config: {
+    registry?: AgentDefinitionRegistry;
+    backend?: InProcessSubAgentBackend;
+  } = {},
 ): AgentTool<typeof sendMessageSchema> {
   const registry = config.registry ?? agentDefinitionRegistry;
+  const backend = config.backend;
 
   return {
     name: SEND_MESSAGE_TOOL_NAME,
@@ -90,22 +94,55 @@ export function createSendMessageTool(
         };
       }
 
-      // In the full CC implementation, this would actually inject the message
-      // into the running agent's conversation stream. For Phase 1, we provide
-      // a confirmation response that the message was queued.
-      //
-      // TODO: Wire this into InProcessSubAgentBackend to actually inject
-      // the message into the running agent's AgentSession.prompt() method.
+      // Real message delivery via InProcessSubAgentBackend (CC §XI)
+      if (!backend) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `SendMessage backend not available. Cannot deliver message to '${input.to}'.`,
+            },
+          ],
+          details: { to: input.to, agentId, delivered: false, reason: "no_backend" },
+        };
+      }
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Message sent to agent '${input.to}' (agentId: ${agentId}).`,
-          },
-        ],
-        details: { to: input.to, agentId, delivered: true },
-      };
+      const session = backend.getSession(agentId);
+      if (!session) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Agent '${input.to}' is no longer running (agentId: ${agentId}).`,
+            },
+          ],
+          details: { to: input.to, agentId, delivered: false, reason: "session_not_found" },
+        };
+      }
+
+      // Inject the message as a new user message into the running agent's conversation
+      try {
+        await session.session.prompt(input.message);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Message delivered to agent '${input.to}' (agentId: ${agentId}).`,
+            },
+          ],
+          details: { to: input.to, agentId, delivered: true },
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Failed to deliver message to '${input.to}': ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+          details: { to: input.to, agentId, delivered: false, reason: "delivery_failed" },
+        };
+      }
     },
   };
 }

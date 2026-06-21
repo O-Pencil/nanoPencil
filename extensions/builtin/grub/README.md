@@ -93,7 +93,7 @@ setting `evidence`.
   `state.json` on every transition. On the next session, `session_start`
   calls `discoverActiveTasks()` and adopts the most recent running task
   without auto-dispatching — the user types `/grub resume` to continue.
-- **Safety limits**: 25 iterations and 3 consecutive failures by default;
+- **Safety limits**: 99 iterations and 3 consecutive failures by default;
   override with `--max-iter` / `--max-fail`. When a limit stops the task, the
   terminal summary includes the passing count and pending feature IDs so a
   later `/grub resume` or new task has an explicit handoff point.

@@ -19,7 +19,7 @@ import type {
 	GrubTaskState,
 } from "./grub-types.js";
 
-const DEFAULT_MAX_ITERATIONS = 25;
+const DEFAULT_MAX_ITERATIONS = 99;
 const DEFAULT_MAX_CONSECUTIVE_FAILURES = 3;
 // The initializer often needs a couple of tries to produce a structurally
 // complete feature list. Give it a more forgiving budget than execution so a

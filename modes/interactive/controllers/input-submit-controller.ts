@@ -14,6 +14,7 @@ import * as path from "node:path";
 import type { ImageContent, Model, TextContent } from "@catui/ai/types";
 import type { PromptOptions } from "../../../core/runtime/agent-session.js";
 import type { Attachment } from "./image-pipeline-controller.js";
+import { extractAtMentionedFiles, buildAtMentionContext } from "../at-mentions.js";
 
 type AnyModel = Model<any>;
 
@@ -193,12 +194,23 @@ export class InputSubmitController {
     }
 
     let steerPromptText = steerResult.text;
+
+    // Extract @-mentioned file references (CC §XI)
+    const cwd = this.ctx.session.getCwd();
+    const atMentionResult = extractAtMentionedFiles(steerPromptText, cwd);
+    steerPromptText = atMentionResult.text;
+    const atMentionContext = buildAtMentionContext(atMentionResult.mentions);
+
     if (steerAttachmentPaths.length > 0) {
-      const cwd = this.ctx.session.getCwd();
       const refs = steerAttachmentPaths
         .map((p) => `@${path.relative(cwd, p).replace(/\\/g, "/")}`)
         .join(" ");
       steerPromptText = refs + "  " + steerPromptText;
+    }
+
+    // Prepend @-mention file context to the steer prompt (CC §XI)
+    if (atMentionContext) {
+      steerPromptText = atMentionContext + "\n\n" + steerPromptText;
     }
 
     await this.ctx.session.promptAfterRender(steerPromptText, {
@@ -219,6 +231,12 @@ export class InputSubmitController {
     const { text: processedText, images } =
       await this.ctx.image.extractImagesFromText(text);
 
+    // Extract @-mentioned file references (CC §XI)
+    const cwd = this.ctx.session.getCwd();
+    const atMentionResult = extractAtMentionedFiles(processedText, cwd);
+    let finalText = atMentionResult.text;
+    const atMentionContext = buildAtMentionContext(atMentionResult.mentions);
+
     const pendingAttachments = this.ctx.image.takePendingAttachments();
     if (pendingAttachments.length > 0) {
       const inlineImages =
@@ -237,19 +255,15 @@ export class InputSubmitController {
     }
 
     // Show the user's input in the chat immediately (optimistic echo).
-    // Built-in slash commands never reach here (handled by slash.execute above),
-    // so this only applies to extension commands and regular messages.
-    // Skip optimistic message for extension commands — they handle their own
-    // UI and may internally call sendUserMessage, which would cause double display.
-    const isExtensionCmd = this.ctx.commands.isExtensionCommand(processedText);
+    const isExtensionCmd = this.ctx.commands.isExtensionCommand(finalText);
     if (!isExtensionCmd) {
       const displayContent: Array<TextContent | ImageContent> = [
-        { type: "text", text: processedText },
+        { type: "text", text: finalText },
       ];
       if (images.length > 0) {
         displayContent.push(...images);
       }
-      this.ctx.render.addOptimisticUserMessage(processedText, displayContent);
+      this.ctx.render.addOptimisticUserMessage(finalText, displayContent);
       this.ctx.render.requestRender();
       dbg("handleIdleSubmit → optimistic message added");
     } else {
@@ -258,23 +272,26 @@ export class InputSubmitController {
 
     // If the main interactive loop is waiting for input (getUserInput),
     // hand off the text to it — the loop will call session.prompt() directly.
-    // We still return here because promptAfterRender would deadlock (it waits
-    // for a render that the main loop's session.prompt will trigger).
     if (this.ctx.editor.handleExternalInput(text)) {
       dbg("handleIdleSubmit → handed off to main loop via handleExternalInput");
       return;
     }
 
+    // Prepend @-mention file context to the prompt (CC §XI)
+    const promptText = atMentionContext
+      ? atMentionContext + "\n\n" + finalText
+      : finalText;
+
     try {
       delete process.env.CATUI_JUST_SWITCHED_PERSONA;
-      await this.ctx.session.promptAfterRender(processedText, {
+      await this.ctx.session.promptAfterRender(promptText, {
         images: images.length > 0 ? images : undefined,
       });
       dbg("handleIdleSubmit → promptAfterRender returned normally");
     } catch (error: unknown) {
       dbg(`handleIdleSubmit → promptAfterRender threw: ${error}`);
       this.ctx.render.rollbackFirstOptimisticUserMessageIfMatches(
-        processedText,
+        finalText,
       );
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";

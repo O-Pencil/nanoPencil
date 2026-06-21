@@ -1,4 +1,4 @@
-﻿# modes/interactive/
+# modes/interactive/
 
 > P2 | Parent: ../AGENT.md
 
@@ -22,6 +22,7 @@ controllers/stream-render-controller.ts: StreamRenderController, StreamRenderCon
 agent-loop-status.ts: formatAgentLoopStatusLines(), formats last agent loop result telemetry for /status
 slash-command-arguments.ts: Built-in TUI slash command argument completion helpers for model, agent-loop, thinking, MCP, language, persona, and login commands
 footer-data-provider.ts: FooterDataProvider class, supplies model/session/branch footer information for the TUI status bar
+at-mentions.ts: extractAtMentionedFiles, buildAtMentionContext — @-mention file reference parser for user input, supports @filename and @file:line-range syntax (CC §XI)
 theme/theme.ts: Theme loader and definitions, ThemeJson schema validation, chalk-based color system
 components/index.ts: Component barrel exports, re-exports all UI components for extensions
 components/extension-selector.ts: Extension selector UI, keyboard navigation with timeout support

@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides verify-package-boundary CLI for P7 package/publication invariants
- * [FROM]: Depends on node:fs/path/module/url only; no project runtime imports
+ * [FROM]: Depends on node:child_process, node:fs/path/module/url only; no project runtime imports
  * [TO]: Consumed by release maintainers before npm beta publish and install smoke
  * [HERE]: scripts/verify-package-boundary.ts - executable guard for public package vs embedded-lib boundaries
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, join, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -190,7 +191,6 @@ function checkDist(violations: Violation[]): void {
 		return;
 	}
 
-	const requireFromDist = createRequire(DIST_MAIN);
 	for (const internalLib of INTERNAL_LIBS) {
 		const targetDir = join(REPO, "dist", "node_modules", ...internalLib.name.split("/"));
 		const packageJsonPath = join(targetDir, "package.json");
@@ -205,7 +205,7 @@ function checkDist(violations: Violation[]): void {
 		}
 		const pkg = readJson(packageJsonPath);
 		checkSanitizedEmbeddedPackage(scope, pkg, violations);
-		const resolved = requireFromDist.resolve(internalLib.name);
+		const resolved = resolveFromDistWithoutLoaders(internalLib.name);
 		if (toRepoPath(resolved) !== toRepoPath(entryPath)) {
 			add(violations, scope, `${internalLib.name} resolves to ${toRepoPath(resolved)} instead of ${toRepoPath(entryPath)}.`);
 		}
@@ -218,6 +218,18 @@ function checkDist(violations: Violation[]): void {
 			add(violations, toRepoPath(abs), `mem-core published dist must include ${file}.`);
 		}
 	}
+}
+
+function resolveFromDistWithoutLoaders(specifier: string): string {
+	const code = [
+		"const { createRequire } = require('node:module');",
+		`const req = createRequire(${JSON.stringify(DIST_MAIN)});`,
+		`process.stdout.write(req.resolve(${JSON.stringify(specifier)}));`,
+	].join("\n");
+	return execFileSync(process.execPath, ["-e", code], {
+		cwd: REPO,
+		encoding: "utf8",
+	});
 }
 
 function main(): void {

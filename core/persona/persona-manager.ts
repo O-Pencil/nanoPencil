@@ -43,6 +43,33 @@ export class PersonaManager {
 		return join(this.ctx.path, "persona.json");
 	}
 
+	private copyDirectoryIfMissing(srcDir: string, destDir: string): void {
+		for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
+			if (entry.name.startsWith(".")) {
+				continue;
+			}
+
+			const srcPath = join(srcDir, entry.name);
+			const destPath = join(destDir, entry.name);
+
+			if (entry.isDirectory()) {
+				if (!existsSync(destPath)) {
+					mkdirSync(destPath, { recursive: true });
+				}
+				const srcStat = statSync(srcPath);
+				if (!srcStat.isDirectory()) {
+					continue;
+				}
+				this.copyDirectoryIfMissing(srcPath, destPath);
+				continue;
+			}
+
+			if (entry.isFile() && !existsSync(destPath)) {
+				copyFileSync(srcPath, destPath);
+			}
+		}
+	}
+
 	private ensurePersonasDir(): void {
 		if (!existsSync(this.personasDir)) mkdirSync(this.personasDir, { recursive: true });
 
@@ -59,19 +86,19 @@ export class PersonaManager {
 			}
 		} catch { /* best-effort migration */ }
 
-		// Copy bundled presets if they don't exist on disk
+		// Copy bundled presets if they don't exist on disk.
+		// Missing files are copied, but existing files are preserved to avoid
+		// overwriting local persona customization.
 		if (existsSync(BUNDLED_PERSONAS_DIR)) {
 			try {
 				for (const entry of readdirSync(BUNDLED_PERSONAS_DIR)) {
 					const srcDir = join(BUNDLED_PERSONAS_DIR, entry);
 					if (!statSync(srcDir).isDirectory()) continue;
 					const destDir = join(this.personasDir, entry);
-					if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
-					const catuiSrc = join(srcDir, "CATUI.md");
-					const catuiDest = join(destDir, "CATUI.md");
-					if (existsSync(catuiSrc) && !existsSync(catuiDest)) {
-						copyFileSync(catuiSrc, catuiDest);
+					if (!existsSync(destDir)) {
+						mkdirSync(destDir, { recursive: true });
 					}
+					this.copyDirectoryIfMissing(srcDir, destDir);
 				}
 			} catch { /* best-effort copy */ }
 		}

@@ -117,9 +117,9 @@ test("report-issue command exposes diagnostic scope completions", async () => {
 	assert.deepEqual(reportIssue.getArgumentCompletions?.("al")?.map((item) => item.value), ["all"]);
 });
 
-test("tokensave command exposes first-argument completions", () => {
+test("tokensave command exposes first-argument completions", async () => {
 	const harness = createExtensionHarness();
-	tokenSaveExtension(harness.api as never);
+	await tokenSaveExtension(harness.api as never);
 
 	const tokensave = harness.commands.get("tokensave");
 	assert.ok(tokensave);

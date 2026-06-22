@@ -1,9 +1,11 @@
 /**
  * [WHO]: tokenSaveExtension - default-on bash output filtering, savings tracking, and /tokensave command
- * [FROM]: Depends on core/extensions-host/types, ./filters, ./tracking
+ * [FROM]: Depends on core/extensions-host/types, ./filters, ./tracking, ./paths
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/token-save/index.ts - TokenSave extension entry point
  */
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { ExtensionAPI, ToolResultEvent, ToolResultEventResult } from "../../../core/extensions-host/types.js";
 import { executeBash, type BashResult } from "../../../core/platform/exec/bash-executor.js";
 import { loadTokenSaveConfigFilters, type ConfiguredTokenSaveFilter } from "./config.js";
@@ -11,6 +13,7 @@ import { applyTokenSavePlan } from "./runner.js";
 import { planCommand } from "./rewrite.js";
 import { applyTomlStyleFilter } from "./toml-dsl.js";
 import { TokenSaveTracker } from "./tracking.js";
+import { resolveTokenSavePaths } from "./paths.js";
 
 const TOKENSAVE_COMMAND_COMPLETIONS = [
 	{ value: "summary", label: "summary", description: "Show total shell output savings" },
@@ -38,8 +41,54 @@ function recoveryPathFromDetails(event: ToolResultEvent): string | undefined {
 	return match?.[1]?.trim();
 }
 
-export default function tokenSaveExtension(api: ExtensionAPI): void {
-	const tracker = new TokenSaveTracker(api.cwd);
+async function migrateLegacyTokenSave(projectPath: string, projectKey: string, dataDir: string): Promise<void> {
+	const legacyDir = join(projectPath, ".catui", "token-save");
+	const marker = join(dataDir, ".migrated");
+	try {
+		await mkdir(dataDir, { recursive: true });
+		try {
+			await writeFile(marker, "", { flag: "wx" });
+		} catch {
+			return; // already migrated or another process won the race
+		}
+
+		const legacyHistory = join(legacyDir, "history.jsonl");
+		const legacyRaw = join(legacyDir, "raw");
+		const newHistory = join(dataDir, "history.jsonl");
+		const newRaw = join(dataDir, "raw");
+
+		await mkdir(dirname(newHistory), { recursive: true });
+		try {
+			await rename(legacyHistory, newHistory);
+		} catch {
+			// missing legacy history is fine
+		}
+		try {
+			await mkdir(newRaw, { recursive: true });
+			const { readdir } = await import("node:fs/promises");
+			const files = await readdir(legacyRaw).catch(() => []);
+			for (const file of files) {
+				try {
+					await rename(join(legacyRaw, file), join(newRaw, file));
+				} catch {
+					// best-effort per file
+				}
+			}
+		} catch {
+			// best-effort
+		}
+		// projectKey is recorded only to make the migration observable; nothing reads it
+		void projectKey;
+	} catch {
+		// Migration must never break the agent startup.
+	}
+}
+
+export default async function tokenSaveExtension(api: ExtensionAPI): Promise<void> {
+	const { projectKey, dataDir, historyFile } = await resolveTokenSavePaths(api.cwd);
+	void migrateLegacyTokenSave(api.cwd, projectKey, dataDir);
+
+	const tracker = new TokenSaveTracker(dataDir, historyFile);
 	let configuredFilters: ConfiguredTokenSaveFilter[] = [];
 
 	void loadTokenSaveConfigFilters(api.cwd).then((filters) => {
@@ -89,7 +138,7 @@ export default function tokenSaveExtension(api: ExtensionAPI): void {
 		if (plan.mode === "passthrough") return;
 
 		const rawResult = await executeBash(event.command, { cwd: event.cwd });
-		const filteredResult = await applyToBashResult(event.command, rawResult, api.cwd, configuredFilters, tracker, Date.now());
+		const filteredResult = await applyToBashResult(event.command, rawResult, dataDir, configuredFilters, tracker, Date.now(), api.cwd);
 		return { result: filteredResult };
 	});
 
@@ -101,7 +150,7 @@ export default function tokenSaveExtension(api: ExtensionAPI): void {
 		if (!command || !rawText) return;
 
 		const started = Date.now();
-		const result = await applyTokenSavePlan(command, rawText, api.cwd);
+		const result = await applyTokenSavePlan(command, rawText, dataDir);
 		const configured = applyConfiguredFilter(command, rawText, configuredFilters);
 		if (configured && configured.length < result.filteredText.length) {
 			result.filteredText = configured;
@@ -112,6 +161,7 @@ export default function tokenSaveExtension(api: ExtensionAPI): void {
 		}
 
 		tracker.add({
+			projectPath: api.cwd,
 			command,
 			category: result.plan.category,
 			mode: result.plan.mode === "passthrough" ? "passthrough" : "filtered",
@@ -147,12 +197,13 @@ export default function tokenSaveExtension(api: ExtensionAPI): void {
 async function applyToBashResult(
 	command: string,
 	rawResult: BashResult,
-	projectPath: string,
+	dataDir: string,
 	configuredFilters: ConfiguredTokenSaveFilter[],
 	tracker: TokenSaveTracker,
 	started: number,
+	projectPath: string,
 ): Promise<BashResult> {
-	const result = await applyTokenSavePlan(command, rawResult.output, projectPath);
+	const result = await applyTokenSavePlan(command, rawResult.output, dataDir);
 	const configured = applyConfiguredFilter(command, rawResult.output, configuredFilters);
 	if (configured && configured.length < result.filteredText.length) {
 		result.filteredText = configured;
@@ -163,6 +214,7 @@ async function applyToBashResult(
 	}
 
 	tracker.add({
+		projectPath,
 		command,
 		category: result.plan.category,
 		mode: result.plan.mode === "passthrough" ? "passthrough" : "filtered",

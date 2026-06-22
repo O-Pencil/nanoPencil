@@ -5,7 +5,7 @@
  * [HERE]: extensions/builtin/token-save/tracking.ts - token savings analytics boundary
  */
 import { mkdir, appendFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { TokenSaveCategory } from "./filters.js";
 
 export interface TokenSaveRecord {
@@ -23,16 +23,20 @@ export interface TokenSaveRecord {
 	rawRecoveryPath?: string;
 }
 
+export interface TokenSaveRecordInput extends Omit<TokenSaveRecord, "timestamp"> {}
+
 export class TokenSaveTracker {
 	private records: TokenSaveRecord[] = [];
 
-	constructor(private readonly projectPath: string) {}
+	constructor(
+		private readonly dataDir: string,
+		private readonly historyFile: string = join(dataDir, "history.jsonl"),
+	) {}
 
-	add(record: Omit<TokenSaveRecord, "timestamp" | "projectPath">): TokenSaveRecord {
+	add(record: TokenSaveRecordInput): TokenSaveRecord {
 		const fullRecord: TokenSaveRecord = {
 			...record,
 			timestamp: new Date().toISOString(),
-			projectPath: this.projectPath,
 		};
 		this.records.push(fullRecord);
 		if (this.records.length > 500) this.records.shift();
@@ -86,10 +90,9 @@ export class TokenSaveTracker {
 	}
 
 	private async persist(record: TokenSaveRecord): Promise<void> {
-		const dir = join(this.projectPath, ".catui", "token-save");
 		try {
-			await mkdir(dir, { recursive: true });
-			await appendFile(join(dir, "history.jsonl"), `${JSON.stringify(record)}\n`, "utf8");
+			await mkdir(dirname(this.historyFile), { recursive: true });
+			await appendFile(this.historyFile, `${JSON.stringify(record)}\n`, "utf8");
 		} catch {
 			// Token savings must never make a tool result fail.
 		}

@@ -102,11 +102,11 @@ test("token-save compacts search output by file groups", () => {
 });
 
 test("token-save runner writes raw recovery for filtered output", async () => {
-	const project = await mkdtemp(join(tmpdir(), "tokensave-test-"));
+	const dataDir = await mkdtemp(join(tmpdir(), "tokensave-test-"));
 	const raw = Array.from({ length: 260 }, (_, i) => `log line ${i}`).join("\n") +
 		"\nFAIL test/example.test.ts\nAssertionError: expected true to be false\nTests: 1 failed, 25 passed";
 
-	const result = await applyTokenSavePlan("npm test", raw, project);
+	const result = await applyTokenSavePlan("npm test", raw, dataDir);
 
 	assert.equal(result.plan.mode, "stream");
 	assert.equal(result.shouldReplace, true);
@@ -115,7 +115,7 @@ test("token-save runner writes raw recovery for filtered output", async () => {
 });
 
 test("token-save stream runner filters accumulated chunks", async () => {
-	const project = await mkdtemp(join(tmpdir(), "tokensave-stream-"));
+	const dataDir = await mkdtemp(join(tmpdir(), "tokensave-stream-"));
 	const chunks = [
 		Array.from({ length: 120 }, (_, i) => `log line ${i}\n`).join(""),
 		"FAIL test/example.test.ts\n",
@@ -123,7 +123,7 @@ test("token-save stream runner filters accumulated chunks", async () => {
 		"Tests: 1 failed, 25 passed\n",
 	];
 
-	const result = await applyTokenSaveStream("npm test", chunks, project);
+	const result = await applyTokenSaveStream("npm test", chunks, dataDir);
 
 	assert.equal(result.plan.mode, "stream");
 	assert.equal(result.shouldReplace, true);

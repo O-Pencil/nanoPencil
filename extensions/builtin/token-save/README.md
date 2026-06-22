@@ -54,3 +54,19 @@ at:
 ```text
 .catui/token-save/trust.json
 ```
+
+## Runtime Data
+
+History JSONL and raw output recovery files are stored under the user-level
+config dir, keyed by a 12-char hash of the project path. They never live in
+your project tree.
+
+```text
+~/.catui/token-save/projects/<projectKey>/
+  ├── history.jsonl
+  └── raw/<ts>-<rand>.log
+```
+
+On first run after upgrading, legacy data under
+`<project>/.catui/token-save/{history.jsonl,raw/}` is migrated once to the
+new location and marked with a `.migrated` sentinel.

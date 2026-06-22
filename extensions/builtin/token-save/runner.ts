@@ -24,14 +24,14 @@ export interface TokenSaveRunResult {
 const MIN_SAVINGS_TOKENS = 32;
 const MIN_SAVINGS_PCT = 12;
 
-export async function applyTokenSavePlan(command: string, rawText: string, projectPath: string): Promise<TokenSaveRunResult> {
+export async function applyTokenSavePlan(command: string, rawText: string, dataDir: string): Promise<TokenSaveRunResult> {
 	const plan = planCommand(command);
 	if (plan.mode === "passthrough") {
 		return buildResult(plan, rawText, rawText, undefined, false);
 	}
 
 	const filtered = filterTokenSaveOutput(command, rawText);
-	const rawRecoveryPath = await writeRawRecovery(projectPath, rawText);
+	const rawRecoveryPath = await writeRawRecovery(dataDir, rawText);
 	const result = buildResult(plan, rawText, filtered.text, rawRecoveryPath, true);
 	return {
 		...result,
@@ -45,7 +45,7 @@ export async function applyTokenSavePlan(command: string, rawText: string, proje
 export async function applyTokenSaveStream(
 	command: string,
 	chunks: Iterable<string>,
-	projectPath: string,
+	dataDir: string,
 ): Promise<TokenSaveRunResult> {
 	const accumulator = new TokenSaveStreamAccumulator();
 	for (const chunk of chunks) {
@@ -55,7 +55,7 @@ export async function applyTokenSaveStream(
 	const rawText = snapshot.truncated
 		? `${snapshot.text}\n\n[TokenSave raw capture capped at ${snapshot.text.length} chars from ${snapshot.totalBytes} bytes]`
 		: snapshot.text;
-	return applyTokenSavePlan(command, rawText, projectPath);
+	return applyTokenSavePlan(command, rawText, dataDir);
 }
 
 function buildResult(

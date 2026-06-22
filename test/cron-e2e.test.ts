@@ -164,9 +164,9 @@ test("hasCronTasksSync: true when tasks exist", async () => {
   }
 });
 
-test("getCronFilePath: ends with .claude/scheduled_tasks.json", () => {
+test("getCronFilePath: ends with cron/scheduled_tasks.json", () => {
   const path = getCronFilePath("/some/dir");
-  assert.ok(path.endsWith(".claude/scheduled_tasks.json"));
+  assert.ok(path.endsWith("cron/scheduled_tasks.json"));
 });
 
 test("findMissedTasks: finds overdue one-shots", () => {

@@ -4,9 +4,9 @@
  * [TO]: Consumed by loop/index
  * [HERE]: extensions/builtin/loop/cron/cron-scheduler.ts - non-React scheduler core for scheduled_tasks.json
  *
- * Non-React scheduler core for .claude/scheduled_tasks.json.
+ * Non-React scheduler core for <agentDir>/cron/scheduled_tasks.json.
  *
- * 1:1 port of Claude Code src/utils/cronScheduler.ts
+ * Modeled on Claude Code src/utils/cronScheduler.ts.
  *
  * Lifecycle: poll scheduledTasksEnabled until true (flag flips when
  * CronCreate runs) → load tasks + watch the file + start a 1s check
@@ -78,7 +78,8 @@ type CronSchedulerOptions = {
 	 */
 	onMissed?: (tasks: CronTask[]) => void;
 	/**
-	 * Directory containing .claude/scheduled_tasks.json. Required for durable tasks.
+	 * Directory containing the cron store (e.g. ~/.catui/agents/default).
+	 * Required for durable tasks.
 	 */
 	dir?: string;
 	/**
@@ -122,8 +123,8 @@ export type CronScheduler = {
 export function buildMissedTaskNotification(missed: CronTask[]): string {
 	const plural = missed.length > 1;
 	const header =
-		`The following one-shot scheduled task${plural ? "s were" : " was"} missed while Claude was not running. ` +
-		`${plural ? "They have" : "It has"} already been removed from .claude/scheduled_tasks.json.\n\n` +
+		`The following one-shot scheduled task${plural ? "s were" : " was"} missed while Catui was not running. ` +
+		`${plural ? "They have" : "It has"} already been removed from the scheduled-tasks store.\n\n` +
 		`Do NOT execute ${plural ? "these prompts" : "this prompt"} yet. ` +
 		`First use the AskUserQuestion tool to ask whether to run ${plural ? "each one" : "it"} now. ` +
 		`Only execute if the user confirms.`;

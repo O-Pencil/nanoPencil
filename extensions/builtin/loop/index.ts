@@ -7,7 +7,8 @@
  * Loop extension — registers /loop command, CronCreate/Delete/List tools,
  * and the unified cron scheduler.
  *
- * 1:1 port of Claude Code's cron/loop system:
+ * Modeled on Claude Code's cron/loop system (1:1 port of structure, paths
+ * diverged — see migrateLegacyCronTasks):
  * - /loop skill (src/skills/bundled/loop.ts) → registered as /loop command
  * - CronCreate/Delete/List tools (src/tools/ScheduleCronTool/)
  * - Cron scheduler (src/utils/cronScheduler.ts)
@@ -16,6 +17,8 @@
  * - Scheduler lock (src/utils/cronTasksLock.ts)
  */
 
+import { copyFile, mkdir, unlink } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { Box, Text } from "@catui/tui";
 import type { ExtensionAPI } from "../../../core/extensions-host/types.js";
 import type { Component } from "@catui/tui";
@@ -46,12 +49,56 @@ function notify(api: ExtensionAPI, message: string, type: "info" | "warning" | "
 }
 
 // ============================================================================
+// One-shot migration: <project>/.claude/scheduled_tasks.{json,lock} → <agentDir>/cron/
+// ============================================================================
+//
+// Catui v1.2.2 moved durable cron state from the project tree (under
+// .claude/, following Claude Code's port) into the agent config dir. The
+// legacy project-level files are agent state, not project state — keeping
+// them in the project tree caused the same kind of pollution we removed
+// for token-save. Migrate once on first load after the upgrade.
+
+const LEGACY_PROJECT_FILES = [
+	".claude/scheduled_tasks.json",
+	".claude/scheduled_tasks.lock",
+] as const;
+
+async function migrateLegacyCronTasks(projectCwd: string, agentDir: string): Promise<void> {
+	try {
+		await mkdir(join(agentDir, "cron"), { recursive: true });
+		for (const rel of LEGACY_PROJECT_FILES) {
+			const legacyPath = join(projectCwd, rel);
+			const destPath = join(agentDir, rel === ".claude/scheduled_tasks.json" ? "cron/scheduled_tasks.json" : "cron/scheduled_tasks.lock");
+			try {
+				await copyFile(legacyPath, destPath);
+				await unlink(legacyPath);
+			} catch {
+				// missing legacy file is fine; copy errors are best-effort
+			}
+		}
+		// Best-effort: drop the now-empty .claude/ subdir left behind in the
+		// project tree. Non-empty dirs are ignored by rmdir.
+		try {
+			const { rmdir } = await import("node:fs/promises");
+			await rmdir(join(projectCwd, ".claude"));
+		} catch {
+			// ignore
+		}
+		void dirname;
+	} catch {
+		// Migration must never break the agent startup.
+	}
+}
+
+// ============================================================================
 // Extension entry point
 // ============================================================================
 
 export default async function loopExtension(api: ExtensionAPI) {
 	const bus = api.events;
 	apiByBus.set(bus, api);
+
+	await migrateLegacyCronTasks(api.cwd, api.agentDir);
 
 	// =========================================================================
 	// Register Cron tools (1:1 port of CC ScheduleCronTool)

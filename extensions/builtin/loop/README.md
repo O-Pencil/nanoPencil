@@ -18,7 +18,7 @@ For the autonomous "keep digging until done" runner, see the sibling
 
 **Key design decisions**:
 - Single scheduler (cron scheduler) for all tasks
-- Single storage (`.catui/cron-tasks.json` for durable, memory for session)
+- Single storage (`<agentDir>/cron/scheduled_tasks.json` for durable, memory for session) — agent state lives with the agent, not the project
 - `/loop` command and CronCreate tool both use `addCronTask`
 - Enhanced features (--name, --max, --quiet, pause/resume) built on top
 
@@ -54,15 +54,16 @@ For the autonomous "keep digging until done" runner, see the sibling
 - `--quiet` (or `-q`) — suppress per-tick UI messages. Errors and terminal
   events still surface; routine ticks are still recorded via `appendEntry`.
 - `--durable` (or `-d`) — persist the loop across sessions. Durable loops are
-  saved to `.catui/cron-tasks.json` and will resume when you reopen the
-  project.
+  saved to `<agentDir>/cron/scheduled_tasks.json` and will resume when you
+  reopen the agent in any project.
 
 ## Notes
 
 - By default, loops are **session-scoped**: closing the session clears them.
 - Use `--durable` to persist loops across sessions.
-- Durable loops are stored in `.catui/cron-tasks.json` in your project
-  directory.
+- Durable loops are stored in `<agentDir>/cron/scheduled_tasks.json`
+  (typically `~/.catui/agents/default/cron/scheduled_tasks.json`). They
+  follow the agent across projects, not the project across agents.
 - **Auto-expiry**: Durable loops automatically expire after 7 days to prevent
   zombie tasks from accumulating.
 - Due tasks wait for the agent to be idle; missed intervals collapse to one

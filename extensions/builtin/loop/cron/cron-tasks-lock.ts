@@ -4,14 +4,13 @@
  * [TO]: Consumed by ./cron-scheduler, ./index
  * [HERE]: extensions/builtin/loop/cron/cron-tasks-lock.ts - scheduler lease lock for scheduled_tasks.json
  *
- * Scheduler lease lock for .claude/scheduled_tasks.json.
+ * Scheduler lease lock for <agentDir>/cron/scheduled_tasks.lock.
  *
- * 1:1 port of Claude Code src/utils/cronTasksLock.ts
- *
- * When multiple Claude sessions run in the same project directory, only one
- * should drive the cron scheduler. The first session to acquire this lock
- * becomes the scheduler; others stay passive and periodically probe the lock.
- * If the owner dies (PID no longer running), a passive session takes over.
+ * Modeled on Claude Code's src/utils/cronTasksLock.ts. When multiple Catui
+ * sessions share the same agent dir, only one should drive the cron
+ * scheduler. The first session to acquire this lock becomes the scheduler;
+ * others stay passive and periodically probe the lock. If the owner dies
+ * (PID no longer running), a passive session takes over.
  *
  * Pattern mirrors computerUseLock.ts: O_EXCL atomic create, PID liveness
  * probe, stale-lock recovery, cleanup-on-exit.
@@ -20,7 +19,7 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-const LOCK_FILE_REL = join(".claude", "scheduled_tasks.lock");
+const LOCK_FILE_REL = join("cron", "scheduled_tasks.lock");
 
 interface SchedulerLock {
 	sessionId: string;
@@ -80,7 +79,7 @@ async function tryCreateExclusive(
 		const code = (e as NodeJS.ErrnoException).code;
 		if (code === "EEXIST") return false;
 		if (code === "ENOENT") {
-			// .claude/ doesn't exist yet — create it and retry once.
+			// cron/ doesn't exist yet — create it and retry once.
 			await mkdir(dirname(path), { recursive: true });
 			try {
 				await writeFile(path, body, { flag: "wx" });

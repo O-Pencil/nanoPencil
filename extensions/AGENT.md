@@ -84,11 +84,14 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 
 `toml-dsl.ts`: Configuration-driven filter pipeline with strip/replace/match/keep/truncate/head/tail/max-lines stages
 
-`tracking.ts`: Session-local token savings aggregate and JSONL history persistence under `.catui/token-save/`
+`tracking.ts`: Session-local token savings aggregate and JSONL history persistence; history.jsonl lives under `~/.catui/token-save/projects/<projectKey>/` (keyed by sha1 of realpath, never inside the project tree)
+
+`paths.ts`: projectKeyForPath() + dataDirForKey() + resolveTokenSavePaths() — single source of truth for the user-level runtime data dir; one-shot legacy migration from `<project>/.catui/token-save/` runs on first post-upgrade load
 
 **Design Principle:**
 - Token savings must not change command execution semantics.
 - Execution planning happens before bash, while filtering occurs after bash completes; raw output recovery is written for filtered results, and small/no-op savings fall back to raw output.
+- Runtime data (history, raw recovery) is kept out of the project tree; only user/project configuration files (filters.json, trust.json) may live under `<project>/.catui/token-save/`.
 
 #### teach/ — Guided Knowledge Teaching
 
@@ -168,6 +171,15 @@ The complete file-level member list for defaults lives in `extensions/builtin/AG
 `scheduler-parser.ts`: Loop command parsing with flags/subcommands, parseSchedulerCommand/parseDurationSpec/buildSchedulerHelp
 
 `scheduler-types.ts`: Scheduled loop types, LoopPayloadKind/ScheduledLoopTask/LoopStartSpec/ParsedSchedulerCommand
+
+`cron/`: Unified cron scheduler (modeled on CC) — durable task store at `<agentDir>/cron/scheduled_tasks.json` with one-shot migration from the legacy `<project>/.claude/scheduled_tasks.json` layout
+  `cron-tasks.ts`: CronTask type + add/read/write/remove + getCronFilePath() under `<agentDir>/cron/scheduled_tasks.json`
+  `cron-tasks-lock.ts`: Scheduler lease lock at `<agentDir>/cron/scheduled_tasks.lock` (O_EXCL atomic create, PID liveness probe, stale recovery)
+  `cron-scheduler.ts`: Non-React scheduler core; chokidar watcher on the cron file, 1s tick loop, jitter, missed-task detection
+  `cron-parser.ts`: 5-field cron expression parser and next-fire-time computation
+  `index.ts`: barrel for the cron sub-package
+
+`cron-tools/`: CronCreate / CronDelete / CronList tool implementations + prompt builders (model-facing tool descriptions updated to reference the agent-dir layout)
 
 `README.md`: Usage documentation for recurring scheduler
 

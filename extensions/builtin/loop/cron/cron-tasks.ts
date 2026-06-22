@@ -2,11 +2,12 @@
  * [WHO]: CronTask, add/get/removeSessionCronTasks, getCronFilePath, scheduled-task storage primitives
  * [FROM]: Depends on node:crypto, node:fs, node:fs/promises, node:path, ./cron-parser
  * [TO]: Consumed by ./cron-scheduler, ./index
- * [HERE]: extensions/builtin/loop/cron/cron-tasks.ts - scheduled-prompt storage in .claude/scheduled_tasks.json
+ * [HERE]: extensions/builtin/loop/cron/cron-tasks.ts - scheduled-prompt storage under <agentDir>/cron/scheduled_tasks.json
  *
- * Scheduled prompts, stored in <project>/.claude/scheduled_tasks.json.
- *
- * 1:1 port of Claude Code src/utils/cronTasks.ts
+ * Scheduled prompts, stored under the agent's config dir
+ * (e.g. ~/.catui/agents/default/cron/scheduled_tasks.json). Agent state lives
+ * with the agent, not in the project tree — same principle as token-save
+ * runtime data.
  *
  * Tasks come in two flavors:
  *   - One-shot (recurring: false/undefined) — fire once, then auto-delete.
@@ -94,17 +95,18 @@ export type CronTask = {
 
 type CronFile = { tasks: CronTask[] };
 
-const CRON_FILE_REL = join(".claude", "scheduled_tasks.json");
+const CRON_FILE_REL = join("cron", "scheduled_tasks.json");
 
 /**
- * Path to the cron file. `dir` must be provided explicitly.
+ * Path to the cron file. `dir` must be provided explicitly (typically the
+ * agent config dir, e.g. ~/.catui/agents/default).
  */
 export function getCronFilePath(dir: string): string {
 	return join(dir, CRON_FILE_REL);
 }
 
 /**
- * Read and parse .claude/scheduled_tasks.json. Returns an empty task list if the file
+ * Read and parse the cron file. Returns an empty task list if the file
  * is missing, empty, or malformed. Tasks with invalid cron strings are
  * silently dropped (logged at debug level) so a single bad entry never
  * blocks the whole file.
@@ -177,12 +179,12 @@ export function hasCronTasksSync(dir: string): boolean {
 }
 
 /**
- * Overwrite .claude/scheduled_tasks.json with the given tasks. Creates .claude/ if
- * missing. Empty task list writes an empty file (rather than deleting) so
- * the file watcher sees a change event on last-task-removed.
+ * Overwrite the cron file with the given tasks. Creates the `cron/` subdir
+ * under `dir` if missing. Empty task list writes an empty file (rather than
+ * deleting) so the file watcher sees a change event on last-task-removed.
  */
 export async function writeCronTasks(tasks: CronTask[], dir: string): Promise<void> {
-	await mkdir(join(dir, ".claude"), { recursive: true });
+	await mkdir(join(dir, "cron"), { recursive: true });
 	// Strip the runtime-only `durable` flag — everything on disk is durable
 	// by definition, and keeping the flag out means readCronTasks() naturally
 	// yields durable: undefined without having to set it explicitly.
@@ -202,9 +204,8 @@ export async function writeCronTasks(tasks: CronTask[], dir: string): Promise<vo
  *
  * When `durable` is false the task is held in process memory only
  * (sessionTasks Map) — it fires on schedule this session but is never
- * written to .claude/scheduled_tasks.json and dies with the process. The
- * scheduler merges session tasks into its tick loop directly, so no file
- * change event is needed.
+ * written to disk and dies with the process. The scheduler merges session
+ * tasks into its tick loop directly, so no file change event is needed.
  */
 export async function addCronTask(
 	cron: string,

@@ -97,10 +97,7 @@ function setPlanModeUi(ctx: ExtensionContext, api: ExtensionAPI): void {
 	const planFilePath = getPlanFilePath(api.events);
 	ctx.ui.setStatus("plan", "Plan mode");
 	ctx.ui.setWidget("plan-mode", [
-		"PLAN MODE",
-		`Plan: ${planFilePath}`,
-		"Read-only except the plan file",
-		"Use /plan open to edit; /plan exit requests approval",
+		`\x1b[35mPlan Mode On\x1b[0m`,
 	], { placement: "aboveEditor" });
 }
 

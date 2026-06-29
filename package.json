@@ -99,6 +99,7 @@
     "test:interactive-memory-notify": "node --test --import tsx test/interactive-memory-notify.test.ts test/session-manager-header.test.ts",
     "start": "npx cross-env NODE_ENV=production node --no-deprecation dist/cli.js",
     "prepare": "git config core.hooksPath .githooks || true",
+    "postinstall": "node -e \"import('fs').then(({chmodSync}) => { try { chmodSync('dist/cli.js', 0o755); } catch (e) { /* dev install before build: no dist yet, skip silently */ } })\"",
     "prepublishOnly": "npm run build:release",
     "changelog": "node scripts/generate-changelog.js",
     "version": "npm run changelog && git add CHANGELOG.md",

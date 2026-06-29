@@ -19,7 +19,7 @@
  *
  * Escape hatch: set CATUI_NO_MINIFY=1 for a readable dev build.
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, chmod } from "node:fs/promises";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import * as esbuild from "esbuild";
@@ -48,6 +48,14 @@ async function minifyFile(file) {
 		legalComments: "none",
 	});
 	await writeFile(file, result.code, "utf8");
+	// esbuild.writeFile + node writeFile both default to mode 0o644, which strips
+	// the executable bit from bin entrypoints (dist/cli.js) that npm relies on
+	// when creating the `catui` symlink. Restore 0o755 for the CLI entry point
+	// so a fresh `npm install -g catui-agent` does not produce a
+	// `zsh: permission denied: catui` failure on macOS/Linux.
+	if (file === join(DIST, "cli.js")) {
+		await chmod(file, 0o755);
+	}
 	return { before: code.length, after: result.code.length };
 }
 

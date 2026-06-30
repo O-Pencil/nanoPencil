@@ -397,6 +397,24 @@ export default async function planExtension(api: ExtensionAPI) {
 	});
 
 	// =========================================================================
+	// Agent abort: soft-exit plan mode when user interrupts the agent
+	// =========================================================================
+
+	api.on("agent_abort", (_event, ctx) => {
+		const sessionState = getSessionState(api);
+		if (sessionState.state.mode !== "plan") return;
+
+		// Soft-exit plan mode: restore prePlanMode, persist state, clear UI
+		handlePlanModeExit(sessionState);
+		api.appendEntry(PLAN_CUSTOM_TYPE, serializePlanSessionState(sessionState));
+
+		ctx.ui.setStatus("plan", undefined);
+		ctx.ui.setWidget("plan-mode", undefined);
+
+		ctx.ui.notify("Plan mode exited (interrupted). Plan file preserved.", "info");
+	});
+
+	// =========================================================================
 	// System prompt injection: plan mode workflow
 	// =========================================================================
 

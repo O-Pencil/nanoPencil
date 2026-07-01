@@ -1,6 +1,6 @@
 /**
  * [WHO]: Regression tests for TokenSave command routing — the bits that decide
- *      whether a command is capture (filter), passthrough (no filter), or stream.
+ *      whether a command is capture (filter) or passthrough (no filter).
  *      Guards the "no-output shell builtin" short-circuit + the rewrite-history
  *      recovery-path helper.
  * [FROM]: Depends on ../extensions/builtin/token-save/no-output-builtins.js,
@@ -133,13 +133,9 @@ describe("planCommand: routes no-output builtins to passthrough", () => {
 		assert.equal(plan.category, "git-status");
 	});
 
-	it("npm install still goes through the planner (capture-or-stream)", () => {
+	it("npm install still goes through the planner as capture", () => {
 		const plan = planCommand("npm install");
-		// npm install is marked streaming: true in the rewrite registry
-		// (because the output arrives over time, e.g. progress bars), so
-		// the plan mode is "stream" rather than "capture". Either way
-		// the command is not passthrough.
-		assert.notEqual(plan.mode, "passthrough");
+		assert.equal(plan.mode, "capture");
 		assert.equal(plan.category, "package-manager");
 	});
 });
@@ -180,11 +176,11 @@ describe("planCommand and classifyCommand agree on routing", () => {
 	// history's recorded mode will diverge — the agent sees one thing,
 	// the history claims another. These cases lock in agreement.
 
-	const cases: Array<[string, "capture" | "stream" | "passthrough"]> = [
+	const cases: Array<[string, "capture" | "passthrough"]> = [
 		// [command, expected mode]
-		// planCommand returns "capture" / "stream" / "passthrough"; classifyCommand
+		// planCommand returns "capture" / "passthrough"; classifyCommand
 		// returns "filtered" / "passthrough". These are the same distinction under
-		// two vocabularies: "filtered" in classify = "capture" | "stream" in plan.
+		// two vocabularies: "filtered" in classify = "capture" in plan.
 		// We map both into a unified check via a small adapter.
 		["cd /tmp", "passthrough"],
 		["pwd", "passthrough"],
@@ -194,13 +190,13 @@ describe("planCommand and classifyCommand agree on routing", () => {
 		["alias ll=ls -la", "passthrough"],
 		["which node", "passthrough"],
 		// Commands whose output is worth filtering
-		["git status", "capture-or-stream"],
-		["git log --oneline -10", "capture-or-stream"],
-		["git diff HEAD", "capture-or-stream"],
-		["cat package.json", "capture-or-stream"],
-		["npm install", "capture-or-stream"],
-		["pytest -q", "capture-or-stream"],
-		["rg foo", "capture-or-stream"],
+		["git status", "capture"],
+		["git log --oneline -10", "capture"],
+		["git diff HEAD", "capture"],
+		["cat package.json", "capture"],
+		["npm install", "capture"],
+		["pytest -q", "capture"],
+		["rg foo", "capture"],
 	];
 
 	for (const [cmd, expected] of cases) {
@@ -211,9 +207,7 @@ describe("planCommand and classifyCommand agree on routing", () => {
 				assert.equal(plan.mode, "passthrough", `planCommand disagreed for '${cmd}'`);
 				assert.equal(cls.mode, "passthrough", `classifyCommand disagreed for '${cmd}'`);
 			} else {
-				// "filtered" output is the contract for these commands; capture-or-stream
-				// is an internal implementation detail of planCommand.
-				assert.ok(plan.mode !== "passthrough", `planCommand wrongly passthrough'd '${cmd}'`);
+				assert.equal(plan.mode, "capture", `planCommand disagreed for '${cmd}'`);
 				assert.equal(cls.mode, "filtered", `classifyCommand disagreed for '${cmd}'`);
 			}
 		});

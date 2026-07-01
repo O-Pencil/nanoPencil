@@ -1,5 +1,5 @@
 /**
- * [WHO]: tokenSaveExtension - default-on bash output filtering, savings tracking, and /tokensave command
+ * [WHO]: tokenSaveExtension - default-on bash tool-result filtering, savings tracking, and /tokensave command
  * [FROM]: Depends on core/extensions-host/types, ./filters, ./tracking, ./paths
  * [TO]: Auto-loaded by builtin-extensions.ts as a default extension
  * [HERE]: extensions/builtin/token-save/index.ts - TokenSave extension entry point
@@ -7,7 +7,6 @@
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ExtensionAPI, ToolResultEvent, ToolResultEventResult } from "../../../core/extensions-host/types.js";
-import { executeBash, type BashResult } from "../../../core/platform/exec/bash-executor.js";
 import { loadTokenSaveConfigFilters, type ConfiguredTokenSaveFilter } from "./config.js";
 import { applyTokenSavePlan } from "./runner.js";
 import { planCommand } from "./rewrite.js";
@@ -194,16 +193,6 @@ export default async function tokenSaveExtension(api: ExtensionAPI): Promise<voi
 		return { input: { ...event.input, command } };
 	});
 
-	api.on("user_bash", async (event) => {
-		if (event.excludeFromContext) return;
-		const plan = planCommand(event.command);
-		if (plan.mode === "passthrough") return;
-
-		const rawResult = await executeBash(event.command, { cwd: event.cwd });
-		const filteredResult = await applyToBashResult(event.command, rawResult, dataDir, configuredFilters, tracker, Date.now(), api.cwd);
-		return { result: filteredResult };
-	});
-
 	api.on("tool_result", async (event: ToolResultEvent): Promise<ToolResultEventResult | void> => {
 		if (event.toolName !== "bash") return;
 
@@ -254,55 +243,6 @@ export default async function tokenSaveExtension(api: ExtensionAPI): Promise<voi
 			details: event.details,
 		};
 	});
-}
-
-async function applyToBashResult(
-	command: string,
-	rawResult: BashResult,
-	dataDir: string,
-	configuredFilters: ConfiguredTokenSaveFilter[],
-	tracker: TokenSaveTracker,
-	started: number,
-	projectPath: string,
-): Promise<BashResult> {
-	const result = await applyTokenSavePlan(command, rawResult.output, dataDir);
-	const configured = applyConfiguredFilter(command, rawResult.output, configuredFilters);
-	if (configured && configured.length < result.filteredText.length) {
-		result.filteredText = configured;
-		result.outputTokens = Math.ceil(configured.length / 4);
-		result.savedTokens = Math.max(0, result.inputTokens - result.outputTokens);
-		result.savingsPct = result.inputTokens > 0 ? Math.round((result.savedTokens / result.inputTokens) * 100) : 0;
-		result.shouldReplace = result.savedTokens >= 32 && result.savingsPct >= 12;
-	}
-
-	tracker.add({
-		projectPath,
-		command,
-		category: result.plan.category,
-		mode: result.plan.mode === "passthrough" ? "passthrough" : "filtered",
-		inputTokens: result.inputTokens,
-		outputTokens: result.outputTokens,
-		savedTokens: result.savedTokens,
-		savingsPct: result.savingsPct,
-		elapsedMs: Date.now() - started,
-		isError: (rawResult.exitCode ?? 0) !== 0,
-		rawRecoveryPath: result.rawRecoveryPath ?? rawResult.fullOutputPath,
-	});
-
-	if (!result.shouldReplace) return rawResult;
-	const footer = [
-		"",
-		`[TokenSave: ${result.inputTokens} -> ${result.outputTokens} estimated tokens, saved ${result.savedTokens} (${result.savingsPct}%), mode=${result.plan.mode}, category=${result.plan.category}]`,
-		result.rawRecoveryPath ? `[Raw recovery: ${result.rawRecoveryPath}]` : undefined,
-	]
-		.filter(Boolean)
-		.join("\n");
-	return {
-		...rawResult,
-		output: `${result.filteredText}${footer}`,
-		truncated: rawResult.truncated,
-		fullOutputPath: result.rawRecoveryPath ?? rawResult.fullOutputPath,
-	};
 }
 
 function applyConfiguredFilter(command: string, rawText: string, filters: ConfiguredTokenSaveFilter[]): string | undefined {

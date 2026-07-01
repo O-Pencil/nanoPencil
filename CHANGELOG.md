@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - refactor(mcp): drop the `mcp-suggest` builtin extension, its `/mcp:suggest status|on|off` slash command, and its per-turn keyword matcher. Layer 1 (scenario-enriched `description`) + Layer 3 (warmup hint) already cover the same ground at lower prompt cost and without the default-off opt-in UX confusion
 
+### Fixed
+- fix(token-save): `cd` / `pwd` / `export` / `unset` / `shopt` / `alias` / `which` / etc. no longer go through the filter pipeline. They produce empty or session-only stdout, so the filter was running for nothing and writing ~280 `mode=filtered savedTokens=0` history records in a typical session that diluted `/tokensave summary`. Both `planCommand` (rewrite.ts) and `classifyCommand` (filters.ts) now short-circuit these shell builtins to `passthrough` via the new `no-output-builtins.ts` shared helper
+- fix(token-save): `migrateLegacyTokenSave` now also rewrites `rawRecoveryPath` fields inside `history.jsonl` after moving raw recovery files. The earlier one-shot migration renamed files but left history entries pointing at the empty legacy directory, so agent footer links for migrated records hit ENOENT and the user could not see the full underlying output. The same one-shot fix-up script lives at `scripts/fix-token-save-history-paths.mjs` for projects whose marker file was already written before this fix landed
+
+### Tests
+- test(token-save): 34 cases in `test/token-save-routing.test.ts` covering `NO_OUTPUT_BUILTINS` membership, `planCommand` routing for cd/pwd/export/echo/git/npm/pytest/rg, `classifyCommand` agreeing with `planCommand` on routing, and the disabled-by-env / heredoc / write-redirection guards still passthrough
+
 ### Documentation
 - docs(mcp-awareness): new `docs/mcp-awareness.md` describing the four-layer nudge (description / system-prompt paragraph / warmup hint / per-turn hint), the corresponding code owners, and the test coverage matrix
 
@@ -24,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - test(mcp): 21 cases in `test/mcp-tool-description.test.ts` (description / guidance format, schema inference, server-hint fallback)
 - test(mcp): 13 cases in `test/mcp-hint-injection.test.ts` (hint builder shape + end-to-end pipeline through `convertToLlm`)
 - test(prompt): 8 cases in `test/system-prompt.test.ts` (regression guard for the Project Context block in the main template; covers the case where the block was once silently removed leaving only the customPrompt branch with the injection)
+- test(token-save): 34 cases in `test/token-save-routing.test.ts` (no-output shell builtin short-circuit + planCommand/classifyCommand routing agreement)
 
 ---
 
